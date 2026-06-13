@@ -35,7 +35,9 @@ proposal's execution plan.
 | Label-free pretraining loop (in-memory + dataset variants) | `fejepa.train.pretrain` |
 | **Gate G0** neural-solver sanity check | `fejepa.train.g0` |
 | **Phase-1 falsification battery (E1–E5) + Gate G1** | `fejepa.experiments.falsification` |
-| Metrics: rel-L2, energy gap `Π_h(û)−Π_h(U*) = ½‖û−U*‖²_K`, effective rank | `fejepa.metrics` |
+| Stress / von Mises recovery (CST, consistent with assembled `K`) | `fejepa.fe.stress` |
+| Cross-resolution transfer eval (RQ3 / E4) + multi-resolution datasets | `fejepa.experiments.falsification`, `fejepa.fe.generator` |
+| Metrics: rel-L2 (disp. & von Mises), max-stress error, critical-region recall, energy gap, effective rank | `fejepa.metrics` |
 
 ### The exactness lemma, numerically verified
 

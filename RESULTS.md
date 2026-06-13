@@ -41,14 +41,18 @@ Source: `fejepa gate-g0 --device cuda` (or `--device cpu`).
 
 ## Training-regime comparison (RQ1 / RQ4)
 
-Source: `runs/regimes.json` (`regimes.<name>.val_rel_l2`,
-`...val_energy_gap_rel`, `...labelled_solves`).
+Source: `runs/regimes.json` (`regimes.<name>.{val_rel_l2, val_energy_gap_rel,
+val_rel_l2_vm, val_max_vm_rel_err, val_crit_recall, labelled_solves}`).
 
-| Regime | val rel-L2 (disp.) | relative energy gap | labelled solves |
-| --- | --- | --- | --- |
-| labels only | `TBD` | `TBD` | `TBD` |
-| labels + anchor | `TBD` | `TBD` | `TBD` |
-| anchor only (label-free) | `TBD` | `TBD` | 0 |
+| Regime | rel-L2 disp. | energy gap | rel-L2 vM | max-vM err | crit. recall | labels |
+| --- | --- | --- | --- | --- | --- | --- |
+| labels only | `TBD` | `TBD` | `TBD` | `TBD` | `TBD` | `TBD` |
+| labels + anchor | `TBD` | `TBD` | `TBD` | `TBD` | `TBD` | `TBD` |
+| anchor only (label-free) | `TBD` | `TBD` | `TBD` | `TBD` | `TBD` | 0 |
+
+(`rel-L2 vM` = relative L2 of the element von Mises field; `max-vM err` = peak
+von Mises relative error; `crit. recall` = recall of the top-10% highest-stress
+elements — the engineering quantities of Section "Evaluation protocol".)
 
 ## Label efficiency (RQ2)
 
@@ -80,11 +84,15 @@ Source: `runs/battery.json` (`results.E*`, `gate_g1`).
 | (c) pretraining beats from-scratch ≤ 256 labels | `TBD` |
 | **Decision** | `TBD` (GO / NO-GO) |
 
-## Cross-resolution transfer (RQ3) — optional
+## Cross-resolution transfer (RQ3 / E4)
 
-Train coarse / test fine, with and without the cross-mesh invariance term.
+Source: `runs/mesh_views.json` (`metrics.with_inv` / `metrics.without_inv`,
+each with `rel_l2_coarse`, `rel_l2_fine`, `transfer_gap`). Train label-free on
+coarse meshes, test on fine meshes, with and without the cross-mesh invariance
+term `L_inv`.
 
-| Setting | rel-L2 (test-fine) | energy gap |
-| --- | --- | --- |
-| `L_inv` off | `TBD` | `TBD` |
-| `L_inv` on | `TBD` | `TBD` |
+| Setting | rel-L2 (train-coarse) | rel-L2 (test-fine) | transfer gap |
+| --- | --- | --- | --- |
+| `L_inv` off | `TBD` | `TBD` | `TBD` |
+| `L_inv` on | `TBD` | `TBD` | `TBD` |
+| E4 verdict (`inv_reduces_gap`) | | | `TBD` |
