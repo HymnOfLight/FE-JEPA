@@ -32,20 +32,57 @@ class SupervisedConfig:
     seed: int = 0
     model: FEJEPAConfig = field(default_factory=FEJEPAConfig)
     grad_clip: float = 1.0
+    # Physics-informed fine-tuning: add the assembled-energy anchor (Lemma 1),
+    # normalised per instance by |Pi(U*)| so the term is scale-comparable. By
+    # the gradient identity this is the supervised energy-norm gradient, so it
+    # is expected to accelerate convergence. lambda_phys=0 disables it (E1).
+    lambda_phys: float = 0.0
 
 
-def _disp_loss(model: FEJEPA, arch: InstanceArchive, dtype: torch.dtype) -> torch.Tensor:
+def _pi_star_norm(arch: InstanceArchive) -> float:
+    """Mean over loads of ``|Pi_h(U*)|`` -- the per-instance energy scale."""
+
+    U = arch.U_star
+    pi = 0.5 * np.einsum("bi,bi->b", U, (arch.K @ U.T).T) - np.einsum(
+        "bi,bi->b", arch.F, U
+    )
+    return float(np.mean(np.abs(pi)) + 1e-30)
+
+
+def _instance_loss(
+    model: FEJEPA,
+    arch: InstanceArchive,
+    dtype: torch.dtype,
+    lambda_phys: float = 0.0,
+    anchor: "EnergyAnchor | None" = None,
+    pi_norm: float | None = None,
+) -> tuple[torch.Tensor, float]:
+    """Supervised displacement rel-L2 loss, optionally + energy anchor.
+
+    Returns ``(loss, disp_rel_l2_value)``; a single forward per load feeds both
+    the displacement term and (if enabled) the physics anchor.
+    """
+
     free = torch.as_tensor(arch.free_mask.astype(np.float64), dtype=dtype)
-    losses = []
+    disp_terms = []
+    u_rows = []
     for j in range(arch.n_loads):
         feats = build_node_features(arch, j, dtype=dtype)
         _, disp = model.encode_decode(feats)
         u = disp.reshape(-1) * free
+        u_rows.append(u)
         target = torch.as_tensor(arch.U_star[j], dtype=dtype)
         num = torch.linalg.vector_norm(u - target)
         den = torch.linalg.vector_norm(target) + 1e-12
-        losses.append(num / den)
-    return torch.stack(losses).mean()
+        disp_terms.append(num / den)
+    disp_loss = torch.stack(disp_terms).mean()
+
+    total = disp_loss
+    if lambda_phys > 0.0 and anchor is not None:
+        u_stack = torch.stack(u_rows, dim=0)
+        energy = anchor(u_stack, reduction="mean")
+        total = total + lambda_phys * energy / (pi_norm or 1.0)
+    return total, float(disp_loss.detach())
 
 
 def load_pretrained_into(model: FEJEPA, ckpt_path: str | Path) -> int:
@@ -85,6 +122,16 @@ def train_supervised(
         load_pretrained_into(model, init_ckpt)
     opt = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
 
+    # Pre-build per-instance energy anchors and energy scales (physics fine-tune).
+    anchors: list = [None] * len(train_archs)
+    pi_norms: list = [None] * len(train_archs)
+    if cfg.lambda_phys > 0.0:
+        from fejepa.anchor.energy import EnergyAnchor
+
+        for i, a in enumerate(train_archs):
+            anchors[i] = EnergyAnchor(a.K, a.F, a.free_mask, dtype=dtype)
+            pi_norms[i] = _pi_star_norm(a)
+
     history = []
     for epoch in range(cfg.epochs):
         model.train()
@@ -92,12 +139,15 @@ def train_supervised(
         epoch_loss = 0.0
         for idx in order:
             opt.zero_grad()
-            loss = _disp_loss(model, train_archs[idx], dtype)
+            loss, disp_val = _instance_loss(
+                model, train_archs[idx], dtype,
+                lambda_phys=cfg.lambda_phys, anchor=anchors[idx], pi_norm=pi_norms[idx],
+            )
             loss.backward()
             if cfg.grad_clip:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
             opt.step()
-            epoch_loss += float(loss.detach())
+            epoch_loss += disp_val
         epoch_loss /= len(train_archs)
         history.append(epoch_loss)
         if verbose and (epoch % max(1, cfg.epochs // 10) == 0 or epoch == cfg.epochs - 1):
