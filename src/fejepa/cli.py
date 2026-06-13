@@ -71,7 +71,7 @@ def _cmd_pretrain(args: argparse.Namespace) -> int:
 def _cmd_run_config(args: argparse.Namespace) -> int:
     from fejepa.experiments.runner import run_config
 
-    run_config(args.config)
+    run_config(args.config, device=args.device)
     return 0
 
 
@@ -181,6 +181,8 @@ def main(argv: list[str] | None = None) -> int:
 
     rc = sub.add_parser("run-config", help="run a full experiment pipeline from a JSON config")
     rc.add_argument("config")
+    rc.add_argument("--device", default=None,
+                    help="override the config's device: cpu | cuda | cuda:N | auto")
     rc.set_defaults(func=_cmd_run_config)
 
     reg = sub.add_parser("regimes", help="compare labels / labels+anchor / anchor-only")

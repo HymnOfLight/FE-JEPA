@@ -43,7 +43,7 @@ def _maybe_generate(ds: dict) -> Path:
     return out
 
 
-def run_config(config_path: str | Path) -> dict:
+def run_config(config_path: str | Path, device: str | None = None) -> dict:
     from fejepa.experiments.falsification import BatteryConfig, load_split, run_battery
     from fejepa.experiments.regimes import compare_training_regimes
     from fejepa.train.pretrain import PretrainConfig
@@ -52,7 +52,8 @@ def run_config(config_path: str | Path) -> dict:
     from fejepa.device import describe_device, resolve_device
 
     cfg = json.loads(Path(config_path).read_text())
-    device = resolve_device(cfg.get("device", "auto"))
+    # An explicit CLI override takes precedence over the config's "device".
+    device = resolve_device(device if device is not None else cfg.get("device", "auto"))
     print(f"[run-config] device: {describe_device(device)}")
     model_cfg = FEJEPAConfig(**cfg.get("model", {}))
     data_dir = _maybe_generate(cfg["dataset"])
