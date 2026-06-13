@@ -7,6 +7,7 @@ from fejepa.fe.elasticity import (
     assemble_problem,
     lame_from_E_nu,
 )
+from fejepa.fe.stress import element_strain_stress, strain_energy
 
 __all__ = [
     "FEProblem",
@@ -14,4 +15,6 @@ __all__ = [
     "Material",
     "assemble_problem",
     "lame_from_E_nu",
+    "element_strain_stress",
+    "strain_energy",
 ]

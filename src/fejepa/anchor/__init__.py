@@ -2,6 +2,7 @@
 
 from fejepa.anchor.energy import (
     EnergyAnchor,
+    csr_to_torch_sparse,
     energy,
     energy_gap,
     energy_norm_sq,
@@ -9,6 +10,7 @@ from fejepa.anchor.energy import (
 
 __all__ = [
     "EnergyAnchor",
+    "csr_to_torch_sparse",
     "energy",
     "energy_gap",
     "energy_norm_sq",

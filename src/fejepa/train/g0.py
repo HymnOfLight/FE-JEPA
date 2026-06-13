@@ -16,6 +16,7 @@ import numpy as np
 import torch
 
 from fejepa.data.archive import InstanceArchive
+from fejepa.device import resolve_device
 from fejepa.losses import physics_loss
 from fejepa.metrics import evaluate_instance
 from fejepa.models.fejepa import FEJEPA, FEJEPAConfig
@@ -49,15 +50,17 @@ def run_gate_g0(
     seed: int = 0,
     dtype: torch.dtype = torch.float64,
     log_every: int = 0,
+    device: str = "auto",
 ) -> GateG0Result:
     """Run Gate G0 on a single labelled instance."""
 
     if arch.U_star is None:
         raise ValueError("Gate G0 requires a labelled instance (U_star present)")
 
+    device = resolve_device(device)
     torch.manual_seed(seed)
     cfg = FEJEPAConfig(dim=dim, depth=depth, heads=4)
-    model = FEJEPA(cfg).to(dtype)
+    model = FEJEPA(cfg).to(dtype).to(device)
     params = list(model.encoder.parameters()) + list(model.decoder.parameters())
     opt = torch.optim.Adam(params, lr=lr)
 
@@ -65,14 +68,14 @@ def run_gate_g0(
     for step in range(steps):
         model.train()
         opt.zero_grad()
-        energy, _, _ = physics_loss(model, arch, dtype=dtype)
+        energy, _, _ = physics_loss(model, arch, dtype=dtype, device=device)
         energy.backward()
         opt.step()
         history.append(float(energy.detach()))
         if log_every and (step % log_every == 0 or step == steps - 1):
             print(f"  G0 step {step:5d}  energy={history[-1]:.6e}")
 
-    metrics = evaluate_instance(model, arch, dtype=dtype)
+    metrics = evaluate_instance(model, arch, dtype=dtype, device=device)
     passed = (
         metrics["rel_l2_disp"] <= rel_l2_threshold
         and metrics["energy_gap_rel"] <= energy_gap_rel_threshold

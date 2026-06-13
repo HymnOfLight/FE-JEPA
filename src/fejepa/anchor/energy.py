@@ -25,16 +25,40 @@ import scipy.sparse as sp
 import torch
 
 
+def csr_to_torch_sparse(
+    K_csr: sp.csr_matrix, dtype: torch.dtype = torch.float32, device="cpu"
+) -> torch.Tensor:
+    """Convert a SciPy CSR matrix to a coalesced torch sparse COO tensor.
+
+    Using a torch sparse tensor keeps the mat-vec on the same device as the
+    decoded field, so the anchor runs on CPU **or** CUDA without host round-trips.
+    """
+
+    coo = K_csr.tocoo()
+    indices = torch.from_numpy(np.vstack([coo.row, coo.col]).astype(np.int64))
+    values = torch.as_tensor(coo.data, dtype=dtype)
+    # The stiffness comes from a coalesced SciPy CSR, so invariants hold; opt out
+    # of the check explicitly to avoid a noisy one-time UserWarning.
+    with torch.sparse.check_sparse_tensor_invariants(False):
+        K = torch.sparse_coo_tensor(indices, values, tuple(coo.shape))
+    return K.coalesce().to(device)
+
+
+def _spmv(K_sparse: torch.Tensor, u: torch.Tensor) -> torch.Tensor:
+    """``K @ u`` for ``u`` of shape ``(ndof,)`` or ``(B, ndof)`` (rows)."""
+
+    if u.dim() == 1:
+        return torch.sparse.mm(K_sparse, u.unsqueeze(1)).squeeze(1)
+    return torch.sparse.mm(K_sparse, u.t()).t()
+
+
 class _EnergyAnchorFn(torch.autograd.Function):
-    """Autograd op for ``Pi_h`` with a constant sparse ``K`` (numpy mat-vec)."""
+    """Autograd op for ``Pi_h`` returning the analytic gradient ``K u - F``."""
 
     @staticmethod
-    def forward(ctx, u: torch.Tensor, K_csr: sp.csr_matrix, F: torch.Tensor):
-        u_np = u.detach().cpu().numpy()
-        F_np = F.detach().cpu().numpy()
-        # K @ u for both (ndof,) and (B, ndof) layouts.
-        Ku_np = (K_csr @ u_np.T).T
-        Ku = torch.as_tensor(np.ascontiguousarray(Ku_np), dtype=u.dtype, device=u.device)
+    def forward(ctx, u: torch.Tensor, K_sparse: torch.Tensor, F: torch.Tensor):
+        with torch.no_grad():
+            Ku = _spmv(K_sparse, u)
         energy_val = 0.5 * (u * Ku).sum(dim=-1) - (F * u).sum(dim=-1)
         ctx.save_for_backward(Ku, F)
         return energy_val
@@ -42,15 +66,18 @@ class _EnergyAnchorFn(torch.autograd.Function):
     @staticmethod
     def backward(ctx, grad_output: torch.Tensor):
         Ku, F = ctx.saved_tensors
-        grad_u = Ku - F  # = K u - F
+        grad_u = Ku - F  # = K u - F  (Lemma 1)
         grad_u = grad_output.unsqueeze(-1) * grad_u
         return grad_u, None, None
 
 
-def energy(u: torch.Tensor, K_csr: sp.csr_matrix, F: torch.Tensor) -> torch.Tensor:
-    """Return ``Pi_h(u)`` (per row if ``u`` is batched over load cases)."""
+def energy(u: torch.Tensor, K_sparse: torch.Tensor, F: torch.Tensor) -> torch.Tensor:
+    """Return ``Pi_h(u)`` (per row if ``u`` is batched over load cases).
 
-    return _EnergyAnchorFn.apply(u, K_csr, F)
+    ``K_sparse`` is a torch sparse tensor (see :func:`csr_to_torch_sparse`).
+    """
+
+    return _EnergyAnchorFn.apply(u, K_sparse, F)
 
 
 def energy_norm_sq(diff: np.ndarray, K_csr: sp.csr_matrix) -> np.ndarray:
@@ -93,16 +120,24 @@ class EnergyAnchor(torch.nn.Module):
         F: np.ndarray,
         free_mask: np.ndarray,
         dtype: torch.dtype = torch.float32,
+        device="cpu",
     ):
         super().__init__()
-        self.K = K_csr.tocsr()
         F = np.atleast_2d(np.asarray(F))
-        self.register_buffer("F", torch.as_tensor(F, dtype=dtype))
+        self.K_sparse = csr_to_torch_sparse(K_csr.tocsr(), dtype=dtype, device=device)
+        self.register_buffer("F", torch.as_tensor(F, dtype=dtype, device=device))
         self.register_buffer(
-            "free_mask", torch.as_tensor(np.asarray(free_mask, dtype=bool))
+            "free_mask",
+            torch.as_tensor(np.asarray(free_mask, dtype=bool), device=device),
         )
         self.n_loads = F.shape[0]
         self.n_dof = F.shape[1]
+
+    def to(self, *args, **kwargs):  # keep the sparse K in sync with .to()
+        super().to(*args, **kwargs)
+        device = self.F.device
+        self.K_sparse = self.K_sparse.to(device=device)
+        return self
 
     def _apply_bc(self, u: torch.Tensor) -> torch.Tensor:
         return u * self.free_mask.to(u.dtype)
@@ -113,7 +148,7 @@ class EnergyAnchor(torch.nn.Module):
         if u.dim() == 1:
             u = u.unsqueeze(0).expand(self.n_loads, -1)
         u = self._apply_bc(u)
-        return energy(u, self.K, self.F)
+        return energy(u, self.K_sparse, self.F)
 
     def forward(self, u: torch.Tensor, reduction: str = "mean") -> torch.Tensor:
         vals = self.per_load(u)

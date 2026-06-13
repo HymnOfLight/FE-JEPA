@@ -37,46 +37,51 @@ def compare_training_regimes(
 ) -> dict:
     sup_cfg = sup_cfg or SupervisedConfig(epochs=60, lr=1.5e-3)
     pre_cfg = pre_cfg or PretrainConfig(epochs=sup_cfg.epochs, lr=1.5e-3, model=sup_cfg.model)
+    from fejepa.device import resolve_device
+
+    device = resolve_device(sup_cfg.device)
+    sup_cfg.device = device
+    pre_cfg.device = device  # keep regimes on the same device
     train_archs = [load_problem(f) for f in pool_files[:n_train]]
 
     def _eval(model):
-        vs = [evaluate_instance(model, a) for a in val_archs]
-        return (
-            float(np.mean([v["rel_l2_disp"] for v in vs])),
-            float(np.mean([v["energy_gap_rel"] for v in vs])),
-        )
+        vs = [evaluate_instance(model, a, device=device) for a in val_archs]
+        agg = lambda k: float(np.mean([v[k] for v in vs if k in v]))  # noqa: E731
+        return {
+            "val_rel_l2": agg("rel_l2_disp"),
+            "val_energy_gap_rel": agg("energy_gap_rel"),
+            "val_rel_l2_vm": agg("rel_l2_vm"),
+            "val_max_vm_rel_err": agg("max_vm_rel_err"),
+            "val_crit_recall": agg("crit_recall"),
+        }
+
+    def _from_supervised(out):
+        return {
+            "val_rel_l2": out["val_rel_l2_disp"],
+            "val_energy_gap_rel": out["val_energy_gap_rel"],
+            "val_rel_l2_vm": out["val_rel_l2_vm"],
+            "val_max_vm_rel_err": out["val_max_vm_rel_err"],
+            "val_crit_recall": out["val_crit_recall"],
+        }
 
     regimes: dict[str, dict] = {}
 
     if verbose:
         print("[regimes] training labels-only...")
     cfg0 = SupervisedConfig(**{**sup_cfg.__dict__, "lambda_phys": 0.0})
-    out0 = train_supervised(train_archs, val_archs, cfg=cfg0)
-    regimes["labels"] = {
-        "val_rel_l2": out0["val_rel_l2_disp"],
-        "val_energy_gap_rel": out0["val_energy_gap_rel"],
-        "labelled_solves": n_train,
-    }
+    regimes["labels"] = {**_from_supervised(train_supervised(train_archs, val_archs, cfg=cfg0)),
+                         "labelled_solves": n_train}
 
     if verbose:
         print("[regimes] training labels+anchor...")
     cfg1 = SupervisedConfig(**{**sup_cfg.__dict__, "lambda_phys": lambda_phys})
-    out1 = train_supervised(train_archs, val_archs, cfg=cfg1)
-    regimes["labels+anchor"] = {
-        "val_rel_l2": out1["val_rel_l2_disp"],
-        "val_energy_gap_rel": out1["val_energy_gap_rel"],
-        "labelled_solves": n_train,
-    }
+    regimes["labels+anchor"] = {**_from_supervised(train_supervised(train_archs, val_archs, cfg=cfg1)),
+                               "labelled_solves": n_train}
 
     if verbose:
         print("[regimes] training anchor-only (label-free)...")
     model2, _ = amortized_ritz(train_archs, cfg=pre_cfg)
-    rel2, gap2 = _eval(model2)
-    regimes["anchor_only"] = {
-        "val_rel_l2": rel2,
-        "val_energy_gap_rel": gap2,
-        "labelled_solves": 0,
-    }
+    regimes["anchor_only"] = {**_eval(model2), "labelled_solves": 0}
 
     report = {"n_train": n_train, "regimes": regimes}
     if verbose:
