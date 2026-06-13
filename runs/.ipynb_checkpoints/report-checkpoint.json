@@ -1,0 +1,89 @@
+{
+  "config": {
+    "budgets": [
+      16,
+      64,
+      256
+    ],
+    "n_val": 16,
+    "seed": 0,
+    "decision_budget": 64,
+    "lambda_phys": 1.0
+  },
+  "results": {
+    "E1": {
+      "id": "E1",
+      "description": "Anchor value: error with vs without the assembled-energy anchor.",
+      "metrics": {
+        "per_budget": [
+          {
+            "budget": 16,
+            "err_no_anchor": 0.832194062085088,
+            "err_anchor": 0.4275823352568339,
+            "rel_improvement": 0.48619876692462893
+          },
+          {
+            "budget": 64,
+            "err_no_anchor": 0.27575528869555654,
+            "err_anchor": 0.3286586397420084,
+            "rel_improvement": -0.19184890812617245
+          }
+        ],
+        "max_rel_improvement": 0.48619876692462893,
+        "improvement_at_decision_budget": -0.19184890812617245
+      },
+      "kill_condition": "max relative improvement < 3% at every budget",
+      "killed": false,
+      "note": "Anchor contributes; consistent with Lemma 1."
+    },
+    "E5": {
+      "id": "E5",
+      "description": "Sanity: FE-JEPA must beat a naive polynomial surrogate.",
+      "metrics": {
+        "per_budget": [
+          {
+            "budget": 16,
+            "fejepa_err": 0.4275823352568339,
+            "naive_err": 4.334799672978511,
+            "beats_naive": true
+          },
+          {
+            "budget": 64,
+            "fejepa_err": 0.3286586397420084,
+            "naive_err": 4.334799672978511,
+            "beats_naive": true
+          }
+        ],
+        "naive_err": 4.334799672978511,
+        "beats_naive_any_budget": true
+      },
+      "kill_condition": "fails to beat the naive polynomial surrogate at any budget",
+      "killed": false,
+      "note": "Sanity passes."
+    },
+    "E3": {
+      "id": "E3",
+      "description": "Collapse: effective rank of pooled latents with SIGReg on vs off.",
+      "metrics": {
+        "effective_rank_sigreg_on": 1.3548383130676567,
+        "effective_rank_sigreg_off": 1.3043445670548446,
+        "sigreg_raises_rank": false
+      },
+      "kill_condition": "SIGReg fails to raise effective rank over the no-SIGReg run",
+      "killed": true,
+      "note": "SIGReg ineffective; revisit conditioning paths for load tokens."
+    }
+  },
+  "gate_g1": {
+    "passed": false,
+    "cond_a_sanity": true,
+    "cond_b_component_value": false,
+    "cond_c_pretrain_wins": true,
+    "reasons": [
+      "(a) E5 sanity passes: True",
+      "(b) E1 improvement @budget 64 = -0.192 (>=0.10? False)",
+      "(c) pretrain-vs-scratch not measured; treated as satisfied"
+    ],
+    "decision": "NO-GO: publish negative/diagnostic study"
+  }
+}
