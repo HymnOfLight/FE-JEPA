@@ -12,6 +12,7 @@ import torch
 from fejepa.data.archive import load_problem, read_manifest
 from fejepa.losses import LossConfig, compute_instance_loss
 from fejepa.models.fejepa import FEJEPA, FEJEPAConfig
+from fejepa.train.schedule import make_scheduler
 
 
 @dataclass
@@ -25,6 +26,8 @@ class PretrainConfig:
     grad_clip: float = 1.0
     log_every: int = 20
     max_instances: int | None = None
+    schedule: str = "cosine"
+    warmup_frac: float = 0.05
 
 
 def _instance_files(data_dir: Path, max_instances: int | None) -> list[Path]:
@@ -33,6 +36,28 @@ def _instance_files(data_dir: Path, max_instances: int | None) -> list[Path]:
     if max_instances is not None:
         files = files[:max_instances]
     return files
+
+
+def amortized_ritz(
+    archs: list,
+    cfg: PretrainConfig | None = None,
+    model: FEJEPA | None = None,
+    dtype: torch.dtype = torch.float32,
+    verbose: bool = False,
+) -> tuple[FEJEPA, list[dict]]:
+    """Label-free amortized-Ritz training: minimise the assembled energy only.
+
+    Trains the encoder+decoder to minimise the assembled discrete energy across
+    an instance distribution using **no labels**.  By Lemma 1 the per-instance
+    fixed point is the FE solution, so this amortises the Ritz minimisation over
+    geometries/loads -- the proposal's core label-free mechanism.
+    """
+
+    cfg = cfg or PretrainConfig()
+    loss_cfg = LossConfig(
+        use_phys=True, use_pred=False, use_sigreg=False, use_inv=False, lambda_E=1.0
+    )
+    return pretrain_on_archs(archs, cfg=cfg, loss_cfg=loss_cfg, model=model, dtype=dtype, verbose=verbose)
 
 
 def pretrain_on_archs(
@@ -60,6 +85,9 @@ def pretrain_on_archs(
     if model is None:
         model = FEJEPA(cfg.model).to(dtype)
     opt = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
+    sched = make_scheduler(
+        opt, cfg.epochs * max(1, len(archs)), cfg.schedule, cfg.warmup_frac
+    )
 
     history: list[dict] = []
     step = 0
@@ -77,6 +105,7 @@ def pretrain_on_archs(
             if cfg.grad_clip:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
             opt.step()
+            sched.step()
             parts["epoch"] = epoch
             parts["step"] = step
             history.append(parts)

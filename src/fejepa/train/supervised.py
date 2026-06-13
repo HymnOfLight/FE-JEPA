@@ -22,6 +22,7 @@ from fejepa.data.archive import InstanceArchive, load_problem
 from fejepa.models.encoder import build_node_features
 from fejepa.models.fejepa import FEJEPA, FEJEPAConfig
 from fejepa.metrics import evaluate_instance
+from fejepa.train.schedule import make_scheduler
 
 
 @dataclass
@@ -32,6 +33,8 @@ class SupervisedConfig:
     seed: int = 0
     model: FEJEPAConfig = field(default_factory=FEJEPAConfig)
     grad_clip: float = 1.0
+    schedule: str = "cosine"
+    warmup_frac: float = 0.05
     # Physics-informed fine-tuning: add the assembled-energy anchor (Lemma 1),
     # normalised per instance by |Pi(U*)| so the term is scale-comparable. By
     # the gradient identity this is the supervised energy-norm gradient, so it
@@ -121,6 +124,9 @@ def train_supervised(
     if init_ckpt is not None:
         load_pretrained_into(model, init_ckpt)
     opt = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
+    sched = make_scheduler(
+        opt, cfg.epochs * max(1, len(train_archs)), cfg.schedule, cfg.warmup_frac
+    )
 
     # Pre-build per-instance energy anchors and energy scales (physics fine-tune).
     anchors: list = [None] * len(train_archs)
@@ -147,6 +153,7 @@ def train_supervised(
             if cfg.grad_clip:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
             opt.step()
+            sched.step()
             epoch_loss += disp_val
         epoch_loss /= len(train_archs)
         history.append(epoch_loss)
