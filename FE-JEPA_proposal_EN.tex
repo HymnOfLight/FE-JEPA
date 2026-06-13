@@ -1,0 +1,940 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{microtype}
+\usepackage{enumitem}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
+\usepackage{xcolor}
+
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposition}{Proposition}
+\newtheorem{remark}{Remark}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\norm}[1]{\left\lVert #1 \right\rVert}
+\newcommand{\sg}{\mathrm{sg}}
+
+\title{\textbf{FE-JEPA: Energy-Anchored Joint-Embedding Predictive Pretraining
+for Finite-Element Surrogates}\\[1ex]
+\large A Feasibility Study, State-of-the-Art Survey, and Research Execution Plan}
+\author{Prepared for Ruifeng Cao}
+\date{June 12, 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+This document examines the feasibility of combining Joint-Embedding Predictive
+Architectures (JEPA) with physics-informed learning for finite-element analysis
+(FEA), surveys the state of the art as of June 2026, and proposes a concrete
+research topic with a detailed execution plan. The intersection has just become
+an active frontier: \emph{PI-JEPA} (April~2026) applies physics-regularized
+masked latent prediction to subsurface flow on regular grids, and
+\emph{AeroJEPA} (May~2026) learns JEPA latents of 3D aerodynamic fields.
+No published work, to the best of this survey's knowledge, applies JEPA to
+unstructured-mesh structural FEA, and the only physics-anchored JEPA reports
+that its strong-form finite-difference residual was \emph{neutral or mildly
+harmful}. We argue that solid mechanics is precisely the setting where physics
+anchoring should work, because the discrete \emph{variational} energy
+$\Pi_h(\hat u)=\tfrac12\hat u^\top K\hat u - F^\top\hat u$, computable by cheap
+FE assembly without any solve, is---exactly, not approximately---the
+energy-norm distance to the FE solution up to a constant
+(Lemma~\ref{lem:energy}). The proposed topic, \textbf{FE-JEPA}, is a label-free
+pretraining framework for FEA surrogates on unstructured meshes that combines
+(i) masked geometry/boundary-condition latent prediction, (ii) mesh-refinement
+views as \emph{exact} physical augmentations, (iii) an assembled-energy anchor
+whose gradient coincides with the supervised energy-norm gradient, and (iv)
+provable collapse control via isotropic-Gaussian regularization (LeJEPA/SIGReg).
+We give the formal setup, two theory targets with one complete proof, five
+research questions, falsification-first experiments, baselines, datasets,
+metrics, a 12-month phased plan with go/no-go gates, a compute budget, and a
+risk register. Overall feasibility is assessed as \emph{high} on engineering
+grounds and \emph{medium-high} on novelty grounds, with speed of execution the
+dominant strategic risk.
+\end{abstract}
+
+\tableofcontents
+\bigskip
+
+\section{Introduction and Motivation}
+\label{sec:intro}
+
+Three independently mature research programs meet in this proposal.
+
+\paragraph{FEA surrogates.}
+Finite-element analysis is the workhorse of structural engineering, but
+high-fidelity solves are too expensive for the many-query regimes that matter
+in practice: design-space exploration, topology and shape optimization,
+uncertainty quantification, real-time monitoring, and digital twins. A decade
+of work on learned surrogates---convolutional models on rasterized geometry,
+graph networks on meshes \cite{pfaff2021}, neural operators
+\cite{li2021fno,lu2021deeponet,kovachki2023,li2023geofno}, and
+geometry-general transformers \cite{wu2024transolver}---has produced fast
+approximations of displacement and stress fields. The persistent bottleneck is
+\emph{labeled data}: every training pair requires a full FE solve, and
+accuracy degrades sharply out of the training distribution of geometries,
+loads, and boundary conditions. Benchmark efforts such as SimJEB
+\cite{whalen2021simjeb} were created precisely because realistic geometric
+diversity overwhelms surrogates trained on synthetic families.
+
+\paragraph{Physics-informed learning.}
+PINNs \cite{raissi2019} inject the governing equations into the loss and in
+principle remove the need for labels. In computational solid mechanics they
+have spawned a large literature---strong-form collocation, variational/energy
+forms (Deep Ritz \cite{e2018ritz}, the Deep Energy Method
+\cite{samaniego2020,nguyen2020dem}), and FEM--network hybrids such as I-FENN
+\cite{pantidis2023ifenn} and deep-finite-element couplings---surveyed at
+length in a 2026 review of PINNs for solid and structural
+mechanics.\footnote{\emph{Physics-Informed Neural Networks: Current Progress
+and Challenges in Computational Solid and Structural Mechanics}, CMES, vol.~146,
+no.~2, 2026. \url{https://www.techscience.com/CMES/v146n2/66323/html}}
+Yet PINNs remain predominantly \emph{per-instance} solvers: each new geometry
+or load requires fresh optimization, which is typically slower and less
+robust than a direct FE solve for the same problem; well-documented failure
+modes of strong-form residual training \cite{krishnapriyan2021,wang2022ntk}
+compound the issue. Physics-informed \emph{operator} learning (PINO
+\cite{li2024pino}, physics-informed DeepONets) amortizes across instances but
+still anchors physics through continuous-form residuals that are only
+approximately consistent with the discrete solver one ultimately wants to
+match.
+
+\paragraph{JEPA.}
+Joint-Embedding Predictive Architectures \cite{lecun2022} learn by predicting
+the \emph{latent representation} of masked or future content rather than
+reconstructing raw signals, and have progressed from images (I-JEPA
+\cite{assran2023ijepa}) to video world models (V-JEPA \cite{bardes2024vjepa},
+V-JEPA~2 \cite{meta2025vjepa2}). Two recent theoretical advances make JEPA
+attractive as a \emph{principled} component rather than a bag of heuristics:
+LeJEPA \cite{balestriero2025lejepa} proves that isotropic Gaussian embeddings
+minimize worst-case downstream risk and enforces them with a linear-time
+sketched regularizer (SIGReg) that replaces stop-gradients, EMA teachers, and
+schedule tricks; and follow-up work gives identifiability conditions under
+which a LeJEPA-style learner provably recovers latent world state
+\cite{klindt2026}.
+
+\paragraph{Why combine them, and why for FEA specifically.}
+The economics of FEA exhibit exactly the \emph{data asymmetry} that motivates
+JEPA-style pretraining for simulation, as articulated by PI-JEPA
+\cite{yee2026pijepa}: unlabeled \emph{inputs} (CAD geometries, meshes,
+material fields, load cases) are abundant and nearly free, while labeled
+\emph{outputs} (solved fields) are expensive. JEPA is the natural mechanism
+for exploiting unlabeled inputs, since it never needs the output field to
+define its pretraining signal. What JEPA alone cannot do is connect latents to
+the \emph{solution}; that is what a physics term must supply. The central
+technical observation of this proposal is that linear(ized) solid mechanics
+offers a physics term of unusual quality: the assembled discrete energy
+functional is cheap to evaluate (sparse matrix--vector products, no solve), is
+\emph{exactly} minimized by the FE solution, and---crucially---its gradient
+with respect to a candidate field equals the gradient of the supervised
+energy-norm loss against the unknown FE solution (Section~\ref{sec:theory}).
+Label-free training and supervised training literally coincide at the level of
+gradients. No strong-form, autodiff-based PINN residual has this property, and
+the one existing physics-anchored JEPA, which used finite-difference
+strong-form residuals on grids, reported the physics term to be neutral or
+mildly harmful \cite{yee2026pijepa}. FEA is therefore not merely an
+application domain for ``JEPA + PINN''; it is the domain where the combination
+can be made \emph{exact}, and where the open question left by PI-JEPA---does a
+\emph{discretization-consistent} physics anchor help where a
+discretization-inconsistent one did not?---can be answered cleanly.
+
+\section{State of the Art (as of June 2026)}
+\label{sec:sota}
+
+\subsection{Learned surrogates for FEA}
+
+Mesh-based graph networks remain the default for unstructured FEA.
+MeshGraphNets \cite{pfaff2021} established message passing on simulation
+meshes (including the quasi-static \textsc{DeformingPlate} hyperelastic
+benchmark), and a stream of derivatives applies the recipe to stress-field
+prediction on plates with holes, brackets, femurs, and multi-component
+assemblies; representative recent work includes mesh-based geometric deep
+learning for large multi-component structures (CMAME, 2026). Neural operators
+provide the resolution-robust alternative: FNO \cite{li2021fno} on regular
+grids, Geo-FNO \cite{li2023geofno} for general geometries via learned
+deformations (whose public elasticity benchmark is a standard testbed),
+DeepONet \cite{lu2021deeponet}, and the general operator framework of
+\cite{kovachki2023}. Transformer solvers such as Transolver
+\cite{wu2024transolver} currently set strong marks on geometry-general PDE
+benchmarks by attending over learned physical slices rather than raw mesh
+points. On the benchmark side, SimJEB \cite{whalen2021simjeb} provides 381
+human-designed jet-engine brackets with displacement and von~Mises stress
+fields under four load cases, explicitly framed as a surrogate-modeling
+challenge because its geometric diversity exceeds synthetic datasets; PDEBench
+\cite{takamoto2022pdebench} covers grid-based PDE suites. The shared weakness
+across this entire line: training is fully supervised on solved fields, and
+label efficiency is rarely the headline metric.
+
+\subsection{Physics-informed learning in solid mechanics}
+
+Strong-form PINNs \cite{raissi2019} are well studied for elasticity,
+elastodynamics, and fracture, but suffer documented optimization pathologies
+\cite{krishnapriyan2021,wang2022ntk} and remain per-instance. The variational
+family is the more natural fit for solids: Deep Ritz \cite{e2018ritz}
+minimizes the energy functional directly; the Deep Energy Method
+\cite{samaniego2020,nguyen2020dem} does so for finite-deformation
+hyperelasticity, where a stored-energy potential exists. Hybrid lines couple
+networks with FEM rather than replacing it: I-FENN embeds networks inside FE
+assembly for nonlocal damage \cite{pantidis2023ifenn}; ``deep finite element''
+frameworks and transfer-learning-accelerated FEM--PINN couplings (CMAME 2025;
+IJMS 2025) report accurate static response for complex shells while
+acknowledging that low efficiency and precision still hinder plain PINNs on
+boundary-value problems. The 2026 CMES review (footnote, p.~2) confirms the
+field's own diagnosis: physics-informed losses are valuable as
+\emph{regularization and label replacement}, but per-instance physics-only
+optimization does not displace FEM. Physics-informed operator learning (PINO
+\cite{li2024pino}) is the amortized compromise, yet PI-JEPA's controlled
+comparison found PINO roughly on par with plain FNO in the low-label regime it
+studied \cite{yee2026pijepa}---evidence that \emph{how} physics is injected
+matters more than \emph{whether}.
+
+\subsection{JEPA: methods and theory}
+
+I-JEPA \cite{assran2023ijepa} predicts masked image-patch embeddings; V-JEPA
+\cite{bardes2024vjepa} and V-JEPA~2 \cite{meta2025vjepa2} extend to video and
+action-conditioned planning. The framework has diffused rapidly into
+specialized domains (EEG, ultrasound, genomics, point clouds, time series,
+graphs), indicating that the recipe transfers when the masking structure is
+adapted to the modality. Two results change the design space for scientific
+applications. First, LeJEPA \cite{balestriero2025lejepa} proves the isotropic
+Gaussian is the embedding distribution minimizing worst-case downstream
+prediction risk and enforces it via SIGReg---random 1D projections matched to
+a Gaussian by a characteristic-function test---yielding a single-hyperparameter,
+linear-time objective (about 50 lines of code) that removes EMA teachers and
+stop-gradient asymmetries while reaching 79\% ImageNet top-1 with ViT-H/14.
+Second, identifiability analysis \cite{klindt2026} shows LeJEPA-style training
+recovers latent world state (up to linear maps) if and only if latents are
+isotropic Gaussian with stationary additive-noise transitions---and,
+instructively, that goal-directed (non-isotropic) data sampling breaks
+recovery. For a proposal whose scientific claim is ``the latent space encodes
+the mechanics,'' these are the right foundations: collapse control becomes a
+testable statistical condition rather than a trick, and the data-sampling
+caveat directly informs how pretraining distributions over loads and
+geometries should be designed.
+
+\subsection{The intersection: latent prediction meets physics (2025--2026)}
+\label{sec:intersection}
+
+The specific combination of JEPA-style latent prediction with
+physics-informed objectives crystallized only in the last six months.
+
+\paragraph{PI-JEPA (arXiv:2604.01349, April 2026) \cite{yee2026pijepa}.}
+The closest existing work. Setting: subsurface flow (two-phase Darcy,
+reactive transport) on \emph{regular grids}. Method: masked latent prediction
+on \emph{unlabeled input parameter fields} (permeability, porosity) with a
+Fourier-enhanced patch encoder, an EMA target encoder plus an explicit
+collapse-prevention regularizer, a bank of latent predictors structurally
+aligned with the Lie--Trotter operator splitting of the governing equations,
+and per-sub-operator \emph{strong-form finite-difference} PDE residuals as
+physics regularization; fine-tuning with as few as 100 labeled runs. Reported
+findings are unusually candid and shape this proposal: (i) self-supervised
+pretraining contributes a real but moderate 6--14\% improvement; (ii) the
+operator-split \emph{architecture}, not pretraining, is the dominant factor;
+(iii) the PDE residual term is \emph{neutral}---ablating it slightly improved
+accuracy ($-8.1\%$ error)---which the authors attribute to the
+finite-difference approximation; (iv) extension to non-elliptic systems and
+other splittings is posed as open. Items (iii)--(iv) define the gap this
+proposal attacks: replace an approximation-quality residual with a
+discretization-exact variational one, in a domain (elliptic solid statics)
+the PI-JEPA benchmarks did not touch.
+
+\paragraph{AeroJEPA (arXiv:2605.05586, May 2026).}
+\footnote{Author list not recorded in this survey; verify on arXiv before
+citing. \url{https://arxiv.org/abs/2605.05586}}JEPA latents for 3D aerodynamic \emph{solution fields}: context/target
+encoders over CFD fields, a latent predictor, and an implicit-neural-
+representation decoder, evaluated on high-lift and transonic-wing datasets
+with latent-space design optimization. Differences from this proposal: it
+pretrains on \emph{labeled} solution fields (the costly resource), targets
+external aerodynamics rather than structural FEA, and uses no physics term.
+
+\paragraph{Latent dynamics and generative solvers.}
+Latent Generative Solvers (arXiv:2602.11229, Feb.~2026)\footnote{Author list
+not recorded in this survey. \url{https://arxiv.org/abs/2602.11229}} pair a
+pretrained VAE latent space with flow-matched transformer dynamics for
+long-horizon multi-PDE rollout---reconstruction-based rather than JEPA, and
+time-dependent rather than static, but evidence that shared latent physics
+spaces are the current frontier.
+
+\paragraph{Geometry/structure self-supervision without physics.}
+The ``Shape'' industrial-CAD foundation model (arXiv:2604.22826,
+April~2026)\footnote{Author list not recorded in this survey.
+\url{https://arxiv.org/abs/2604.22826}} pretrains a 10.9M-parameter backbone
+on 61k CAD meshes (Thingi10K, MFCAD, Fusion360) via masked-token
+reconstruction of geometry statistics---demonstrating that exactly the
+unlabeled corpus FE-JEPA needs already exists at scale, but using
+reconstruction rather than latent prediction and no mechanics. A polycrystal
+microstructure foundation model (arXiv:2512.06770, Dec.~2025) similarly shows
+masked 3D pretraining improving homogenized-stiffness prediction.
+
+\paragraph{PDE foundation models (pre-JEPA lineage).}
+Multiple Physics Pretraining \cite{mccabe2023mpp}, Poseidon
+\cite{herde2024poseidon}, and DPOT \cite{hao2024dpot} pretrain on large
+corpora of \emph{solved trajectories} with supervised or autoregressive
+denoising objectives. They establish that pretraining transfers across PDE
+families, but their pretraining currency is exactly the expensive resource
+(solutions) that JEPA-style input-side pretraining avoids spending.
+
+\section{Gap Analysis and Feasibility Assessment}
+\label{sec:gap}
+
+\subsection{Gap matrix}
+
+Table~\ref{tab:gap} positions the proposal against the closest work along the
+axes that define it.
+
+\begin{table}[h]
+\centering
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}p{3.0cm}cccccc@{}}
+\toprule
+ & \textbf{Domain} & \textbf{Unstr.} & \textbf{Label-free} & \textbf{Physics} & \textbf{Physics form} & \textbf{Collapse}\\
+ & & \textbf{mesh} & \textbf{pretrain} & \textbf{anchor} & & \textbf{control}\\
+\midrule
+PI-JEPA \cite{yee2026pijepa} & subsurface flow & no (grid) & yes & yes & strong-form FD & EMA + reg.\\
+AeroJEPA (2026) & aerodynamics & point cloud & no (fields) & no & --- & EMA\\
+Shape (2026) & CAD geometry & yes & yes & no & --- & (recon.)\\
+MPP / Poseidon / DPOT & multi-PDE & no & no & no & --- & (recon./AR)\\
+PINO \cite{li2024pino} & multi-PDE & no & partial & yes & strong-form & ---\\
+Deep Ritz / DEM \cite{e2018ritz,samaniego2020} & solids & n/a & yes & yes & variational & --- (per inst.)\\
+\textbf{FE-JEPA (proposed)} & \textbf{structural FEA} & \textbf{yes} & \textbf{yes} & \textbf{yes} & \textbf{assembled energy} & \textbf{SIGReg}\\
+\bottomrule
+\end{tabular}
+\caption{Gap matrix. ``Label-free pretrain'' = pretraining signal requires no
+solved fields. ``Assembled energy'' = discrete variational functional built by
+FE assembly on the instance's own mesh, exact w.r.t.\ the FE solution.}
+\label{tab:gap}
+\end{table}
+
+No surveyed work occupies the bottom row. Targeted searches (June 2026) for
+JEPA applied to finite elements, solid mechanics, or structural analysis
+return PI-JEPA and AeroJEPA as the only physics-simulation JEPAs, neither in
+structural FEA, neither on unstructured FE meshes, and neither with a
+discretization-exact physics term.
+
+\subsection{Feasibility verdict}
+
+\paragraph{Engineering feasibility: high.}
+Every ingredient is off the shelf. Unlabeled geometry corpora exist at the
+required scale (Thingi10K/MFCAD/Fusion360 as used by Shape; ABC-style CAD
+collections; parametric generators). Meshing and assembly are commodity
+operations (Gmsh; FEniCSx, scikit-fem, or CalculiX for $K,F$ assembly);
+assembly without solving is $O(\text{nnz})$ and embarrassingly parallel, so
+the energy anchor adds only sparse mat-vecs per training step. Labeled
+evaluation sets exist (SimJEB; Geo-FNO elasticity; MeshGraphNets
+DeformingPlate; in-house ABAQUS/CalculiX generation for controlled studies).
+Encoders (graph transformer / Transolver-class), JEPA training loops, and
+SIGReg (public reference implementation) are all published. Nothing requires
+new infrastructure beyond careful integration.
+
+\paragraph{Scientific feasibility: high, with one honest caveat.}
+The core lemma (Section~\ref{sec:theory}) guarantees the physics anchor is
+\emph{informative}---it is the supervised energy-norm loss in disguise---so
+the failure mode that PI-JEPA observed for finite-difference residuals is
+structurally excluded for linear problems. The caveat: PI-JEPA also found
+that \emph{architecture} dominated \emph{pretraining} in its setting. It is
+entirely possible that the same holds here and the JEPA component contributes
+single-digit percentages while the energy anchor does the heavy lifting. That
+outcome is still a publishable, decision-relevant finding (it would say
+``amortized Ritz training, not SSL, is what FEA surrogates were missing''),
+but the proposal's experimental design must be able to attribute credit
+cleanly (Section~\ref{sec:plan}).
+
+\paragraph{Novelty feasibility: medium-high, time-sensitive.}
+Two adjacent papers appeared within the last 90 days; PI-JEPA's own
+future-work section gestures toward other operator classes; AeroJEPA's
+machinery (INR decoder over JEPA latents) is one dataset away from solid
+mechanics. The window for ``first JEPA for structural FEA with an exact
+variational anchor'' is open now and should be assumed to close within
+6--12 months. The differentiators that survive even if scooped on the
+application: the exactness lemma and gradient identity, the
+mesh-refinement-as-exact-augmentation principle, and the
+identifiability-style anti-collapse analysis---these are \emph{theory}
+contributions a rushed applications paper is unlikely to include.
+
+\section{Proposed Research Topic: FE-JEPA}
+\label{sec:proposal}
+
+\subsection{One-sentence statement}
+
+\emph{Label-free pretraining of FEA surrogates on unstructured meshes by
+joint-embedding prediction over masked geometry and boundary conditions,
+anchored to the mechanics through the assembled discrete energy functional,
+with provable collapse control and provable equivalence---for linear
+problems---between the label-free anchor and supervised energy-norm
+training.}
+
+\subsection{Formal setup}
+\label{sec:setup}
+
+Consider a family of linear elastostatic boundary-value problems indexed by
+$\theta=(\Omega,\,E,\nu,\,\Gamma_D,\Gamma_N,\,f,\,t)$: domain, material
+parameters, Dirichlet/Neumann partition, body force, traction. Weak form:
+find $u\in V$ with $a_\theta(u,v)=\ell_\theta(v)$ for all $v\in V$, where
+$a_\theta(u,v)=\int_\Omega \sigma(u):\varepsilon(v)\,dx$ and
+$\ell_\theta(v)=\int_\Omega f\cdot v\,dx+\int_{\Gamma_N} t\cdot v\,ds$.
+A mesh $\mathcal{T}_h(\theta)$ and FE space $V_h$ give the discrete system
+$K\,U^\star=F$ with $K$ symmetric positive definite after Dirichlet
+elimination, and the discrete total potential energy
+\begin{equation}
+\Pi_h(\hat u)\;=\;\tfrac12\,\hat u^\top K\,\hat u\;-\;F^\top \hat u,
+\qquad \hat u\in\R^{n}.
+\label{eq:energy}
+\end{equation}
+Assembling $(K,F)$ costs one pass over elements; \emph{no linear solve is
+performed at training time}. The unlabeled pretraining corpus is a
+distribution $\mathcal{D}$ over instances $\theta$ (geometries $\times$
+load/BC programs $\times$ material draws), each meshed at one or more
+resolutions.
+
+\paragraph{Architecture.}
+A shared encoder $f_\xi$ maps tokenized instance data---node coordinates,
+element connectivity, material fields, BC/load tokens---to per-region latents
+$z$ (graph-transformer or Transolver-class backbone, so that token count
+decouples from node count). A predictor $p_\phi(z_{\mathrm{ctx}},m)$ predicts
+target-region latents from context latents and a mask/condition descriptor
+$m$ (which carries the JEPA latent variable: load case, masked-region
+location, mesh-resolution tag). A lightweight field decoder $g_\psi$ maps
+latents to a nodal displacement field $\hat u=g_\psi(z)\in\R^{n}$ on the
+instance's own mesh (per-node head conditioned on pooled/region latents, so
+$g_\psi$ is mesh-size-agnostic).
+
+\subsection{Training objectives}
+\label{sec:objectives}
+
+\begin{align}
+\mathcal{L}
+&= \underbrace{\E_{\theta,\,\text{mask}}\,
+   \norm{\,p_\phi(z_{\mathrm{ctx}},m)-z_{\mathrm{tgt}}\,}_2^2}_{\mathcal{L}_{\mathrm{pred}}\;:\;\text{masked latent prediction}}
+\;+\;\lambda_E\,
+\underbrace{\E_{\theta,\,j}\;\Pi_h^{(\theta,j)}\!\bigl(g_\psi(z)\bigr)}_{\mathcal{L}_{\mathrm{phys}}\;:\;\text{assembled-energy anchor}}
+\notag\\[0.5ex]
+&\qquad +\;\lambda_S\,
+\underbrace{\mathrm{SIGReg}(z)}_{\text{collapse control}}
+\;+\;\lambda_I\,
+\underbrace{\E_{\theta}\,
+   \norm{\,h(z^{(h_1)})-h(z^{(h_2)})\,}_2^2}_{\mathcal{L}_{\mathrm{inv}}\;:\;\text{cross-mesh invariance}}.
+\label{eq:loss}
+\end{align}
+
+Here $j$ ranges over a small battery of load cases applied to the same
+geometry (cheap: $F$ changes, $K$ is reused), $z^{(h_1)},z^{(h_2)}$ are
+latents of the \emph{same} instance meshed at two resolutions, and $h$ is a
+projection head. Three design choices deserve emphasis.
+
+\paragraph{(a) The anchor is exact, not a PINN proxy.}
+$\mathcal{L}_{\mathrm{phys}}$ uses the instance's own assembled $(K,F)$.
+Its minimizer over $\hat u$ is the FE solution itself, so the surrogate's
+fixed point is the object FEA users actually want---not a continuous-PDE
+stand-in whose discretization mismatch PI-JEPA identified as the likely
+culprit for its neutral physics term. Section~\ref{sec:theory} makes this
+exactness quantitative.
+
+\paragraph{(b) Mesh refinement is an \emph{exact} augmentation.}
+In vision, augmentations (crops, colors) only approximately preserve
+semantics. Here, two meshes of the same boundary-value problem represent
+\emph{identical} physics by construction; $\mathcal{L}_{\mathrm{inv}}$
+therefore demands discretization-invariant latents with zero augmentation
+bias---a property neural-operator practice prizes
+\cite{kovachki2023,li2023geofno} but SSL has not exploited. This is, to this
+survey's knowledge, a new augmentation principle for scientific SSL.
+
+\paragraph{(c) Collapse control is statistical, not heuristic.}
+SIGReg \cite{balestriero2025lejepa} replaces EMA/stop-gradient machinery,
+keeps the objective symmetric (important because context and target here are
+the same modality), and---via \cite{klindt2026}---turns ``the latents encode
+the mechanics'' into a testable distributional condition. The energy anchor
+itself adds a second, physics-grounded anti-collapse force, formalized as
+Proposition~\ref{prop:collapse}.
+
+\subsection{Theory targets}
+\label{sec:theory}
+
+\begin{lemma}[Exactness of the assembled-energy anchor]
+\label{lem:energy}
+Let $K\in\R^{n\times n}$ be symmetric positive definite, $F\in\R^n$,
+$U^\star=K^{-1}F$, and $\Pi_h$ as in \eqref{eq:energy}. Then for every
+$\hat u\in\R^n$,
+\[
+\Pi_h(\hat u)-\Pi_h(U^\star)\;=\;\tfrac12\,\norm{\hat u-U^\star}_K^2,
+\qquad\text{and}\qquad
+\nabla_{\hat u}\,\Pi_h(\hat u)\;=\;K(\hat u-U^\star)
+\;=\;\nabla_{\hat u}\,\tfrac12\norm{\hat u-U^\star}_K^2 .
+\]
+\end{lemma}
+
+\begin{proof}
+$\Pi_h(\hat u)-\Pi_h(U^\star)
+=\tfrac12\hat u^\top K\hat u-F^\top\hat u
++\tfrac12 U^{\star\top}KU^\star$ using
+$\Pi_h(U^\star)=-\tfrac12 U^{\star\top}KU^\star$ (since $KU^\star=F$).
+Substituting $F=KU^\star$ in $-F^\top\hat u$ and completing the square gives
+$\tfrac12(\hat u-U^\star)^\top K(\hat u-U^\star)$. The gradient identity is
+immediate: $\nabla\Pi_h=K\hat u-F=K(\hat u-U^\star)$.
+\end{proof}
+
+\begin{remark}
+The consequence is stronger than ``same minimizer'': the \emph{label-free}
+loss $\mathcal{L}_{\mathrm{phys}}$ and the \emph{supervised} energy-norm loss
+produce identical gradients with respect to the decoded field, for every
+instance, at every training step, without ever computing $U^\star$. By
+Galerkin coercivity the energy norm controls the $H^1$ error, so this is
+supervision in the norm FE theory cares about. Per-instance constants
+$\Pi_h(U^\star)$ are unknown during training (irrelevant to gradients) and
+are computed only on the labeled evaluation split to report the
+\emph{energy gap} metric. For finite-deformation hyperelasticity, $\Pi_h$
+remains a well-defined (nonconvex) stored-energy functional and the anchor
+generalizes with stationarity replacing global minimality; for plasticity and
+contact, incremental variational formulations provide the analogue and are
+deferred to a stretch phase.
+\end{remark}
+
+\begin{proposition}[Energy anchor prevents collapse; to be formalized]
+\label{prop:collapse}
+Fix a geometry and loads $F_1,\dots,F_m$ spanning an $r$-dimensional
+subspace, with solutions $U_j^\star=K^{-1}F_j$ spanning an $r$-dimensional
+subspace of $\R^n$. If the decoder is $L$-Lipschitz (latent metric to
+$K$-norm) and each instance's decoded field achieves energy gap
+$\Pi_h(g_\psi(z_j))-\Pi_h(U_j^\star)\le\varepsilon$, then by
+Lemma~\ref{lem:energy} $\norm{g_\psi(z_j)-U^\star_j}_K\le\sqrt{2\varepsilon}$,
+hence pairwise latent distances obey
+$\norm{z_i-z_j}\ \ge\ \bigl(\norm{U_i^\star-U_j^\star}_K-2\sqrt{2\varepsilon}\bigr)/L$:
+latents of mechanically distinct instances cannot collapse, with separation
+quantified by the energy-norm geometry of the solution manifold. The research
+task is to formalize the conditioning information flow (the predictor sees the
+load token) and to connect the resulting latent geometry to the
+identifiability conditions of \cite{klindt2026}.
+\end{proposition}
+
+\subsection{Research questions and hypotheses}
+\label{sec:rq}
+
+\textbf{RQ1 (anchor quality).} Does a discretization-exact variational anchor
+deliver the gains that strong-form FD residuals failed to deliver in
+PI-JEPA? \emph{Hypothesis:} yes for elliptic solid statics; the gradient
+identity of Lemma~\ref{lem:energy} removes the approximation-mismatch failure
+mode, and ablating the anchor will hurt, reversing PI-JEPA's $-8.1\%$
+finding. This is the single most falsifiable claim in the proposal.
+
+\textbf{RQ2 (label efficiency).} With pretraining on $10^4$--$10^5$ unlabeled
+instances, how many labeled solves are needed to match a fully supervised
+Transolver/MeshGraphNets trained on $10^3$--$10^4$ solves? \emph{Target:}
+$\ge 10\times$ label reduction at equal relative-$L^2$ error on stress.
+
+\textbf{RQ3 (discretization invariance).} Does
+$\mathcal{L}_{\mathrm{inv}}$ produce latents and predictions stable under
+mesh refinement/coarsening at test time (train-coarse/test-fine gap), beating
+operator baselines on cross-resolution transfer?
+
+\textbf{RQ4 (credit assignment).} How does the benefit decompose across
+JEPA prediction, energy anchor, SIGReg, and cross-mesh invariance? (Directly
+addresses the ``architecture vs.\ pretraining'' confound PI-JEPA reported.)
+
+\textbf{RQ5 (latent semantics).} Do latents support zero-/few-shot
+engineering queries---max von Mises stress, compliance, critical-region
+localization---via linear probes, and does latent geometry correlate with
+energy-norm distances as Proposition~\ref{prop:collapse} predicts?
+
+\subsection{Novelty deltas relative to closest work}
+
+Relative to PI-JEPA \cite{yee2026pijepa}: unstructured FE meshes and
+geometry variation (vs.\ fixed grids and parameter-field variation);
+assembled variational anchor with an exactness guarantee (vs.\ FD strong-form
+found neutral); elliptic statics and energy functionals (vs.\ parabolic
+time-stepping and operator splitting); SIGReg-symmetric training (vs.\ EMA +
+ad-hoc regularizer); two theory results. Relative to AeroJEPA: label-free
+input-side pretraining (vs.\ pretraining on solved fields); structural FEA;
+physics anchoring; mesh-refinement augmentation. Relative to Deep Ritz/DEM:
+amortization across an instance distribution with a representation-learning
+objective (vs.\ per-instance optimization). Relative to Shape and geometry
+SSL: the latents are tied to mechanics, not only to shape statistics.
+
+\section{Execution Plan}
+\label{sec:plan}
+
+The plan is organized as a 12-month, four-phase program with explicit
+go/no-go gates, designed falsification-first: the cheapest experiments that
+could kill the idea run earliest. A single researcher with periodic
+collaboration suffices for Phases 0--2; Phase 3 benefits from a second pair
+of hands on theory or on the nonlinear solver stack.
+
+\subsection{Phase 0 (weeks 1--6): infrastructure and data}
+
+\textbf{Deliverable: \texttt{fejepa} v0.1 + frozen datasets + reproduced baselines.}
+Build the data pipeline: (i) a parametric 2D generator (plates with
+holes/notches/inclusions; linear elasticity; randomized Dirichlet/Neumann
+programs and load batteries) producing per-instance \texttt{(mesh, $K$, $F$
+battery)} archives via Gmsh + FEniCSx or scikit-fem, with sparse $K$ stored
+in CSR; (ii) ingestion of external corpora for later phases (SimJEB meshes
+and load cases \cite{whalen2021simjeb}; Geo-FNO elasticity
+\cite{li2023geofno}; a CAD slice of Thingi10K/Fusion360 for unlabeled-only
+pretraining); (iii) a labeled evaluation split solved once with CalculiX/
+FEniCSx (these are the \emph{only} solves in the project's training economy;
+budget $\sim$5k 2D solves and $\sim$1--2k 3D solves). Implement the encoder
+(graph-transformer with physics tokens; Transolver-style slicing as a
+variant), $g_\psi$, SIGReg (reference implementation exists), and the
+assembly-backed $\Pi_h$ loss as a sparse-matvec autograd op. Reproduce two
+supervised baselines (MeshGraphNets-style GNN; Transolver) on the 2D set to
+calibrate the evaluation harness. \emph{Gate G0:} energy-anchor unit test ---
+training $g_\psi$ alone on single instances must converge to the FE solution
+in energy norm (this just re-derives a neural linear solver, but it validates
+the entire differentiable-assembly path and Lemma~\ref{lem:energy}
+numerically).
+
+\subsection{Phase 1 (months 2--4): core FE-JEPA in 2D + falsification battery}
+
+\textbf{Deliverable: full method on 2D elasticity; ablation table; decision memo.}
+Train Eq.~\eqref{eq:loss} on $\ge 3\times 10^4$ unlabeled 2D instances;
+fine-tune with $\{16, 64, 256, 1024\}$ labels; evaluate against baselines
+trained from scratch on the same label budgets. The falsification battery
+(Table~\ref{tab:falsify}) is designed so that each headline claim has a
+cheap, pre-registered kill test, mirroring the discipline of running
+adversarial experiments before writing.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}llp{6.6cm}@{}}
+\toprule
+\textbf{ID} & \textbf{Tests} & \textbf{Kill condition (pre-registered)}\\
+\midrule
+E1 & RQ1: anchor value & Removing $\mathcal{L}_{\mathrm{phys}}$ changes
+fine-tuned error by $<3\%$ relative at every label budget
+$\Rightarrow$ anchor is neutral here too; pivot to anchor-only framing
+(amortized Ritz) and report the negative JEPA-side result honestly.\\
+E2 & RQ4: JEPA value & Anchor-only training (no $\mathcal{L}_{\mathrm{pred}}$)
+matches full FE-JEPA within 3\% $\Rightarrow$ SSL component not pulling
+weight; investigate masking design before concluding.\\
+E3 & collapse & With $\lambda_S{=}0$ and no EMA, latents collapse
+(effective rank $\to$ small) and Prop.~\ref{prop:collapse}'s prediction
+fails empirically $\Rightarrow$ revisit conditioning paths for load tokens.\\
+E4 & RQ3: mesh views & $\mathcal{L}_{\mathrm{inv}}$ off vs.\ on shows no
+cross-resolution transfer gap difference $\Rightarrow$ drop the
+augmentation claim.\\
+E5 & sanity vs.\ naive & Fails to beat SimJEB-style naive polynomial
+surrogate \cite{whalen2021simjeb} at any budget $\Rightarrow$ implementation
+bug hunt before any further claims.\\
+\bottomrule
+\end{tabular}
+\caption{Pre-registered falsification battery (Phase 1).}
+\label{tab:falsify}
+\end{table}
+
+\emph{Gate G1 (go/no-go):} proceed to 3D iff (a) E5 passes, (b) at least one
+of E1/E2 shows a $\ge 10\%$ relative improvement attributable to its
+component at the 64-label budget, and (c) pretraining beats from-scratch at
+$\le 256$ labels. Otherwise publish the negative/diagnostic study (still
+valuable given PI-JEPA's open question) and stop.
+
+\subsection{Phase 2 (months 4--8): 3D, SimJEB, and external baselines}
+
+\textbf{Deliverable: headline results; preprint draft.}
+Scale to 3D tetrahedral meshes; pretrain on unlabeled CAD-derived instances
+plus SimJEB geometries (labels held out); fine-tune and evaluate on SimJEB's
+official splits (displacement components, magnitude, von Mises stress, four
+load cases) and on Geo-FNO elasticity. Baselines: supervised MeshGraphNets
+\cite{pfaff2021}, Transolver \cite{wu2024transolver}, Geo-FNO
+\cite{li2023geofno}, PINO-style physics-informed fine-tuning
+\cite{li2024pino}, a masked-reconstruction (MAE-style) pretraining control
+with identical encoder (isolating ``JEPA vs.\ reconstruction''), and a
+Shape-style geometry-only SSL control (isolating ``mechanics anchor vs.\
+shape statistics''). Report the metric suite of
+Section~\ref{sec:metrics} with seeds $\ge 3$ and confidence intervals.
+\emph{Gate G2:} headline table shows label-efficiency gains $\ge 5\times$ at
+matched error on at least one 3D benchmark, or cross-resolution transfer
+wins; either suffices for a strong empirical paper.
+
+\subsection{Phase 3 (months 7--10, overlapping): nonlinear extension and theory}
+
+\textbf{Deliverable: hyperelastic results + formalized Prop.~\ref{prop:collapse} + identifiability connection.}
+Replace $\Pi_h$ with a Neo-Hookean stored-energy functional (assembled
+elementwise; gradients via autodiff through the element loop or via assembled
+residual vectors); evaluate on DeformingPlate-style quasi-static benchmarks.
+Honest scope: nonconvexity voids the global-minimizer half of
+Lemma~\ref{lem:energy} (stationarity remains), and stabilization
+(load-stepping curricula in the loss) is expected to matter---this is
+flagged as the project's main technical risk, not hidden. In parallel,
+formalize Proposition~\ref{prop:collapse} (Lipschitz decoder assumptions,
+conditioning information flow, connection to the isotropy conditions of
+\cite{klindt2026}); this theory thread is deliberately matched to the
+proposer's strengths and can proceed independently of GPU queues.
+
+\subsection{Phase 4 (months 10--12): writing, release, submission}
+
+Paper, code release (\texttt{fejepa} with frozen configs, data generators,
+and the labeled splits' provenance), and a model card stating verified vs.\
+unverified claims. Venue ladder, to be confirmed against actual deadlines at
+submission time: ICML/NeurIPS/ICLR main track (method + theory framing);
+AAAI-27 if Phase-2 results land early enough for its earlier deadline;
+CMAME or CMES as the mechanics-community version with extended engineering
+validation. The theory results alone (exact anchor; collapse geometry) could
+seed a short workshop paper earlier as a flag-plant if scooping risk
+materializes.
+
+\subsection{Evaluation protocol and metrics}
+\label{sec:metrics}
+
+Primary: relative $L^2$ error on displacement and von Mises stress fields;
+\emph{energy gap} $\Pi_h(\hat u)-\Pi_h(U^\star)$ (by Lemma~\ref{lem:energy},
+exactly $\tfrac12\norm{\hat u-U^\star}_K^2$; the FE-native metric);
+label-efficiency curves (error vs.\ number of labeled solves, with area-under-curve
+summary). Secondary: max-von-Mises relative error and critical-element
+localization accuracy (the quantities engineers act on); cross-resolution
+gap (train-coarse/test-fine); OOD geometry splits (held-out shape families);
+wall-clock speedup vs.\ direct solve at matched accuracy; latent diagnostics
+(effective rank, SIGReg statistic, probe $R^2$ for compliance). All
+comparisons at matched parameter counts and tuned baselines; seeds $\ge 3$;
+no metric reported without its definition in the released harness.
+
+\subsection{Compute and cost envelope}
+
+2D phases run on a single modern GPU (24--48\,GB): encoder $\le 30$M params,
+sparse anchor adds $O(\mathrm{nnz})$ per step. Phase 2 wants 4--8 GPUs for
+$\sim$3--4 weeks of accumulated training (pretraining epochs over $10^5$
+instances dominate); total project envelope on the order of 5--8k GPU-hours
+--- modest by SSL standards because the anchor replaces, rather than adds to,
+expensive labels. Data generation is CPU-bound and parallel (meshing +
+assembly; the $\sim$6--7k evaluation solves are a one-time cost).
+
+\subsection{Risk register}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}p{3.6cm}cp{7.6cm}@{}}
+\toprule
+\textbf{Risk} & \textbf{Severity} & \textbf{Mitigation}\\
+\midrule
+Scooped on ``JEPA for FEA'' & High & Speed (Phases 0--1 in $\le$4 months);
+theory deltas survive scooping; workshop flag-plant option.\\
+Anchor neutral (PI-JEPA repeat) & Medium & Lemma~\ref{lem:energy} makes
+neutrality diagnosable (decoder capacity or conditioning, not signal
+quality); E1 pre-registered; negative result still answers PI-JEPA's open
+question.\\
+JEPA adds little over anchor & Medium & E2 isolates it; pivot story
+(``amortized Ritz pretraining'') remains novel and useful.\\
+Nonlinear instability (Phase 3) & Medium & Load-stepping curricula;
+stationarity-based losses; scope paper to linear+hyperelastic only if
+needed.\\
+3D memory blow-up & Low--Med & Token-slicing encoders (Transolver-class);
+region-wise decoding; mixed precision; coarse-mesh pretraining with
+fine-mesh invariance views.\\
+Benchmark licensing/availability drift & Low & SimJEB is public
+(Harvard Dataverse); in-house generator guarantees a fallback.\\
+Over-claiming & Low & Pre-registered kill conditions; verified-reference
+policy; explicit ``unverified'' flags in the paper for any external claim
+not reproduced.\\
+\bottomrule
+\end{tabular}
+\caption{Risk register with mitigations.}
+\label{tab:risk}
+\end{table}
+
+\subsection{Timeline summary}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{@{}lp{5.2cm}p{5.6cm}@{}}
+\toprule
+\textbf{Phase (months)} & \textbf{Output} & \textbf{Gate}\\
+\midrule
+0 (0--1.5) & pipeline, datasets, baselines, anchor unit test & G0: neural-solver sanity passes\\
+1 (2--4) & 2D FE-JEPA + falsification battery & G1: component value $\ge$10\%; beats scratch at $\le$256 labels\\
+2 (4--8) & 3D + SimJEB headline table, preprint & G2: $\ge 5\times$ label efficiency or resolution-transfer win\\
+3 (7--10) & hyperelastic anchor; formal theory & theory write-up complete\\
+4 (10--12) & paper, release, submission & venue deadline (verify dates)\\
+\bottomrule
+\end{tabular}
+\caption{Phased timeline with go/no-go gates.}
+\label{tab:timeline}
+\end{table}
+
+\section{Expected Contributions}
+\label{sec:contrib}
+
+(1) The first JEPA framework for structural FEA on unstructured meshes, with
+label-free pretraining over geometry/BC/load space. (2) The assembled-energy
+anchor with an exactness lemma showing label-free and supervised energy-norm
+training coincide in gradient for linear problems---a clean answer to the
+open question raised by PI-JEPA's neutral physics term. (3) Mesh refinement
+as a provably exact SSL augmentation, with cross-resolution transfer
+evidence. (4) A collapse-geometry result linking energy gaps to latent
+separation, connected to current JEPA identifiability theory. (5) An
+open-source, falsification-first benchmark harness (generator + frozen
+splits + metrics) for label-efficient FEA surrogacy, where the field
+currently lacks a standard.
+
+\section{Honest Limitations and Open Issues}
+\label{sec:limits}
+
+The exactness guarantee is specific to linear self-adjoint problems;
+hyperelasticity retains a variational anchor but loses convexity, and
+plasticity/contact require incremental variational formulations that are
+explicitly out of the 12-month scope. The anchor supervises toward the FE
+solution \emph{on the given mesh}, inheriting its discretization error; the
+cross-mesh invariance term mitigates but does not eliminate this, and claims
+will be phrased as ``matches FEA,'' not ``matches the continuum.'' Latent
+prediction on input-side data may, as in PI-JEPA, contribute less than
+architecture or anchor; the experimental design treats this as a result to
+be measured, not a risk to be obscured. Several 2026 preprints surveyed here
+(AeroJEPA, Shape, LGS) are cited by arXiv identifier with author lists
+deliberately left unrecorded pending verification, consistent with a
+verified-references-only policy; they must be checked before any of this
+material enters a submission. Venue deadlines stated nowhere in this
+document should be taken from official CFPs at decision time.
+
+\begin{thebibliography}{99}
+\small
+
+\bibitem{raissi2019}
+M.~Raissi, P.~Perdikaris, G.~E. Karniadakis.
+Physics-informed neural networks: A deep learning framework for solving
+forward and inverse problems involving nonlinear partial differential
+equations. \emph{Journal of Computational Physics} 378:686--707, 2019.
+
+\bibitem{e2018ritz}
+W.~E, B.~Yu.
+The Deep Ritz method: A deep learning-based numerical algorithm for solving
+variational problems. \emph{Communications in Mathematics and Statistics}
+6(1):1--12, 2018.
+
+\bibitem{samaniego2020}
+E.~Samaniego, C.~Anitescu, S.~Goswami, V.~M. Nguyen-Thanh, H.~Guo,
+K.~Hamdia, X.~Zhuang, T.~Rabczuk.
+An energy approach to the solution of partial differential equations in
+computational mechanics via machine learning: Concepts, implementation and
+applications. \emph{Computer Methods in Applied Mechanics and Engineering}
+362:112790, 2020.
+
+\bibitem{nguyen2020dem}
+V.~M. Nguyen-Thanh, X.~Zhuang, T.~Rabczuk.
+A deep energy method for finite deformation hyperelasticity.
+\emph{European Journal of Mechanics --- A/Solids}, 2020.
+
+\bibitem{krishnapriyan2021}
+A.~Krishnapriyan, A.~Gholami, S.~Zhe, R.~Kirby, M.~W. Mahoney.
+Characterizing possible failure modes in physics-informed neural networks.
+\emph{NeurIPS}, 2021.
+
+\bibitem{wang2022ntk}
+S.~Wang, X.~Yu, P.~Perdikaris.
+When and why PINNs fail to train: A neural tangent kernel perspective.
+\emph{Journal of Computational Physics}, 2022. arXiv:2007.14527.
+
+\bibitem{pantidis2023ifenn}
+P.~Pantidis, M.~E. Mobasher.
+Integrated finite element neural network (I-FENN) for non-local continuum
+damage mechanics. \emph{Computer Methods in Applied Mechanics and
+Engineering} 404:115766, 2023.
+
+\bibitem{lu2021deeponet}
+L.~Lu, P.~Jin, G.~Pang, Z.~Zhang, G.~E. Karniadakis.
+Learning nonlinear operators via DeepONet based on the universal
+approximation theorem of operators. \emph{Nature Machine Intelligence}
+3:218--229, 2021.
+
+\bibitem{li2021fno}
+Z.~Li, N.~Kovachki, K.~Azizzadenesheli, B.~Liu, K.~Bhattacharya, A.~Stuart,
+A.~Anandkumar.
+Fourier neural operator for parametric partial differential equations.
+\emph{ICLR}, 2021. arXiv:2010.08895.
+
+\bibitem{li2023geofno}
+Z.~Li, D.~Z. Huang, B.~Liu, A.~Anandkumar.
+Fourier neural operator with learned deformations for PDEs on general
+geometries. \emph{Journal of Machine Learning Research}, 2023.
+arXiv:2207.05209.
+
+\bibitem{kovachki2023}
+N.~Kovachki, Z.~Li, B.~Liu, K.~Azizzadenesheli, K.~Bhattacharya, A.~Stuart,
+A.~Anandkumar.
+Neural operator: Learning maps between function spaces with applications to
+PDEs. \emph{Journal of Machine Learning Research} 24(89):1--97, 2023.
+
+\bibitem{li2024pino}
+Z.~Li, H.~Zheng, N.~Kovachki, D.~Jin, H.~Chen, B.~Liu, K.~Azizzadenesheli,
+A.~Anandkumar.
+Physics-informed neural operator for learning partial differential
+equations. arXiv:2111.03794, 2021.
+
+\bibitem{pfaff2021}
+T.~Pfaff, M.~Fortunato, A.~Sanchez-Gonzalez, P.~Battaglia.
+Learning mesh-based simulation with graph networks. \emph{ICLR}, 2021.
+arXiv:2010.03409.
+
+\bibitem{wu2024transolver}
+H.~Wu, H.~Luo, H.~Wang, J.~Wang, M.~Long.
+Transolver: A fast transformer solver for PDEs on general geometries.
+\emph{ICML}, 2024. arXiv:2402.02366.
+
+\bibitem{whalen2021simjeb}
+E.~Whalen, A.~Beyene, C.~Mueller.
+SimJEB: Simulated Jet Engine Bracket Dataset.
+\emph{Computer Graphics Forum (SGP)}, 2021. arXiv:2105.03534.
+
+\bibitem{takamoto2022pdebench}
+M.~Takamoto et al.
+PDEBench: An extensive benchmark for scientific machine learning.
+\emph{NeurIPS Datasets and Benchmarks}, 2022. arXiv:2210.07182.
+
+\bibitem{mccabe2023mpp}
+M.~McCabe et al.
+Multiple physics pretraining for physical surrogate models.
+arXiv:2310.02994, 2023.
+
+\bibitem{herde2024poseidon}
+M.~Herde et al.
+Poseidon: Efficient foundation models for PDEs. \emph{NeurIPS}, 2024.
+arXiv:2405.19101.
+
+\bibitem{hao2024dpot}
+Z.~Hao et al.
+DPOT: Auto-regressive denoising operator transformer for large-scale PDE
+pre-training. \emph{ICML}, 2024. arXiv:2403.03542.
+
+\bibitem{lecun2022}
+Y.~LeCun.
+A path towards autonomous machine intelligence (version 0.9.2).
+OpenReview position paper, 2022.
+
+\bibitem{assran2023ijepa}
+M.~Assran, Q.~Duval, I.~Misra, P.~Bojanowski, P.~Vincent, M.~Rabbat,
+Y.~LeCun, N.~Ballas.
+Self-supervised learning from images with a joint-embedding predictive
+architecture. \emph{CVPR}, 2023. arXiv:2301.08243.
+
+\bibitem{bardes2024vjepa}
+A.~Bardes et al.
+Revisiting feature prediction for learning visual representations from
+video (V-JEPA). 2024. arXiv:2404.08471.
+
+\bibitem{meta2025vjepa2}
+M.~Assran et al. (Meta FAIR).
+V-JEPA 2: Self-supervised video models enable understanding, prediction and
+planning. arXiv:2506.09985, 2025.
+
+\bibitem{bardes2022vicreg}
+A.~Bardes, J.~Ponce, Y.~LeCun.
+VICReg: Variance-invariance-covariance regularization for self-supervised
+learning. \emph{ICLR}, 2022. arXiv:2105.04906.
+
+\bibitem{balestriero2025lejepa}
+R.~Balestriero, Y.~LeCun.
+LeJEPA: Provable and scalable self-supervised learning without the
+heuristics. arXiv:2511.08544, 2025.
+
+\bibitem{klindt2026}
+D.~Klindt, Y.~LeCun, R.~Balestriero.
+When does LeJEPA learn a world model? arXiv:2605.26379, 2026.
+
+\bibitem{yee2026pijepa}
+B.~Yee, P.~Koh.
+PI-JEPA: Closing the data asymmetry in subsurface surrogate modeling via
+label-free pretraining. arXiv:2604.01349, 2026.
+
+\end{thebibliography}
+
+\end{document}
