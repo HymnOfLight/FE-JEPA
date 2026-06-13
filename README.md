@@ -28,6 +28,9 @@ proposal's execution plan.
 | MeshGraphNets-style GNN baseline | `fejepa.models.gnn` |
 | Supervised baseline / fine-tuning / label-efficiency sweep (RQ2) | `fejepa.train.supervised` |
 | Physics-informed fine-tuning (energy anchor as supervised-consistent term) | `fejepa.train.supervised` (`lambda_phys`) |
+| **Label-free amortized-Ritz training** (energy anchor only, no labels) | `fejepa.train.amortized_ritz` |
+| Cosine LR schedule + warmup (shared by all trainers) | `fejepa.train.schedule` |
+| Training-regime comparison (RQ1/RQ4 credit assignment) | `fejepa.experiments.regimes` |
 | Naive polynomial surrogate (E5 sanity target) | `fejepa.baselines` |
 | Label-free pretraining loop (in-memory + dataset variants) | `fejepa.train.pretrain` |
 | **Gate G0** neural-solver sanity check | `fejepa.train.g0` |
@@ -81,6 +84,34 @@ fejepa pretrain --data data/train2d --ckpt runs/fejepa.pt --epochs 5
 fejepa battery --data data/train2d --out runs/report.json \
     --budgets 16,64,256 --experiments E1,E3,E5
 ```
+
+### Label-free amortized Ritz, and what the energy anchor buys you
+
+The proposal's central mechanism is that minimizing the *assembled discrete
+energy* across an instance distribution amortizes the Ritz minimization — and by
+Lemma 1 the per-instance fixed point is the FE solution, with **no labels**:
+
+```bash
+# Compare labels / labels+anchor / anchor-only on the same instances.
+fejepa regimes --data data/train2d --n-train 40 --epochs 60 --out runs/regimes.json
+```
+
+A representative CPU run on coarse 2D plates (40 train / 16 val, 60 epochs):
+
+| Regime | val rel-L2 (displacement) | relative energy gap | labelled solves |
+| --- | --- | --- | --- |
+| labels only | 0.190 | 1.00 | 40 |
+| labels + anchor | 0.188 | **0.089** | 40 |
+| anchor only (label-free) | 0.242 | 0.102 | **0** |
+
+The relative energy gap equals the squared relative energy-norm error
+(`‖û−U*‖²_K / ‖U*‖²_K`), i.e. strain/stress accuracy — the quantity engineers act
+on. Labels alone give acceptable displacements but ~100% energy-norm error (poor
+strains); adding the anchor cuts that ~11× **without** hurting displacement
+accuracy, and the **label-free anchor-only** model reaches comparable physical
+consistency with zero solved fields. Accuracy keeps improving with compute (a
+150-epoch label-free run reached rel-L2 0.174 / energy gap 0.093), indicating
+undertraining rather than a capacity ceiling at this scale.
 
 ### Phase 1: falsification battery and Gate G1
 
