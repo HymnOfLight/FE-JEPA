@@ -30,7 +30,7 @@ import numpy as np
 import torch
 
 from fejepa.data.archive import InstanceArchive, load_problem, read_manifest
-from fejepa.metrics import effective_rank, evaluate_instance
+from fejepa.metrics import effective_rank
 from fejepa.models.fejepa import FEJEPAConfig
 from fejepa.train.supervised import SupervisedConfig, train_supervised
 
@@ -55,15 +55,11 @@ class BatteryConfig:
     seed: int = 0
     decision_budget: int = 64
     lambda_phys: float = 1.0
-    device: str = "cpu"
     sup: SupervisedConfig = field(
         default_factory=lambda: SupervisedConfig(
             epochs=40, lr=3e-3, model=FEJEPAConfig(dim=96, depth=4)
         )
     )
-
-    def __post_init__(self):
-        self.sup.device = self.device
 
 
 def load_split(
@@ -184,16 +180,14 @@ def e5_naive_sanity(
 # --------------------------------------------------------------------------- #
 # E3: collapse control
 # --------------------------------------------------------------------------- #
-def collect_pooled_latents(
-    model, archs: list[InstanceArchive], dtype=torch.float32, device="cpu"
-) -> np.ndarray:
+def collect_pooled_latents(model, archs: list[InstanceArchive], dtype=torch.float32) -> np.ndarray:
     from fejepa.models.encoder import build_node_features
 
     model.eval()
     with torch.no_grad():
         rows = []
         for a in archs:
-            feats = build_node_features(a, 0, dtype=dtype, device=device)
+            feats = build_node_features(a, 0, dtype=dtype)
             z = model.encode(feats).mean(dim=0)
             rows.append(z.cpu().numpy())
     return np.stack(rows, axis=0)
@@ -213,10 +207,7 @@ def e3_collapse(
     probe = archs[: min(n_probe, len(archs))]
 
     epochs = max(1, pretrain_steps // max(1, len(archs)))
-    pcfg = PretrainConfig(
-        epochs=epochs, lr=1e-3, model=cfg.sup.model, seed=cfg.seed, log_every=0,
-        device=cfg.device,
-    )
+    pcfg = PretrainConfig(epochs=epochs, lr=1e-3, model=cfg.sup.model, seed=cfg.seed, log_every=0)
 
     loss_on = LossConfig(lambda_S=0.1, use_inv=False)
     loss_off = LossConfig(lambda_S=0.0, use_inv=False)
@@ -224,8 +215,8 @@ def e3_collapse(
     model_on, _ = pretrain_on_archs(archs, cfg=pcfg, loss_cfg=loss_on)
     model_off, _ = pretrain_on_archs(archs, cfg=pcfg, loss_cfg=loss_off)
 
-    rank_on = effective_rank(collect_pooled_latents(model_on, probe, device=cfg.device))
-    rank_off = effective_rank(collect_pooled_latents(model_off, probe, device=cfg.device))
+    rank_on = effective_rank(collect_pooled_latents(model_on, probe))
+    rank_off = effective_rank(collect_pooled_latents(model_off, probe))
 
     # The proposal's expected (non-killed) picture: SIGReg keeps the effective
     # rank meaningfully higher than the no-SIGReg run.  We flag a concern if
@@ -246,88 +237,6 @@ def e3_collapse(
             if not sigreg_helps
             else "SIGReg increases latent rank as expected."
         ),
-    )
-
-
-# --------------------------------------------------------------------------- #
-# E4: mesh-refinement views (cross-resolution transfer)
-# --------------------------------------------------------------------------- #
-def load_multires_split(data_dir: str | Path, n_val: int, seed: int = 0):
-    """Split a multi-resolution dataset into (train_pairs, val_pairs)."""
-
-    data_dir = Path(data_dir)
-    manifest = read_manifest(data_dir)
-    if not manifest.get("multires"):
-        raise ValueError("expected a multi-resolution dataset (use generate_multires_dataset)")
-    pairs = manifest["pairs"]
-    rng = np.random.default_rng(seed)
-    perm = rng.permutation(len(pairs))
-    val = [pairs[i] for i in perm[:n_val]]
-    train = [pairs[i] for i in perm[n_val:]]
-
-    def _load(recs):
-        return [
-            (load_problem(data_dir / r["fine"]), load_problem(data_dir / r["coarse"]))
-            for r in recs
-        ]
-
-    return _load(train), _load(val)
-
-
-def cross_resolution_gap(model, val_pairs, device="cpu") -> dict:
-    """Mean rel-L2 on coarse and fine meshes, and the train/test resolution gap."""
-
-    rel_coarse, rel_fine = [], []
-    for fine, coarse in val_pairs:
-        rel_coarse.append(evaluate_instance(model, coarse, device=device)["rel_l2_disp"])
-        rel_fine.append(evaluate_instance(model, fine, device=device)["rel_l2_disp"])
-    rc, rf = float(np.mean(rel_coarse)), float(np.mean(rel_fine))
-    return {"rel_l2_coarse": rc, "rel_l2_fine": rf, "transfer_gap": abs(rf - rc)}
-
-
-def e4_mesh_views(
-    data_dir: str | Path,
-    cfg: BatteryConfig,
-    n_train: int = 64,
-    pretrain_steps: int = 400,
-) -> ExperimentResult:
-    """Cross-resolution transfer with the invariance term on vs off.
-
-    Trains label-free (amortized Ritz) on coarse meshes with ``L_inv`` on (using
-    the fine meshes as the invariance view) and off, then measures the
-    train-coarse / test-fine transfer gap.
-    """
-
-    from fejepa.losses import LossConfig
-    from fejepa.train.pretrain import PretrainConfig, pretrain_on_archs
-
-    train_pairs, val_pairs = load_multires_split(data_dir, cfg.n_val, cfg.seed)
-    train_pairs = train_pairs[:n_train]
-    coarse_archs = [c for _, c in train_pairs]
-    fine_archs = [f for f, _ in train_pairs]
-
-    epochs = max(1, pretrain_steps // max(1, len(coarse_archs)))
-    pcfg = PretrainConfig(epochs=epochs, lr=1.5e-3, model=cfg.sup.model, seed=cfg.seed,
-                          log_every=0, device=cfg.device)
-    loss_inv = LossConfig(use_phys=True, use_pred=False, use_sigreg=False, use_inv=True, lambda_I=1.0)
-    loss_noinv = LossConfig(use_phys=True, use_pred=False, use_sigreg=False, use_inv=False)
-
-    # Train on coarse meshes; the fine meshes are the invariance views.
-    model_inv, _ = pretrain_on_archs(coarse_archs, cfg=pcfg, loss_cfg=loss_inv, coarse_archs=fine_archs)
-    model_noinv, _ = pretrain_on_archs(coarse_archs, cfg=pcfg, loss_cfg=loss_noinv)
-
-    g_inv = cross_resolution_gap(model_inv, val_pairs, device=cfg.device)
-    g_noinv = cross_resolution_gap(model_noinv, val_pairs, device=cfg.device)
-
-    # Non-killed expectation: L_inv reduces the cross-resolution transfer gap.
-    improves = g_inv["transfer_gap"] < g_noinv["transfer_gap"]
-    return ExperimentResult(
-        id="E4",
-        description="Mesh views: cross-resolution transfer gap with L_inv on vs off.",
-        metrics={"with_inv": g_inv, "without_inv": g_noinv, "inv_reduces_gap": improves},
-        kill_condition="L_inv on shows no smaller cross-resolution transfer gap than off",
-        killed=not improves,
-        note="Drop the augmentation claim." if not improves else "L_inv improves cross-resolution transfer.",
     )
 
 
@@ -385,13 +294,9 @@ def run_battery(
     cfg: BatteryConfig | None = None,
     experiments: list[str] | None = None,
     out_report: str | Path | None = None,
-    multires_dir: str | Path | None = None,
     verbose: bool = True,
 ) -> dict:
-    """Run the (subset of) falsification battery and apply Gate G1.
-
-    ``E4`` requires a multi-resolution dataset (``multires_dir``).
-    """
+    """Run the (subset of) falsification battery and apply Gate G1."""
 
     cfg = cfg or BatteryConfig()
     experiments = experiments or ["E1", "E3", "E5"]
@@ -410,10 +315,6 @@ def run_battery(
         if verbose:
             print("[battery] running E3 (collapse)...")
         results["E3"] = e3_collapse(pool_files, cfg)
-    if "E4" in experiments and multires_dir is not None:
-        if verbose:
-            print("[battery] running E4 (mesh views / cross-resolution)...")
-        results["E4"] = e4_mesh_views(multires_dir, cfg)
 
     gate = gate_g1(results, decision_budget=cfg.decision_budget)
 

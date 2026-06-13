@@ -49,7 +49,6 @@ def run_gate_g0(
     seed: int = 0,
     dtype: torch.dtype = torch.float64,
     log_every: int = 0,
-    device: str = "cpu",
 ) -> GateG0Result:
     """Run Gate G0 on a single labelled instance."""
 
@@ -58,7 +57,7 @@ def run_gate_g0(
 
     torch.manual_seed(seed)
     cfg = FEJEPAConfig(dim=dim, depth=depth, heads=4)
-    model = FEJEPA(cfg).to(dtype).to(device)
+    model = FEJEPA(cfg).to(dtype)
     params = list(model.encoder.parameters()) + list(model.decoder.parameters())
     opt = torch.optim.Adam(params, lr=lr)
 
@@ -66,14 +65,14 @@ def run_gate_g0(
     for step in range(steps):
         model.train()
         opt.zero_grad()
-        energy, _, _ = physics_loss(model, arch, dtype=dtype, device=device)
+        energy, _, _ = physics_loss(model, arch, dtype=dtype)
         energy.backward()
         opt.step()
         history.append(float(energy.detach()))
         if log_every and (step % log_every == 0 or step == steps - 1):
             print(f"  G0 step {step:5d}  energy={history[-1]:.6e}")
 
-    metrics = evaluate_instance(model, arch, dtype=dtype, device=device)
+    metrics = evaluate_instance(model, arch, dtype=dtype)
     passed = (
         metrics["rel_l2_disp"] <= rel_l2_threshold
         and metrics["energy_gap_rel"] <= energy_gap_rel_threshold

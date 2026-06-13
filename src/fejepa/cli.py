@@ -46,9 +46,7 @@ def _cmd_gate_g0(args: argparse.Namespace) -> int:
         arch = load_problem(tmp)
         print(f"Sampled instance with {arch.n_nodes} nodes -> {tmp}")
 
-    res = run_gate_g0(
-        arch, steps=args.steps, lr=args.lr, log_every=args.log_every, device=args.device
-    )
+    res = run_gate_g0(arch, steps=args.steps, lr=args.lr, log_every=args.log_every)
     print(res)
     return 0 if res.passed else 1
 
@@ -56,22 +54,13 @@ def _cmd_gate_g0(args: argparse.Namespace) -> int:
 def _cmd_pretrain(args: argparse.Namespace) -> int:
     from fejepa.train.pretrain import PretrainConfig, pretrain
 
-    cfg = PretrainConfig(
-        epochs=args.epochs, lr=args.lr, max_instances=args.max_instances, device=args.device
-    )
+    cfg = PretrainConfig(epochs=args.epochs, lr=args.lr, max_instances=args.max_instances)
     result = pretrain(args.data, out_ckpt=args.ckpt, cfg=cfg)
     print(
         f"Pretraining done: {result['steps']} steps in "
         f"{result['elapsed_sec']:.1f}s"
         + (f", checkpoint -> {result['checkpoint']}" if "checkpoint" in result else "")
     )
-    return 0
-
-
-def _cmd_run_config(args: argparse.Namespace) -> int:
-    from fejepa.experiments.runner import run_config
-
-    run_config(args.config)
     return 0
 
 
@@ -84,8 +73,8 @@ def _cmd_regimes(args: argparse.Namespace) -> int:
 
     model_cfg = FEJEPAConfig(dim=args.dim, depth=args.depth)
     pool_files, val_archs = load_split(args.data, args.n_val, args.seed)
-    sup = SupervisedConfig(epochs=args.epochs, lr=args.lr, model=model_cfg, device=args.device)
-    pre = PretrainConfig(epochs=args.epochs, lr=args.lr, model=model_cfg, device=args.device)
+    sup = SupervisedConfig(epochs=args.epochs, lr=args.lr, model=model_cfg)
+    pre = PretrainConfig(epochs=args.epochs, lr=args.lr, model=model_cfg)
     compare_training_regimes(
         pool_files, val_archs, n_train=args.n_train, sup_cfg=sup, pre_cfg=pre, out_report=args.out
     )
@@ -103,7 +92,6 @@ def _cmd_battery(args: argparse.Namespace) -> int:
         seed=args.seed,
         decision_budget=args.decision_budget,
         lambda_phys=args.lambda_phys,
-        device=args.device,
         sup=SupervisedConfig(
             epochs=args.epochs, lr=args.lr, model=FEJEPAConfig(dim=args.dim, depth=args.depth)
         ),
@@ -147,7 +135,6 @@ def main(argv: list[str] | None = None) -> int:
     g0.add_argument("--max-holes", type=int, default=0)
     g0.add_argument("--seed", type=int, default=0)
     g0.add_argument("--log-every", type=int, default=250)
-    g0.add_argument("--device", default="cpu")
     g0.set_defaults(func=_cmd_gate_g0)
 
     pt = sub.add_parser("pretrain", help="label-free pretraining over a dataset")
@@ -156,7 +143,6 @@ def main(argv: list[str] | None = None) -> int:
     pt.add_argument("--epochs", type=int, default=1)
     pt.add_argument("--lr", type=float, default=1e-3)
     pt.add_argument("--max-instances", type=int, default=None)
-    pt.add_argument("--device", default="cpu")
     pt.set_defaults(func=_cmd_pretrain)
 
     bat = sub.add_parser("battery", help="run the Phase-1 falsification battery + Gate G1")
@@ -172,12 +158,7 @@ def main(argv: list[str] | None = None) -> int:
     bat.add_argument("--lr", type=float, default=3e-3)
     bat.add_argument("--dim", type=int, default=96)
     bat.add_argument("--depth", type=int, default=4)
-    bat.add_argument("--device", default="cpu")
     bat.set_defaults(func=_cmd_battery)
-
-    rc = sub.add_parser("run-config", help="run a full experiment pipeline from a JSON config")
-    rc.add_argument("config")
-    rc.set_defaults(func=_cmd_run_config)
 
     reg = sub.add_parser("regimes", help="compare labels / labels+anchor / anchor-only")
     reg.add_argument("--data", required=True)
@@ -189,7 +170,6 @@ def main(argv: list[str] | None = None) -> int:
     reg.add_argument("--lr", type=float, default=1.5e-3)
     reg.add_argument("--dim", type=int, default=96)
     reg.add_argument("--depth", type=int, default=4)
-    reg.add_argument("--device", default="cpu")
     reg.set_defaults(func=_cmd_regimes)
 
     info = sub.add_parser("info", help="summarise a dataset directory")
