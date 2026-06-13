@@ -165,11 +165,17 @@ def train_supervised(
             print(f"  [sup] epoch {epoch} train_rel_l2={epoch_loss:.4f}")
 
     val = [evaluate_instance(model, a, dtype=dtype, device=device) for a in val_archs]
-    rel = float(np.mean([v["rel_l2_disp"] for v in val]))
-    gap = float(np.mean([v["energy_gap_rel"] for v in val]))
+
+    def _mean(key):
+        vals = [v[key] for v in val if key in v]
+        return float(np.mean(vals)) if vals else None
+
     return {
-        "val_rel_l2_disp": rel,
-        "val_energy_gap_rel": gap,
+        "val_rel_l2_disp": _mean("rel_l2_disp"),
+        "val_energy_gap_rel": _mean("energy_gap_rel"),
+        "val_rel_l2_vm": _mean("rel_l2_vm"),
+        "val_max_vm_rel_err": _mean("max_vm_rel_err"),
+        "val_crit_recall": _mean("crit_recall"),
         "train_history": history,
         "n_train": len(train_archs),
         "model": model,
