@@ -22,6 +22,7 @@ from fejepa.data.archive import InstanceArchive, load_problem
 from fejepa.models.encoder import build_node_features
 from fejepa.models.fejepa import FEJEPA, FEJEPAConfig
 from fejepa.metrics import evaluate_instance
+from fejepa.device import resolve_device
 from fejepa.train.schedule import make_scheduler
 
 
@@ -35,7 +36,7 @@ class SupervisedConfig:
     grad_clip: float = 1.0
     schedule: str = "cosine"
     warmup_frac: float = 0.05
-    device: str = "cpu"
+    device: str = "auto"
     # Physics-informed fine-tuning: add the assembled-energy anchor (Lemma 1),
     # normalised per instance by |Pi(U*)| so the term is scale-comparable. By
     # the gradient identity this is the supervised energy-norm gradient, so it
@@ -122,7 +123,7 @@ def train_supervised(
     cfg = cfg or SupervisedConfig()
     torch.manual_seed(cfg.seed)
     rng = np.random.default_rng(cfg.seed)
-    device = cfg.device
+    device = resolve_device(cfg.device)
     model = FEJEPA(cfg.model).to(dtype).to(device)
     if init_ckpt is not None:
         load_pretrained_into(model, init_ckpt)

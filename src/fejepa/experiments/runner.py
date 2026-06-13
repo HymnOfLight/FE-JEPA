@@ -49,8 +49,11 @@ def run_config(config_path: str | Path) -> dict:
     from fejepa.train.pretrain import PretrainConfig
     from fejepa.train.supervised import SupervisedConfig, label_efficiency_sweep
 
+    from fejepa.device import describe_device, resolve_device
+
     cfg = json.loads(Path(config_path).read_text())
-    device = cfg.get("device", "cpu")
+    device = resolve_device(cfg.get("device", "auto"))
+    print(f"[run-config] device: {describe_device(device)}")
     model_cfg = FEJEPAConfig(**cfg.get("model", {}))
     data_dir = _maybe_generate(cfg["dataset"])
 

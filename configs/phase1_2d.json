@@ -1,5 +1,5 @@
 {
-  "device": "cuda",
+  "device": "auto",
   "model": {"dim": 256, "depth": 8, "heads": 8},
   "dataset": {
     "out": "runs/data2d",

@@ -16,6 +16,7 @@ import numpy as np
 import torch
 
 from fejepa.data.archive import InstanceArchive
+from fejepa.device import resolve_device
 from fejepa.losses import physics_loss
 from fejepa.metrics import evaluate_instance
 from fejepa.models.fejepa import FEJEPA, FEJEPAConfig
@@ -49,13 +50,14 @@ def run_gate_g0(
     seed: int = 0,
     dtype: torch.dtype = torch.float64,
     log_every: int = 0,
-    device: str = "cpu",
+    device: str = "auto",
 ) -> GateG0Result:
     """Run Gate G0 on a single labelled instance."""
 
     if arch.U_star is None:
         raise ValueError("Gate G0 requires a labelled instance (U_star present)")
 
+    device = resolve_device(device)
     torch.manual_seed(seed)
     cfg = FEJEPAConfig(dim=dim, depth=depth, heads=4)
     model = FEJEPA(cfg).to(dtype).to(device)

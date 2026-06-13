@@ -37,8 +37,11 @@ def compare_training_regimes(
 ) -> dict:
     sup_cfg = sup_cfg or SupervisedConfig(epochs=60, lr=1.5e-3)
     pre_cfg = pre_cfg or PretrainConfig(epochs=sup_cfg.epochs, lr=1.5e-3, model=sup_cfg.model)
-    pre_cfg.device = sup_cfg.device  # keep regimes on the same device
-    device = sup_cfg.device
+    from fejepa.device import resolve_device
+
+    device = resolve_device(sup_cfg.device)
+    sup_cfg.device = device
+    pre_cfg.device = device  # keep regimes on the same device
     train_archs = [load_problem(f) for f in pool_files[:n_train]]
 
     def _eval(model):

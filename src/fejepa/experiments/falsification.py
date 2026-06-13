@@ -30,6 +30,7 @@ import numpy as np
 import torch
 
 from fejepa.data.archive import InstanceArchive, load_problem, read_manifest
+from fejepa.device import resolve_device
 from fejepa.metrics import effective_rank, evaluate_instance
 from fejepa.models.fejepa import FEJEPAConfig
 from fejepa.train.supervised import SupervisedConfig, train_supervised
@@ -55,7 +56,7 @@ class BatteryConfig:
     seed: int = 0
     decision_budget: int = 64
     lambda_phys: float = 1.0
-    device: str = "cpu"
+    device: str = "auto"
     sup: SupervisedConfig = field(
         default_factory=lambda: SupervisedConfig(
             epochs=40, lr=3e-3, model=FEJEPAConfig(dim=96, depth=4)
@@ -63,6 +64,7 @@ class BatteryConfig:
     )
 
     def __post_init__(self):
+        self.device = resolve_device(self.device)
         self.sup.device = self.device
 
 

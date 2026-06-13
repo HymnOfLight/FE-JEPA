@@ -12,6 +12,7 @@ import torch
 from fejepa.data.archive import load_problem, read_manifest
 from fejepa.losses import LossConfig, compute_instance_loss
 from fejepa.models.fejepa import FEJEPA, FEJEPAConfig
+from fejepa.device import resolve_device
 from fejepa.train.schedule import make_scheduler
 
 
@@ -28,7 +29,7 @@ class PretrainConfig:
     max_instances: int | None = None
     schedule: str = "cosine"
     warmup_frac: float = 0.05
-    device: str = "cpu"
+    device: str = "auto"
 
 
 def _instance_files(data_dir: Path, max_instances: int | None) -> list[Path]:
@@ -83,7 +84,7 @@ def pretrain_on_archs(
 
     torch.manual_seed(cfg.seed)
     rng = np.random.default_rng(cfg.seed)
-    device = cfg.device
+    device = resolve_device(cfg.device)
     if model is None:
         model = FEJEPA(cfg.model).to(dtype).to(device)
     else:

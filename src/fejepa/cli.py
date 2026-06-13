@@ -147,7 +147,7 @@ def main(argv: list[str] | None = None) -> int:
     g0.add_argument("--max-holes", type=int, default=0)
     g0.add_argument("--seed", type=int, default=0)
     g0.add_argument("--log-every", type=int, default=250)
-    g0.add_argument("--device", default="cpu")
+    g0.add_argument("--device", default="auto", help="cpu | cuda | cuda:N | auto")
     g0.set_defaults(func=_cmd_gate_g0)
 
     pt = sub.add_parser("pretrain", help="label-free pretraining over a dataset")
@@ -156,7 +156,7 @@ def main(argv: list[str] | None = None) -> int:
     pt.add_argument("--epochs", type=int, default=1)
     pt.add_argument("--lr", type=float, default=1e-3)
     pt.add_argument("--max-instances", type=int, default=None)
-    pt.add_argument("--device", default="cpu")
+    pt.add_argument("--device", default="auto", help="cpu | cuda | cuda:N | auto")
     pt.set_defaults(func=_cmd_pretrain)
 
     bat = sub.add_parser("battery", help="run the Phase-1 falsification battery + Gate G1")
@@ -172,7 +172,7 @@ def main(argv: list[str] | None = None) -> int:
     bat.add_argument("--lr", type=float, default=3e-3)
     bat.add_argument("--dim", type=int, default=96)
     bat.add_argument("--depth", type=int, default=4)
-    bat.add_argument("--device", default="cpu")
+    bat.add_argument("--device", default="auto", help="cpu | cuda | cuda:N | auto")
     bat.set_defaults(func=_cmd_battery)
 
     rc = sub.add_parser("run-config", help="run a full experiment pipeline from a JSON config")
@@ -189,7 +189,7 @@ def main(argv: list[str] | None = None) -> int:
     reg.add_argument("--lr", type=float, default=1.5e-3)
     reg.add_argument("--dim", type=int, default=96)
     reg.add_argument("--depth", type=int, default=4)
-    reg.add_argument("--device", default="cpu")
+    reg.add_argument("--device", default="auto", help="cpu | cuda | cuda:N | auto")
     reg.set_defaults(func=_cmd_regimes)
 
     info = sub.add_parser("info", help="summarise a dataset directory")
