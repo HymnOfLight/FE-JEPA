@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+build/
+dist/
+.eggs/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Project artifacts (repo-root only)
+/data/
+/runs/
+*.pt
+*.npz
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+
+# LaTeX build artifacts
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
