@@ -87,15 +87,31 @@ fejepa battery --data data/train2d --out runs/report.json \
     --budgets 16,64,256 --experiments E1,E3,E5
 ```
 
-### Running on GPU / full-scale (config-driven)
+### Selecting CPU or GPU (`--device` / `"device"`)
 
-All training entry points accept `--device cuda`; the energy anchor uses a torch
-sparse mat-vec that runs on CPU or CUDA without host round-trips. For the full
-Phase-1 pipeline (dataset generation + regime comparison + battery +
-label-efficiency sweep) use the config runner:
+Every training and experiment entry point takes a single `device` parameter:
+
+| Value | Behaviour |
+| --- | --- |
+| `auto` (default) | use CUDA if available, else CPU |
+| `cpu` | force CPU |
+| `cuda` / `cuda:N` | force a GPU (falls back to CPU with a warning if no CUDA) |
+
+The energy anchor uses a torch sparse mat-vec that runs on CPU or CUDA without
+host round-trips, so the same config/command is portable across machines.
 
 ```bash
-# Edit configs/phase1_2d.json (device, dataset size, epochs) for your hardware.
+fejepa gate-g0 --device auto          # auto-detect (cuda if present)
+fejepa pretrain --data data/train2d --device cuda
+fejepa regimes  --data data/train2d --device cpu
+```
+
+For the full Phase-1 pipeline (dataset generation + regime comparison + battery +
+label-efficiency sweep + cross-resolution) use the config runner; set
+`"device"` in the JSON to `auto` / `cpu` / `cuda`:
+
+```bash
+# configs/phase1_2d.json uses "device": "auto" (runs on GPU where available).
 fejepa run-config configs/phase1_2d.json        # writes JSON reports to runs/
 
 # Quick CPU pipeline check (tiny, just validates the plumbing):
