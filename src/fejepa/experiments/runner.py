@@ -82,6 +82,32 @@ def run_config(config_path: str | Path) -> dict:
         run_battery(data_dir, cfg=bcfg, experiments=b.get("experiments"), out_report=b.get("out"))
         summary["reports"]["battery"] = b.get("out")
 
+    if cfg.get("mesh_views", {}).get("enabled"):
+        mv = cfg["mesh_views"]
+        print("[run-config] mesh-views / cross-resolution (E4) ...")
+        from fejepa.experiments.falsification import BatteryConfig, e4_mesh_views
+        from fejepa.fe.generator import GeneratorConfig, generate_multires_dataset
+        from fejepa.train.supervised import SupervisedConfig
+
+        mdir = Path(mv["out_data"])
+        if not (mdir / "manifest.json").exists() or mv.get("regenerate", False):
+            generate_multires_dataset(
+                mdir, n_instances=mv["n"], seed=mv.get("seed", 0),
+                coarsen=mv.get("coarsen", 1.8),
+                cfg=GeneratorConfig(max_holes=cfg["dataset"].get("max_holes", 3)),
+            )
+        bcfg = BatteryConfig(
+            n_val=mv.get("n_val", 16), seed=mv.get("seed", 0), device=device,
+            sup=SupervisedConfig(epochs=mv["epochs"], lr=mv.get("lr", 1.5e-3), model=model_cfg),
+        )
+        res = e4_mesh_views(
+            mdir, bcfg, n_train=mv.get("n_train", 64),
+            pretrain_steps=mv.get("pretrain_steps", 400),
+        )
+        if mv.get("out"):
+            Path(mv["out"]).write_text(json.dumps(res.to_dict(), indent=2))
+        summary["reports"]["mesh_views"] = mv.get("out") or res.to_dict()
+
     if cfg.get("label_efficiency", {}).get("enabled"):
         le = cfg["label_efficiency"]
         print("[run-config] label-efficiency sweep ...")

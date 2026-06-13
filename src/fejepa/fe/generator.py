@@ -158,6 +158,47 @@ def sample_instance_multires(
     return fine, coarse
 
 
+def generate_multires_dataset(
+    out_dir: str | Path,
+    n_instances: int,
+    seed: int = 0,
+    coarsen: float = 1.8,
+    labelled: bool = True,
+    cfg: GeneratorConfig | None = None,
+    verbose: bool = True,
+) -> Path:
+    """Generate paired (fine, coarse) meshings of the same BVPs.
+
+    Produces ``instance_{i}_fine.npz`` / ``instance_{i}_coarse.npz`` and a
+    manifest listing the pairs -- the substrate for the cross-mesh invariance
+    term and the cross-resolution transfer evaluation (RQ3 / E4).
+    """
+
+    from fejepa.data.archive import save_problem, write_manifest
+
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    rng = np.random.default_rng(seed)
+    cfg = cfg or GeneratorConfig()
+
+    pairs = []
+    for i in range(n_instances):
+        params = sample_params(rng, cfg)
+        fine = build_problem(params, mesh_size=params.mesh_size, labelled=labelled)
+        coarse = build_problem(params, mesh_size=params.mesh_size * coarsen, labelled=labelled)
+        ff, fc = f"instance_{i:05d}_fine.npz", f"instance_{i:05d}_coarse.npz"
+        save_problem(out_dir / ff, fine)
+        save_problem(out_dir / fc, coarse)
+        pairs.append({"fine": ff, "coarse": fc,
+                      "n_nodes_fine": int(fine.n_nodes), "n_nodes_coarse": int(coarse.n_nodes)})
+        if verbose and (i + 1) % max(1, n_instances // 10) == 0:
+            print(f"  generated {i + 1}/{n_instances} pairs")
+
+    write_manifest(out_dir, {"seed": seed, "coarsen": coarsen, "labelled": labelled,
+                             "n_instances": n_instances, "multires": True, "pairs": pairs})
+    return out_dir
+
+
 def generate_dataset(
     out_dir: str | Path,
     n_instances: int,

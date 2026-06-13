@@ -30,5 +30,18 @@
     "seed": 1,
     "out": "runs/smoke_battery.json"
   },
-  "label_efficiency": {"enabled": false}
+  "label_efficiency": {"enabled": false},
+  "mesh_views": {
+    "enabled": true,
+    "out_data": "runs/data_smoke_multires",
+    "n": 6,
+    "coarsen": 2.0,
+    "n_train": 4,
+    "n_val": 2,
+    "epochs": 3,
+    "lr": 0.002,
+    "pretrain_steps": 12,
+    "seed": 1,
+    "out": "runs/smoke_mesh_views.json"
+  }
 }
