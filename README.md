@@ -13,7 +13,7 @@ energy anchor, the model backbones, the combined training objective, supervised
 baselines, and the **Gate G0** neural-solver sanity check called for in the
 proposal's execution plan.
 
-## What is implemented (Phase 0)
+## What is implemented (Phases 0–1)
 
 | Proposal component | Module |
 | --- | --- |
@@ -27,9 +27,12 @@ proposal's execution plan.
 | Combined objective `L = L_pred + λ_E L_phys + λ_S SIGReg + λ_I L_inv` | `fejepa.losses` |
 | MeshGraphNets-style GNN baseline | `fejepa.models.gnn` |
 | Supervised baseline / fine-tuning / label-efficiency sweep (RQ2) | `fejepa.train.supervised` |
-| Label-free pretraining loop | `fejepa.train.pretrain` |
+| Physics-informed fine-tuning (energy anchor as supervised-consistent term) | `fejepa.train.supervised` (`lambda_phys`) |
+| Naive polynomial surrogate (E5 sanity target) | `fejepa.baselines` |
+| Label-free pretraining loop (in-memory + dataset variants) | `fejepa.train.pretrain` |
 | **Gate G0** neural-solver sanity check | `fejepa.train.g0` |
-| Metrics: rel-L2, energy gap `Π_h(û)−Π_h(U*) = ½‖û−U*‖²_K` | `fejepa.metrics` |
+| **Phase-1 falsification battery (E1–E5) + Gate G1** | `fejepa.experiments.falsification` |
+| Metrics: rel-L2, energy gap `Π_h(û)−Π_h(U*) = ½‖û−U*‖²_K`, effective rank | `fejepa.metrics` |
 
 ### The exactness lemma, numerically verified
 
@@ -73,7 +76,32 @@ fejepa gate-g0 --steps 2500
 
 # 4. Label-free FE-JEPA pretraining.
 fejepa pretrain --data data/train2d --ckpt runs/fejepa.pt --epochs 5
+
+# 5. Phase-1 pre-registered falsification battery + Gate G1 decision.
+fejepa battery --data data/train2d --out runs/report.json \
+    --budgets 16,64,256 --experiments E1,E3,E5
 ```
+
+### Phase 1: falsification battery and Gate G1
+
+The battery (`fejepa.experiments.falsification`) runs the proposal's
+pre-registered kill tests and applies the Gate G1 go/no-go criteria:
+
+| ID | Claim under test | Pre-registered kill condition |
+| --- | --- | --- |
+| **E1** | the assembled-energy anchor is valuable | removing `L_phys` changes fine-tuned error by < 3% at every budget |
+| **E2** | the JEPA SSL component is valuable | anchor-only matches full FE-JEPA within 3% |
+| **E3** | collapse control works | with `λ_S = 0` latents collapse (low effective rank) |
+| **E4** | mesh-refinement views help | `L_inv` on/off shows no cross-resolution gap difference |
+| **E5** | basic sanity | fails to beat a naive polynomial surrogate at any budget |
+
+`E1`, `E3`, `E5` are runnable on CPU at modest scale; `E2`/`E4` are wired but
+intended for the full-scale (GPU) Phase-1 run. The energy anchor's benefit is
+strongest once the surrogate is adequately trained — in a 35-epoch run on coarse
+2D plates, adding the anchor (`lambda_phys=1`) improved validation rel-L2 from
+0.56 → 0.38 (≈ 32% relative), consistent with Lemma 1 and reversing PI-JEPA's
+neutral-physics finding. At very short budgets the anchor can destabilize early
+optimization; the harness reports this honestly rather than hiding it.
 
 Programmatic label-efficiency study (RQ2), comparing from-scratch vs. fine-tuned:
 
@@ -94,10 +122,11 @@ pytest -q --ignore=tests/test_g0.py   # fast subset
 
 ## Status and scope
 
-This is Phase-0 research scaffolding: correct, tested, CPU-runnable, and faithful
-to the proposal's formal setup. It is **not** yet tuned for the headline
-label-efficiency results (those are Phases 1–2, requiring larger corpora and GPU
-training). The energy anchor and Lemma 1 are exact for linear elastostatics;
-hyperelastic/nonlinear anchors (Phase 3) are not yet included.
+This is Phase-0/Phase-1 research scaffolding: correct, tested, CPU-runnable, and
+faithful to the proposal's formal setup, including the pre-registered
+falsification battery and Gate G1 decision logic. It is **not** yet tuned for the
+headline label-efficiency results (those need the larger corpora and GPU training
+of a full Phase-1/2 run). The energy anchor and Lemma 1 are exact for linear
+elastostatics; hyperelastic/nonlinear anchors (Phase 3) are not yet included.
 
 See `FE-JEPA_proposal_EN.tex` for the full motivation, theory, and execution plan.
