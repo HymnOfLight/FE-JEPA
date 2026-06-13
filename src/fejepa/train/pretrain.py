@@ -35,6 +35,61 @@ def _instance_files(data_dir: Path, max_instances: int | None) -> list[Path]:
     return files
 
 
+def pretrain_on_archs(
+    archs: list,
+    cfg: PretrainConfig | None = None,
+    loss_cfg: LossConfig | None = None,
+    coarse_archs: list | None = None,
+    model: FEJEPA | None = None,
+    dtype: torch.dtype = torch.float32,
+    verbose: bool = False,
+) -> tuple[FEJEPA, list[dict]]:
+    """Pretrain on an in-memory list of archives, returning ``(model, history)``.
+
+    If ``coarse_archs`` is provided (a same-length list of coarser meshings of
+    the same BVPs), the cross-mesh invariance term is exercised; otherwise it is
+    disabled.  ``loss_cfg`` lets callers toggle individual terms (ablations).
+    """
+
+    cfg = cfg or PretrainConfig()
+    loss_cfg = loss_cfg if loss_cfg is not None else cfg.loss
+    loss_cfg.use_inv = loss_cfg.use_inv and coarse_archs is not None
+
+    torch.manual_seed(cfg.seed)
+    rng = np.random.default_rng(cfg.seed)
+    if model is None:
+        model = FEJEPA(cfg.model).to(dtype)
+    opt = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
+
+    history: list[dict] = []
+    step = 0
+    for epoch in range(cfg.epochs):
+        order = rng.permutation(len(archs))
+        for idx in order:
+            arch = archs[idx]
+            coarse = coarse_archs[idx] if coarse_archs is not None else None
+            model.train()
+            opt.zero_grad()
+            total, parts = compute_instance_loss(
+                model, arch, cfg=loss_cfg, arch_coarse=coarse, rng=rng, dtype=dtype
+            )
+            total.backward()
+            if cfg.grad_clip:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
+            opt.step()
+            parts["epoch"] = epoch
+            parts["step"] = step
+            history.append(parts)
+            if verbose and cfg.log_every and step % cfg.log_every == 0:
+                msg = "  ".join(
+                    f"{k}={v:.3e}" for k, v in parts.items()
+                    if k in {"total", "phys", "pred", "sigreg", "inv"}
+                )
+                print(f"[pretrain] epoch {epoch} step {step}  {msg}")
+            step += 1
+    return model, history
+
+
 def pretrain(
     data_dir: str | Path,
     out_ckpt: str | Path | None = None,
@@ -54,38 +109,15 @@ def pretrain(
     if not files:
         raise ValueError(f"no instances found in {data_dir}")
 
-    torch.manual_seed(cfg.seed)
-    rng = np.random.default_rng(cfg.seed)
-    model = FEJEPA(cfg.model).to(dtype)
-    opt = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
-
+    archs = [load_problem(f) for f in files]
     loss_cfg = cfg.loss
     loss_cfg.use_inv = False  # single-resolution archives
 
-    history: list[dict] = []
-    step = 0
     t0 = time.time()
-    for epoch in range(cfg.epochs):
-        order = rng.permutation(len(files))
-        for idx in order:
-            arch = load_problem(files[idx])
-            model.train()
-            opt.zero_grad()
-            total, parts = compute_instance_loss(
-                model, arch, cfg=loss_cfg, rng=rng, dtype=dtype
-            )
-            total.backward()
-            if cfg.grad_clip:
-                torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
-            opt.step()
-            parts["epoch"] = epoch
-            parts["step"] = step
-            history.append(parts)
-            if cfg.log_every and step % cfg.log_every == 0:
-                msg = "  ".join(f"{k}={v:.3e}" for k, v in parts.items() if k in {"total", "phys", "pred", "sigreg"})
-                print(f"[pretrain] epoch {epoch} step {step}  {msg}")
-            step += 1
-
+    model, history = pretrain_on_archs(
+        archs, cfg=cfg, loss_cfg=loss_cfg, dtype=dtype, verbose=True
+    )
+    step = len(history)
     elapsed = time.time() - t0
     result = {"history": history, "steps": step, "elapsed_sec": elapsed}
 

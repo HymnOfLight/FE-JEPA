@@ -11,6 +11,25 @@ from fejepa.models.encoder import build_node_features
 from fejepa.models.fejepa import FEJEPA
 
 
+def effective_rank(z: np.ndarray) -> float:
+    """Participation-ratio effective rank of an embedding matrix ``(n, d)``.
+
+    Defined as ``(sum lambda_i)^2 / sum lambda_i^2`` over covariance eigenvalues
+    -- a collapse diagnostic: a collapsed (low-dimensional) embedding has small
+    effective rank, an isotropic one has effective rank close to ``d``.
+    """
+
+    z = np.asarray(z, dtype=np.float64)
+    z = z - z.mean(axis=0, keepdims=True)
+    cov = (z.T @ z) / max(1, z.shape[0] - 1)
+    ev = np.linalg.eigvalsh(cov)
+    ev = np.clip(ev, 0.0, None)
+    s = ev.sum()
+    if s <= 1e-30:
+        return 0.0
+    return float((s * s) / (np.square(ev).sum() + 1e-30))
+
+
 def relative_l2(pred: np.ndarray, ref: np.ndarray) -> float:
     """Relative L2 error ``||pred - ref|| / ||ref||`` (row-flattened)."""
 
