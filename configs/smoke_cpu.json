@@ -1,0 +1,34 @@
+{
+  "device": "cpu",
+  "model": {"dim": 48, "depth": 2, "heads": 4},
+  "dataset": {
+    "out": "runs/data_smoke",
+    "n": 40,
+    "seed": 0,
+    "max_holes": 1,
+    "labelled": true,
+    "regenerate": false
+  },
+  "regimes": {
+    "enabled": true,
+    "n_train": 16,
+    "n_val": 8,
+    "epochs": 6,
+    "lr": 0.002,
+    "seed": 1,
+    "out": "runs/smoke_regimes.json"
+  },
+  "battery": {
+    "enabled": true,
+    "experiments": ["E5"],
+    "budgets": [8, 16],
+    "n_val": 8,
+    "epochs": 6,
+    "lr": 0.002,
+    "decision_budget": 16,
+    "lambda_phys": 1.0,
+    "seed": 1,
+    "out": "runs/smoke_battery.json"
+  },
+  "label_efficiency": {"enabled": false}
+}
