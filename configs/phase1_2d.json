@@ -1,0 +1,56 @@
+{
+  "device": "cuda",
+  "model": {"dim": 256, "depth": 8, "heads": 8},
+  "dataset": {
+    "out": "runs/data2d",
+    "n": 30000,
+    "seed": 0,
+    "max_holes": 3,
+    "labelled": true,
+    "regenerate": false
+  },
+  "regimes": {
+    "enabled": true,
+    "n_train": 1024,
+    "n_val": 256,
+    "epochs": 200,
+    "lr": 0.0015,
+    "seed": 1,
+    "out": "runs/regimes.json"
+  },
+  "battery": {
+    "enabled": true,
+    "experiments": ["E1", "E3", "E5"],
+    "budgets": [16, 64, 256, 1024],
+    "n_val": 256,
+    "epochs": 200,
+    "lr": 0.0015,
+    "decision_budget": 64,
+    "lambda_phys": 1.0,
+    "seed": 1,
+    "out": "runs/battery.json"
+  },
+  "label_efficiency": {
+    "enabled": true,
+    "budgets": [16, 64, 256, 1024],
+    "n_val": 256,
+    "epochs": 200,
+    "lr": 0.0015,
+    "init_ckpt": null,
+    "seed": 1,
+    "out": "runs/labeleff.json"
+  },
+  "mesh_views": {
+    "enabled": true,
+    "out_data": "runs/data2d_multires",
+    "n": 2000,
+    "coarsen": 1.8,
+    "n_train": 512,
+    "n_val": 128,
+    "epochs": 200,
+    "lr": 0.0015,
+    "pretrain_steps": 50000,
+    "seed": 1,
+    "out": "runs/mesh_views.json"
+  }
+}
