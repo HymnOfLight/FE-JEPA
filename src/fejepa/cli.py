@@ -64,6 +64,23 @@ def _cmd_pretrain(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_regimes(args: argparse.Namespace) -> int:
+    from fejepa.experiments.falsification import load_split
+    from fejepa.experiments.regimes import compare_training_regimes
+    from fejepa.models.fejepa import FEJEPAConfig
+    from fejepa.train.pretrain import PretrainConfig
+    from fejepa.train.supervised import SupervisedConfig
+
+    model_cfg = FEJEPAConfig(dim=args.dim, depth=args.depth)
+    pool_files, val_archs = load_split(args.data, args.n_val, args.seed)
+    sup = SupervisedConfig(epochs=args.epochs, lr=args.lr, model=model_cfg)
+    pre = PretrainConfig(epochs=args.epochs, lr=args.lr, model=model_cfg)
+    compare_training_regimes(
+        pool_files, val_archs, n_train=args.n_train, sup_cfg=sup, pre_cfg=pre, out_report=args.out
+    )
+    return 0
+
+
 def _cmd_battery(args: argparse.Namespace) -> int:
     from fejepa.experiments.falsification import BatteryConfig, run_battery
     from fejepa.models.fejepa import FEJEPAConfig
@@ -142,6 +159,18 @@ def main(argv: list[str] | None = None) -> int:
     bat.add_argument("--dim", type=int, default=96)
     bat.add_argument("--depth", type=int, default=4)
     bat.set_defaults(func=_cmd_battery)
+
+    reg = sub.add_parser("regimes", help="compare labels / labels+anchor / anchor-only")
+    reg.add_argument("--data", required=True)
+    reg.add_argument("--out", default=None)
+    reg.add_argument("--n-train", type=int, default=48)
+    reg.add_argument("--n-val", type=int, default=16)
+    reg.add_argument("--seed", type=int, default=0)
+    reg.add_argument("--epochs", type=int, default=60)
+    reg.add_argument("--lr", type=float, default=1.5e-3)
+    reg.add_argument("--dim", type=int, default=96)
+    reg.add_argument("--depth", type=int, default=4)
+    reg.set_defaults(func=_cmd_regimes)
 
     info = sub.add_parser("info", help="summarise a dataset directory")
     info.add_argument("--data", required=True)
