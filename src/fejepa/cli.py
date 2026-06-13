@@ -64,6 +64,26 @@ def _cmd_pretrain(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_battery(args: argparse.Namespace) -> int:
+    from fejepa.experiments.falsification import BatteryConfig, run_battery
+    from fejepa.models.fejepa import FEJEPAConfig
+    from fejepa.train.supervised import SupervisedConfig
+
+    cfg = BatteryConfig(
+        budgets=[int(b) for b in args.budgets.split(",")],
+        n_val=args.n_val,
+        seed=args.seed,
+        decision_budget=args.decision_budget,
+        lambda_phys=args.lambda_phys,
+        sup=SupervisedConfig(
+            epochs=args.epochs, lr=args.lr, model=FEJEPAConfig(dim=args.dim, depth=args.depth)
+        ),
+    )
+    exps = [e.strip() for e in args.experiments.split(",")] if args.experiments else None
+    run_battery(args.data, cfg=cfg, experiments=exps, out_report=args.out)
+    return 0
+
+
 def _cmd_info(args: argparse.Namespace) -> int:
     from fejepa.data.archive import read_manifest
 
@@ -107,6 +127,21 @@ def main(argv: list[str] | None = None) -> int:
     pt.add_argument("--lr", type=float, default=1e-3)
     pt.add_argument("--max-instances", type=int, default=None)
     pt.set_defaults(func=_cmd_pretrain)
+
+    bat = sub.add_parser("battery", help="run the Phase-1 falsification battery + Gate G1")
+    bat.add_argument("--data", required=True)
+    bat.add_argument("--out", default=None, help="path to write the JSON report")
+    bat.add_argument("--budgets", default="16,64,256")
+    bat.add_argument("--experiments", default="E1,E3,E5", help="comma list of E1..E5")
+    bat.add_argument("--n-val", type=int, default=16)
+    bat.add_argument("--seed", type=int, default=0)
+    bat.add_argument("--decision-budget", type=int, default=64)
+    bat.add_argument("--lambda-phys", type=float, default=1.0)
+    bat.add_argument("--epochs", type=int, default=40)
+    bat.add_argument("--lr", type=float, default=3e-3)
+    bat.add_argument("--dim", type=int, default=96)
+    bat.add_argument("--depth", type=int, default=4)
+    bat.set_defaults(func=_cmd_battery)
 
     info = sub.add_parser("info", help="summarise a dataset directory")
     info.add_argument("--data", required=True)
