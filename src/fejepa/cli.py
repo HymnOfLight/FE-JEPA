@@ -103,6 +103,8 @@ def _cmd_battery(args: argparse.Namespace) -> int:
         seed=args.seed,
         decision_budget=args.decision_budget,
         lambda_phys=args.lambda_phys,
+        lambda_grid=[float(x) for x in args.lambda_grid.split(",")] if args.lambda_grid else None,
+        n_seeds=args.n_seeds,
         device=args.device,
         sup=SupervisedConfig(
             epochs=args.epochs, lr=args.lr, model=FEJEPAConfig(dim=args.dim, depth=args.depth)
@@ -168,6 +170,8 @@ def main(argv: list[str] | None = None) -> int:
     bat.add_argument("--seed", type=int, default=0)
     bat.add_argument("--decision-budget", type=int, default=64)
     bat.add_argument("--lambda-phys", type=float, default=1.0)
+    bat.add_argument("--lambda-grid", default=None, help="comma list, e.g. 0.1,0.3,1.0 (E1 sweep)")
+    bat.add_argument("--n-seeds", type=int, default=1)
     bat.add_argument("--epochs", type=int, default=40)
     bat.add_argument("--lr", type=float, default=3e-3)
     bat.add_argument("--dim", type=int, default=96)

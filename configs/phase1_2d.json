@@ -27,6 +27,8 @@
     "lr": 0.0015,
     "decision_budget": 64,
     "lambda_phys": 1.0,
+    "lambda_grid": [0.1, 0.3, 1.0, 3.0],
+    "n_seeds": 3,
     "seed": 1,
     "out": "runs/battery.json"
   },
