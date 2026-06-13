@@ -22,4 +22,7 @@ __all__ = [
     "gate_g1",
     "load_split",
     "run_battery",
+    "compare_training_regimes",
 ]
+
+from fejepa.experiments.regimes import compare_training_regimes
