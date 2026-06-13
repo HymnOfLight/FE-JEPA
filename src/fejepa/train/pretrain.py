@@ -28,6 +28,7 @@ class PretrainConfig:
     max_instances: int | None = None
     schedule: str = "cosine"
     warmup_frac: float = 0.05
+    device: str = "cpu"
 
 
 def _instance_files(data_dir: Path, max_instances: int | None) -> list[Path]:
@@ -82,8 +83,11 @@ def pretrain_on_archs(
 
     torch.manual_seed(cfg.seed)
     rng = np.random.default_rng(cfg.seed)
+    device = cfg.device
     if model is None:
-        model = FEJEPA(cfg.model).to(dtype)
+        model = FEJEPA(cfg.model).to(dtype).to(device)
+    else:
+        model = model.to(device)
     opt = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
     sched = make_scheduler(
         opt, cfg.epochs * max(1, len(archs)), cfg.schedule, cfg.warmup_frac
@@ -99,7 +103,8 @@ def pretrain_on_archs(
             model.train()
             opt.zero_grad()
             total, parts = compute_instance_loss(
-                model, arch, cfg=loss_cfg, arch_coarse=coarse, rng=rng, dtype=dtype
+                model, arch, cfg=loss_cfg, arch_coarse=coarse, rng=rng,
+                dtype=dtype, device=device,
             )
             total.backward()
             if cfg.grad_clip:

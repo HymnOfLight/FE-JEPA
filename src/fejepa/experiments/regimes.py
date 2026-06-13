@@ -37,10 +37,12 @@ def compare_training_regimes(
 ) -> dict:
     sup_cfg = sup_cfg or SupervisedConfig(epochs=60, lr=1.5e-3)
     pre_cfg = pre_cfg or PretrainConfig(epochs=sup_cfg.epochs, lr=1.5e-3, model=sup_cfg.model)
+    pre_cfg.device = sup_cfg.device  # keep regimes on the same device
+    device = sup_cfg.device
     train_archs = [load_problem(f) for f in pool_files[:n_train]]
 
     def _eval(model):
-        vs = [evaluate_instance(model, a) for a in val_archs]
+        vs = [evaluate_instance(model, a, device=device) for a in val_archs]
         return (
             float(np.mean([v["rel_l2_disp"] for v in vs])),
             float(np.mean([v["energy_gap_rel"] for v in vs])),

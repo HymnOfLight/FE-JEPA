@@ -35,6 +35,7 @@ class SupervisedConfig:
     grad_clip: float = 1.0
     schedule: str = "cosine"
     warmup_frac: float = 0.05
+    device: str = "cpu"
     # Physics-informed fine-tuning: add the assembled-energy anchor (Lemma 1),
     # normalised per instance by |Pi(U*)| so the term is scale-comparable. By
     # the gradient identity this is the supervised energy-norm gradient, so it
@@ -59,6 +60,7 @@ def _instance_loss(
     lambda_phys: float = 0.0,
     anchor: "EnergyAnchor | None" = None,
     pi_norm: float | None = None,
+    device="cpu",
 ) -> tuple[torch.Tensor, float]:
     """Supervised displacement rel-L2 loss, optionally + energy anchor.
 
@@ -66,15 +68,15 @@ def _instance_loss(
     the displacement term and (if enabled) the physics anchor.
     """
 
-    free = torch.as_tensor(arch.free_mask.astype(np.float64), dtype=dtype)
+    free = torch.as_tensor(arch.free_mask.astype(np.float64), dtype=dtype, device=device)
     disp_terms = []
     u_rows = []
     for j in range(arch.n_loads):
-        feats = build_node_features(arch, j, dtype=dtype)
+        feats = build_node_features(arch, j, dtype=dtype, device=device)
         _, disp = model.encode_decode(feats)
         u = disp.reshape(-1) * free
         u_rows.append(u)
-        target = torch.as_tensor(arch.U_star[j], dtype=dtype)
+        target = torch.as_tensor(arch.U_star[j], dtype=dtype, device=device)
         num = torch.linalg.vector_norm(u - target)
         den = torch.linalg.vector_norm(target) + 1e-12
         disp_terms.append(num / den)
@@ -120,7 +122,8 @@ def train_supervised(
     cfg = cfg or SupervisedConfig()
     torch.manual_seed(cfg.seed)
     rng = np.random.default_rng(cfg.seed)
-    model = FEJEPA(cfg.model).to(dtype)
+    device = cfg.device
+    model = FEJEPA(cfg.model).to(dtype).to(device)
     if init_ckpt is not None:
         load_pretrained_into(model, init_ckpt)
     opt = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
@@ -135,7 +138,7 @@ def train_supervised(
         from fejepa.anchor.energy import EnergyAnchor
 
         for i, a in enumerate(train_archs):
-            anchors[i] = EnergyAnchor(a.K, a.F, a.free_mask, dtype=dtype)
+            anchors[i] = EnergyAnchor(a.K, a.F, a.free_mask, dtype=dtype, device=device)
             pi_norms[i] = _pi_star_norm(a)
 
     history = []
@@ -148,6 +151,7 @@ def train_supervised(
             loss, disp_val = _instance_loss(
                 model, train_archs[idx], dtype,
                 lambda_phys=cfg.lambda_phys, anchor=anchors[idx], pi_norm=pi_norms[idx],
+                device=device,
             )
             loss.backward()
             if cfg.grad_clip:
@@ -160,7 +164,7 @@ def train_supervised(
         if verbose and (epoch % max(1, cfg.epochs // 10) == 0 or epoch == cfg.epochs - 1):
             print(f"  [sup] epoch {epoch} train_rel_l2={epoch_loss:.4f}")
 
-    val = [evaluate_instance(model, a, dtype=dtype) for a in val_archs]
+    val = [evaluate_instance(model, a, dtype=dtype, device=device) for a in val_archs]
     rel = float(np.mean([v["rel_l2_disp"] for v in val]))
     gap = float(np.mean([v["energy_gap_rel"] for v in val]))
     return {

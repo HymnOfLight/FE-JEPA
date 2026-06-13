@@ -51,7 +51,7 @@ def _split_mask(n_nodes: int, frac: float, rng: np.random.Generator):
 
 
 def physics_loss(
-    model: FEJEPA, arch: InstanceArchive, dtype: torch.dtype = torch.float32
+    model: FEJEPA, arch: InstanceArchive, dtype: torch.dtype = torch.float32, device="cpu"
 ) -> tuple[torch.Tensor, torch.Tensor, list[torch.Tensor]]:
     """Decode every load case and return ``(mean energy, disp, latents)``.
 
@@ -60,11 +60,11 @@ def physics_loss(
     """
 
     free_mask = arch.free_mask
-    anchor = EnergyAnchor(arch.K, arch.F, free_mask, dtype=dtype)
+    anchor = EnergyAnchor(arch.K, arch.F, free_mask, dtype=dtype, device=device)
     disp_rows = []
     latents_all = []
     for j in range(arch.n_loads):
-        feats = build_node_features(arch, j, dtype=dtype)
+        feats = build_node_features(arch, j, dtype=dtype, device=device)
         latents, disp = model.encode_decode(feats)
         latents_all.append(latents)
         disp_rows.append(disp.reshape(-1))  # node-major (ux0,uy0,ux1,uy1,...)
@@ -80,19 +80,19 @@ def compute_instance_loss(
     arch_coarse: InstanceArchive | None = None,
     rng: np.random.Generator | None = None,
     dtype: torch.dtype = torch.float32,
+    device="cpu",
 ) -> tuple[torch.Tensor, dict]:
     """Compute the combined loss and a dict of (detached) component values."""
 
     cfg = cfg or LossConfig()
     rng = rng or np.random.default_rng()
-    device_zero = torch.zeros((), dtype=dtype)
-    total = device_zero.clone()
+    total = torch.zeros((), dtype=dtype, device=device)
     parts: dict[str, float] = {}
 
     latents_all: list[torch.Tensor] = []
 
     if cfg.use_phys:
-        energy, _, latents_all = physics_loss(model, arch, dtype=dtype)
+        energy, _, latents_all = physics_loss(model, arch, dtype=dtype, device=device)
         l_phys = cfg.energy_scale * energy
         total = total + cfg.lambda_E * l_phys
         parts["phys"] = float(l_phys.detach())
@@ -100,8 +100,10 @@ def compute_instance_loss(
     # Masked latent prediction on a representative load case.
     if cfg.use_pred:
         load_idx = int(rng.integers(arch.n_loads))
-        feats = build_node_features(arch, load_idx, dtype=dtype)
+        feats = build_node_features(arch, load_idx, dtype=dtype, device=device)
         target_idx, context_idx = _split_mask(arch.n_nodes, cfg.mask_frac, rng)
+        target_idx = target_idx.to(device)
+        context_idx = context_idx.to(device)
         pred, tgt = model.masked_prediction(feats, target_idx, context_idx)
         l_pred = ((pred - tgt) ** 2).mean()
         total = total + cfg.lambda_pred * l_pred
@@ -109,7 +111,7 @@ def compute_instance_loss(
 
     if cfg.use_sigreg:
         if not latents_all:
-            feats = build_node_features(arch, 0, dtype=dtype)
+            feats = build_node_features(arch, 0, dtype=dtype, device=device)
             latents_all = [model.encode(feats)]
         z = torch.cat(latents_all, dim=0)
         from fejepa.models.sigreg import sigreg_loss
@@ -119,8 +121,8 @@ def compute_instance_loss(
         parts["sigreg"] = float(l_sig.detach())
 
     if cfg.use_inv and arch_coarse is not None:
-        feats_f = build_node_features(arch, 0, dtype=dtype)
-        feats_c = build_node_features(arch_coarse, 0, dtype=dtype)
+        feats_f = build_node_features(arch, 0, dtype=dtype, device=device)
+        feats_c = build_node_features(arch_coarse, 0, dtype=dtype, device=device)
         e_f = model.project(model.encode(feats_f))
         e_c = model.project(model.encode(feats_c))
         l_inv = ((e_f - e_c) ** 2).mean()

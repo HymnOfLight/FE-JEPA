@@ -40,7 +40,7 @@ def relative_l2(pred: np.ndarray, ref: np.ndarray) -> float:
 
 @torch.no_grad()
 def evaluate_instance(
-    model: FEJEPA, arch: InstanceArchive, dtype: torch.dtype = torch.float32
+    model: FEJEPA, arch: InstanceArchive, dtype: torch.dtype = torch.float32, device="cpu"
 ) -> dict:
     """Per-instance displacement rel-L2 and energy gap, averaged over loads.
 
@@ -52,7 +52,7 @@ def evaluate_instance(
     free_mask = arch.free_mask
     disp_rows = []
     for j in range(arch.n_loads):
-        feats = build_node_features(arch, j, dtype=dtype)
+        feats = build_node_features(arch, j, dtype=dtype, device=device)
         latents, disp = model.encode_decode(feats)
         u = (disp.reshape(-1).cpu().numpy()) * free_mask
         disp_rows.append(u)

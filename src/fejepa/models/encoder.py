@@ -19,7 +19,10 @@ NODE_FEATURE_DIM = 6  # [x, y, dirichlet_x, dirichlet_y, fx, fy]
 
 
 def build_node_features(
-    arch: InstanceArchive, load_idx: int, dtype: torch.dtype = torch.float32
+    arch: InstanceArchive,
+    load_idx: int,
+    dtype: torch.dtype = torch.float32,
+    device="cpu",
 ) -> torch.Tensor:
     """Build the ``(n_nodes, NODE_FEATURE_DIM)`` node feature matrix.
 
@@ -41,7 +44,7 @@ def build_node_features(
     f = arch.F[load_idx].reshape(-1, 2) / fscale
 
     feats = np.concatenate([coords, dmask, f], axis=1)
-    return torch.as_tensor(feats, dtype=dtype)
+    return torch.as_tensor(feats, dtype=dtype, device=device)
 
 
 class _TransformerBlock(nn.Module):

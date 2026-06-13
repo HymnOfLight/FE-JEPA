@@ -55,11 +55,15 @@ class BatteryConfig:
     seed: int = 0
     decision_budget: int = 64
     lambda_phys: float = 1.0
+    device: str = "cpu"
     sup: SupervisedConfig = field(
         default_factory=lambda: SupervisedConfig(
             epochs=40, lr=3e-3, model=FEJEPAConfig(dim=96, depth=4)
         )
     )
+
+    def __post_init__(self):
+        self.sup.device = self.device
 
 
 def load_split(
@@ -180,14 +184,16 @@ def e5_naive_sanity(
 # --------------------------------------------------------------------------- #
 # E3: collapse control
 # --------------------------------------------------------------------------- #
-def collect_pooled_latents(model, archs: list[InstanceArchive], dtype=torch.float32) -> np.ndarray:
+def collect_pooled_latents(
+    model, archs: list[InstanceArchive], dtype=torch.float32, device="cpu"
+) -> np.ndarray:
     from fejepa.models.encoder import build_node_features
 
     model.eval()
     with torch.no_grad():
         rows = []
         for a in archs:
-            feats = build_node_features(a, 0, dtype=dtype)
+            feats = build_node_features(a, 0, dtype=dtype, device=device)
             z = model.encode(feats).mean(dim=0)
             rows.append(z.cpu().numpy())
     return np.stack(rows, axis=0)
@@ -207,7 +213,10 @@ def e3_collapse(
     probe = archs[: min(n_probe, len(archs))]
 
     epochs = max(1, pretrain_steps // max(1, len(archs)))
-    pcfg = PretrainConfig(epochs=epochs, lr=1e-3, model=cfg.sup.model, seed=cfg.seed, log_every=0)
+    pcfg = PretrainConfig(
+        epochs=epochs, lr=1e-3, model=cfg.sup.model, seed=cfg.seed, log_every=0,
+        device=cfg.device,
+    )
 
     loss_on = LossConfig(lambda_S=0.1, use_inv=False)
     loss_off = LossConfig(lambda_S=0.0, use_inv=False)
@@ -215,8 +224,8 @@ def e3_collapse(
     model_on, _ = pretrain_on_archs(archs, cfg=pcfg, loss_cfg=loss_on)
     model_off, _ = pretrain_on_archs(archs, cfg=pcfg, loss_cfg=loss_off)
 
-    rank_on = effective_rank(collect_pooled_latents(model_on, probe))
-    rank_off = effective_rank(collect_pooled_latents(model_off, probe))
+    rank_on = effective_rank(collect_pooled_latents(model_on, probe, device=cfg.device))
+    rank_off = effective_rank(collect_pooled_latents(model_off, probe, device=cfg.device))
 
     # The proposal's expected (non-killed) picture: SIGReg keeps the effective
     # rank meaningfully higher than the no-SIGReg run.  We flag a concern if
