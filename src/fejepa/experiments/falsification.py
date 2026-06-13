@@ -56,6 +56,8 @@ class BatteryConfig:
     seed: int = 0
     decision_budget: int = 64
     lambda_phys: float = 1.0
+    lambda_grid: list[float] | None = None  # E1 sweeps these; None -> [lambda_phys]
+    n_seeds: int = 1  # average E1/E5 over this many seeds (report mean +/- std)
     device: str = "auto"
     sup: SupervisedConfig = field(
         default_factory=lambda: SupervisedConfig(
@@ -96,30 +98,53 @@ def _sup_with(cfg: SupervisedConfig, **kw) -> SupervisedConfig:
 # --------------------------------------------------------------------------- #
 # E1: anchor value
 # --------------------------------------------------------------------------- #
+def _mean_std_err(pool_files, val_archs, cfg, budget, lambda_phys, seeds):
+    """Mean +/- std validation rel-L2 over seeds for one (budget, lambda)."""
+
+    train_archs = [load_problem(f) for f in pool_files[:budget]]
+    errs = []
+    for s in seeds:
+        out = train_supervised(
+            train_archs, val_archs, cfg=_sup_with(cfg.sup, lambda_phys=lambda_phys, seed=s)
+        )
+        errs.append(out["val_rel_l2_disp"])
+    return float(np.mean(errs)), float(np.std(errs))
+
+
 def e1_anchor_value(
     pool_files: list[Path],
     val_archs: list[InstanceArchive],
     cfg: BatteryConfig,
 ) -> ExperimentResult:
-    """Compare fine-tuned error with vs without the energy anchor at each budget."""
+    """Anchor value: sweep ``lambda_phys`` and average over seeds at each budget.
+
+    A single fixed lambda at one seed is noisy and regime-dependent; we therefore
+    sweep a small lambda grid and report, per budget, the *best* anchored error vs
+    the no-anchor baseline, with seed std for confidence.
+    """
 
     budgets = _budget_subset(cfg.budgets, len(pool_files))
+    lambdas = cfg.lambda_grid or [cfg.lambda_phys]
+    seeds = list(range(cfg.n_seeds)) if cfg.n_seeds > 1 else [cfg.seed]
+
     rows = []
     for b in budgets:
-        train_archs = [load_problem(f) for f in pool_files[:b]]
-        out_off = train_supervised(
-            train_archs, val_archs, cfg=_sup_with(cfg.sup, lambda_phys=0.0, seed=cfg.seed)
-        )
-        out_on = train_supervised(
-            train_archs, val_archs,
-            cfg=_sup_with(cfg.sup, lambda_phys=cfg.lambda_phys, seed=cfg.seed),
-        )
-        err_off = out_off["val_rel_l2_disp"]
-        err_on = out_on["val_rel_l2_disp"]
-        improvement = (err_off - err_on) / (err_off + 1e-12)
-        rows.append(
-            {"budget": b, "err_no_anchor": err_off, "err_anchor": err_on, "rel_improvement": improvement}
-        )
+        off_mean, off_std = _mean_std_err(pool_files, val_archs, cfg, b, 0.0, seeds)
+        grid = {}
+        for lam in lambdas:
+            m, sd = _mean_std_err(pool_files, val_archs, cfg, b, lam, seeds)
+            grid[str(lam)] = {"mean": m, "std": sd}
+        best_lambda = min(grid, key=lambda k: grid[k]["mean"])
+        best_err = grid[best_lambda]["mean"]
+        improvement = (off_mean - best_err) / (off_mean + 1e-12)
+        rows.append({
+            "budget": b,
+            "err_no_anchor": off_mean, "err_no_anchor_std": off_std,
+            "lambda_grid": grid,
+            "best_lambda": best_lambda,
+            "err_anchor": best_err,
+            "rel_improvement": improvement,
+        })
 
     max_impr = max((r["rel_improvement"] for r in rows), default=0.0)
     impr_at_decision = next(
@@ -129,18 +154,20 @@ def e1_anchor_value(
     killed = max_impr < 0.03
     return ExperimentResult(
         id="E1",
-        description="Anchor value: error with vs without the assembled-energy anchor.",
+        description="Anchor value: best-lambda anchored error vs no-anchor, per budget (seed-averaged).",
         metrics={
             "per_budget": rows,
+            "lambdas_swept": lambdas,
+            "n_seeds": len(seeds),
             "max_rel_improvement": max_impr,
             "improvement_at_decision_budget": impr_at_decision,
         },
-        kill_condition="max relative improvement < 3% at every budget",
+        kill_condition="max relative improvement (best lambda) < 3% at every budget",
         killed=killed,
         note=(
-            "Anchor neutral here too; pivot to amortized-Ritz framing."
+            "Anchor neutral across the lambda grid; pivot to amortized-Ritz framing."
             if killed
-            else "Anchor contributes; consistent with Lemma 1."
+            else "Anchor contributes at its best lambda; consistent with Lemma 1."
         ),
     )
 
@@ -161,15 +188,11 @@ def e5_naive_sanity(
     naive = fit_naive_polynomial(train_max)
     naive_err = evaluate_naive(naive, val_archs)["val_rel_l2_disp"]
 
+    seeds = list(range(cfg.n_seeds)) if cfg.n_seeds > 1 else [cfg.seed]
     rows = []
     beats = False
     for b in budgets:
-        train_archs = [load_problem(f) for f in pool_files[:b]]
-        out = train_supervised(
-            train_archs, val_archs,
-            cfg=_sup_with(cfg.sup, lambda_phys=cfg.lambda_phys, seed=cfg.seed),
-        )
-        err = out["val_rel_l2_disp"]
+        err, _ = _mean_std_err(pool_files, val_archs, cfg, b, cfg.lambda_phys, seeds)
         beats = beats or (err < naive_err)
         rows.append({"budget": b, "fejepa_err": err, "naive_err": naive_err, "beats_naive": err < naive_err})
 

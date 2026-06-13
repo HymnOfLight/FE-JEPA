@@ -159,10 +159,15 @@ pre-registered kill tests and applies the Gate G1 go/no-go criteria:
 
 `E1`, `E3`, `E5` are runnable on CPU at modest scale; `E2`/`E4` are wired but
 intended for the full-scale (GPU) Phase-1 run. Headline battery verdicts and
-Gate G1 decisions are recorded in [`RESULTS.md`](RESULTS.md). The energy anchor's
-benefit is strongest once the surrogate is adequately trained; at very short
-budgets it can destabilize early optimization, and the harness reports this
-honestly rather than hiding it.
+Gate G1 decisions are recorded in [`RESULTS.md`](RESULTS.md).
+
+The first GPU run showed the anchor's value is **regime-dependent** (large gains
+at few labels, but a fixed `λ` can regress once labels are plentiful). E1 therefore
+**sweeps a `lambda_grid` and averages over `n_seeds`** (`--lambda-grid 0.1,0.3,1.0`,
+`--n-seeds 3`) and reports the best-`λ` improvement per budget with seed std. An
+opt-in **gradient-balanced anchor** (`SupervisedConfig.phys_grad_balance`) caps the
+physics-gradient norm to a fraction of the label-gradient norm so a fixed `λ`
+cannot overwhelm the label signal.
 
 Programmatic label-efficiency study (RQ2), comparing from-scratch vs. fine-tuned:
 

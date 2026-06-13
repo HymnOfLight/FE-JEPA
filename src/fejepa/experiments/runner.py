@@ -79,6 +79,7 @@ def run_config(config_path: str | Path) -> dict:
         bcfg = BatteryConfig(
             budgets=b["budgets"], n_val=b.get("n_val", 64), seed=b.get("seed", 0),
             decision_budget=b.get("decision_budget", 64), lambda_phys=b.get("lambda_phys", 1.0),
+            lambda_grid=b.get("lambda_grid"), n_seeds=b.get("n_seeds", 1),
             device=device,
             sup=SupervisedConfig(epochs=b["epochs"], lr=b.get("lr", 1.5e-3), model=model_cfg),
         )

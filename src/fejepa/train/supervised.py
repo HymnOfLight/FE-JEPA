@@ -42,6 +42,11 @@ class SupervisedConfig:
     # the gradient identity this is the supervised energy-norm gradient, so it
     # is expected to accelerate convergence. lambda_phys=0 disables it (E1).
     lambda_phys: float = 0.0
+    # Gradient-balanced anchor: cap the physics-gradient norm to
+    # ``phys_balance_ratio * ||label gradient||`` so a fixed lambda cannot
+    # overwhelm the label signal when labels are plentiful.
+    phys_grad_balance: bool = False
+    phys_balance_ratio: float = 1.0
 
 
 def _pi_star_norm(arch: InstanceArchive) -> float:
@@ -83,12 +88,48 @@ def _instance_loss(
         disp_terms.append(num / den)
     disp_loss = torch.stack(disp_terms).mean()
 
-    total = disp_loss
+    phys_loss = None
     if lambda_phys > 0.0 and anchor is not None:
         u_stack = torch.stack(u_rows, dim=0)
-        energy = anchor(u_stack, reduction="mean")
-        total = total + lambda_phys * energy / (pi_norm or 1.0)
-    return total, float(disp_loss.detach())
+        phys_loss = anchor(u_stack, reduction="mean") / (pi_norm or 1.0)
+    return disp_loss, phys_loss, float(disp_loss.detach())
+
+
+def _global_grad_norm(grads) -> torch.Tensor:
+    sq = [g.pow(2).sum() for g in grads if g is not None]
+    if not sq:
+        return torch.zeros(())
+    return torch.sqrt(torch.stack(sq).sum())
+
+
+def _backward_balanced(
+    params,
+    disp_loss: torch.Tensor,
+    phys_loss: torch.Tensor,
+    lambda_phys: float,
+    ratio: float,
+) -> float:
+    """Set ``p.grad`` to the label gradient plus a magnitude-capped physics one.
+
+    The physics-gradient norm is capped to ``ratio * ||label gradient||`` so the
+    anchor complements the label signal without overwhelming it once labels are
+    plentiful (motivated by the E1 result: fixed lambda helps at 16 labels but
+    hurts at 64).  Returns the effective physics weight used.
+    """
+
+    gl = torch.autograd.grad(disp_loss, params, retain_graph=True, allow_unused=True)
+    gp = torch.autograd.grad(phys_loss, params, retain_graph=True, allow_unused=True)
+    nl = _global_grad_norm(gl)
+    npx = _global_grad_norm(gp)
+    w = min(lambda_phys, float(ratio * nl / (npx + 1e-12)))
+    for p, a, b in zip(params, gl, gp):
+        g = None
+        if a is not None:
+            g = a.clone()
+        if b is not None:
+            g = b.mul(w) if g is None else g.add_(b, alpha=w)
+        p.grad = g
+    return w
 
 
 def load_pretrained_into(model: FEJEPA, ckpt_path: str | Path) -> int:
@@ -147,14 +188,19 @@ def train_supervised(
         model.train()
         order = rng.permutation(len(train_archs))
         epoch_loss = 0.0
+        params = list(model.parameters())
         for idx in order:
             opt.zero_grad()
-            loss, disp_val = _instance_loss(
+            disp_loss, phys_loss, disp_val = _instance_loss(
                 model, train_archs[idx], dtype,
                 lambda_phys=cfg.lambda_phys, anchor=anchors[idx], pi_norm=pi_norms[idx],
                 device=device,
             )
-            loss.backward()
+            if phys_loss is not None and cfg.phys_grad_balance:
+                _backward_balanced(params, disp_loss, phys_loss, cfg.lambda_phys, cfg.phys_balance_ratio)
+            else:
+                total = disp_loss if phys_loss is None else disp_loss + cfg.lambda_phys * phys_loss
+                total.backward()
             if cfg.grad_clip:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.grad_clip)
             opt.step()
