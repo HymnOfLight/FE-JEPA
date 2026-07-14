@@ -1,0 +1,145 @@
+{
+  "_comment": "End-to-end smoke: synthetic backend (no gmsh/skfem), CPU, minutes. Exercises every stage incl. gate. Needs the torch extra.",
+  "data": {
+    "dir": "runs/smoke_data",
+    "n": 24,
+    "seed": 0,
+    "backend": "synthetic",
+    "labelled_policy": "economy"
+  },
+  "split": {
+    "n_val": 8,
+    "seed": 1
+  },
+  "model": {
+    "dim": 32,
+    "depth": 2,
+    "heads": 2,
+    "mask_frac": 0.4,
+    "features": {
+      "load_summary": true,
+      "geometry": true
+    },
+    "mgn_dim": 32,
+    "mgn_depth": 2
+  },
+  "sup": {
+    "epochs": 3,
+    "lr": 0.0015
+  },
+  "pretrain": {
+    "epochs": 3,
+    "lr": 0.001
+  },
+  "experiments": {
+    "e1": {
+      "enabled": true,
+      "budgets": [
+        4,
+        8
+      ],
+      "seeds": 2,
+      "epochs": 3,
+      "grid": []
+    },
+    "e5": {
+      "enabled": true,
+      "budgets": [
+        4,
+        8
+      ],
+      "fit_budget": 8,
+      "margin": 3.0
+    },
+    "e8": {
+      "enabled": true,
+      "budgets": [
+        4,
+        8
+      ],
+      "pool_sizes": [
+        8
+      ],
+      "seeds": 2,
+      "sup_epochs": 3,
+      "ar_epochs": 3,
+      "include_mgn": true
+    },
+    "e2": {
+      "enabled": true,
+      "budgets": [
+        4,
+        8
+      ],
+      "seeds": 2,
+      "pool_size": 8,
+      "pre_epochs": 3,
+      "ft_epochs": 3,
+      "decision_budget": 8
+    },
+    "e3": {
+      "enabled": true,
+      "steps": 2000,
+      "n_train": 8,
+      "n_probe": 12,
+      "modes": [
+        "sigreg",
+        "sigreg_pooled",
+        "vicreg_pooled"
+      ],
+      "geometry_conditions": [
+        false,
+        true
+      ]
+    },
+    "e4": {
+      "enabled": true,
+      "coarsens": [
+        1.8
+      ],
+      "n": 6,
+      "n_val": 3,
+      "n_train": 3,
+      "epochs": 3
+    },
+    "e6": {
+      "enabled": true,
+      "pool_size": 8,
+      "pre_epochs": 3,
+      "n_probe": 6
+    },
+    "e7": {
+      "enabled": true,
+      "pool_size": 8,
+      "pre_epochs": 3,
+      "fit_budget": 8,
+      "n_eval": 4,
+      "ks": [
+        0,
+        3
+      ],
+      "tol": 1e-06
+    },
+    "wp2": {
+      "enabled": true,
+      "ratios": [
+        0.2,
+        0.4
+      ],
+      "steps": 40,
+      "n_train": 6,
+      "n_holdout": 4
+    },
+    "wp6": {
+      "enabled": true,
+      "n_check": 3
+    }
+  },
+  "gate": {
+    "decision_budget": 8
+  },
+  "out": "runs/smoke_report.json",
+  "device": "auto",
+  "workers": 1,
+  "tf32": true
+}
