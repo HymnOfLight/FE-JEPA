@@ -1,0 +1,163 @@
+{
+  "_comment": "THE DECIDING RUN (plan Sec.5 item 7 / WP1). Freeze PREREG.md + git tag BEFORE executing. Reuses the audited Phase-1 corpus (labelled_policy=asis; economy not demonstrated on this corpus -- WP5 regenerates an unlabelled pool later). E2 stays disabled here: its one-shot verdict belongs to the WP2 run (plan Sec.5 item 6).",
+  "data": {
+    "dir": "runs/data2d",
+    "n": 30000,
+    "seed": 0,
+    "backend": "gmsh",
+    "labelled_policy": "asis"
+  },
+  "split": {
+    "n_val": 256,
+    "seed": 1
+  },
+  "model": {
+    "dim": 256,
+    "depth": 8,
+    "heads": 8,
+    "mask_frac": 0.4,
+    "features": {
+      "load_summary": true,
+      "geometry": true
+    },
+    "mgn_dim": 256,
+    "mgn_depth": 8
+  },
+  "sup": {
+    "epochs": 200,
+    "lr": 0.0015
+  },
+  "pretrain": {
+    "epochs": 200,
+    "lr": 0.001
+  },
+  "experiments": {
+    "e1": {
+      "enabled": true,
+      "budgets": [
+        16,
+        64,
+        256,
+        1024
+      ],
+      "seeds": 3,
+      "epochs": 200,
+      "grid": [
+        0.1,
+        0.3,
+        1.0,
+        3.0
+      ],
+      "decision_budget": 64
+    },
+    "e5": {
+      "enabled": true,
+      "budgets": [
+        16,
+        64,
+        256,
+        1024
+      ],
+      "fit_budget": 1024,
+      "margin": 3.0
+    },
+    "e8": {
+      "enabled": true,
+      "budgets": [
+        16,
+        64,
+        256,
+        1024
+      ],
+      "pool_sizes": [
+        1024
+      ],
+      "seeds": 3,
+      "sup_epochs": 200,
+      "ar_epochs": 200,
+      "include_mgn": true
+    },
+    "e2": {
+      "enabled": false,
+      "budgets": [
+        16,
+        64,
+        256
+      ],
+      "seeds": 3,
+      "pool_size": 1024,
+      "pre_epochs": 200,
+      "ft_epochs": 200,
+      "decision_budget": 64
+    },
+    "e3": {
+      "enabled": true,
+      "steps": 2000,
+      "n_train": 64,
+      "n_probe": 256,
+      "modes": [
+        "sigreg",
+        "sigreg_pooled",
+        "vicreg_pooled"
+      ],
+      "geometry_conditions": [
+        false,
+        true
+      ]
+    },
+    "e4": {
+      "enabled": true,
+      "coarsens": [
+        1.8,
+        2.5
+      ],
+      "n": 2000,
+      "n_val": 128,
+      "n_train": 512,
+      "epochs": 100
+    },
+    "e6": {
+      "enabled": true,
+      "pool_size": 1024,
+      "pre_epochs": 100,
+      "n_probe": 64
+    },
+    "e7": {
+      "enabled": true,
+      "pool_size": 1024,
+      "pre_epochs": 100,
+      "fit_budget": 1024,
+      "n_eval": 64,
+      "ks": [
+        0,
+        5,
+        20
+      ],
+      "tol": 1e-06
+    },
+    "wp2": {
+      "enabled": false,
+      "ratios": [
+        0.2,
+        0.4,
+        0.6
+      ],
+      "steps": 2000,
+      "n_train": 64,
+      "n_holdout": 64
+    },
+    "wp6": {
+      "enabled": true,
+      "n_check": 16
+    }
+  },
+  "gate": {
+    "decision_budget": 64
+  },
+  "out": "runs/report_rec8_v2.json",
+  "device": "auto",
+  "workers": 3,
+  "tf32": true,
+  "prereg_guard": true,
+  "prereg_file": "PREREG.md"
+}

@@ -1,0 +1,91 @@
+{
+ "_comment": "DIAGNOSTIC run D1 (exploratory, NOT pre-registered): 6-seed replication of the b16 labels_anchor cell in BOTH harnesses (E1' balanced arm vs E8 grid) to localise the instability found in the 2026-07-16 deciding run (per-seed disp [0.2251, 0.4579, 0.5458]). Fresh out dir so the deciding run's artefacts are never touched.",
+ "data": {
+  "dir": "runs/data2d",
+  "n": 30000,
+  "seed": 0,
+  "backend": "gmsh",
+  "labelled_policy": "asis"
+ },
+ "split": {
+  "n_val": 256,
+  "seed": 1
+ },
+ "model": {
+  "dim": 256,
+  "depth": 8,
+  "heads": 8,
+  "mask_frac": 0.4,
+  "features": {
+   "load_summary": true,
+   "geometry": true
+  },
+  "mgn_dim": 256,
+  "mgn_depth": 8
+ },
+ "sup": {
+  "epochs": 200,
+  "lr": 0.0015
+ },
+ "pretrain": {
+  "epochs": 200,
+  "lr": 0.001
+ },
+ "experiments": {
+  "e1": {
+   "enabled": true,
+   "budgets": [
+    16
+   ],
+   "seeds": 6,
+   "epochs": 200,
+   "grid": [],
+   "decision_budget": 16
+  },
+  "e2": {
+   "enabled": false
+  },
+  "e3": {
+   "enabled": false
+  },
+  "e4": {
+   "enabled": false
+  },
+  "e5": {
+   "enabled": false
+  },
+  "e6": {
+   "enabled": false
+  },
+  "e7": {
+   "enabled": false
+  },
+  "e8": {
+   "enabled": true,
+   "budgets": [
+    16
+   ],
+   "pool_sizes": [
+    1024
+   ],
+   "seeds": 6,
+   "sup_epochs": 200,
+   "ar_epochs": 200,
+   "include_mgn": false
+  },
+  "wp2": {
+   "enabled": false
+  },
+  "wp6": {
+   "enabled": false
+  }
+ },
+ "gate": {
+  "decision_budget": 16
+ },
+ "out": "runs/diag_b16/report_diag.json",
+ "device": "auto",
+ "workers": 3,
+ "tf32": true,
+ "prereg_guard": false
+}

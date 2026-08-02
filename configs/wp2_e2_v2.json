@@ -1,0 +1,93 @@
+{
+ "_comment": "WP2/E2 run (pre-registered via PREREG_WP2.md): the one-shot JEPA-vs-AR verdict (PREREG.md Sec.6, kill K3). E2 values are exactly the pre-committed block that sat disabled in phase1_rec8_v2.json; do not tune. Corpus and its 1280 labels reused as-is (labelled_policy=asis).",
+ "data": {
+  "dir": "runs/data2d",
+  "n": 30000,
+  "seed": 0,
+  "backend": "gmsh",
+  "labelled_policy": "asis"
+ },
+ "split": {
+  "n_val": 256,
+  "seed": 1
+ },
+ "model": {
+  "dim": 256,
+  "depth": 8,
+  "heads": 8,
+  "mask_frac": 0.4,
+  "features": {
+   "load_summary": true,
+   "geometry": true
+  },
+  "mgn_dim": 256,
+  "mgn_depth": 8
+ },
+ "sup": {
+  "epochs": 200,
+  "lr": 0.0015
+ },
+ "pretrain": {
+  "epochs": 200,
+  "lr": 0.001
+ },
+ "experiments": {
+  "e1": {
+   "enabled": false
+  },
+  "e2": {
+   "enabled": true,
+   "budgets": [
+    16,
+    64,
+    256
+   ],
+   "seeds": 3,
+   "pool_size": 1024,
+   "pre_epochs": 200,
+   "ft_epochs": 200,
+   "decision_budget": 64
+  },
+  "e3": {
+   "enabled": false
+  },
+  "e4": {
+   "enabled": false
+  },
+  "e5": {
+   "enabled": false
+  },
+  "e6": {
+   "enabled": false
+  },
+  "e7": {
+   "enabled": false
+  },
+  "e8": {
+   "enabled": false
+  },
+  "wp2": {
+   "enabled": true,
+   "ratios": [
+    0.2,
+    0.4,
+    0.6
+   ],
+   "steps": 2000,
+   "n_train": 64,
+   "n_holdout": 64
+  },
+  "wp6": {
+   "enabled": false
+  }
+ },
+ "gate": {
+  "decision_budget": 64
+ },
+ "out": "runs/wp2_e2/report_wp2_e2.json",
+ "device": "auto",
+ "workers": 3,
+ "tf32": true,
+ "prereg_guard": true,
+ "prereg_file": "PREREG_WP2.md"
+}

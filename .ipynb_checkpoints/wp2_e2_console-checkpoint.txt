@@ -1,0 +1,363 @@
+0/204800 (80%) loss=-4.7599e-02
+[pretrain E2 AR s0] step 184320/204800 (90%) loss=-9.1019e-03
+[pretrain E2 AR s0] step 204800/204800 (100%) loss=-2.6686e-02
+[E2] 1/33 (3%) elapsed 00:38:46 eta 20:40:59 | AR pretrain s0
+[pretrain E2 JEPA s0] step 20480/204800 (10%) loss=3.4089e-02
+[pretrain E2 JEPA s0] step 40960/204800 (20%) loss=1.5118e-02
+[pretrain E2 JEPA s0] step 61440/204800 (30%) loss=6.0618e-02
+[pretrain E2 JEPA s0] step 81920/204800 (40%) loss=4.9861e-02
+[pretrain E2 JEPA s0] step 102400/204800 (50%) loss=-1.1466e-02
+[pretrain E2 JEPA s0] step 122880/204800 (60%) loss=7.7444e-02
+[pretrain E2 JEPA s0] step 143360/204800 (70%) loss=5.2469e-02
+[pretrain E2 JEPA s0] step 163840/204800 (80%) loss=3.7697e-02
+[pretrain E2 JEPA s0] step 184320/204800 (90%) loss=-6.1049e-02
+[pretrain E2 JEPA s0] step 204800/204800 (100%) loss=3.9599e-02
+[E2] 2/33 (6%) elapsed 02:04:22 eta 32:07:54 | JEPA pretrain s0
+[sup:none E2 scratch b16 s0] step 320/3200 (10%) disp=0.8480
+[sup:none E2 scratch b16 s0] step 640/3200 (20%) disp=0.9081
+[sup:none E2 scratch b16 s0] step 960/3200 (30%) disp=0.8137
+[sup:none E2 scratch b16 s0] step 1280/3200 (40%) disp=0.5955
+[sup:none E2 scratch b16 s0] step 1600/3200 (50%) disp=0.4978
+[sup:none E2 scratch b16 s0] step 1920/3200 (60%) disp=0.3710
+[sup:none E2 scratch b16 s0] step 2240/3200 (70%) disp=0.1236
+[sup:none E2 scratch b16 s0] step 2560/3200 (80%) disp=0.1064
+[sup:none E2 scratch b16 s0] step 2880/3200 (90%) disp=0.4232
+[sup:none E2 scratch b16 s0] step 3200/3200 (100%) disp=0.0705
+[E2] 3/33 (9%) elapsed 02:05:00 eta 20:50:03 | scratch b16 s0
+[sup:none E2 ar_ft b16 s0] step 320/3200 (10%) disp=0.0991
+[sup:none E2 ar_ft b16 s0] step 640/3200 (20%) disp=0.0526
+[sup:none E2 ar_ft b16 s0] step 960/3200 (30%) disp=0.1279
+[sup:none E2 ar_ft b16 s0] step 1280/3200 (40%) disp=0.0881
+[sup:none E2 ar_ft b16 s0] step 1600/3200 (50%) disp=0.0352
+[sup:none E2 ar_ft b16 s0] step 1920/3200 (60%) disp=0.0572
+[sup:none E2 ar_ft b16 s0] step 2240/3200 (70%) disp=0.0214
+[sup:none E2 ar_ft b16 s0] step 2560/3200 (80%) disp=0.0252
+[sup:none E2 ar_ft b16 s0] step 2880/3200 (90%) disp=0.0089
+[sup:none E2 ar_ft b16 s0] step 3200/3200 (100%) disp=0.0054
+[E2] 4/33 (12%) elapsed 02:05:36 eta 15:10:42 | ar_ft b16 s0
+[sup:none E2 jepa_ft b16 s0] step 320/3200 (10%) disp=0.4581
+[sup:none E2 jepa_ft b16 s0] step 640/3200 (20%) disp=0.0887
+[sup:none E2 jepa_ft b16 s0] step 960/3200 (30%) disp=0.1904
+[sup:none E2 jepa_ft b16 s0] step 1280/3200 (40%) disp=0.0940
+[sup:none E2 jepa_ft b16 s0] step 1600/3200 (50%) disp=0.0994
+[sup:none E2 jepa_ft b16 s0] step 1920/3200 (60%) disp=0.0686
+[sup:none E2 jepa_ft b16 s0] step 2240/3200 (70%) disp=0.0615
+[sup:none E2 jepa_ft b16 s0] step 2560/3200 (80%) disp=0.0393
+[sup:none E2 jepa_ft b16 s0] step 2880/3200 (90%) disp=0.0194
+[sup:none E2 jepa_ft b16 s0] step 3200/3200 (100%) disp=0.0148
+[E2] 5/33 (15%) elapsed 02:06:14 eta 11:46:54 | jepa_ft b16 s0
+[sup:none E2 scratch b64 s0] step 1280/12800 (10%) disp=0.3851
+[sup:none E2 scratch b64 s0] step 2560/12800 (20%) disp=0.2410
+[sup:none E2 scratch b64 s0] step 3840/12800 (30%) disp=0.1196
+[sup:none E2 scratch b64 s0] step 5120/12800 (40%) disp=0.1591
+[sup:none E2 scratch b64 s0] step 6400/12800 (50%) disp=0.1424
+[sup:none E2 scratch b64 s0] step 7680/12800 (60%) disp=0.0669
+[sup:none E2 scratch b64 s0] step 8960/12800 (70%) disp=0.1253
+[sup:none E2 scratch b64 s0] step 10240/12800 (80%) disp=0.1109
+[sup:none E2 scratch b64 s0] step 11520/12800 (90%) disp=0.0537
+[sup:none E2 scratch b64 s0] step 12800/12800 (100%) disp=0.1275
+[E2] 6/33 (18%) elapsed 02:08:36 eta 09:38:46 | scratch b64 s0
+[sup:none E2 ar_ft b64 s0] step 1280/12800 (10%) disp=0.1608
+[sup:none E2 ar_ft b64 s0] step 2560/12800 (20%) disp=0.1862
+[sup:none E2 ar_ft b64 s0] step 3840/12800 (30%) disp=0.0554
+[sup:none E2 ar_ft b64 s0] step 5120/12800 (40%) disp=0.1760
+[sup:none E2 ar_ft b64 s0] step 6400/12800 (50%) disp=0.1192
+[sup:none E2 ar_ft b64 s0] step 7680/12800 (60%) disp=0.0627
+[sup:none E2 ar_ft b64 s0] step 8960/12800 (70%) disp=0.0658
+[sup:none E2 ar_ft b64 s0] step 10240/12800 (80%) disp=0.0767
+[sup:none E2 ar_ft b64 s0] step 11520/12800 (90%) disp=0.0267
+[sup:none E2 ar_ft b64 s0] step 12800/12800 (100%) disp=0.0617
+[E2] 7/33 (21%) elapsed 02:10:59 eta 08:06:33 | ar_ft b64 s0
+[sup:none E2 jepa_ft b64 s0] step 1280/12800 (10%) disp=0.1790
+[sup:none E2 jepa_ft b64 s0] step 2560/12800 (20%) disp=0.1415
+[sup:none E2 jepa_ft b64 s0] step 3840/12800 (30%) disp=0.0605
+[sup:none E2 jepa_ft b64 s0] step 5120/12800 (40%) disp=0.0901
+[sup:none E2 jepa_ft b64 s0] step 6400/12800 (50%) disp=0.1197
+[sup:none E2 jepa_ft b64 s0] step 7680/12800 (60%) disp=0.0603
+[sup:none E2 jepa_ft b64 s0] step 8960/12800 (70%) disp=0.0584
+[sup:none E2 jepa_ft b64 s0] step 10240/12800 (80%) disp=0.0710
+[sup:none E2 jepa_ft b64 s0] step 11520/12800 (90%) disp=0.0254
+[sup:none E2 jepa_ft b64 s0] step 12800/12800 (100%) disp=0.0574
+[E2] 8/33 (24%) elapsed 02:13:24 eta 06:56:55 | jepa_ft b64 s0
+[sup:none E2 scratch b256 s0] step 5120/51200 (10%) disp=0.2867
+[sup:none E2 scratch b256 s0] step 10240/51200 (20%) disp=0.1385
+[sup:none E2 scratch b256 s0] step 15360/51200 (30%) disp=0.1746
+[sup:none E2 scratch b256 s0] step 20480/51200 (40%) disp=0.1595
+[sup:none E2 scratch b256 s0] step 25600/51200 (50%) disp=0.1242
+[sup:none E2 scratch b256 s0] step 30720/51200 (60%) disp=0.0716
+[sup:none E2 scratch b256 s0] step 35840/51200 (70%) disp=0.0690
+[sup:none E2 scratch b256 s0] step 40960/51200 (80%) disp=0.1546
+[sup:none E2 scratch b256 s0] step 46080/51200 (90%) disp=0.0751
+[sup:none E2 scratch b256 s0] step 51200/51200 (100%) disp=0.1594
+[E2] 9/33 (27%) elapsed 02:22:57 eta 06:21:13 | scratch b256 s0
+[sup:none E2 ar_ft b256 s0] step 5120/51200 (10%) disp=0.1602
+[sup:none E2 ar_ft b256 s0] step 10240/51200 (20%) disp=0.0764
+[sup:none E2 ar_ft b256 s0] step 15360/51200 (30%) disp=0.0983
+[sup:none E2 ar_ft b256 s0] step 20480/51200 (40%) disp=0.1599
+[sup:none E2 ar_ft b256 s0] step 25600/51200 (50%) disp=0.0718
+[sup:none E2 ar_ft b256 s0] step 30720/51200 (60%) disp=0.0944
+[sup:none E2 ar_ft b256 s0] step 35840/51200 (70%) disp=0.0544
+[sup:none E2 ar_ft b256 s0] step 40960/51200 (80%) disp=0.0924
+[sup:none E2 ar_ft b256 s0] step 46080/51200 (90%) disp=0.0201
+[sup:none E2 ar_ft b256 s0] step 51200/51200 (100%) disp=0.0479
+[E2] 10/33 (30%) elapsed 02:32:40 eta 05:51:09 | ar_ft b256 s0
+[sup:none E2 jepa_ft b256 s0] step 5120/51200 (10%) disp=0.1586
+[sup:none E2 jepa_ft b256 s0] step 10240/51200 (20%) disp=0.1016
+[sup:none E2 jepa_ft b256 s0] step 15360/51200 (30%) disp=0.0858
+[sup:none E2 jepa_ft b256 s0] step 20480/51200 (40%) disp=0.2078
+[sup:none E2 jepa_ft b256 s0] step 25600/51200 (50%) disp=0.1084
+[sup:none E2 jepa_ft b256 s0] step 30720/51200 (60%) disp=0.1041
+[sup:none E2 jepa_ft b256 s0] step 35840/51200 (70%) disp=0.0541
+[sup:none E2 jepa_ft b256 s0] step 40960/51200 (80%) disp=0.0876
+[sup:none E2 jepa_ft b256 s0] step 46080/51200 (90%) disp=0.0472
+[sup:none E2 jepa_ft b256 s0] step 51200/51200 (100%) disp=0.0460
+[E2] 11/33 (33%) elapsed 02:42:29 eta 05:24:59 | jepa_ft b256 s0
+[pretrain E2 AR s1] step 20480/204800 (10%) loss=-4.0250e-03
+[pretrain E2 AR s1] step 40960/204800 (20%) loss=-7.5538e-03
+[pretrain E2 AR s1] step 61440/204800 (30%) loss=-1.7145e-02
+[pretrain E2 AR s1] step 81920/204800 (40%) loss=-1.4351e-02
+[pretrain E2 AR s1] step 102400/204800 (50%) loss=-2.4130e-02
+[pretrain E2 AR s1] step 122880/204800 (60%) loss=-5.1320e-02
+[pretrain E2 AR s1] step 143360/204800 (70%) loss=-4.1466e-02
+[pretrain E2 AR s1] step 163840/204800 (80%) loss=-3.8980e-02
+[pretrain E2 AR s1] step 184320/204800 (90%) loss=-2.5641e-02
+[pretrain E2 AR s1] step 204800/204800 (100%) loss=-1.0647e-01
+[E2] 12/33 (36%) elapsed 03:22:08 eta 05:53:44 | AR pretrain s1
+[pretrain E2 JEPA s1] step 20480/204800 (10%) loss=1.4132e-02
+[pretrain E2 JEPA s1] step 40960/204800 (20%) loss=7.4353e-02
+[pretrain E2 JEPA s1] step 61440/204800 (30%) loss=7.6758e-02
+[pretrain E2 JEPA s1] step 81920/204800 (40%) loss=4.8057e-02
+[pretrain E2 JEPA s1] step 102400/204800 (50%) loss=1.0335e-02
+[pretrain E2 JEPA s1] step 122880/204800 (60%) loss=2.4894e-02
+[pretrain E2 JEPA s1] step 143360/204800 (70%) loss=4.1791e-02
+[pretrain E2 JEPA s1] step 163840/204800 (80%) loss=-3.3067e-02
+[pretrain E2 JEPA s1] step 184320/204800 (90%) loss=-3.7454e-02
+[pretrain E2 JEPA s1] step 204800/204800 (100%) loss=5.6120e-02
+[E2] 13/33 (39%) elapsed 04:48:26 eta 07:23:45 | JEPA pretrain s1
+[sup:none E2 scratch b16 s1] step 320/3200 (10%) disp=0.8514
+[sup:none E2 scratch b16 s1] step 640/3200 (20%) disp=0.7437
+[sup:none E2 scratch b16 s1] step 960/3200 (30%) disp=0.4541
+[sup:none E2 scratch b16 s1] step 1280/3200 (40%) disp=0.4574
+[sup:none E2 scratch b16 s1] step 1600/3200 (50%) disp=0.3929
+[sup:none E2 scratch b16 s1] step 1920/3200 (60%) disp=0.3304
+[sup:none E2 scratch b16 s1] step 2240/3200 (70%) disp=0.2634
+[sup:none E2 scratch b16 s1] step 2560/3200 (80%) disp=0.1110
+[sup:none E2 scratch b16 s1] step 2880/3200 (90%) disp=0.2039
+[sup:none E2 scratch b16 s1] step 3200/3200 (100%) disp=0.1043
+[E2] 14/33 (42%) elapsed 04:49:03 eta 06:32:17 | scratch b16 s1
+[sup:none E2 ar_ft b16 s1] step 320/3200 (10%) disp=0.2042
+[sup:none E2 ar_ft b16 s1] step 640/3200 (20%) disp=0.0821
+[sup:none E2 ar_ft b16 s1] step 960/3200 (30%) disp=0.0545
+[sup:none E2 ar_ft b16 s1] step 1280/3200 (40%) disp=0.1030
+[sup:none E2 ar_ft b16 s1] step 1600/3200 (50%) disp=0.0691
+[sup:none E2 ar_ft b16 s1] step 1920/3200 (60%) disp=0.0349
+[sup:none E2 ar_ft b16 s1] step 2240/3200 (70%) disp=0.0313
+[sup:none E2 ar_ft b16 s1] step 2560/3200 (80%) disp=0.0126
+[sup:none E2 ar_ft b16 s1] step 2880/3200 (90%) disp=0.0087
+[sup:none E2 ar_ft b16 s1] step 3200/3200 (100%) disp=0.0051
+[E2] 15/33 (45%) elapsed 04:49:41 eta 05:47:37 | ar_ft b16 s1
+[sup:none E2 jepa_ft b16 s1] step 320/3200 (10%) disp=0.1101
+[sup:none E2 jepa_ft b16 s1] step 640/3200 (20%) disp=0.1175
+[sup:none E2 jepa_ft b16 s1] step 960/3200 (30%) disp=0.0831
+[sup:none E2 jepa_ft b16 s1] step 1280/3200 (40%) disp=0.0908
+[sup:none E2 jepa_ft b16 s1] step 1600/3200 (50%) disp=0.0583
+[sup:none E2 jepa_ft b16 s1] step 1920/3200 (60%) disp=0.0708
+[sup:none E2 jepa_ft b16 s1] step 2240/3200 (70%) disp=0.0361
+[sup:none E2 jepa_ft b16 s1] step 2560/3200 (80%) disp=0.0183
+[sup:none E2 jepa_ft b16 s1] step 2880/3200 (90%) disp=0.0164
+[sup:none E2 jepa_ft b16 s1] step 3200/3200 (100%) disp=0.0068
+[E2] 16/33 (48%) elapsed 04:50:17 eta 05:08:26 | jepa_ft b16 s1
+[sup:none E2 scratch b64 s1] step 1280/12800 (10%) disp=0.1713
+[sup:none E2 scratch b64 s1] step 2560/12800 (20%) disp=0.1772
+[sup:none E2 scratch b64 s1] step 3840/12800 (30%) disp=0.2398
+[sup:none E2 scratch b64 s1] step 5120/12800 (40%) disp=0.0832
+[sup:none E2 scratch b64 s1] step 6400/12800 (50%) disp=0.3418
+[sup:none E2 scratch b64 s1] step 7680/12800 (60%) disp=0.0569
+[sup:none E2 scratch b64 s1] step 8960/12800 (70%) disp=0.1600
+[sup:none E2 scratch b64 s1] step 10240/12800 (80%) disp=0.1262
+[sup:none E2 scratch b64 s1] step 11520/12800 (90%) disp=0.1960
+[sup:none E2 scratch b64 s1] step 12800/12800 (100%) disp=0.0484
+[E2] 17/33 (52%) elapsed 04:52:40 eta 04:35:27 | scratch b64 s1
+[sup:none E2 ar_ft b64 s1] step 1280/12800 (10%) disp=0.1378
+[sup:none E2 ar_ft b64 s1] step 2560/12800 (20%) disp=0.1927
+[sup:none E2 ar_ft b64 s1] step 3840/12800 (30%) disp=0.0544
+[sup:none E2 ar_ft b64 s1] step 5120/12800 (40%) disp=0.1374
+[sup:none E2 ar_ft b64 s1] step 6400/12800 (50%) disp=0.1427
+[sup:none E2 ar_ft b64 s1] step 7680/12800 (60%) disp=0.0617
+[sup:none E2 ar_ft b64 s1] step 8960/12800 (70%) disp=0.0574
+[sup:none E2 ar_ft b64 s1] step 10240/12800 (80%) disp=0.0296
+[sup:none E2 ar_ft b64 s1] step 11520/12800 (90%) disp=0.0299
+[sup:none E2 ar_ft b64 s1] step 12800/12800 (100%) disp=0.0107
+[E2] 18/33 (55%) elapsed 04:55:04 eta 04:05:53 | ar_ft b64 s1
+[sup:none E2 jepa_ft b64 s1] step 1280/12800 (10%) disp=0.1230
+[sup:none E2 jepa_ft b64 s1] step 2560/12800 (20%) disp=0.2571
+[sup:none E2 jepa_ft b64 s1] step 3840/12800 (30%) disp=0.0511
+[sup:none E2 jepa_ft b64 s1] step 5120/12800 (40%) disp=0.1772
+[sup:none E2 jepa_ft b64 s1] step 6400/12800 (50%) disp=0.1278
+[sup:none E2 jepa_ft b64 s1] step 7680/12800 (60%) disp=0.0681
+[sup:none E2 jepa_ft b64 s1] step 8960/12800 (70%) disp=0.0573
+[sup:none E2 jepa_ft b64 s1] step 10240/12800 (80%) disp=0.0292
+[sup:none E2 jepa_ft b64 s1] step 11520/12800 (90%) disp=0.0350
+[sup:none E2 jepa_ft b64 s1] step 12800/12800 (100%) disp=0.0145
+[E2] 19/33 (58%) elapsed 04:57:29 eta 03:39:11 | jepa_ft b64 s1
+[sup:none E2 scratch b256 s1] step 5120/51200 (10%) disp=1.2082
+[sup:none E2 scratch b256 s1] step 10240/51200 (20%) disp=0.2910
+[sup:none E2 scratch b256 s1] step 15360/51200 (30%) disp=0.1164
+[sup:none E2 scratch b256 s1] step 20480/51200 (40%) disp=0.2649
+[sup:none E2 scratch b256 s1] step 25600/51200 (50%) disp=0.1373
+[sup:none E2 scratch b256 s1] step 30720/51200 (60%) disp=0.0933
+[sup:none E2 scratch b256 s1] step 35840/51200 (70%) disp=0.1366
+[sup:none E2 scratch b256 s1] step 40960/51200 (80%) disp=0.0915
+[sup:none E2 scratch b256 s1] step 46080/51200 (90%) disp=0.1169
+[sup:none E2 scratch b256 s1] step 51200/51200 (100%) disp=0.0280
+[E2] 20/33 (61%) elapsed 05:07:02 eta 03:19:34 | scratch b256 s1
+[sup:none E2 ar_ft b256 s1] step 5120/51200 (10%) disp=0.6774
+[sup:none E2 ar_ft b256 s1] step 10240/51200 (20%) disp=0.2497
+[sup:none E2 ar_ft b256 s1] step 15360/51200 (30%) disp=0.1732
+[sup:none E2 ar_ft b256 s1] step 20480/51200 (40%) disp=0.2613
+[sup:none E2 ar_ft b256 s1] step 25600/51200 (50%) disp=0.1312
+[sup:none E2 ar_ft b256 s1] step 30720/51200 (60%) disp=0.0896
+[sup:none E2 ar_ft b256 s1] step 35840/51200 (70%) disp=0.0732
+[sup:none E2 ar_ft b256 s1] step 40960/51200 (80%) disp=0.0466
+[sup:none E2 ar_ft b256 s1] step 46080/51200 (90%) disp=0.0193
+[sup:none E2 ar_ft b256 s1] step 51200/51200 (100%) disp=0.0122
+[E2] 21/33 (64%) elapsed 05:16:35 eta 03:00:54 | ar_ft b256 s1
+[sup:none E2 jepa_ft b256 s1] step 5120/51200 (10%) disp=0.8003
+[sup:none E2 jepa_ft b256 s1] step 10240/51200 (20%) disp=0.3086
+[sup:none E2 jepa_ft b256 s1] step 15360/51200 (30%) disp=0.1203
+[sup:none E2 jepa_ft b256 s1] step 20480/51200 (40%) disp=0.2049
+[sup:none E2 jepa_ft b256 s1] step 25600/51200 (50%) disp=0.1561
+[sup:none E2 jepa_ft b256 s1] step 30720/51200 (60%) disp=0.0970
+[sup:none E2 jepa_ft b256 s1] step 35840/51200 (70%) disp=0.0726
+[sup:none E2 jepa_ft b256 s1] step 40960/51200 (80%) disp=0.0565
+[sup:none E2 jepa_ft b256 s1] step 46080/51200 (90%) disp=0.0335
+[sup:none E2 jepa_ft b256 s1] step 51200/51200 (100%) disp=0.0206
+[E2] 22/33 (67%) elapsed 05:26:10 eta 02:43:05 | jepa_ft b256 s1
+[pretrain E2 AR s2] step 20480/204800 (10%) loss=-2.8334e-02
+[pretrain E2 AR s2] step 40960/204800 (20%) loss=-2.4752e-02
+[pretrain E2 AR s2] step 61440/204800 (30%) loss=-5.1504e-03
+[pretrain E2 AR s2] step 81920/204800 (40%) loss=-3.6637e-02
+[pretrain E2 AR s2] step 102400/204800 (50%) loss=-1.1442e-01
+[pretrain E2 AR s2] step 122880/204800 (60%) loss=-5.2055e-03
+[pretrain E2 AR s2] step 143360/204800 (70%) loss=-5.4096e-03
+[pretrain E2 AR s2] step 163840/204800 (80%) loss=-1.7847e-02
+[pretrain E2 AR s2] step 184320/204800 (90%) loss=-1.3265e-01
+[pretrain E2 AR s2] step 204800/204800 (100%) loss=-5.1410e-02
+[E2] 23/33 (70%) elapsed 06:05:24 eta 02:38:52 | AR pretrain s2
+[pretrain E2 JEPA s2] step 20480/204800 (10%) loss=2.1749e-02
+[pretrain E2 JEPA s2] step 40960/204800 (20%) loss=6.4866e-02
+[pretrain E2 JEPA s2] step 61440/204800 (30%) loss=5.4825e-02
+[pretrain E2 JEPA s2] step 81920/204800 (40%) loss=4.6578e-03
+[pretrain E2 JEPA s2] step 102400/204800 (50%) loss=1.7076e-02
+[pretrain E2 JEPA s2] step 122880/204800 (60%) loss=-3.9738e-02
+[pretrain E2 JEPA s2] step 143360/204800 (70%) loss=9.2022e-03
+[pretrain E2 JEPA s2] step 163840/204800 (80%) loss=4.6789e-02
+[pretrain E2 JEPA s2] step 184320/204800 (90%) loss=-2.2046e-02
+[pretrain E2 JEPA s2] step 204800/204800 (100%) loss=2.0845e-02
+[E2] 24/33 (73%) elapsed 07:30:26 eta 02:48:54 | JEPA pretrain s2
+[sup:none E2 scratch b16 s2] step 320/3200 (10%) disp=0.7489
+[sup:none E2 scratch b16 s2] step 640/3200 (20%) disp=0.7242
+[sup:none E2 scratch b16 s2] step 960/3200 (30%) disp=0.7305
+[sup:none E2 scratch b16 s2] step 1280/3200 (40%) disp=0.6858
+[sup:none E2 scratch b16 s2] step 1600/3200 (50%) disp=0.3230
+[sup:none E2 scratch b16 s2] step 1920/3200 (60%) disp=0.3226
+[sup:none E2 scratch b16 s2] step 2240/3200 (70%) disp=0.2203
+[sup:none E2 scratch b16 s2] step 2560/3200 (80%) disp=0.4719
+[sup:none E2 scratch b16 s2] step 2880/3200 (90%) disp=0.1288
+[sup:none E2 scratch b16 s2] step 3200/3200 (100%) disp=0.0735
+[E2] 25/33 (76%) elapsed 07:31:03 eta 02:24:20 | scratch b16 s2
+[sup:none E2 ar_ft b16 s2] step 320/3200 (10%) disp=0.1121
+[sup:none E2 ar_ft b16 s2] step 640/3200 (20%) disp=0.0577
+[sup:none E2 ar_ft b16 s2] step 960/3200 (30%) disp=0.0770
+[sup:none E2 ar_ft b16 s2] step 1280/3200 (40%) disp=0.0658
+[sup:none E2 ar_ft b16 s2] step 1600/3200 (50%) disp=0.0318
+[sup:none E2 ar_ft b16 s2] step 1920/3200 (60%) disp=0.0478
+[sup:none E2 ar_ft b16 s2] step 2240/3200 (70%) disp=0.0363
+[sup:none E2 ar_ft b16 s2] step 2560/3200 (80%) disp=0.0228
+[sup:none E2 ar_ft b16 s2] step 2880/3200 (90%) disp=0.0061
+[sup:none E2 ar_ft b16 s2] step 3200/3200 (100%) disp=0.0059
+[E2] 26/33 (79%) elapsed 07:31:40 eta 02:01:36 | ar_ft b16 s2
+[sup:none E2 jepa_ft b16 s2] step 320/3200 (10%) disp=0.4630
+[sup:none E2 jepa_ft b16 s2] step 640/3200 (20%) disp=0.1978
+[sup:none E2 jepa_ft b16 s2] step 960/3200 (30%) disp=0.2521
+[sup:none E2 jepa_ft b16 s2] step 1280/3200 (40%) disp=0.1016
+[sup:none E2 jepa_ft b16 s2] step 1600/3200 (50%) disp=0.0559
+[sup:none E2 jepa_ft b16 s2] step 1920/3200 (60%) disp=0.0553
+[sup:none E2 jepa_ft b16 s2] step 2240/3200 (70%) disp=0.0441
+[sup:none E2 jepa_ft b16 s2] step 2560/3200 (80%) disp=0.0529
+[sup:none E2 jepa_ft b16 s2] step 2880/3200 (90%) disp=0.0104
+[sup:none E2 jepa_ft b16 s2] step 3200/3200 (100%) disp=0.0072
+[E2] 27/33 (82%) elapsed 07:32:18 eta 01:40:30 | jepa_ft b16 s2
+[sup:none E2 scratch b64 s2] step 1280/12800 (10%) disp=0.4288
+[sup:none E2 scratch b64 s2] step 2560/12800 (20%) disp=0.1451
+[sup:none E2 scratch b64 s2] step 3840/12800 (30%) disp=0.1951
+[sup:none E2 scratch b64 s2] step 5120/12800 (40%) disp=0.3289
+[sup:none E2 scratch b64 s2] step 6400/12800 (50%) disp=0.1301
+[sup:none E2 scratch b64 s2] step 7680/12800 (60%) disp=0.3157
+[sup:none E2 scratch b64 s2] step 8960/12800 (70%) disp=0.0799
+[sup:none E2 scratch b64 s2] step 10240/12800 (80%) disp=0.1011
+[sup:none E2 scratch b64 s2] step 11520/12800 (90%) disp=0.0636
+[sup:none E2 scratch b64 s2] step 12800/12800 (100%) disp=0.0440
+[E2] 28/33 (85%) elapsed 07:34:41 eta 01:21:11 | scratch b64 s2
+[sup:none E2 ar_ft b64 s2] step 1280/12800 (10%) disp=0.0783
+[sup:none E2 ar_ft b64 s2] step 2560/12800 (20%) disp=0.1049
+[sup:none E2 ar_ft b64 s2] step 3840/12800 (30%) disp=0.1206
+[sup:none E2 ar_ft b64 s2] step 5120/12800 (40%) disp=0.4074
+[sup:none E2 ar_ft b64 s2] step 6400/12800 (50%) disp=0.0740
+[sup:none E2 ar_ft b64 s2] step 7680/12800 (60%) disp=0.1297
+[sup:none E2 ar_ft b64 s2] step 8960/12800 (70%) disp=0.0550
+[sup:none E2 ar_ft b64 s2] step 10240/12800 (80%) disp=0.0159
+[sup:none E2 ar_ft b64 s2] step 11520/12800 (90%) disp=0.0361
+[sup:none E2 ar_ft b64 s2] step 12800/12800 (100%) disp=0.0142
+[E2] 29/33 (88%) elapsed 07:37:05 eta 01:03:02 | ar_ft b64 s2
+[sup:none E2 jepa_ft b64 s2] step 1280/12800 (10%) disp=0.1491
+[sup:none E2 jepa_ft b64 s2] step 2560/12800 (20%) disp=0.1656
+[sup:none E2 jepa_ft b64 s2] step 3840/12800 (30%) disp=0.2218
+[sup:none E2 jepa_ft b64 s2] step 5120/12800 (40%) disp=0.2597
+[sup:none E2 jepa_ft b64 s2] step 6400/12800 (50%) disp=0.1867
+[sup:none E2 jepa_ft b64 s2] step 7680/12800 (60%) disp=0.1767
+[sup:none E2 jepa_ft b64 s2] step 8960/12800 (70%) disp=0.0605
+[sup:none E2 jepa_ft b64 s2] step 10240/12800 (80%) disp=0.0482
+[sup:none E2 jepa_ft b64 s2] step 11520/12800 (90%) disp=0.0708
+[sup:none E2 jepa_ft b64 s2] step 12800/12800 (100%) disp=0.0195
+[E2] 30/33 (91%) elapsed 07:39:29 eta 00:45:56 | jepa_ft b64 s2
+[sup:none E2 scratch b256 s2] step 5120/51200 (10%) disp=0.1921
+[sup:none E2 scratch b256 s2] step 10240/51200 (20%) disp=0.1445
+[sup:none E2 scratch b256 s2] step 15360/51200 (30%) disp=0.2085
+[sup:none E2 scratch b256 s2] step 20480/51200 (40%) disp=0.1197
+[sup:none E2 scratch b256 s2] step 25600/51200 (50%) disp=0.1542
+[sup:none E2 scratch b256 s2] step 30720/51200 (60%) disp=0.2177
+[sup:none E2 scratch b256 s2] step 35840/51200 (70%) disp=0.1224
+[sup:none E2 scratch b256 s2] step 40960/51200 (80%) disp=0.4292
+[sup:none E2 scratch b256 s2] step 46080/51200 (90%) disp=0.1702
+[sup:none E2 scratch b256 s2] step 51200/51200 (100%) disp=0.0647
+[E2] 31/33 (94%) elapsed 07:49:13 eta 00:30:16 | scratch b256 s2
+[sup:none E2 ar_ft b256 s2] step 5120/51200 (10%) disp=0.1346
+[sup:none E2 ar_ft b256 s2] step 10240/51200 (20%) disp=0.1499
+[sup:none E2 ar_ft b256 s2] step 15360/51200 (30%) disp=0.2739
+[sup:none E2 ar_ft b256 s2] step 20480/51200 (40%) disp=0.0743
+[sup:none E2 ar_ft b256 s2] step 25600/51200 (50%) disp=0.2132
+[sup:none E2 ar_ft b256 s2] step 30720/51200 (60%) disp=0.1169
+[sup:none E2 ar_ft b256 s2] step 35840/51200 (70%) disp=0.0397
+[sup:none E2 ar_ft b256 s2] step 40960/51200 (80%) disp=0.2413
+[sup:none E2 ar_ft b256 s2] step 46080/51200 (90%) disp=0.0502
+[sup:none E2 ar_ft b256 s2] step 51200/51200 (100%) disp=0.0544
+[E2] 32/33 (97%) elapsed 07:59:47 eta 00:14:59 | ar_ft b256 s2
+[sup:none E2 jepa_ft b256 s2] step 5120/51200 (10%) disp=0.1405
+[sup:none E2 jepa_ft b256 s2] step 10240/51200 (20%) disp=0.1128
+[sup:none E2 jepa_ft b256 s2] step 15360/51200 (30%) disp=0.3402
+[sup:none E2 jepa_ft b256 s2] step 20480/51200 (40%) disp=0.1053
+[sup:none E2 jepa_ft b256 s2] step 25600/51200 (50%) disp=0.2275
+[sup:none E2 jepa_ft b256 s2] step 30720/51200 (60%) disp=0.1364
+[sup:none E2 jepa_ft b256 s2] step 35840/51200 (70%) disp=0.0603
+[sup:none E2 jepa_ft b256 s2] step 40960/51200 (80%) disp=0.2907
+[sup:none E2 jepa_ft b256 s2] step 46080/51200 (90%) disp=0.0510
+[sup:none E2 jepa_ft b256 s2] step 51200/51200 (100%) disp=0.0639
+[E2] 33/33 (100%) elapsed 08:09:33 eta 00:00:00 | jepa_ft b256 s2
+[E2] done in 08:09:33
+
+=== gate G1' ===
+[fejepa] report -> runs/wp2_e2/report_wp2_e2.json
+[fejepa] RESULTS.md -> runs/wp2_e2/RESULTS.md
+[fejepa] gate G1' passed=False conditions={'a': False, 'b': False, 'c': False}
+[fejepa] solve ledger: {'per_stage': {'asis-preexisting-corpus': 0}, 'total': 0, 'wall_clock_s': 0.0}
