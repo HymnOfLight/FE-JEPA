@@ -1,6 +1,7 @@
 # PROVENANCE NOTE -- FE-JEPA 2D phase (frozen record)
 
-Compiled 1 August 2026. This note attests the code state, data lineage, and
+Compiled 1 August 2026; terminal-log status finalised 6 August 2026.
+This note attests the code state, data lineage, and
 artefact fingerprints of the three executed runs of the 2D phase. All SHA-256
 digests below were computed independently from the received archives.
 
@@ -75,12 +76,16 @@ digests below were computed independently from the received archives.
   c10d8ee237d37377027d742; stamped PREREG_WP2.md 550cf7c66c360cf79546c9d359d
   fc95d8a6593f3e64ad11d8f77522235535306. Bundle: wp2_e2_result.tar.gz,
   SHA-256 c563cb66258df3847902076a735b582de8a529ecdf3bff812adb91def9fe7bf4.
-- Terminal log: [二选一，按第①步结果保留一行]
-  (a) wp2_e2_console.txt archived; contains the v2.1.5 labelling-verification
-      line "asis: verified labels on val 256 + pool prefix 256".
-  (b) console log unrecoverable (terminal closed without redirection);
-      recorded as such. v2.1.5 execution supported by the 2026-07-30
-      reinstall verification and unchanged environment.
+- Terminal log: partial (tail) recovery. wp2_e2_console.txt is archived in
+  this repository, SHA-256
+  93702e975ec9660c18b745b37003054e85737fc406048f07c29e88190637ea31,
+  byte-identical to the copy received off-box. The preserved scrollback
+  opens mid AR-s0 pretraining and runs to completion: 33/33 E2 units plus
+  the gate and solve-ledger lines, all consistent with report_wp2_e2.json.
+  The labelling-verification line predates the preserved window; v2.1.5
+  execution for this run therefore rests on the 2026-07-30 reinstall
+  verification (Run 2 console evidence) and the unchanged environment.
+  Recorded as final, 6 August 2026.
 
 ## Standing prohibitions
 - configs/phase1_rec8_v2.json and configs/wp2_e2_v2.json are one-shot and
