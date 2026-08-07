@@ -1,6 +1,7 @@
 # PROVENANCE NOTE -- FE-JEPA 2D phase (frozen record)
 
-Compiled 1 August 2026; terminal-log status finalised 6 August 2026.
+Compiled 1 August 2026; terminal-log status finalised 6 August 2026;
+arXiv ID recorded 7 August 2026.
 This note attests the code state, data lineage, and
 artefact fingerprints of the three executed runs of the 2D phase. All SHA-256
 digests below were computed independently from the received archives.
@@ -86,6 +87,13 @@ digests below were computed independently from the received archives.
   execution for this run therefore rests on the 2026-07-30 reinstall
   verification (Run 2 console evidence) and the unchanged environment.
   Recorded as final, 6 August 2026.
+
+## Publication record
+- Theory note: the identities these runs exercise are proved in R. Cao and
+  X. Song, "Discrete energy as an exact label-free training objective for
+  finite-element surrogates", arXiv:2608.05437v1 [cs.CE], submitted
+  5 August 2026, announced 7 August 2026.
+  https://arxiv.org/abs/2608.05437
 
 ## Standing prohibitions
 - configs/phase1_rec8_v2.json and configs/wp2_e2_v2.json are one-shot and

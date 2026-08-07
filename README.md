@@ -5,6 +5,10 @@ This package is a ground-up refactor matching the **Experimental Plan v2.0 one-t
 -- see `PLAN_MAP.md` for the full traceability matrix (including what was intentionally
 removed) and `PREREG.md` for the frozen gate.
 
+Theory note: R. Cao and X. Song, *Discrete energy as an exact label-free
+training objective for finite-element surrogates*, arXiv:2608.05437 [cs.CE], 2026.
+<https://arxiv.org/abs/2608.05437>
+
 ## Install (on the GPU box)
 
     pip install -e ".[torch,gen,dev]"     # torch + scikit-fem/gmsh + pytest
@@ -83,3 +87,16 @@ instances bought vs. the unlabeled pool AR consumed), derived from the solve led
     src/fejepa/{fe,data,anchor,models,train,experiments}/ ...  # plan refs in docstrings
     configs/{smoke.json, phase1_rec8_v2.json}
     tests/                                                     # numpy suite + guarded torch suite
+
+## Citation
+
+    @misc{cao2026discrete,
+      title         = {Discrete energy as an exact label-free training objective
+                       for finite-element surrogates},
+      author        = {Cao, Ruifeng and Song, Xidan},
+      year          = {2026},
+      eprint        = {2608.05437},
+      archivePrefix = {arXiv},
+      primaryClass  = {cs.CE},
+      doi           = {10.48550/arXiv.2608.05437}
+    }
