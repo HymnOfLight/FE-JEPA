@@ -20,18 +20,40 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from .features import FeatureSpec, build_features_battery
+from .features import FeatureSpec, battery_fscale, build_features_battery
 
 
 # ------------------------------------------------------------ region masking --
 
+def element_edges(elements: np.ndarray) -> np.ndarray:
+    """(2, 2*|edges|) unique undirected element edges, both directions, for any
+    fixed-arity simplex row layout: (E, 3) triangles and (E, 4) tetrahedra alike
+    (WP7 3D-P0.1). For triangles the output is bit-identical to the v2.1.5
+    triangle-only construction (sorted-unique pairs, then both directions)."""
+    el = np.asarray(elements)
+    k = int(el.shape[1])
+    pairs = [(a, b) for a in range(k) for b in range(a + 1, k)]
+    e = np.concatenate([el[:, [a, b]] for a, b in pairs], axis=0)
+    e = np.unique(np.sort(e, axis=1), axis=0)
+    return np.concatenate([e, e[:, ::-1]], axis=0).T
+
+
 def mesh_adjacency(elements: np.ndarray, n_nodes: int) -> list[np.ndarray]:
-    """Undirected node adjacency from triangle edges."""
+    """Undirected node adjacency from element edges (triangles AND tetrahedra).
+
+    WP7 3D-P0.1: the v2.1.5 body unpacked rows as ``for a, b, c in elements`` and
+    crashed on (E, 4) tets; rewritten as pairwise combinations per row. For
+    triangles the per-row insertion sequence -- (a,b), (a,c), (b,c), each both
+    ways -- reproduces the old ``update`` order exactly, so the returned
+    neighbour arrays (and hence region-mask RNG consumption downstream) are
+    bit-identical in 2D."""
     nbrs = [set() for _ in range(n_nodes)]
-    for a, b, c in elements:
-        nbrs[a].update((b, c))
-        nbrs[b].update((a, c))
-        nbrs[c].update((a, b))
+    k = int(np.asarray(elements).shape[1])
+    for row in np.asarray(elements):
+        for a in range(k):
+            for b in range(a + 1, k):
+                nbrs[row[a]].add(int(row[b]))
+                nbrs[row[b]].add(int(row[a]))
     return [np.fromiter(s, dtype=np.int64) for s in nbrs]
 
 
@@ -64,12 +86,14 @@ class FEJEPAConfig:
     heads: int = 4
     mask_frac: float = 0.4
     predictor_stop_grad: bool = True
+    scale_decode: bool = True   # WP7 3D-P0.5: multiply battery fscale back in decode
     features: FeatureSpec = field(default_factory=FeatureSpec)
 
     def to_dict(self) -> dict:
         return {"dim": self.dim, "depth": self.depth, "heads": self.heads,
                 "mask_frac": self.mask_frac,
                 "predictor_stop_grad": self.predictor_stop_grad,
+                "scale_decode": self.scale_decode,
                 "features": self.features.to_dict()}
 
     @classmethod
@@ -131,15 +155,16 @@ def build_fejepa(cfg: FEJEPAConfig):
     in_dim = cfg.features.dim
 
     class FieldDecoder(nn.Module):
-        """Per-node MLP on [node latent || pooled latent] -> 2 displacement components."""
+        """Per-node MLP on [node latent || pooled latent] -> spatial_dim displacement
+        components (WP7 3D-P0: 2 in 2D, unchanged; 3 in 3D)."""
 
         def __init__(self):
             super().__init__()
             self.mlp = nn.Sequential(nn.Linear(2 * cfg.dim, 2 * cfg.dim), nn.GELU(),
                                      nn.Linear(2 * cfg.dim, cfg.dim), nn.GELU(),
-                                     nn.Linear(cfg.dim, 2))
+                                     nn.Linear(cfg.dim, int(cfg.features.spatial_dim)))
 
-        def forward(self, z):                      # (..., N, dim) -> (..., N, 2)
+        def forward(self, z):        # (..., N, dim) -> (..., N, spatial_dim)
             pooled = z.mean(dim=-2, keepdim=True).expand_as(z)
             return self.mlp(torch.cat([z, pooled], dim=-1))
 
@@ -176,14 +201,20 @@ def build_fejepa(cfg: FEJEPAConfig):
             feats = torch.as_tensor(build_features_battery(arch, cfg.features),
                                     device=device)
             free = torch.as_tensor(arch.free_mask, device=device).float()
-            return {"feats": feats, "free": free, "arch": arch}
+            fscale = torch.as_tensor(battery_fscale(arch.F), dtype=feats.dtype,
+                                     device=device)
+            return {"feats": feats, "free": free, "fscale": fscale,
+                    "arch": arch}
 
         def forward_instance(self, pack):
             """(L, ndof) masked displacement battery, differentiable."""
             z = self.encoder(pack["feats"])
             u = self.decoder(z)
             L = u.shape[0]
-            return u.reshape(L, -1) * pack["free"]
+            u = u.reshape(L, -1) * pack["free"]
+            if self.cfg.scale_decode:      # WP7 3D-P0.5: exact by linearity
+                u = u * pack["fscale"]
+            return u
 
         # ---- latent utilities -------------------------------------------------
         def encode(self, feats):

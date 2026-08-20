@@ -1,0 +1,71 @@
+{
+ "_comment": "WP7 3D-S1 structured-tet smoke (EXPLORATORY, prereg_guard false; RUN_PLAN_2026-08-05 sec 3.3). Same corpus as the preflight; enables E1' small + E5' + WP6 end to end. Toy scale, minutes on CPU or GPU; needs the torch extra. New output directory; no frozen artefact touched. Model block sets scale_decode true explicitly (WP7 3D-P0.5 default).",
+ "data": {
+  "dir": "runs/data3d_smoke",
+  "n": 24,
+  "seed": 11,
+  "backend": "tet3d",
+  "labelled_policy": "economy",
+  "nx": 4,
+  "ny": 3,
+  "nz": 3
+ },
+ "split": {
+  "n_val": 8,
+  "seed": 1
+ },
+ "model": {
+  "dim": 32,
+  "depth": 2,
+  "heads": 2,
+  "mask_frac": 0.4,
+  "features": {
+   "load_summary": true,
+   "geometry": true,
+   "spatial_dim": 3
+  },
+  "scale_decode": true
+ },
+ "sup": {
+  "epochs": 3,
+  "lr": 0.0015
+ },
+ "pretrain": {
+  "epochs": 3,
+  "lr": 0.001
+ },
+ "experiments": {
+  "e1": {
+   "enabled": true,
+   "budgets": [
+    4,
+    8
+   ],
+   "seeds": 2,
+   "epochs": 3,
+   "grid": []
+  },
+  "e5": {
+   "enabled": true,
+   "budgets": [
+    4,
+    8
+   ],
+   "fit_budget": 8,
+   "margin": 3.0
+  },
+  "wp6": {
+   "enabled": true,
+   "n_check": 8,
+   "seed": 0
+  }
+ },
+ "gate": {
+  "decision_budget": 8
+ },
+ "out": "runs/wp7_s1_smoke/report_s1.json",
+ "device": "auto",
+ "workers": 1,
+ "tf32": true,
+ "prereg_guard": false
+}

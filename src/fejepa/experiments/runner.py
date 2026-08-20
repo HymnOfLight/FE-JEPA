@@ -57,10 +57,17 @@ def _ensure_dataset(dcfg: dict, ledger: SolveLedger) -> Path:
     require_asis_corpus(dcfg)   # asis must never trigger generation (v2.1.5)
     n, seed = int(dcfg.get("n", 100)), int(dcfg.get("seed", 0))
     labelled = "all" if dcfg.get("labelled_policy") == "all" else "none"
-    if dcfg.get("backend", "gmsh") == "synthetic":
+    backend = dcfg.get("backend", "gmsh")
+    if backend == "synthetic":
         from ..fe.synthetic import generate_synthetic_dataset
 
         generate_synthetic_dataset(ddir, n, seed, labelled=labelled, ledger=ledger)
+    elif backend == "tet3d":                               # WP7 3D-S1
+        from ..fe.tet3d import generate_tet3d_dataset
+
+        generate_tet3d_dataset(ddir, n, seed, labelled=labelled, ledger=ledger,
+                               nx=int(dcfg.get("nx", 4)), ny=int(dcfg.get("ny", 3)),
+                               nz=int(dcfg.get("nz", 3)))
     else:
         from ..fe.generator import generate_dataset
 
@@ -70,6 +77,10 @@ def _ensure_dataset(dcfg: dict, ledger: SolveLedger) -> Path:
 
 
 def _ensure_multires(dcfg: dict, coarsen: float, n: int, ledger: SolveLedger) -> Path:
+    if dcfg.get("backend") == "tet3d":
+        raise NotImplementedError(
+            "multires pairs (E4) for the tet3d backend are Phase-2 3D-G1 work; "
+            "disable e4 in 3D smoke configs (WP7 3D-S1)")
     ddir = Path(str(dcfg["dir"]) + "_c" + str(coarsen).replace(".", "p"))
     if (ddir / "manifest.json").exists():
         return ddir

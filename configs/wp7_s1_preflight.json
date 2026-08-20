@@ -1,0 +1,27 @@
+{
+  "_comment": "WP7 3D-S1 pre-flight (EXPLORATORY, prereg_guard false). Structured-tet corpus generated through the standard pipeline (backend tet3d, zero gmsh), economy labelling of val only, then the WP6 falsification block at corpus level on 3D instances -- the run plan's S1 core deliverable, torch-free by construction. The E1' small + E5' arms live in wp7_s1_smoke.json and need the torch extra.",
+  "data": {
+    "dir": "runs/data3d_smoke",
+    "n": 24,
+    "seed": 11,
+    "backend": "tet3d",
+    "labelled_policy": "economy",
+    "nx": 4,
+    "ny": 3,
+    "nz": 3
+  },
+  "split": { "n_val": 8, "seed": 1 },
+  "model": {
+    "dim": 32, "depth": 2, "heads": 2, "mask_frac": 0.4,
+    "features": { "load_summary": true, "geometry": true, "spatial_dim": 3 }
+  },
+  "experiments": {
+    "wp6": { "enabled": true, "n_check": 8, "seed": 0 }
+  },
+  "gate": { "decision_budget": 8 },
+  "out": "runs/wp7_s1_preflight/report_s1_preflight.json",
+  "device": "cpu",
+  "workers": 1,
+  "tf32": true,
+  "prereg_guard": false
+}

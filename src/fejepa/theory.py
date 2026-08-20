@@ -158,9 +158,10 @@ def _interp_to(src_arch, field_src: np.ndarray, dst_arch) -> np.ndarray:
     from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator
 
     pts, xq = normalized_coords(src_arch.nodes), normalized_coords(dst_arch.nodes)
-    vals = field_src.reshape(-1, 2)
-    out = np.zeros((dst_arch.n_nodes, 2))
-    for c in range(2):
+    sd = int(src_arch.nodes.shape[1])                      # WP7 3D-P0
+    vals = field_src.reshape(-1, sd)
+    out = np.zeros((dst_arch.n_nodes, sd))
+    for c in range(sd):
         y = LinearNDInterpolator(pts, vals[:, c])(xq)
         bad = np.isnan(y)
         if bad.any():

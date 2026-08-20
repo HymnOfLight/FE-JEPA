@@ -89,8 +89,9 @@ def run_e3(model_factory, pool_archs, cfg: dict) -> dict:
 
     task = Task("E3'", total=len(conds) * (1 + len(modes)))
     conditions = []
+    sd = int(pool_archs[0].nodes.shape[1])                 # WP7 3D-P0
     for geom in conds:
-        spec = FeatureSpec(load_summary=True, geometry=geom)
+        spec = FeatureSpec(load_summary=True, geometry=geom, spatial_dim=sd)
         runs = {}
         for reg in ["none"] + modes:
             model = seeded_factory(lambda spec=spec: model_factory(features=spec),

@@ -182,6 +182,35 @@ def tet_instance(rng: np.random.Generator, nx: int = 4, ny: int = 3, nz: int = 3
     return arch
 
 
+def generate_tet3d_dataset(out, n: int, seed: int, labelled: str = "none",
+                           nx: int = 4, ny: int = 3, nz: int = 3,
+                           ledger: SolveLedger | None = None):
+    """Structured-tet corpus in the standard manifest contract (WP7 3D-S1).
+
+    Mirror of :func:`fejepa.fe.synthetic.generate_synthetic_dataset`, one
+    dimension up (labelled: none|all); zero gmsh dependency by design, so the
+    3D smoke run proves the pipeline end to end before any 3D-G1 corpus work.
+    """
+    from pathlib import Path
+
+    from ..data.archive import save_instance, write_manifest
+
+    out = Path(out)
+    rng = np.random.default_rng(seed)
+    records = []
+    for i in range(n):
+        arch = tet_instance(rng, nx=nx, ny=ny, nz=nz,
+                            labelled=(labelled == "all"), ledger=ledger)
+        fn = f"instance_{i:05d}.npz"
+        save_instance(arch, out / fn)
+        records.append({"file": fn, "n_nodes": arch.n_nodes,
+                        "n_holes": 0, "labelled": arch.labelled})
+    write_manifest(out, records, {"backend": "tet3d", "seed": seed,
+                                  "labelled_policy": labelled,
+                                  "load_names": LOAD_NAMES_3D})
+    return out
+
+
 # --------------------------------------------------------------- 3D recovery --
 
 def tet_strains(nodes, tets, u: np.ndarray) -> np.ndarray:

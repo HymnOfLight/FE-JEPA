@@ -116,7 +116,9 @@ def _build_model(payload):
             lambda: build_mesh_gnn(dim=int(mcfg.get("mgn_dim", 128)),
                                    depth=int(mcfg.get("mgn_depth", 8)),
                                    features=FeatureSpec.from_dict(
-                                       mcfg.get("features"))), seed)
+                                       mcfg.get("features")),
+                                   scale_decode=bool(
+                                       mcfg.get("scale_decode", True))), seed)
     from ..models.fejepa import FEJEPAConfig, build_fejepa
 
     return seeded_factory(lambda: build_fejepa(FEJEPAConfig.from_dict(mcfg)), seed)

@@ -20,7 +20,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from .models.features import geometry_descriptor, load_summary, normalized_coords
+from .models.features import (geometry_descriptor, load_summary,
+                              normalized_coords, spatial_dim_of)
 
 
 def zero_predictor(arch) -> np.ndarray:
@@ -30,10 +31,11 @@ def zero_predictor(arch) -> np.ndarray:
 # ------------------------------------------------------------- global poly ----
 
 def _node_features(arch, j: int) -> np.ndarray:
+    sd = spatial_dim_of(arch)                              # WP7 3D-P0
     coords = normalized_coords(arch.nodes)
-    dmask = arch.dirichlet_mask.reshape(-1, 2).astype(np.float64)
+    dmask = arch.dirichlet_mask.reshape(-1, sd).astype(np.float64)
     fscale = np.abs(arch.F).max() + 1e-12
-    f = arch.F[j].reshape(-1, 2) / fscale
+    f = arch.F[j].reshape(-1, sd) / fscale
     return np.concatenate([coords, dmask, f], axis=1)
 
 
@@ -58,7 +60,7 @@ class GlobalPolyBaseline:
         for a in train_archs:
             for j in range(a.n_loads):
                 X.append(_poly(_node_features(a, j)))
-                Y.append(a.U_star[j].reshape(-1, 2))
+                Y.append(a.U_star[j].reshape(-1, spatial_dim_of(a)))
         X, Y = np.concatenate(X), np.concatenate(Y)
         A = X.T @ X + self.ridge * np.eye(X.shape[1])
         self.W = np.linalg.solve(A, X.T @ Y)
@@ -76,7 +78,7 @@ class GlobalPolyBaseline:
 def _case_descriptor(arch, j: int) -> np.ndarray:
     fscale = np.abs(arch.F).max() + 1e-12
     return np.concatenate([
-        load_summary(arch.F, j),
+        load_summary(arch.F, j, spatial_dim_of(arch)),
         geometry_descriptor(arch.meta),
         [np.log(fscale), np.log(arch.n_nodes)],
     ])
@@ -151,15 +153,16 @@ class KNNFieldBaseline:
         _, pts, U_nb = self._store[i]
         tri = self._triangulation(i)
         xq = normalized_coords(arch.nodes)
+        sd = spatial_dim_of(arch)                          # WP7 3D-P0
         U = np.zeros_like(arch.F)
         for j in range(arch.n_loads):
-            vals = U_nb[j].reshape(-1, 2)
-            for c in range(2):
+            vals = U_nb[j].reshape(-1, sd)
+            for c in range(sd):
                 out = LinearNDInterpolator(tri, vals[:, c])(xq)
                 bad = np.isnan(out)
                 if bad.any():
                     out[bad] = NearestNDInterpolator(pts, vals[:, c])(xq[bad])
-                U[j, c::2] = out
+                U[j, c::sd] = out
         return U * arch.free_mask
 
 

@@ -16,7 +16,8 @@ def main(argv=None) -> int:
     g.add_argument("out")
     g.add_argument("--n", type=int, default=100)
     g.add_argument("--seed", type=int, default=0)
-    g.add_argument("--backend", choices=["gmsh", "synthetic"], default="gmsh")
+    g.add_argument("--backend", choices=["gmsh", "synthetic", "tet3d"],
+                   default="gmsh")
     g.add_argument("--labelled", choices=["none", "all"], default="none")
     g.add_argument("--jobs", type=int, default=0)
     g.add_argument("--multires-coarsen", type=float, default=None)
@@ -72,7 +73,14 @@ def main(argv=None) -> int:
         from .fe.solve import SolveLedger
 
         ledger = SolveLedger()
-        if a.backend == "synthetic":
+        if a.backend == "tet3d":                            # WP7 3D-S1
+            if a.multires_coarsen:
+                raise SystemExit("tet3d multires is Phase-2 3D-G1 work")
+            from .fe.tet3d import generate_tet3d_dataset
+
+            generate_tet3d_dataset(a.out, a.n, a.seed, labelled=a.labelled,
+                                   ledger=ledger)
+        elif a.backend == "synthetic":
             from .fe.synthetic import (generate_synthetic_dataset,
                                        generate_synthetic_multires)
 

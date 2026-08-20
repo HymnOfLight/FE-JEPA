@@ -10,18 +10,19 @@ from __future__ import annotations
 
 import numpy as np
 
-from .features import FeatureSpec, build_features_battery
+from .features import FeatureSpec, battery_fscale, build_features_battery
+from .fejepa import element_edges
 
 
 def _edges(elements: np.ndarray) -> np.ndarray:
-    e = np.concatenate([elements[:, [0, 1]], elements[:, [1, 2]],
-                        elements[:, [2, 0]]], axis=0)
-    e = np.unique(np.sort(e, axis=1), axis=0)
-    return np.concatenate([e, e[:, ::-1]], axis=0).T      # (2, 2E) both directions
+    """(2, 2*|edges|) both directions -- generic over triangles and tetrahedra
+    (WP7 3D-P0.1); bit-identical to the v2.1.5 construction on triangles."""
+    return element_edges(elements)
 
 
 def build_mesh_gnn(dim: int = 128, depth: int = 8,
-                   features: FeatureSpec | None = None):
+                   features: FeatureSpec | None = None,
+                   scale_decode: bool = True):
     import torch
     from torch import nn
 
@@ -39,13 +40,16 @@ def build_mesh_gnn(dim: int = 128, depth: int = 8,
     class MeshGNN(nn.Module):
         def __init__(self):
             super().__init__()
-            self.cfg_dict = {"dim": dim, "depth": depth, "features": spec.to_dict()}
+            self.cfg_dict = {"dim": dim, "depth": depth,
+                             "scale_decode": scale_decode,
+                             "features": spec.to_dict()}
             self.node_enc = MLP(spec.dim, dim)
-            self.edge_enc = MLP(3, dim)
+            # rel-position (spatial_dim) + length (1); 2D value 3 unchanged
+            self.edge_enc = MLP(int(spec.spatial_dim) + 1, dim)
             self.node_upd = nn.ModuleList(MLP(2 * dim, dim) for _ in range(depth))
             self.edge_upd = nn.ModuleList(MLP(3 * dim, dim) for _ in range(depth))
             self.head = nn.Sequential(nn.Linear(dim, dim), nn.GELU(),
-                                      nn.Linear(dim, 2))
+                                      nn.Linear(dim, int(spec.spatial_dim)))
 
         def prepare_instance(self, arch, device):
             feats = torch.as_tensor(build_features_battery(arch, spec), device=device)
@@ -55,8 +59,10 @@ def build_mesh_gnn(dim: int = 128, depth: int = 8,
                                    axis=1)
             efeat = torch.as_tensor(efeat, dtype=feats.dtype, device=device)
             free = torch.as_tensor(arch.free_mask, device=device).float()
+            fscale = torch.as_tensor(battery_fscale(arch.F), dtype=feats.dtype,
+                                     device=device)
             return {"feats": feats, "edges": edges, "efeat": efeat, "free": free,
-                    "arch": arch}
+                    "fscale": fscale, "arch": arch}
 
         def _one(self, x, edges, efeat):
             src, dst = edges[0], edges[1]
@@ -72,6 +78,9 @@ def build_mesh_gnn(dim: int = 128, depth: int = 8,
             us = [self._one(pack["feats"][j], pack["edges"], pack["efeat"])
                   for j in range(pack["feats"].shape[0])]
             u = torch.stack(us, dim=0)
-            return u.reshape(u.shape[0], -1) * pack["free"]
+            u = u.reshape(u.shape[0], -1) * pack["free"]
+            if scale_decode:               # WP7 3D-P0.5: exact by linearity
+                u = u * pack["fscale"]
+            return u
 
     return MeshGNN()

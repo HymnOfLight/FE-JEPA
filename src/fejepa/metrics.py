@@ -35,11 +35,15 @@ def energy_gap_rel(U: np.ndarray, arch) -> np.ndarray:
 
 def vm_suite(U: np.ndarray, arch) -> dict:
     m = arch.meta["material"]
+    if int(arch.nodes.shape[1]) == 3:                     # WP7 3D-P0.4
+        from .fe.tet3d import tet_von_mises as _vm
+    else:
+        _vm = element_von_mises
     k = max(1, int(round(0.10 * arch.elements.shape[0])))
     rel, peak, recall = [], [], []
     for j in range(arch.n_loads):
-        vm_p = element_von_mises(arch.nodes, arch.elements, U[j], m)
-        vm_t = element_von_mises(arch.nodes, arch.elements, arch.U_star[j], m)
+        vm_p = _vm(arch.nodes, arch.elements, U[j], m)
+        vm_t = _vm(arch.nodes, arch.elements, arch.U_star[j], m)
         rel.append(relative_l2(vm_p, vm_t))
         peak.append(abs(vm_p.max() - vm_t.max()) / (vm_t.max() + 1e-30))
         top_t = set(np.argsort(vm_t)[-k:].tolist())
