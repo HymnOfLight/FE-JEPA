@@ -151,3 +151,43 @@ family + manifest discipline + contract-first tests) and a doubled motivation
 for the descriptor E-channel (SimJEB variable materials now joined by
 Stage-B's E(theta)) -- an explicit design input for the production G1 corpus
 and A-S1.
+
+## E4-3D wiring + G1.1 calibration + AMP protocol (21 August 2026)
+
+**E4-3D multires.** Pair generators for both 3D backends under the 2D pairs
+contract: `generate_tet3d_multires` (dims/coarsen) and
+`generate_gmsh3d_multires` (lc vs lc*coarsen), both via the rng-state reset so
+geometry AND traction scales are identical across each pair (tested: traction
+totals match exactly; gravity totals per unit mesh volume match to 1e-9, the
+sharp invariant on unstructured meshes where discrete cavity volumes differ).
+Runner `_ensure_multires` dispatches 3D; CLI routes `--multires-coarsen` for
+both backends; the former guard tests upgraded to positive coverage. The
+wiring pilot (`wp7_e4_3d_pilot.json`) executed end to end -- pairs generated,
+val pairs labelled in-ledger (32 solves), `run_e4` both arms -- gap numbers at
+this 2-epoch toy scale are wiring proof only; the frozen 2D K6 verdict
+(regulariser retired) is untouched.
+
+**gmsh sizing model fix (found by the pair tests).** With cavities present the
+original Min/Max-only sizing saturated: lc and 2*lc produced identical meshes,
+so multires pairs did not coarsen. Revised model: geometry-point sizes at lc,
+Max=lc, curvature refinement on cavity surfaces down to Min=lc/4. lc now binds
+(nodes ~ lc^-2 coarse regime, steepening toward volume scaling fine); the
+G1 pilot re-ran under the revision (new manifest `7154cadc...`, WP6 still
+green: premise 0.3502, witness 0.0194 < 0.0742).
+
+**G1.1 lc calibration.** `scripts/g1_lc_calibration.py`: same seeded
+geometries meshed across an lc sweep, piecewise log-log inversion (a single
+global power law is wrong -- the measured exponent moves from ~-2
+surface-dominated to ~-3 volume-dominated), probe refinement extends the curve
+until every target interpolates, incremental writes (B1.1 lesson). Sandbox
+calibration under the revised sizing: **10k dof -> lc 0.0906; 30k -> 0.0579;
+100k -> 0.0374** (per-geometry spread x1.33; the 100k probe measured 100,182
+median dof at lc 0.0374 -- dead on). gmsh sizing is version-dependent: the
+stamped production numbers come from re-running this script on the box
+(~5 minutes) before the Phase-2 freeze.
+
+**AMP/compile protocol.** `scripts/amp_compile_check.py` gathers fp32 vs
+autocast vs torch.compile deviations and step rates on one 3D unit; thresholds
+are frozen in the Phase-2 pre-registration, not in the script. CPU smoke:
+compile bitwise-transparent, amp(bf16) rel pred dev 5.9e-4; GPU numbers are a
+box run. Suite: 143 -> 146 pass, zero skips. Version marker: `2.1.5+wp7.3`.

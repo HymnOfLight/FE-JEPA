@@ -1,0 +1,28 @@
+{
+ "_comment": "WP7 E4-3D wiring pilot (EXPLORATORY, prereg_guard false). First execution of the multires-pairs machinery on 3D: gmsh3d pairs at coarsen 2.0 from the G1 pilot family, val pairs labelled in-ledger, run_e4 end to end (AR pretrain, inv arms on/off). The 2D K6 verdict (regulariser retired) is frozen and untouched; this run proves the E4-3D wiring and produces the first 3D resolution-transfer gap numbers for Phase-2 design. New output directories only.",
+ "data": {
+  "dir": "runs/data3d_g1pilot",
+  "n": 24,
+  "seed": 13,
+  "backend": "gmsh3d",
+  "lc": 0.32,
+  "labelled_policy": "economy"
+ },
+ "split": { "n_val": 8, "seed": 1 },
+ "model": {
+  "dim": 32, "depth": 2, "heads": 2, "mask_frac": 0.4,
+  "scale_decode": true,
+  "features": { "load_summary": true, "geometry": true, "spatial_dim": 3 }
+ },
+ "pretrain": { "epochs": 2, "lr": 0.001 },
+ "experiments": {
+  "e4": { "enabled": true, "coarsens": [2.0], "n": 8,
+          "n_train": 4, "n_val": 4, "epochs": 2, "seed": 0 }
+ },
+ "gate": { "decision_budget": 8 },
+ "out": "runs/wp7_e4_3d_pilot/report_e4_3d.json",
+ "device": "auto",
+ "workers": 1,
+ "tf32": true,
+ "prereg_guard": false
+}

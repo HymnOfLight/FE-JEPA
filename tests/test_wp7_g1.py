@@ -120,9 +120,10 @@ def test_runner_and_cli_wiring(tmp_path):
     assert m["backend"] == "gmsh3d" and m["n_instances"] == 2
 
     from fejepa.experiments.runner import _ensure_multires
-    with pytest.raises(NotImplementedError):
-        _ensure_multires({"backend": "gmsh3d", "dir": str(tmp_path / "g")},
-                         2.5, 2, SolveLedger())
+    mdir = _ensure_multires({"backend": "gmsh3d", "dir": str(tmp_path / "g"),
+                             "lc": 0.4, "seed": 3}, 2.0, 2, SolveLedger())
+    mm = json.load(open(mdir / "manifest.json"))
+    assert len(mm["pairs"]) == 2 and mm["backend"] == "gmsh3d"
 
 
 def test_simjeb_schema_audit_on_mock_tree(tmp_path):

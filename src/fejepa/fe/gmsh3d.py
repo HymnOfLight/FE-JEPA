@@ -86,8 +86,15 @@ def mesh_box_with_cavities(params: dict, lc: float):
     if tools:
         occ.cut([(3, box)], tools, removeObject=True, removeTool=True)
     occ.synchronize()
-    g.option.setNumber("Mesh.MeshSizeMin", 0.4 * lc)
+    # Sizing model (E4-3D revision): drive the bulk from geometry-point sizes
+    # at lc and cap with Max=lc; let curvature refine cavity surfaces down to
+    # Min=lc/4. Without the point sizes, cavity-bearing geometries saturate the
+    # sizing field and lc stops binding (observed: identical meshes at lc and
+    # 2*lc), which breaks multires pairs.
+    g.model.mesh.setSize(g.model.getEntities(0), lc)
+    g.option.setNumber("Mesh.MeshSizeMin", lc / 4.0)
     g.option.setNumber("Mesh.MeshSizeMax", lc)
+    g.option.setNumber("Mesh.MeshSizeFromCurvature", 8)
     g.option.setNumber("Mesh.Algorithm", 6)      # 2D frontal (surface, stable)
     g.option.setNumber("Mesh.Algorithm3D", 1)    # Delaunay
     g.option.setNumber("Mesh.Optimize", 1)
@@ -207,4 +214,36 @@ def generate_gmsh3d_dataset(out, n: int, seed: int, labelled: str = "none",
     write_manifest(out, records, {"backend": "gmsh3d", "seed": seed,
                                   "labelled_policy": labelled, "lc": float(lc),
                                   "load_names": LOAD_NAMES_3D})
+    return out
+
+
+def generate_gmsh3d_multires(out, n: int, seed: int, coarsen: float,
+                             lc: float = 0.30, labelled: str = "none",
+                             solve_method: str = "cg",
+                             ledger: SolveLedger | None = None):
+    """Same unstructured 3D BVP meshed at ``lc`` and ``lc*coarsen``; pairs
+    manifest in the 2D multires contract (WP7 E4-3D wiring). The rng-state
+    reset makes geometry and traction scales identical across the pair;
+    meshing consumes no randomness."""
+    from pathlib import Path
+
+    out = Path(out)
+    rng = np.random.default_rng(seed)
+    pairs = []
+    for i in range(n):
+        state = rng.bit_generator.state
+        fine = gmsh3d_instance(rng, lc=lc, labelled=(labelled == "all"),
+                               solve_method=solve_method, ledger=ledger)
+        rng.bit_generator.state = state
+        coarse = gmsh3d_instance(rng, lc=lc * coarsen,
+                                 labelled=(labelled == "all"),
+                                 solve_method=solve_method, ledger=ledger)
+        ff, cf = f"instance_{i:05d}_fine.npz", f"instance_{i:05d}_coarse.npz"
+        save_instance(fine, out / ff)
+        save_instance(coarse, out / cf)
+        pairs.append({"fine": ff, "coarse": cf})
+    write_manifest(out, [], {"backend": "gmsh3d", "seed": seed,
+                             "coarsen": float(coarsen), "lc": float(lc),
+                             "labelled_policy": labelled,
+                             "load_names": LOAD_NAMES_3D, "pairs": pairs})
     return out

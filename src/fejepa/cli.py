@@ -76,19 +76,26 @@ def main(argv=None) -> int:
 
         ledger = SolveLedger()
         if a.backend == "tet3d":                            # WP7 3D-S1
-            if a.multires_coarsen:
-                raise SystemExit("3D multires is the E4-3D wiring item")
-            from .fe.tet3d import generate_tet3d_dataset
+            from .fe.tet3d import (generate_tet3d_dataset,
+                                   generate_tet3d_multires)
 
-            generate_tet3d_dataset(a.out, a.n, a.seed, labelled=a.labelled,
-                                   ledger=ledger)
+            if a.multires_coarsen:
+                generate_tet3d_multires(a.out, a.n, a.seed, a.multires_coarsen,
+                                        labelled=a.labelled, ledger=ledger)
+            else:
+                generate_tet3d_dataset(a.out, a.n, a.seed, labelled=a.labelled,
+                                       ledger=ledger)
         elif a.backend == "gmsh3d":                         # WP7 3D-G1
-            if a.multires_coarsen:
-                raise SystemExit("3D multires is the E4-3D wiring item")
-            from .fe.gmsh3d import generate_gmsh3d_dataset
+            from .fe.gmsh3d import (generate_gmsh3d_dataset,
+                                    generate_gmsh3d_multires)
 
-            generate_gmsh3d_dataset(a.out, a.n, a.seed, labelled=a.labelled,
-                                    lc=a.lc, ledger=ledger)
+            if a.multires_coarsen:
+                generate_gmsh3d_multires(a.out, a.n, a.seed, a.multires_coarsen,
+                                         lc=a.lc, labelled=a.labelled,
+                                         ledger=ledger)
+            else:
+                generate_gmsh3d_dataset(a.out, a.n, a.seed, labelled=a.labelled,
+                                        lc=a.lc, ledger=ledger)
         elif a.backend == "synthetic":
             from .fe.synthetic import (generate_synthetic_dataset,
                                        generate_synthetic_multires)

@@ -83,14 +83,25 @@ def _ensure_dataset(dcfg: dict, ledger: SolveLedger) -> Path:
 
 
 def _ensure_multires(dcfg: dict, coarsen: float, n: int, ledger: SolveLedger) -> Path:
-    if dcfg.get("backend") in ("tet3d", "gmsh3d"):
-        raise NotImplementedError(
-            "multires pairs (E4) for the 3D backends are the E4-3D wiring item; "
-            "disable e4 in 3D configs until it lands")
     ddir = Path(str(dcfg["dir"]) + "_c" + str(coarsen).replace(".", "p"))
     if (ddir / "manifest.json").exists():
         return ddir
     seed = int(dcfg.get("seed", 0)) + 7919
+    if dcfg.get("backend") == "tet3d":                     # WP7 E4-3D
+        from ..fe.tet3d import generate_tet3d_multires
+
+        generate_tet3d_multires(ddir, n, seed, coarsen, ledger=ledger,
+                                nx=int(dcfg.get("nx", 8)),
+                                ny=int(dcfg.get("ny", 6)),
+                                nz=int(dcfg.get("nz", 6)))
+        return ddir
+    if dcfg.get("backend") == "gmsh3d":                    # WP7 E4-3D
+        from ..fe.gmsh3d import generate_gmsh3d_multires
+
+        generate_gmsh3d_multires(ddir, n, seed, coarsen, ledger=ledger,
+                                 lc=float(dcfg.get("lc", 0.30)),
+                                 solve_method=str(dcfg.get("solve_method", "cg")))
+        return ddir
     if dcfg.get("backend", "gmsh") == "synthetic":
         from ..fe.synthetic import generate_synthetic_multires
 

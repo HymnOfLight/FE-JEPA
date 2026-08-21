@@ -261,8 +261,12 @@ def test_runner_ensure_dataset_tet3d(tmp_path):
             "labelled_policy": "economy"}
     ddir = _ensure_dataset(dcfg, SolveLedger())
     assert (ddir / "manifest.json").exists()
-    with pytest.raises(NotImplementedError, match="E4-3D"):
-        _ensure_multires(dcfg, 1.8, 2, SolveLedger())
+    # E4-3D wiring landed: multires now yields a pairs manifest for tet3d
+    mdir = _ensure_multires({**dcfg, "nx": 4, "ny": 3, "nz": 3}, 2.0, 2,
+                            SolveLedger())
+    import json as _json
+    mm = _json.load(open(mdir / "manifest.json"))
+    assert len(mm["pairs"]) == 2 and mm["coarsen"] == 2.0
 
 
 # ----------------------------------- torch-gated: encoder/decoder + MGN I/O --

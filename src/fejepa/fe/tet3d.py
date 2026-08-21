@@ -211,6 +211,38 @@ def generate_tet3d_dataset(out, n: int, seed: int, labelled: str = "none",
     return out
 
 
+def generate_tet3d_multires(out, n: int, seed: int, coarsen: float,
+                            nx: int = 8, ny: int = 6, nz: int = 6,
+                            labelled: str = "none",
+                            ledger: SolveLedger | None = None):
+    """Same 3D BVP meshed fine (nx,ny,nz) and coarse (dims/coarsen); pairs
+    manifest in the 2D multires contract (WP7 E4-3D wiring)."""
+    from pathlib import Path
+
+    from ..data.archive import save_instance, write_manifest
+
+    out = Path(out)
+    rng = np.random.default_rng(seed)
+    cx, cy, cz = (max(2, int(round(v / coarsen))) for v in (nx, ny, nz))
+    pairs = []
+    for i in range(n):
+        state = rng.bit_generator.state          # same params for both meshes
+        fine = tet_instance(rng, nx=nx, ny=ny, nz=nz,
+                            labelled=(labelled == "all"), ledger=ledger)
+        rng.bit_generator.state = state
+        coarse = tet_instance(rng, nx=cx, ny=cy, nz=cz,
+                              labelled=(labelled == "all"), ledger=ledger)
+        ff, cf = f"instance_{i:05d}_fine.npz", f"instance_{i:05d}_coarse.npz"
+        save_instance(fine, out / ff)
+        save_instance(coarse, out / cf)
+        pairs.append({"fine": ff, "coarse": cf})
+    write_manifest(out, [], {"backend": "tet3d", "seed": seed,
+                             "coarsen": float(coarsen),
+                             "labelled_policy": labelled,
+                             "load_names": LOAD_NAMES_3D, "pairs": pairs})
+    return out
+
+
 # --------------------------------------------------------------- 3D recovery --
 
 def tet_strains(nodes, tets, u: np.ndarray) -> np.ndarray:
