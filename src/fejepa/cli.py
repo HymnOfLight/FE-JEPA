@@ -16,10 +16,12 @@ def main(argv=None) -> int:
     g.add_argument("out")
     g.add_argument("--n", type=int, default=100)
     g.add_argument("--seed", type=int, default=0)
-    g.add_argument("--backend", choices=["gmsh", "synthetic", "tet3d"],
+    g.add_argument("--backend", choices=["gmsh", "synthetic", "tet3d", "gmsh3d"],
                    default="gmsh")
     g.add_argument("--labelled", choices=["none", "all"], default="none")
     g.add_argument("--jobs", type=int, default=0)
+    g.add_argument("--lc", type=float, default=0.30,
+                   help="gmsh3d characteristic length (WP7 3D-G1)")
     g.add_argument("--multires-coarsen", type=float, default=None)
 
     l = sub.add_parser("label", help="solve+attach U* for val + a pool prefix")
@@ -75,11 +77,18 @@ def main(argv=None) -> int:
         ledger = SolveLedger()
         if a.backend == "tet3d":                            # WP7 3D-S1
             if a.multires_coarsen:
-                raise SystemExit("tet3d multires is Phase-2 3D-G1 work")
+                raise SystemExit("3D multires is the E4-3D wiring item")
             from .fe.tet3d import generate_tet3d_dataset
 
             generate_tet3d_dataset(a.out, a.n, a.seed, labelled=a.labelled,
                                    ledger=ledger)
+        elif a.backend == "gmsh3d":                         # WP7 3D-G1
+            if a.multires_coarsen:
+                raise SystemExit("3D multires is the E4-3D wiring item")
+            from .fe.gmsh3d import generate_gmsh3d_dataset
+
+            generate_gmsh3d_dataset(a.out, a.n, a.seed, labelled=a.labelled,
+                                    lc=a.lc, ledger=ledger)
         elif a.backend == "synthetic":
             from .fe.synthetic import (generate_synthetic_dataset,
                                        generate_synthetic_multires)

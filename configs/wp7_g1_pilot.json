@@ -1,0 +1,30 @@
+{
+ "_comment": "WP7 3D-G1 pilot (EXPLORATORY, prereg_guard false). First corpus from the gmsh3d backend: 24 unstructured box-with-cavity instances at coarse lc, economy labelling (CG per the 21 Aug envelope memo), E1' small + E5' + WP6 at corpus level -- the falsification protocol's first measurement on UNSTRUCTURED 3D meshes. New output directories; nothing frozen touched.",
+ "data": {
+  "dir": "runs/data3d_g1pilot",
+  "n": 24,
+  "seed": 13,
+  "backend": "gmsh3d",
+  "lc": 0.32,
+  "labelled_policy": "economy"
+ },
+ "split": { "n_val": 8, "seed": 1 },
+ "model": {
+  "dim": 32, "depth": 2, "heads": 2, "mask_frac": 0.4,
+  "scale_decode": true,
+  "features": { "load_summary": true, "geometry": true, "spatial_dim": 3 }
+ },
+ "sup": { "epochs": 3, "lr": 0.0015 },
+ "pretrain": { "epochs": 3, "lr": 0.001 },
+ "experiments": {
+  "e1": { "enabled": true, "budgets": [4, 8], "seeds": 2, "epochs": 3, "grid": [] },
+  "e5": { "enabled": true, "budgets": [4, 8], "fit_budget": 8, "margin": 3.0 },
+  "wp6": { "enabled": true, "n_check": 8, "seed": 0 }
+ },
+ "gate": { "decision_budget": 8 },
+ "out": "runs/wp7_g1_pilot/report_g1_pilot.json",
+ "device": "auto",
+ "workers": 1,
+ "tf32": true,
+ "prereg_guard": false
+}

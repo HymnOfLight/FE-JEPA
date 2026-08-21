@@ -68,6 +68,12 @@ def _ensure_dataset(dcfg: dict, ledger: SolveLedger) -> Path:
         generate_tet3d_dataset(ddir, n, seed, labelled=labelled, ledger=ledger,
                                nx=int(dcfg.get("nx", 4)), ny=int(dcfg.get("ny", 3)),
                                nz=int(dcfg.get("nz", 3)))
+    elif backend == "gmsh3d":                              # WP7 3D-G1
+        from ..fe.gmsh3d import generate_gmsh3d_dataset
+
+        generate_gmsh3d_dataset(ddir, n, seed, labelled=labelled, ledger=ledger,
+                                lc=float(dcfg.get("lc", 0.30)),
+                                solve_method=str(dcfg.get("solve_method", "cg")))
     else:
         from ..fe.generator import generate_dataset
 
@@ -77,10 +83,10 @@ def _ensure_dataset(dcfg: dict, ledger: SolveLedger) -> Path:
 
 
 def _ensure_multires(dcfg: dict, coarsen: float, n: int, ledger: SolveLedger) -> Path:
-    if dcfg.get("backend") == "tet3d":
+    if dcfg.get("backend") in ("tet3d", "gmsh3d"):
         raise NotImplementedError(
-            "multires pairs (E4) for the tet3d backend are Phase-2 3D-G1 work; "
-            "disable e4 in 3D smoke configs (WP7 3D-S1)")
+            "multires pairs (E4) for the 3D backends are the E4-3D wiring item; "
+            "disable e4 in 3D configs until it lands")
     ddir = Path(str(dcfg["dir"]) + "_c" + str(coarsen).replace(".", "p"))
     if (ddir / "manifest.json").exists():
         return ddir

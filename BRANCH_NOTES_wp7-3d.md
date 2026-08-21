@@ -109,3 +109,45 @@ floor -- scale-ON starts near the zero predictor because the normalised target
 is not yet learned; the floor claim is asymptotic and its clean demonstration
 remains the executed equivariance tests. The pair stands ready for a
 larger-epoch box run when Phase-2 scales are set.
+
+## 3D-G1 (21 August 2026): gmsh corpus backend + SimJEB schema audit
+
+Shaped by the 21 August envelope memo (training corpus 2,000 @ 10k-30k dof;
+transfer set 256 @ ~100k dof; CG labelling per the measured ~7k-dof no-reuse
+crossover). `fe/gmsh3d.py`: OCC boxes on the `tet_instance` sampling ranges
+(descriptor normalisation constants carry over verbatim) minus 0-3
+non-overlapping spherical cavities -- the exact `(x, y, z, r)` convention the
+P0.2 descriptor encodes -- meshed by gmsh Delaunay under a characteristic
+length `lc` (the transfer set is the same sampler at smaller `lc`). Assembly,
+gravity lumping, recovery and metrics are reused from `tet3d` unchanged; face
+tractions get a proper unstructured quadrature (boundary-triangle area/3
+lumping, exact for constant tractions on P1 -- verified to 1e-9 of the face
+area). Labelled solves default to CG (envelope decision), `solve_method`
+configurable. Runner backend `gmsh3d` (+ `lc`, `solve_method` keys), CLI
+`generate --backend gmsh3d --lc`; 3D multires stays guarded as the E4-3D
+wiring item (guard message updated accordingly, old test assertion aligned).
+Determinism within a gmsh version is tested; the manifest pins what was built.
+`scripts/simjeb_schema_audit.py` is the SimJEB line's first deliverable:
+offline tree inventory (formats, counts, mesh probes, split-file detection);
+per-model licence audit remains a separate mandatory step (fire-plan R1).
+
+Tests: `tests/test_wp7_g1.py` -- 8 checks (sampling separation, cavity meshing
+validity + volume sanity + determinism, contract identities at machine
+precision on unstructured meshes, exact traction quadrature, descriptor and
+20-dim feature carry-over, dataset/manifest round-trip, runner + guard wiring,
+schema-audit mock). Suite: 135 -> 143 pass, zero skips, all dependencies live.
+Pilot `configs/wp7_g1_pilot.json` executed in-harness (24 instances, cavities
+0-3, economy 64 solves in-ledger): **the WP6 falsification pass held at corpus
+level on unstructured 3D meshes -- the protocol's fourth measurement and its
+first unstructured** (C5 not triggered; contraction 1.2e-15; Chebyshev 0.087;
+Prop-1 premise 0.350; the naive cross-geometry extension falsified again,
+0.0221 < 0.0762 -- the scope boundary now replicates across 2D gmsh, 3D
+structured and 3D unstructured families). Version marker: `2.1.5+wp7.2`.
+
+Fire-line alignment note (staged decomposition of 19 August): Stage A's
+`wp8-heat` branch and A-S2 corpus generator (I/H sections, fire families) stay
+separate by design; what G1 contributes there is the pattern (parametric
+family + manifest discipline + contract-first tests) and a doubled motivation
+for the descriptor E-channel (SimJEB variable materials now joined by
+Stage-B's E(theta)) -- an explicit design input for the production G1 corpus
+and A-S1.

@@ -261,7 +261,7 @@ def test_runner_ensure_dataset_tet3d(tmp_path):
             "labelled_policy": "economy"}
     ddir = _ensure_dataset(dcfg, SolveLedger())
     assert (ddir / "manifest.json").exists()
-    with pytest.raises(NotImplementedError, match="3D-G1"):
+    with pytest.raises(NotImplementedError, match="E4-3D"):
         _ensure_multires(dcfg, 1.8, 2, SolveLedger())
 
 
