@@ -109,27 +109,41 @@ def main(argv=None) -> int:
     ap.add_argument("--out", default="runs/bench3d/bench3d_scale.json")
     a = ap.parse_args(argv)
 
+    out = Path(a.out)
+    out.parent.mkdir(parents=True, exist_ok=True)
     rows, t_start = [], time.perf_counter()
+    payload = {"purpose": "WP7 3D-B1 solve benchmark (envelope input)",
+               "note": "envelope valid only when measured on the target box "
+                       "(Manual sec 16.4); elsewhere this validates the script",
+               "tol_cg": a.tol, "rows": rows}
+
+    def _flush():
+        out.write_text(json.dumps(payload, indent=1))
+
     for n in a.sizes:
         if time.perf_counter() - t_start > a.max_seconds:
             print(f"[bench3d] budget {a.max_seconds}s reached; stopping before "
                   f"n_side={n}", flush=True)
             break
-        r = bench_one(n, tol=a.tol)
+        try:
+            r = bench_one(n, tol=a.tol)
+        except MemoryError:
+            rows.append({"n_side": n, "memory_wall": True,
+                         "note": "splu MemoryError -- direct-factor memory wall "
+                                 "on this box at this size"})
+            print(f"[bench3d] n_side={n}: MemoryError in splu -- memory wall "
+                  f"recorded; stopping sweep", flush=True)
+            _flush()
+            break
         rows.append(r)
+        _flush()                       # incremental: completed sizes never lost
         print(f"[bench3d] n_side={n:>3} nodes={r['n_nodes']:>7} "
               f"ndof={r['ndof']:>8} | asm {r['assembly_s']:.3f}s | "
               f"splu {r['splu_factor_s']:.3f}s fill {r['lu_fill_mem_mb_16B']:.1f}MB "
               f"(rss +{r['rss_delta_mb']:.0f}MB) | dir/rhs {r['direct_solve_per_rhs_s']:.4f}s | "
               f"CG {r['cg_iters_1e-10']} its {r['cg_per_rhs_s']:.3f}s/rhs", flush=True)
 
-    out = Path(a.out)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    payload = {"purpose": "WP7 3D-B1 solve benchmark (envelope input)",
-               "note": "envelope valid only when measured on the target box "
-                       "(Manual sec 16.4); elsewhere this validates the script",
-               "tol_cg": a.tol, "rows": rows}
-    out.write_text(json.dumps(payload, indent=1))
+    _flush()
     print(f"[bench3d] -> {out}")
     return 0
 
