@@ -22,6 +22,9 @@ def main(argv=None) -> int:
     g.add_argument("--jobs", type=int, default=0)
     g.add_argument("--lc", type=float, default=0.30,
                    help="gmsh3d characteristic length (WP7 3D-G1)")
+    g.add_argument("--lc-range", type=float, nargs=2, default=None,
+                   metavar=("LO", "HI"),
+                   help="per-instance lc sampled uniformly (production band)")
     g.add_argument("--multires-coarsen", type=float, default=None)
 
     l = sub.add_parser("label", help="solve+attach U* for val + a pool prefix")
@@ -95,7 +98,8 @@ def main(argv=None) -> int:
                                          ledger=ledger)
             else:
                 generate_gmsh3d_dataset(a.out, a.n, a.seed, labelled=a.labelled,
-                                        lc=a.lc, ledger=ledger)
+                                        lc=a.lc, lc_range=a.lc_range,
+                                        ledger=ledger)
         elif a.backend == "synthetic":
             from .fe.synthetic import (generate_synthetic_dataset,
                                        generate_synthetic_multires)

@@ -15,4 +15,4 @@ Layout (plan reference in each module docstring; full traceability in PLAN_MAP.m
   experiments/  E1'..E8, Gate G1', runner, cost model          (plan Sec.5, Sec.6, Sec.9)
 """
 
-__version__ = "2.1.5+wp7.3"
+__version__ = "2.1.5+wp7.4"

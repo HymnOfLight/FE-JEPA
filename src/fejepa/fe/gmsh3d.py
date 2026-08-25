@@ -190,13 +190,19 @@ def gmsh3d_instance(rng: np.random.Generator, lc: float = 0.30,
 
 
 def generate_gmsh3d_dataset(out, n: int, seed: int, labelled: str = "none",
-                            lc: float = 0.30, solve_method: str = "cg",
+                            lc: float = 0.30, lc_range=None,
+                            solve_method: str = "cg",
                             ledger: SolveLedger | None = None):
-    """gmsh 3D corpus in the standard manifest contract (WP7 3D-G1).
+    """gmsh 3D corpus in the standard manifest contract (WP7 3D-G1/G1.2).
 
     Labelled solves default to CG per the 21 August envelope memo (the
-    no-factor-reuse crossover sits at ~7k dof). ``lc`` sets the resolution;
-    the transfer set is this generator at a smaller ``lc``.
+    no-factor-reuse crossover sits at ~7k dof). Resolution: a fixed ``lc``,
+    or -- for the production training band -- ``lc_range=(lo, hi)`` sampling a
+    per-instance lc uniformly (drawn from the corpus rng immediately before
+    each instance; the realised lc is recorded per manifest record). The
+    calibrated band from the 21 August box run: lc in [0.0579, 0.0906] spans
+    10k--30k dof (per-geometry spread x1.33); the transfer set is a fixed
+    lc = 0.0374 (~100k dof).
     """
     from pathlib import Path
 
@@ -204,16 +210,21 @@ def generate_gmsh3d_dataset(out, n: int, seed: int, labelled: str = "none",
     rng = np.random.default_rng(seed)
     records = []
     for i in range(n):
-        arch = gmsh3d_instance(rng, lc=lc, labelled=(labelled == "all"),
+        lc_i = float(rng.uniform(*lc_range)) if lc_range else float(lc)
+        arch = gmsh3d_instance(rng, lc=lc_i, labelled=(labelled == "all"),
                                solve_method=solve_method, ledger=ledger)
         fn = f"instance_{i:05d}.npz"
         save_instance(arch, out / fn)
         records.append({"file": fn, "n_nodes": arch.n_nodes,
                         "n_holes": arch.meta["extra"]["n_holes"],
-                        "labelled": arch.labelled})
-    write_manifest(out, records, {"backend": "gmsh3d", "seed": seed,
-                                  "labelled_policy": labelled, "lc": float(lc),
-                                  "load_names": LOAD_NAMES_3D})
+                        "lc": lc_i, "labelled": arch.labelled})
+    extra = {"backend": "gmsh3d", "seed": seed, "labelled_policy": labelled,
+             "load_names": LOAD_NAMES_3D}
+    if lc_range:
+        extra["lc_range"] = [float(lc_range[0]), float(lc_range[1])]
+    else:
+        extra["lc"] = float(lc)
+    write_manifest(out, records, extra)
     return out
 
 

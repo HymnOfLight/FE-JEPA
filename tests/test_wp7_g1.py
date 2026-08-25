@@ -140,3 +140,18 @@ def test_simjeb_schema_audit_on_mock_tree(tmp_path):
     obj = rep["samples"][".obj"]
     assert obj["vertices"] == 3 and obj["faces"] == 1
     assert rep["samples"][".csv"]["header"] == ["id", "mass"]
+
+
+def test_lc_range_band_sampling(tmp_path):
+    """G1.2: the production-band mode samples a per-instance lc, records it in
+    every manifest record and in extra, and regenerates deterministically."""
+    out = generate_gmsh3d_dataset(tmp_path / "band", n=4, seed=6,
+                                  labelled="none", lc_range=(0.30, 0.50))
+    m = json.load(open(out / "manifest.json"))
+    assert m["lc_range"] == [0.30, 0.50] and "lc" not in m
+    lcs = [r["lc"] for r in m["instances"]]
+    assert all(0.30 <= x <= 0.50 for x in lcs) and len(set(lcs)) > 1
+    out2 = generate_gmsh3d_dataset(tmp_path / "band2", n=4, seed=6,
+                                   labelled="none", lc_range=(0.30, 0.50))
+    m2 = json.load(open(out2 / "manifest.json"))
+    assert [{k: v for k, v in r.items() if k != "file"} for r in m["instances"]]         == [{k: v for k, v in r.items() if k != "file"} for r in m2["instances"]]

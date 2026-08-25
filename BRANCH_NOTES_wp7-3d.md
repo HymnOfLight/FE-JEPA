@@ -191,3 +191,27 @@ autocast vs torch.compile deviations and step rates on one 3D unit; thresholds
 are frozen in the Phase-2 pre-registration, not in the script. CPU smoke:
 compile bitwise-transparent, amp(bf16) rel pred dev 5.9e-4; GPU numbers are a
 box run. Suite: 143 -> 146 pass, zero skips. Version marker: `2.1.5+wp7.3`.
+
+## G1.2 (21 August 2026): production-band lc sampling + measurement provenance
+
+The box calibration round (Xeon Platinum 8470Q, 208 threads; tar `6635ff83...`)
+returned the official numbers **identical to the sandbox calibration** --
+lc 0.0906 / 0.0579 / 0.0374 for 10k / 30k / 100k dof, all interpolated, spread
+x1.33 -- with all 39 rows matching on nodes and dof and a single fine-probe row
+differing by 6 tets in 97,790 (0.006%): node-level cross-machine determinism
+held, connectivity is not guaranteed bit-stable at fine resolution, so **the
+production corpus is generated once, on the box, and its manifest pins it**
+(standing policy, now with its measured justification). The AMP GPU row (RTX
+5090, torch 2.12.1+cu130, 50 steps): compile 1.46x faster and bitwise
+transparent; autocast fp16 carries 1.7e-2 trajectory-level prediction deviation
+-- adopt compile for Phase-2 training, defer AMP (budgets do not need it;
+thresholds recorded for the prereg if revisited).
+
+This commit closes the two residuals the round exposed: (1)
+`generate_gmsh3d_dataset` gains `lc_range=(lo, hi)` -- a per-instance lc drawn
+uniformly from the corpus rng, recorded in every manifest record and in extra
+-- so the training corpus spans the calibrated band [0.0579, 0.0906] in one
+manifest (runner key `lc_range`, CLI `--lc-range`; determinism tested); the
+transfer set stays a fixed lc = 0.0374. (2) Both measurement scripts now stamp
+a provenance block (git describe, numpy, gmsh) into their JSONs. Suite:
+146 -> 147 pass, zero skips. Version marker: `2.1.5+wp7.4`.

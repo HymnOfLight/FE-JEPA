@@ -22,6 +22,25 @@ from pathlib import Path
 import numpy as np
 
 
+def _provenance() -> dict:
+    """Best-effort provenance for measurement JSONs (git describe, versions)."""
+    import subprocess
+    prov = {}
+    try:
+        prov["git"] = subprocess.run(
+            ["git", "describe", "--tags", "--always", "--dirty"],
+            capture_output=True, text=True, timeout=10).stdout.strip() or "unavailable"
+    except Exception:                                     # noqa: BLE001
+        prov["git"] = "unavailable"
+    prov["numpy"] = np.__version__
+    try:
+        import gmsh
+        prov["gmsh"] = ".".join(str(v) for v in gmsh.GMSH_API_VERSION.split("."))             if isinstance(getattr(gmsh, "GMSH_API_VERSION", None), str) else             str(getattr(gmsh, "GMSH_API_VERSION", "unknown"))
+    except Exception:                                     # noqa: BLE001
+        pass
+    return prov
+
+
 def _unit(device, steps, mode, seed=0):
     import torch
 
@@ -90,7 +109,8 @@ def main(argv=None) -> int:
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     payload = {"device": device, "steps": a.steps,
-               "torch": torch.__version__, "rows": rows,
+               "torch": torch.__version__, "provenance": _provenance(),
+               "rows": rows,
                "note": "numbers gathered for the Phase-2 prereg; thresholds "
                        "are frozen there, not here"}
     out.write_text(json.dumps(payload, indent=1))

@@ -73,6 +73,7 @@ def _ensure_dataset(dcfg: dict, ledger: SolveLedger) -> Path:
 
         generate_gmsh3d_dataset(ddir, n, seed, labelled=labelled, ledger=ledger,
                                 lc=float(dcfg.get("lc", 0.30)),
+                                lc_range=dcfg.get("lc_range"),
                                 solve_method=str(dcfg.get("solve_method", "cg")))
     else:
         from ..fe.generator import generate_dataset

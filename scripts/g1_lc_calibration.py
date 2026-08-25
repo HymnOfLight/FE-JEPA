@@ -31,6 +31,25 @@ import numpy as np
 from fejepa.fe.gmsh3d import mesh_box_with_cavities, sample_params3d
 
 
+def _provenance() -> dict:
+    """Best-effort provenance for measurement JSONs (git describe, versions)."""
+    import subprocess
+    prov = {}
+    try:
+        prov["git"] = subprocess.run(
+            ["git", "describe", "--tags", "--always", "--dirty"],
+            capture_output=True, text=True, timeout=10).stdout.strip() or "unavailable"
+    except Exception:                                     # noqa: BLE001
+        prov["git"] = "unavailable"
+    prov["numpy"] = np.__version__
+    try:
+        import gmsh
+        prov["gmsh"] = ".".join(str(v) for v in gmsh.GMSH_API_VERSION.split("."))             if isinstance(getattr(gmsh, "GMSH_API_VERSION", None), str) else             str(getattr(gmsh, "GMSH_API_VERSION", "unknown"))
+    except Exception:                                     # noqa: BLE001
+        pass
+    return prov
+
+
 def _measure(params: dict, lc: float) -> dict:
     t0 = time.perf_counter()
     nodes, tets = mesh_box_with_cavities(params, lc)
@@ -56,7 +75,8 @@ def main(argv=None) -> int:
     children = np.random.SeedSequence(a.seed).spawn(a.samples)
     geoms = [sample_params3d(np.random.default_rng(c)) for c in children]
     payload: dict = {"purpose": "WP7 3D-G1.1 lc calibration (envelope targets)",
-                     "seed": a.seed, "samples": a.samples, "rows": []}
+                     "seed": a.seed, "samples": a.samples,
+                     "provenance": _provenance(), "rows": []}
 
     def flush():
         out.write_text(json.dumps(payload, indent=1))
