@@ -124,6 +124,20 @@ def _build_model(payload):
     return seeded_factory(lambda: build_fejepa(FEJEPAConfig.from_dict(mcfg)), seed)
 
 
+def _maybe_compile(model, payload):
+    if payload.get("compile"):
+        import torch
+
+        return torch.compile(model)
+    return model
+
+
+def _state_dict(model):
+    """State dict of the underlying module (torch.compile wraps in _orig_mod;
+    saving the wrapper would poison the shared-checkpoint contract)."""
+    return getattr(model, "_orig_mod", model).state_dict()
+
+
 def supervised_unit(payload: dict) -> dict:
     """One supervised training (any anchor_mode, optional pretrained state on disk).
 
@@ -144,9 +158,16 @@ def supervised_unit(payload: dict) -> dict:
 
         state = torch.load(payload["pretrained_path"], map_location="cpu",
                            weights_only=True)
+    model = _maybe_compile(model, payload)
     res = train_supervised(model, _load(payload["train_files"]),
                            _load(payload["val_files"]),
                            SupervisedConfig(**sup), pretrained_state=state)
+    if payload.get("state_path"):
+        import torch
+
+        sp = Path(payload["state_path"])
+        sp.parent.mkdir(parents=True, exist_ok=True)
+        torch.save(_state_dict(model), sp)
     return {k: res[k] for k in ("val", "pretrained_tensors_loaded")} | (
         {"balance_scale_mean": res["balance_scale_mean"]}
         if "balance_scale_mean" in res else {})
@@ -172,11 +193,12 @@ def pretrain_unit(payload: dict) -> dict:
     if payload.get("quiet"):
         pre["log_every"] = -1
     loss = AR_CONFIG if payload.get("loss", "ar") == "ar" else JEPA_CONFIG
+    model = _maybe_compile(model, payload)
     pretrain(model, _load(payload["files"]), PretrainConfig(loss=loss, **pre))
 
     sp = Path(payload["state_path"])
     sp.parent.mkdir(parents=True, exist_ok=True)
-    torch.save(model.state_dict(), sp)
+    torch.save(_state_dict(model), sp)
 
     out = {"state_path": str(sp)}
     if payload.get("eval_val_files"):

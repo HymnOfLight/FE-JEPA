@@ -168,7 +168,8 @@ def gate_g2(e8_result: dict | None, e1_result: dict | None,
     if e6_result is None:
         reasons["KP6"] = "P5/E6 not run -- alignment claim unevaluated"
     else:
-        rho = e6_result["metrics"].get("rho_within")
+        rho = e6_result["metrics"].get("rho_within_mean",
+                                       e6_result["metrics"].get("rho_within"))
         kills["KP6"] = bool(rho is not None and rho < k["KP6_rho_within_min"])
         reasons["KP6"] = f"rho_within {rho} (kill if < {k['KP6_rho_within_min']})"
 

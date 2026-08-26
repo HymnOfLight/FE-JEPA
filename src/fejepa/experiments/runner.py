@@ -24,7 +24,7 @@ from dataclasses import replace
 import numpy as np
 from pathlib import Path
 
-from ..data.archive import add_labels, load_instance, load_manifest, mark_labelled
+from ..data.archive import add_labels, load_instance, load_manifest, mark_labelled, instance_files
 from ..fe.solve import SolveLedger, solve_fe_displacement
 from ..models.features import FeatureSpec
 from ..models.fejepa import FEJEPAConfig, build_fejepa
@@ -326,7 +326,8 @@ def run_config(path, device_override: str | None = None,
     factory, _ = make_model_factory(cfg.get("model", {}))
     model_cfg = cfg.get("model", {})
     dev = {"device": device}
-    run_opts = {"device": device, "workers": workers, "tf32": policy["tf32"]}
+    run_opts = {"device": device, "workers": workers, "tf32": policy["tf32"],
+                "compile": bool(cfg.get("runtime", {}).get("compile", False))}
     results: dict = {}
 
     if (exps.get("e1") or {}).get("enabled"):
@@ -420,17 +421,61 @@ def run_config(path, device_override: str | None = None,
 
         results["e7"] = run_e7(factory, pool_archs, val_archs, {**exps["e7"], **dev})
 
-    stage("gate G1'")
+    if (exps.get("p3_transfer") or {}).get("enabled"):
+        from .p3_transfer import run_p3
+        stage("P3 (resolution transfer)")
+
+        dt = dict(cfg["data_transfer"])
+        dt_split = dt.pop("split", {})
+        fdir = _ensure_dataset(dt, ledger)
+        ffiles = instance_files(Path(fdir))
+        n_eval = int(dt_split.get("n_eval", 256))
+        n_pref = int(dt_split.get("n_fewshot_prefix", 64))
+        if len(ffiles) < n_eval + n_pref:
+            raise ValueError(f"P3 transfer set has {len(ffiles)} instances; "
+                             f"needs n_eval {n_eval} + prefix {n_pref}")
+        # Pinned partition (r8 Sec.7): manifest order -- first n_eval are the
+        # evaluation set, the next n_fewshot_prefix the few-shot prefix.
+        fine_eval_files = ffiles[:n_eval]
+        fine_prefix_files = ffiles[n_eval:n_eval + n_pref]
+        _label_files(fine_eval_files, ledger, "labelling-fine-val",
+                     workers=label_workers)
+        _label_files(fine_prefix_files, ledger, "labelling-fine-prefix",
+                     workers=label_workers)
+        fine_eval_archs = [load_instance(f) for f in fine_eval_files]
+        e8c = exps.get("e8") or {}
+        results["p3_transfer"] = run_p3(
+            model_cfg, split.pool_files, val_archs, fine_eval_archs,
+            fine_eval_files, fine_prefix_files,
+            {**exps["p3_transfer"], **run_opts,
+             "state_dir": str(Path(cfg.get("out", "runs/report_v2.json")).parent
+                              / "e8_states"),
+             "pool_size": (e8c.get("pool_sizes") or [1024])[0],
+             "bmax": max(e8c.get("budgets", [1024]))})
+
     if (exps.get("wp6") or {}).get("enabled"):
         from ..theory import run_theory_checks
 
         stage("WP6 theory falsification pass (GPU-free)")
         results["wp6"] = run_theory_checks(val_archs, exps["wp6"])
 
-    gate = gate_mod.g1_prime(results.get("e5"), results.get("e8"), results.get("e1"),
-                             decision_budget=int(cfg.get("gate", {})
-                                                 .get("decision_budget", 64)),
-                             thresholds=cfg.get("gate", {}).get("thresholds"))
+    if cfg.get("gate_g2"):
+        from .gate_g2 import gate_g2
+
+        stage("gate G2")
+        gate = gate_g2(results.get("e8"), results.get("e1"),
+                       results.get("p3_transfer"), results.get("e6"),
+                       results.get("wp6"), gate_cfg=cfg.get("gate_g2"),
+                       kill_cfg=cfg.get("kills"))
+        gate_key = "gate_g2"
+    else:
+        stage("gate G1'")
+        gate = gate_mod.g1_prime(results.get("e5"), results.get("e8"),
+                                 results.get("e1"),
+                                 decision_budget=int(cfg.get("gate", {})
+                                                     .get("decision_budget", 64)),
+                                 thresholds=cfg.get("gate", {}).get("thresholds"))
+        gate_key = "gate_g1_prime"
 
     seeds = sorted({int(s) for e in exps.values() if isinstance(e, dict)
                     for s in range(int(e.get("seeds", 0) or 0))}) or [0]
@@ -443,7 +488,7 @@ def run_config(path, device_override: str | None = None,
         "runtime_policy": policy,
         "planned_steps": count_steps(cfg),
         "results": results,
-        "gate_g1_prime": gate,
+        gate_key: gate,
         "solve_ledger": ledger.as_dict(),
         "provenance": provenance(cfg, [ddir, *mr_dirs.values()], seeds),
     }

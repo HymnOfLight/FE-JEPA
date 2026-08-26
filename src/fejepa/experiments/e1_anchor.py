@@ -17,7 +17,8 @@ concurrently on the GPU with identical results to the serial path (tested).
 from __future__ import annotations
 
 from .parallel import map_units, supervised_unit
-from .protocol import PIPELINE_PA, kill, mean_std, result, seeds_list, t_stat
+from .protocol import (PIPELINE_PA, divergence_flags, kill, mean_std, result,
+                       seeds_list, t_stat)
 
 PLAN_REF = "plan v2.0 Sec.6 E1', Sec.5 item 4 (lambda policy), kill K1"
 
@@ -59,6 +60,7 @@ def run_e1(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
                 keys.append((b, name, s))
                 payloads.append({
                     "kind": "fejepa", "model": model_cfg, "seed": s, "tf32": tf32,
+                    "compile": cfg.get("compile", False),
                     "train_files": train_str, "val_files": val_str,
                     "sup": dict(kw, desc=f"E1' b{b} {name} s{s}"),
                     "tag": f"b{b} {name} s{s}",
@@ -75,6 +77,7 @@ def run_e1(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
                 "disp": mean_std([v["disp_rel_l2"] for v in vals]),
                 "egap": mean_std([v["energy_gap_rel"] for v in vals]),
                 "per_instance_by_seed": [v["per_instance"] for v in vals],
+                "divergence_flags": divergence_flags(vals),   # r8 Sec.5
             }
 
         def improvement(arm: str, key: str, _arms=arm_out) -> dict:

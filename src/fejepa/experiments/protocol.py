@@ -126,6 +126,23 @@ def kill(condition: str, triggered: bool, note: str = "") -> dict:
     return {"condition": condition, "triggered": bool(triggered), "note": note}
 
 
+DIVERGENCE_DISP_LIMIT = 10.0
+
+
+def divergence_flags(seed_evals: list, key: str = "disp_rel_l2",
+                     limit: float = DIVERGENCE_DISP_LIMIT) -> list[bool]:
+    """PREREG_PHASE2 r8 Sec.5 divergence rule: a run is flagged when its loss is
+    non-finite or its relative L2 displacement error exceeds ``limit``. Flags are
+    reported per seed; seed means ALWAYS include flagged runs (no exclusion)."""
+    import numpy as np
+
+    out = []
+    for e in seed_evals:
+        v = e.get(key) if isinstance(e, dict) else e
+        out.append(bool(v is None or not np.isfinite(v) or v > limit))
+    return out
+
+
 def result(exp_id: str, plan_ref: str, protocol: dict, metrics: dict,
            kills: list[dict]) -> dict:
     return {"id": exp_id, "plan_ref": plan_ref, "protocol": protocol,

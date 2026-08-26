@@ -32,7 +32,8 @@ from ..baselines import (KNNFieldBaseline, ScaleAwarePolyBaseline,
                          zero_predictor)
 from ..metrics import FIELD_KEYS, evaluate_model, label_efficiency_auc
 from .parallel import map_units, pretrain_unit, supervised_unit
-from .protocol import kill, load_archs, mean_std, result, seeds_list
+from .protocol import (divergence_flags, kill, load_archs, mean_std, result,
+                       seeds_list)
 
 PLAN_REF = "plan v2.0 Sec.6 E8, C1, gate G1'(b,c), kills K2 + C1-advantage"
 
@@ -40,6 +41,7 @@ PLAN_REF = "plan v2.0 Sec.6 E8, C1, gate G1'(b,c), kills K2 + C1-advantage"
 def _agg(seed_evals: list[dict]) -> dict:
     out = {k: mean_std([e[k] for e in seed_evals]) for k in FIELD_KEYS}
     out["per_seed_eval"] = seed_evals            # includes per-instance arrays (B6)
+    out["divergence_flags"] = divergence_flags(seed_evals)   # r8 Sec.5; no exclusion
     return out
 
 
@@ -90,6 +92,7 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
             pre_keys.append((s, p))
             pre_payloads.append({
                 "kind": "fejepa", "model": model_cfg, "seed": s, "tf32": tf32,
+                "compile": cfg.get("compile", False),
                 "files": [str(f) for f in pool_files[:p]], "loss": "ar",
                 "pre": dict(pre, desc=f"E8 AR pool{p} s{s}"),
                 "state_path": str(state_dir / f"ar_p{p}_s{s}.pt"),
@@ -114,10 +117,17 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
                 sup_payloads.append({
                     "kind": "mgn" if r == "mgn" else "fejepa",
                     "model": model_cfg, "seed": s, "tf32": tf32,
+                "compile": cfg.get("compile", False),
                     "train_files": train_str, "val_files": val_str,
                     "sup": dict(sup, **arm_kw[r], desc=f"E8 {r} b{b} s{s}"),
                     "pretrained_path": (pre_out[(s, ft_pool)]["state_path"]
                                         if r == "ar_ft" else None),
+                    # P3 checkpoint sharing (PREREG_PHASE2 r8: identical
+                    # configurations trained once): persist the b_max states of
+                    # the labels and mgn arms for zero-shot transfer evaluation.
+                    "state_path": (str(state_dir / f"{r}_b{b}_s{s}.pt")
+                                   if (b == max(budgets) and r in ("labels", "mgn"))
+                                   else None),
                     "tag": f"{r} b{b} s{s}",
                 })
     sup_out = dict(zip(sup_keys,
