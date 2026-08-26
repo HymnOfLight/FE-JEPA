@@ -272,6 +272,10 @@ def run_config(path, device_override: str | None = None,
         except Exception:
             device = "cpu"
 
+    if (cfg.get("runtime") or {}).get("amp"):
+        raise ValueError("AMP is deferred by PREREG_PHASE2 r8 Sec.0 (fp16 "
+                         "trajectory deviation on record); a bf16 variant "
+                         "enters only by fresh pre-registration")
     policy = setup_torch(device, tf32=bool(cfg.get("tf32", True)))
     ledger = SolveLedger()
     exps = cfg.get("experiments", {})
@@ -458,7 +462,10 @@ def run_config(path, device_override: str | None = None,
              "state_dir": str(Path(cfg.get("out", "runs/report_v2.json")).parent
                               / "e8_states"),
              "pool_size": (e8c.get("pool_sizes") or [1024])[0],
-             "bmax": max(e8c.get("budgets", [1024]))})
+             "bmax": max(e8c.get("budgets", [1024])),
+             # seed count follows E8 (single source: the shared checkpoints
+             # exist exactly for E8's seeds)
+             "seeds": e8c.get("seeds", 3)})
 
     if (exps.get("wp6") or {}).get("enabled"):
         from ..theory import run_theory_checks
@@ -524,6 +531,8 @@ def run_config(path, device_override: str | None = None,
             print(f"[fejepa] WARNING: figure rendering failed "
                   f"({type(e).__name__}: {e}); re-render later with "
                   f"`fejepa results {out} --figures`", flush=True)
-    print(f"[fejepa] gate G1' passed={gate['passed']} conditions={gate['conditions']}")
+    gate_name = "G2" if gate_key == "gate_g2" else "G1'"
+    print(f"[fejepa] gate {gate_name} passed={gate['passed']} "
+          f"conditions={gate['conditions']}")
     print(f"[fejepa] solve ledger: {ledger.as_dict()}")
     return payload

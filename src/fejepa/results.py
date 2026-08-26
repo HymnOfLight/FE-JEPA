@@ -80,8 +80,26 @@ def render_results(payload: dict) -> str:
     add("")
 
     # ---- gate ------------------------------------------------------------
+    g2 = payload.get("gate_g2")
+    if g2:
+        add("## Gate G2 (PREREG_PHASE2)")
+        c = g2["conditions"]
+        add(f"**{'GO' if g2['passed'] else 'NO-GO'}** -- logic {g2['logic']}; "
+            f"(a)={c['a']} (b)={c['b']} (c)={c['c']}; "
+            f"transfer zone: {g2.get('transfer_zone')}")
+        add("")
+        add("| kill | triggered |")
+        add("|---|---|")
+        for k, v in g2["kills"].items():
+            add(f"| {k} | {'**YES**' if v else 'no'} |")
+        add("")
+        add("Reasons:")
+        for k, v in g2.get("reasons", {}).items():
+            add(f"- `{k}`: {v}")
+        add("")
+
     g = payload.get("gate_g1_prime")
-    add("## Gate G1'")
+    add("## Gate G1'" if not g2 else "## Gate G1' (legacy; not the Phase-2 gate)")
     if g:
         add(f"**Verdict: {'GO' if g['passed'] else 'NO-GO'}** "
             f"(decision budget {g['decision_budget']})")

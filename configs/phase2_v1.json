@@ -160,9 +160,6 @@
   }
  },
  "runtime": {
-  "device": "auto",
-  "workers": 1,
-  "tf32": true,
   "compile": true,
   "amp": false
  },
@@ -173,5 +170,8 @@
   0,
   1,
   2
- ]
+ ],
+ "device": "auto",
+ "workers": 1,
+ "tf32": true
 }
