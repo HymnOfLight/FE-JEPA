@@ -84,7 +84,8 @@
    "pool_sizes": [
     1024
    ],
-   "report_vm": true
+   "report_vm": true,
+   "include_ar_ft": false
   },
   "e1": {
    "enabled": true,

@@ -167,7 +167,9 @@ def _label_files(files, ledger: SolveLedger, stage_name: str,
 
 def _label_need(exps: dict) -> int:
     """Largest labelled pool prefix any enabled experiment consumes (plan WP5).
-    Defaults here MUST mirror each experiment's own defaults."""
+    Defaults here MUST mirror each experiment's own defaults. Includes the P3
+    strongest-form naive budget (r8: fine naives are built from the labelled
+    in-band prefix)."""
     need = 0
     for name in ("e1", "e2", "e8"):
         e = exps.get(name) or {}
@@ -180,6 +182,9 @@ def _label_need(exps: dict) -> int:
     e7 = exps.get("e7") or {}
     if e7.get("enabled"):
         need = max(need, int(e7.get("fit_budget", 256)))
+    p3 = exps.get("p3_transfer") or {}
+    if p3.get("enabled"):
+        need = max(need, int(p3.get("naive_budget", 1024)))
     return need
 
 
@@ -381,6 +386,7 @@ def run_config(path, device_override: str | None = None,
 
         results["e3"] = run_e3(factory, pool_archs, {**exps["e3"], **dev})
 
+    extra_prov_dirs: list = []
     mr_dirs = {}
     if (exps.get("e4") or {}).get("enabled"):
         from .e4_meshviews import run_e4
@@ -428,6 +434,7 @@ def run_config(path, device_override: str | None = None,
         dt = dict(cfg["data_transfer"])
         dt_split = dt.pop("split", {})
         fdir = _ensure_dataset(dt, ledger)
+        extra_prov_dirs.append(fdir)
         ffiles = instance_files(Path(fdir))
         n_eval = int(dt_split.get("n_eval", 256))
         n_pref = int(dt_split.get("n_fewshot_prefix", 64))
@@ -490,7 +497,8 @@ def run_config(path, device_override: str | None = None,
         "results": results,
         gate_key: gate,
         "solve_ledger": ledger.as_dict(),
-        "provenance": provenance(cfg, [ddir, *mr_dirs.values()], seeds),
+        "provenance": provenance(cfg, [ddir, *mr_dirs.values(),
+                                       *extra_prov_dirs], seeds),
     }
     out = cfg.get("out", "runs/report_v2.json")
     write_report(out, payload)

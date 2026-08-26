@@ -32,6 +32,17 @@ from ..baselines import (KNNFieldBaseline, ScaleAwarePolyBaseline,
                          zero_predictor)
 from ..metrics import FIELD_KEYS, evaluate_model, label_efficiency_auc
 from .parallel import map_units, pretrain_unit, supervised_unit
+
+POLICY_BALANCED_FROM = 64   # r8 Sec.6: fixed lambda=1 strictly below this budget
+
+
+def _anchor_kw(budget: int) -> dict:
+    """PREREG_PHASE2 r8 Sec.6 lambda policy: fixed lambda=1 below the decision
+    budget (the measured stable low-budget carrier), balanced (ratio 1.0) at
+    and above it."""
+    if budget < POLICY_BALANCED_FROM:
+        return dict(anchor_mode="fixed", lambda_phys=1.0)
+    return dict(anchor_mode="balanced", balance_ratio=1.0)
 from .protocol import (divergence_flags, kill, load_archs, mean_std, result,
                        seeds_list)
 
@@ -77,13 +88,16 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
     pre = dict(epochs=int(cfg.get("ar_epochs", 100)),
                lr=float(cfg.get("ar_lr", 1e-3)), device=device)
     include_mgn = bool(cfg.get("include_mgn", False))
+    include_ar_ft = bool(cfg.get("include_ar_ft", True))
     ft_pool = pool_sizes[0]
 
     if len(pool_files) < max(max(pool_sizes), max(budgets)):
         raise ValueError(f"E8: pool has {len(pool_files)} archives; "
                          f"needs {max(max(pool_sizes), max(budgets))}")
     val_str = [str(f) for f in val_files]
-    regimes = ["labels", "labels_anchor", "ar_ft"] + (["mgn"] if include_mgn else [])
+    regimes = (["labels", "labels_anchor"]
+               + (["ar_ft"] if include_ar_ft else [])
+               + (["mgn"] if include_mgn else []))
 
     # ---- phase A: AR pretrainings (states to disk, evaluated on val) ----------
     pre_keys, pre_payloads = [], []
@@ -106,7 +120,6 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
     # ---- phase B: the supervised grid -----------------------------------------
     sup_keys, sup_payloads = [], []
     arm_kw = {"labels": dict(anchor_mode="none"),
-              "labels_anchor": dict(anchor_mode="balanced"),
               "ar_ft": dict(anchor_mode="none"),
               "mgn": dict(anchor_mode="none")}
     for s in seeds:
@@ -117,9 +130,11 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
                 sup_payloads.append({
                     "kind": "mgn" if r == "mgn" else "fejepa",
                     "model": model_cfg, "seed": s, "tf32": tf32,
-                "compile": cfg.get("compile", False),
+                    "compile": cfg.get("compile", False),
                     "train_files": train_str, "val_files": val_str,
-                    "sup": dict(sup, **arm_kw[r], desc=f"E8 {r} b{b} s{s}"),
+                    "sup": dict(sup, **(arm_kw[r] if r != "labels_anchor"
+                                        else _anchor_kw(b)),
+                                desc=f"E8 {r} b{b} s{s}"),
                     "pretrained_path": (pre_out[(s, ft_pool)]["state_path"]
                                         if r == "ar_ft" else None),
                     # P3 checkpoint sharing (PREREG_PHASE2 r8: identical

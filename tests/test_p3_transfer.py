@@ -47,6 +47,7 @@ def shared_states(tmp_path):
     e8 = run_e8(MODEL, sp.pool_files, sp.val_files,
                 {"budgets": [2, 4], "pool_sizes": [4], "seeds": 1,
                  "ar_epochs": 1, "sup_epochs": 1, "include_mgn": True,
+                 "include_ar_ft": False,   # r8 D-1: no ar_ft arm in Phase 2
                  "state_dir": str(state_dir), "device": "cpu", "workers": 1})
     return sp, state_dir, e8, led
 
@@ -57,6 +58,8 @@ def test_p3_end_to_end_shared_checkpoints(tmp_path, shared_states):
     assert (state_dir / "ar_p4_s0.pt").exists()
     assert (state_dir / "labels_b4_s0.pt").exists()
     assert (state_dir / "mgn_b4_s0.pt").exists()
+    # r8 D-1: the ar_ft arm is excluded from the Phase-2 battery
+    assert "ar_ft" not in e8["metrics"]["cells"]
 
     fd = generate_synthetic_dataset(tmp_path / "fine", n=6, seed=7)
     fsp = load_split(fd, n_val=0, seed=1)
@@ -98,3 +101,14 @@ def test_e8_cells_carry_divergence_flags(shared_states):
     _, _, e8, _ = shared_states
     cell = e8["metrics"]["cells"]["labels"][4]
     assert cell["divergence_flags"] == [False]
+
+
+def test_lambda_policy_helper():
+    """r8 Sec.6: fixed lambda=1 strictly below 64; balanced at and above."""
+    from fejepa.experiments.e8_regimes import POLICY_BALANCED_FROM, _anchor_kw
+
+    assert POLICY_BALANCED_FROM == 64
+    assert _anchor_kw(16) == {"anchor_mode": "fixed", "lambda_phys": 1.0}
+    assert _anchor_kw(63) == {"anchor_mode": "fixed", "lambda_phys": 1.0}
+    assert _anchor_kw(64) == {"anchor_mode": "balanced", "balance_ratio": 1.0}
+    assert _anchor_kw(1024) == {"anchor_mode": "balanced", "balance_ratio": 1.0}

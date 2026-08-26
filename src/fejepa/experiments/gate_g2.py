@@ -92,7 +92,9 @@ def gate_g2(e8_result: dict | None, e1_result: dict | None,
 
         # (b)
         max_b = buds[-1]
-        ar = _cell(e8_result, "ar", max_b) or _cell(e8_result, "ar", buds[0])
+        ar_cells = e8_result["metrics"]["cells"].get("ar", {})
+        ar = (ar_cells[max(ar_cells, key=lambda k: int(k))]
+              if ar_cells else None)   # keyed by pool size, not budget
         lab_max = _cell(e8_result, "labels", max_b)
         if ar is None or lab_max is None:
             reasons["b_label_efficiency"] = "ar / labels cell missing"
@@ -155,11 +157,15 @@ def gate_g2(e8_result: dict | None, e1_result: dict | None,
     if wp6_result is None:
         reasons["KP5"] = "P4/WP6 not run -- theory transcription unverified"
     else:
-        holds = wp6_result.get("holds")
-        if holds is None:
-            m = wp6_result.get("metrics", {})
-            holds = all(v.get("holds", True) for v in m.values()
-                        if isinstance(v, dict))
+        tk = wp6_result.get("kills")
+        if tk:
+            holds = not any(k.get("triggered") for k in tk)
+        else:
+            holds = wp6_result.get("holds")
+            if holds is None:
+                m = wp6_result.get("metrics", {})
+                holds = all(v.get("holds", True) for v in m.values()
+                            if isinstance(v, dict))
         kills["KP5"] = not bool(holds)
         reasons["KP5"] = "all inequalities hold" if holds else \
             "VIOLATION -- investigate and publish before any other claim is used"

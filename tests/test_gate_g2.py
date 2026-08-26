@@ -122,3 +122,13 @@ def test_sanity_binds_every_budget():
     r = gate_g2(mk_e8(anc_disp=(0.40, 0.1875, 0.1742, 0.1657)),
                 mk_e1(), None, E6, WP6_OK)
     assert r["conditions"]["a"] is False and r["passed"] is False
+
+
+def test_kp5_consumes_theory_kill_list():
+    """R1 fix: the wp6 result's own kill list is authoritative for KP5."""
+    tripped = {"kills": [{"name": "C5 numeric falsification pass",
+                          "triggered": True}]}
+    r = gate_g2(mk_e8(), mk_e1(), None, E6, tripped)
+    assert r["kills"]["KP5"] is True
+    clean = {"kills": [{"name": "C5", "triggered": False}]}
+    assert gate_g2(mk_e8(), mk_e1(), None, E6, clean)["kills"]["KP5"] is False
