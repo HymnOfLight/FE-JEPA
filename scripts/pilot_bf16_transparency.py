@@ -143,7 +143,7 @@ def main() -> None:
               "max_rel_dev_measured": float(max(devs)),
               "all_finite": bool(finite),
               "measured_speedup_fp32_over_bf16": round(float(speedup), 3),
-              "pilot_ledger": ledger.summary(),
+              "pilot_ledger": ledger.as_dict(),
               "verdict": "PASS" if verdict else "FAIL",
               "consequence": ("stamped config sets runtime.precision = bf16"
                               if verdict else
