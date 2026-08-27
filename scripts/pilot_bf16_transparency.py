@@ -55,6 +55,9 @@ def main() -> None:
     from fejepa.train.supervised import SupervisedConfig, train_supervised
 
     dev = "cuda" if torch.cuda.is_available() else "cpu"
+    from fejepa.runtime import setup_torch
+
+    policy = setup_torch(dev, tf32=True)   # the run's baseline is TF32-fp32
     ddir = Path(a.data)
     ledger = SolveLedger()
     if not (ddir / "manifest.json").exists():
@@ -137,6 +140,7 @@ def main() -> None:
                / max(1e-9, sum(times[k] for k in times if k[2] == "bf16")))
     verdict = bool(finite and max(devs) <= CRITERIA["max_rel_dev"] and engaged)
     report = {"criteria": CRITERIA, "device": dev,
+              "numeric_policy_baseline": policy,
               "engagement": {"encoder_bf16_under_autocast": engaged,
                              "note": "False on cuda => autocast no-op => FAIL"},
               "torch": torch.__version__, "table": table,

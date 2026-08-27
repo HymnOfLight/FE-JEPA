@@ -84,10 +84,15 @@ def main() -> None:
     from fejepa.data.archive import load_instance
     from fejepa.experiments.parallel import _build_model
     from fejepa.experiments.protocol import load_split
+    from fejepa.runtime import setup_torch
     from fejepa.train.losses import AR_CONFIG
     from fejepa.train.pretrain import PretrainConfig, pretrain
 
     dev = "cuda" if torch.cuda.is_available() else "cpu"
+    # Measure under the deciding run's EXACT numeric policy (r11/O1: the first
+    # bench ran torch defaults = pure fp32, a mode the run never uses; the 2D
+    # calibration baseline is TF32-fp32).
+    policy = setup_torch(dev, tf32=bool(cfg.get("tf32", True)))
     work = Path(a.out).parent / "bench_data"
     work.mkdir(parents=True, exist_ok=True)
 
@@ -120,6 +125,7 @@ def main() -> None:
         model = torch.compile(model)
 
     res = {"device": dev, "torch": torch.__version__, "smoke": a.smoke,
+           "numeric_policy": policy,
            "phases": {}, "compile": {"enabled": bool(
                cfg.get("runtime", {}).get("compile", False))}}
 
