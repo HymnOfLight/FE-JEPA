@@ -61,6 +61,7 @@ def run_e1(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
                 payloads.append({
                     "kind": "fejepa", "model": model_cfg, "seed": s, "tf32": tf32,
                     "compile": cfg.get("compile", False),
+                    "precision": cfg.get("precision", "fp32"),
                     "train_files": train_str, "val_files": val_str,
                     "sup": dict(kw, desc=f"E1' b{b} {name} s{s}"),
                     "tag": f"b{b} {name} s{s}",

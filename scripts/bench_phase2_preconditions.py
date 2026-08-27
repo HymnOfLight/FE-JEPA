@@ -34,35 +34,47 @@ def load_cfg(path: str) -> dict:
 
 
 def training_plan(cfg: dict) -> dict:
+    """Per-arm honest step counts (r10): supervised arms train on b instances,
+    not the corpus; mgn on its budget subset; no E1' battery (P2 subsumed)."""
     e8 = cfg["experiments"]["e8"]
-    e1 = cfg["experiments"]["e1"]
     p3 = cfg["experiments"]["p3_transfer"]
     seeds = len(cfg.get("seeds", [0, 1, 2]))
-    nb8, nb1 = len(e8["budgets"]), len(e1["budgets"])
-    fs = len(p3["fewshot_budgets"])
-    trainings = {
-        "ar (P1; shared with P3)": seeds,
-        "labels (P1; shared with P2 'none')": nb8 * seeds,
-        "labels_anchor policy cells (P1/P2 shared)": nb8 * seeds,
-        "P2 extra lambda arms": nb1 * seeds,
-        "mgn (P1, in-band only)": nb8 * seeds,
-        "P3 few-shot fine-tune (fine)": fs * seeds,
-        "P3 scratch-at-fine (fine)": fs * seeds,
+    ep_pre = int(cfg.get("pretrain", {}).get("epochs", 200))
+    ep_sup = int(cfg.get("sup", {}).get("epochs", 200))
+    ep_fs = int(p3.get("fewshot_epochs", 200))
+    budgets = [int(b) for b in e8["budgets"]]
+    mgnb = [int(b) for b in e8.get("mgn_budgets", budgets)]
+    n_ar = int(cfg["data"]["n"]) - int(cfg.get("split", {}).get("n_val", 256))
+    steps = {
+        "ar (pretrain, shared with P3)": seeds * ep_pre * n_ar,
+        "labels (P1)": seeds * ep_sup * sum(budgets),
+        "labels_anchor policy (P1; KP3 source)": seeds * ep_sup * sum(budgets),
+        "mgn (subset %s)" % mgnb: seeds * ep_sup * sum(mgnb),
     }
-    return {"trainings": trainings, "total": sum(trainings.values()),
-            "inband": sum(v for k, v in trainings.items() if "fine" not in k),
-            "fine": sum(v for k, v in trainings.items() if "fine" in k)}
+    fine_steps = {
+        "P3 few-shot fine-tune": seeds * ep_fs * sum(p3["fewshot_budgets"]),
+        "P3 scratch-at-fine": seeds * ep_fs * sum(p3["fewshot_budgets"]),
+    }
+    return {"inband_steps": steps, "fine_steps": fine_steps,
+            "inband_total": sum(steps.values()),
+            "fine_total": sum(fine_steps.values()),
+            "note": "zero-shot/naive evaluations add forward-only cost, "
+                    "reported separately by the run itself"}
 
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--config", required=True)
+    ap.add_argument("config_pos", nargs="?", help="config path (positional)")
+    ap.add_argument("--config", default=None)
     ap.add_argument("--plan", action="store_true")
     ap.add_argument("--smoke", action="store_true")
     ap.add_argument("--repeats", type=int, default=20)
     ap.add_argument("--out", default="runs/phase2/bench_preconditions.json")
     a = ap.parse_args()
-    cfg = load_cfg(a.config)
+    cfg_path = a.config or a.config_pos
+    if not cfg_path:
+        ap.error("config path required (positional or --config)")
+    cfg = load_cfg(cfg_path)
     if a.plan:
         print(json.dumps(training_plan(cfg), indent=1))
         return
@@ -145,20 +157,17 @@ def main() -> None:
         res["compile"].setdefault("first_counters", before)
 
     plan = training_plan(cfg)
-    ep = int(cfg.get("pretrain", {}).get("epochs", 200))
-    n_in = int(cfg["data"]["n"])
-    n_fs = max(cfg["experiments"]["p3_transfer"]["fewshot_budgets"])
     ms_in = res["phases"]["inband_1"]["ms_per_step"]
     ms_fi = res["phases"]["fine"]["ms_per_step"]
-    proj_h = (plan["inband"] * ep * n_in * ms_in
-              + plan["fine"] * ep * n_fs * ms_fi) / 3.6e6
+    hours = (plan["inband_total"] * ms_in
+             + plan["fine_total"] * ms_fi) / 3.6e6
     res["projection"] = {
-        "trainings": plan, "epochs": ep,
-        "hours_order_of_magnitude": round(proj_h, 1),
-        "note": ("upper-order projection from measured ms/step; per-arm "
-                 "n_train varies by budget -- refine per arm before writing "
-                 "the provenance note (D8: measured, not manual)")}
-
+        "per_arm": plan, "ms_in_band_mid": ms_in, "ms_fine": ms_fi,
+        "precision": (cfg.get("runtime") or {}).get("precision", "fp32"),
+        "hours_at_measured_precision": round(hours, 1),
+        "note": ("per-arm honest projection (r10); if the bf16 pilot passes, "
+                 "divide by its measured speedup for the stamped provenance "
+                 "number (D8: measured, not manual)")}
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(res, indent=1))

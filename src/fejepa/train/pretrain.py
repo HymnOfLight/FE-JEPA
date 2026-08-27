@@ -29,6 +29,8 @@ class PretrainConfig:
     loss: LossConfig = field(default_factory=lambda: AR_CONFIG)
     log_every: int = 0            # 0 = auto (~10 milestones), -1 = silent, N = every N
     desc: str = ""                # progress tag, e.g. "E8 AR pool1024 s0"
+    precision: str = "fp32"       # fp32 | bf16 (r10: network compute autocast;
+                                  # the energy anchor self-protects to fp32)
 
 
 def pretrain(model, archs, cfg: PretrainConfig, pairs=None) -> dict:
@@ -67,14 +69,23 @@ def pretrain(model, archs, cfg: PretrainConfig, pairs=None) -> dict:
         (cfg.log_every or max(1, total_steps // 10))
     buffer = PooledBuffer()
 
+    from contextlib import nullcontext
+    dev_type = "cuda" if str(cfg.device).startswith("cuda") else "cpu"
+    def _ac():
+        if cfg.precision == "bf16":
+            return torch.autocast(device_type=dev_type, dtype=torch.bfloat16)
+        return nullcontext()
+
     history = {"loss": []}
     step = 0
     for _epoch in range(cfg.epochs):
         order = rng.permutation(len(prepared))
         for i in order:
             train_arch, pack, twin_pack, adj = prepared[i]
-            loss, parts = compute_loss(model, pack, anchors.get(train_arch), adj,
-                                       buffer, rng, cfg.loss, twin_pack=twin_pack)
+            with _ac():
+                loss, parts = compute_loss(model, pack, anchors.get(train_arch),
+                                           adj, buffer, rng, cfg.loss,
+                                           twin_pack=twin_pack)
             opt.zero_grad(set_to_none=True)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), cfg.clip)

@@ -89,6 +89,7 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
                lr=float(cfg.get("ar_lr", 1e-3)), device=device)
     include_mgn = bool(cfg.get("include_mgn", False))
     include_ar_ft = bool(cfg.get("include_ar_ft", True))
+    mgn_budgets = set(int(b) for b in cfg.get("mgn_budgets", budgets))
     ft_pool = pool_sizes[0]
 
     if len(pool_files) < max(max(pool_sizes), max(budgets)):
@@ -107,6 +108,7 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
             pre_payloads.append({
                 "kind": "fejepa", "model": model_cfg, "seed": s, "tf32": tf32,
                 "compile": cfg.get("compile", False),
+                    "precision": cfg.get("precision", "fp32"),
                 "files": [str(f) for f in pool_files[:p]], "loss": "ar",
                 "pre": dict(pre, desc=f"E8 AR pool{p} s{s}"),
                 "state_path": str(state_dir / f"ar_p{p}_s{s}.pt"),
@@ -126,11 +128,14 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
         for b in budgets:
             train_str = [str(f) for f in pool_files[:b]]
             for r in regimes:
+                if r == "mgn" and int(b) not in mgn_budgets:
+                    continue   # r10 L4: comparator trains on a budget subset
                 sup_keys.append((r, b, s))
                 sup_payloads.append({
                     "kind": "mgn" if r == "mgn" else "fejepa",
                     "model": model_cfg, "seed": s, "tf32": tf32,
                     "compile": cfg.get("compile", False),
+                    "precision": cfg.get("precision", "fp32"),
                     "train_files": train_str, "val_files": val_str,
                     "sup": dict(sup, **(arm_kw[r] if r != "labels_anchor"
                                         else _anchor_kw(b)),
@@ -149,7 +154,9 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
                        map_units(supervised_unit, sup_payloads, workers,
                                  "E8 (supervised grid)"), strict=True))
     for r in regimes:
-        raw[r] = {b: [sup_out[(r, b, s)]["val"] for s in seeds] for b in budgets}
+        r_buds = [b for b in budgets
+                  if not (r == "mgn" and int(b) not in mgn_budgets)]
+        raw[r] = {b: [sup_out[(r, b, s)]["val"] for s in seeds] for b in r_buds}
 
     cells = {r: {k: _agg(v) for k, v in per.items()} for r, per in raw.items()}
 
@@ -161,8 +168,12 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
         cells.update(naive_baseline_cells(pool_archs, val_archs, budgets))
         baseline_rows = ["zero", "scale_aware_poly", "knn_field"]
 
+    def _row_buds(r):
+        return sorted((b for b in cells[r]), key=int)
+
     auc = {r: label_efficiency_auc(
-        budgets, [cells[r][b]["disp_rel_l2"]["mean"] for b in budgets])
+        _row_buds(r),
+        [cells[r][b]["disp_rel_l2"]["mean"] for b in _row_buds(r)])
         for r in regimes + baseline_rows}
 
     b_max, p_max = max(budgets), max(pool_sizes)

@@ -35,6 +35,7 @@ class SupervisedConfig:
     balance_ratio: float = 1.0       # for anchor_mode='balanced'
     log_every: int = 0               # 0 = auto (~10 milestones), -1 = silent, N = every N
     desc: str = ""                   # progress tag, e.g. "E1' b64 balanced s1"
+    precision: str = "fp32"          # fp32 | bf16 (r10; anchor self-protects)
 
     def protocol(self) -> dict:
         return {"epochs": self.epochs, "lr": self.lr, "seed": self.seed,
@@ -120,7 +121,14 @@ def train_supervised(model, train_archs, val_archs, cfg: SupervisedConfig,
     for _epoch in range(cfg.epochs):
         for i in rng.permutation(len(prepared)):
             arch, pack = prepared[i]
-            u = model.forward_instance(pack)
+            if cfg.precision == "bf16":
+                import torch as _t
+                _dt = "cuda" if str(cfg.device).startswith("cuda") else "cpu"
+                with _t.autocast(device_type=_dt, dtype=_t.bfloat16):
+                    u = model.forward_instance(pack)
+                u = u.float()
+            else:
+                u = model.forward_instance(pack)
             disp = _disp_loss(u, pack["u_star"], pack["free"])
 
             opt.zero_grad(set_to_none=True)

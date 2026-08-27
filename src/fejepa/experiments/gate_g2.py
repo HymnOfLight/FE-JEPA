@@ -114,9 +114,23 @@ def gate_g2(e8_result: dict | None, e1_result: dict | None,
                 f"egap advantage min {min(advs.values()):.3f} "
                 f"(need >= {g['egap_adv_min']} everywhere)")
 
-    # ---------------- KP3: anchor value (P2/E1') -----------------------------
-    if e1_result is None:
-        reasons["KP3"] = "P2/E1' not run -- anchor claim unevaluated"
+    # ---------------- KP3: anchor value ------------------------------------
+    # r10: P2 is subsumed into P1's shared cells; KP3 sources from E8's
+    # labels vs labels_anchor (the policy arm) when no separate E1' ran.
+    if e1_result is None and e8_result is not None:
+        improvs = []
+        for bud in _budgets(e8_result):
+            lab = _cell(e8_result, "labels", bud)
+            anc = _cell(e8_result, "labels_anchor", bud)
+            if lab and anc:
+                improvs.append(1.0 - _egap(anc) / (_egap(lab) + 1e-30))
+        kills["KP3"] = bool(improvs and all(v < k["KP3_anchor_improv_min"]
+                                            for v in improvs))
+        reasons["KP3"] = (f"sourced from P1 shared cells; anchored egap "
+                          f"improvements {['%.3f' % v for v in improvs]} "
+                          f"(kill if ALL < {k['KP3_anchor_improv_min']})")
+    elif e1_result is None:
+        reasons["KP3"] = "neither P2/E1' nor E8 available -- anchor claim unevaluated"
     else:
         improvs = []
         for row in e1_result["metrics"]["per_budget"]:

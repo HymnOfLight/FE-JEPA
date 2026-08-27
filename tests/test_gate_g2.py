@@ -132,3 +132,17 @@ def test_kp5_consumes_theory_kill_list():
     assert r["kills"]["KP5"] is True
     clean = {"kills": [{"name": "C5", "triggered": False}]}
     assert gate_g2(mk_e8(), mk_e1(), None, E6, clean)["kills"]["KP5"] is False
+
+
+def test_kp3_sourced_from_e8_when_e1_absent():
+    """r10: P2 subsumed into P1 -- KP3 computes from labels vs labels_anchor."""
+    e8 = mk_e8()  # anchor egap 0.2 vs labels {6.26..0.42}: improvements huge
+    r = gate_g2(e8, None, None, E6, WP6_OK)
+    assert r["kills"]["KP3"] is False
+    assert "sourced from P1 shared cells" in r["reasons"]["KP3"]
+    # force the kill: anchored egap barely below labels everywhere (<25% improv)
+    dead = mk_e8()
+    for b, lab in ((16, 6.264), (64, 2.718), (256, 1.257), (1024, 0.4177)):
+        dead["metrics"]["cells"]["labels_anchor"][b] = _cell(0.2, lab * 0.9)
+    r2 = gate_g2(dead, None, None, E6, WP6_OK)
+    assert r2["kills"]["KP3"] is True

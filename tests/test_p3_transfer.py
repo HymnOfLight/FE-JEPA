@@ -112,3 +112,59 @@ def test_lambda_policy_helper():
     assert _anchor_kw(63) == {"anchor_mode": "fixed", "lambda_phys": 1.0}
     assert _anchor_kw(64) == {"anchor_mode": "balanced", "balance_ratio": 1.0}
     assert _anchor_kw(1024) == {"anchor_mode": "balanced", "balance_ratio": 1.0}
+
+
+def test_e8_mgn_budget_subset(tmp_path):
+    """r10 L4: the comparator trains only on its budget subset."""
+    d = generate_synthetic_dataset(tmp_path / "sub", n=10, seed=3)
+    sp = load_split(d, n_val=2, seed=1)
+    led = SolveLedger()
+    _label_files(sp.val_files, led, "v")
+    _label_files(sp.pool_files[:4], led, "p")
+    e8 = run_e8(MODEL, sp.pool_files, sp.val_files,
+                {"budgets": [2, 4], "pool_sizes": [4], "seeds": 1,
+                 "ar_epochs": 1, "sup_epochs": 1, "include_mgn": True,
+                 "include_ar_ft": False, "mgn_budgets": [4],
+                 "state_dir": str(tmp_path / "st"), "device": "cpu",
+                 "workers": 1})
+    mg = e8["metrics"]["cells"]["mgn"]
+    assert set(int(k) for k in mg) == {4}
+    assert set(int(k) for k in e8["metrics"]["cells"]["labels"]) == {2, 4}
+
+
+def test_bf16_precision_smoke(tmp_path):
+    """r10 L5 wiring: both trainers run under bf16 autocast on CPU; the
+    anchor self-protects to fp32; metrics finite."""
+    import torch
+
+    from fejepa.data.archive import load_instance
+    from fejepa.train.losses import AR_CONFIG
+    from fejepa.train.pretrain import PretrainConfig, pretrain
+    from fejepa.train.supervised import SupervisedConfig, train_supervised
+    from fejepa.metrics import evaluate_model, torch_predictor
+    from fejepa.experiments.parallel import _build_model
+
+    d = generate_synthetic_dataset(tmp_path / "bf", n=6, seed=5)
+    sp = load_split(d, n_val=2, seed=1)
+    led = SolveLedger()
+    _label_files(sp.val_files, led, "v")
+    _label_files(sp.pool_files[:2], led, "t")
+    val = [load_instance(f) for f in sp.val_files]
+    tr = [load_instance(f) for f in sp.pool_files[:2]]
+
+    m = _build_model({"kind": "fejepa", "model": MODEL, "seed": 0})
+    h = pretrain(m, tr, PretrainConfig(epochs=1, lr=1e-3, seed=0,
+                                       device="cpu", loss=AR_CONFIG,
+                                       log_every=-1, precision="bf16"))
+    assert np.isfinite(h["loss"][-1])
+    ev = evaluate_model(torch_predictor(m, "cpu"), val)
+    assert np.isfinite(ev["disp_rel_l2"])
+
+    m2 = _build_model({"kind": "fejepa", "model": MODEL, "seed": 0})
+    train_supervised(m2, tr, val,
+                     SupervisedConfig(epochs=1, lr=1.5e-3, seed=0,
+                                      device="cpu", anchor_mode="balanced",
+                                      balance_ratio=1.0, log_every=-1,
+                                      precision="bf16"))
+    ev2 = evaluate_model(torch_predictor(m2, "cpu"), val)
+    assert np.isfinite(ev2["energy_gap_rel"])

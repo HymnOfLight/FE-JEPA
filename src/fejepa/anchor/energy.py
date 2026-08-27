@@ -70,6 +70,16 @@ class EnergyAnchor:
 
     def energies(self, u):
         """Per-load Pi_h of a (L, ndof) or (ndof,) prediction; masks Dirichlet dofs."""
+        import torch
+
+        # Precision self-protection (r10): the anchor is the exact objective;
+        # regardless of any surrounding autocast (bf16), energy math runs fp32.
+        if u.dtype != self.K_t.dtype:
+            u = u.to(self.K_t.dtype)
+        with torch.autocast(device_type=u.device.type, enabled=False):
+            return self._energies_fp32(u)
+
+    def _energies_fp32(self, u):
         u2 = u if u.dim() == 2 else u.unsqueeze(0)
         u2 = u2 * self.free_t                      # autograd chains the mask
         return _EnergyFn.apply(u2, self.K_t, self.F_t)

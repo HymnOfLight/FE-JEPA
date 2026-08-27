@@ -336,7 +336,8 @@ def run_config(path, device_override: str | None = None,
     model_cfg = cfg.get("model", {})
     dev = {"device": device}
     run_opts = {"device": device, "workers": workers, "tf32": policy["tf32"],
-                "compile": bool(cfg.get("runtime", {}).get("compile", False))}
+                "compile": bool(cfg.get("runtime", {}).get("compile", False)),
+                "precision": (cfg.get("runtime") or {}).get("precision", "fp32")}
     results: dict = {}
 
     if (exps.get("e1") or {}).get("enabled"):

@@ -85,24 +85,10 @@
     1024
    ],
    "report_vm": true,
-   "include_ar_ft": false
-  },
-  "e1": {
-   "enabled": true,
-   "budgets": [
-    16,
+   "include_ar_ft": false,
+   "mgn_budgets": [
     64,
-    256,
     1024
-   ],
-   "seeds": 3,
-   "epochs": 200,
-   "decision_budget": 64,
-   "grid": [
-    0.1,
-    0.3,
-    1.0,
-    3.0
    ]
   },
   "p3_transfer": {
@@ -117,7 +103,7 @@
     64
    ],
    "fewshot_init": "ar_seed_matched",
-   "fewshot_epochs": 200,
+   "fewshot_epochs": 50,
    "fewshot_lr": 0.0015,
    "scratch_at_fine": true,
    "naive_budget": 1024,
@@ -160,8 +146,9 @@
   }
  },
  "runtime": {
-  "compile": true,
-  "amp": false
+  "compile": false,
+  "amp": false,
+  "precision": "fp32"
  },
  "out": "runs/phase2/report_phase2.json",
  "prereg_guard": true,

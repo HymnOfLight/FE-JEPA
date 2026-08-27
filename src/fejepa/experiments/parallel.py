@@ -150,6 +150,7 @@ def supervised_unit(payload: dict) -> dict:
     model = _build_model(payload)
     sup = dict(payload["sup"])
     sup["seed"] = int(payload["seed"])
+    sup.setdefault("precision", payload.get("precision", "fp32"))
     if payload.get("quiet"):
         sup["log_every"] = -1
     state = None
@@ -190,6 +191,7 @@ def pretrain_unit(payload: dict) -> dict:
     model = _build_model(payload)
     pre = dict(payload["pre"])
     pre["seed"] = int(payload["seed"])
+    pre.setdefault("precision", payload.get("precision", "fp32"))
     if payload.get("quiet"):
         pre["log_every"] = -1
     loss = AR_CONFIG if payload.get("loss", "ar") == "ar" else JEPA_CONFIG
