@@ -36,6 +36,10 @@ class SupervisedConfig:
     log_every: int = 0               # 0 = auto (~10 milestones), -1 = silent, N = every N
     desc: str = ""                   # progress tag, e.g. "E1' b64 balanced s1"
     precision: str = "fp32"          # fp32 | bf16 (r10; anchor self-protects)
+    ckpt_path: str | None = None     # R9: epoch-boundary checkpoint file
+    ckpt_every_epochs: int = 1
+    resume: bool = False
+    stop_after_epoch: int | None = None   # test hook (simulated interruption)
 
     def protocol(self) -> dict:
         return {"epochs": self.epochs, "lr": self.lr, "seed": self.seed,
@@ -118,7 +122,19 @@ def train_supervised(model, train_archs, val_archs, cfg: SupervisedConfig,
 
     balance_scale_sum, balance_n = None, 0
     step = 0
-    for _epoch in range(cfg.epochs):
+    start_epoch = 0
+    if cfg.ckpt_path and cfg.resume:
+        from .checkpoint import load_epoch_checkpoint
+
+        ck = load_epoch_checkpoint(cfg.ckpt_path, model=model, opt=opt,
+                                   sched=sched, rng=rng, device=cfg.device)
+        if ck is not None:
+            start_epoch, step, extra = ck
+            balance_scale_sum = extra.get("balance_scale_sum")
+            balance_n = int(extra.get("balance_n", 0))
+            print(f"[ckpt] resumed {cfg.desc or 'supervised'} at epoch "
+                  f"{start_epoch}/{cfg.epochs} (step {step})", flush=True)
+    for _epoch in range(start_epoch, cfg.epochs):
         for i in rng.permutation(len(prepared)):
             arch, pack = prepared[i]
             if cfg.precision == "bf16":
@@ -154,6 +170,16 @@ def train_supervised(model, train_archs, val_archs, cfg: SupervisedConfig,
                 print(f"[sup:{cfg.anchor_mode}{tag}] step {step}/{total_steps} "
                       f"({100.0 * step / total_steps:.0f}%) disp={float(disp):.4f}",
                       flush=True)
+        if cfg.ckpt_path and (_epoch + 1) % max(1, cfg.ckpt_every_epochs) == 0:
+            from .checkpoint import save_epoch_checkpoint
+
+            save_epoch_checkpoint(cfg.ckpt_path, epochs_done=_epoch + 1,
+                                  step=step, model=model, opt=opt, sched=sched,
+                                  rng=rng,
+                                  extra={"balance_scale_sum": balance_scale_sum,
+                                         "balance_n": balance_n})
+        if cfg.stop_after_epoch is not None and _epoch + 1 >= cfg.stop_after_epoch:
+            break                              # simulated interruption (tests)
 
     out = {"protocol": cfg.protocol(),
            "val": evaluate_model(torch_predictor(model, cfg.device), val_archs),

@@ -74,7 +74,15 @@ def save_instance(arch: InstanceArchive, path: Path) -> None:
     )
     if arch.U_star is not None:
         payload["U_star"] = arch.U_star.astype(np.float64)
-    np.savez_compressed(path, **payload)
+    # R9a: atomic write (temp file + os.replace) so a power cut never leaves a
+    # truncated archive; numpy is given a file handle so it does not rename.
+    import os
+
+    path = str(path)
+    tmp = path + ".tmp"
+    with open(tmp, "wb") as fh:
+        np.savez_compressed(fh, **payload)
+    os.replace(tmp, path)
 
 
 def load_instance(path: Path) -> InstanceArchive:

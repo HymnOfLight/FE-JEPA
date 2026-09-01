@@ -156,15 +156,23 @@ def cached_supervised_unit(payload: dict) -> dict:
 
     cp = _cache_path(payload)
     if cp is not None and cp.exists() and payload.get("reuse_existing"):
-        with cp.open("rb") as fh:
-            res = pickle.load(fh)
-        res["from_cache"] = True
-        return res
+        try:                                                  # R9a fallback
+            with cp.open("rb") as fh:
+                res = pickle.load(fh)
+            res["from_cache"] = True
+            return res
+        except Exception as exc:                              # noqa: BLE001
+            print(f"[d9] {cp}: unusable cache ({type(exc).__name__}); removed, "
+                  f"retraining", flush=True)
+            cp.unlink(missing_ok=True)
+    if cp is not None:                                        # R9b in-unit ckpt
+        payload = dict(payload, ckpt_path=str(cp.with_suffix(".ckpt")))
     res = supervised_unit(payload)
     if cp is not None:
-        cp.parent.mkdir(parents=True, exist_ok=True)
-        with cp.open("wb") as fh:
-            pickle.dump(res, fh)
+        from ..train.checkpoint import atomic_pickle_dump
+
+        atomic_pickle_dump(res, cp)
+        Path(payload["ckpt_path"]).unlink(missing_ok=True)      # unit complete
     return res
 
 
@@ -181,6 +189,9 @@ def supervised_unit(payload: dict) -> dict:
     sup = dict(payload["sup"])
     sup["seed"] = int(payload["seed"])
     sup.setdefault("precision", payload.get("precision", "fp32"))
+    if payload.get("ckpt_path"):                              # R9b
+        sup.setdefault("ckpt_path", payload["ckpt_path"])
+        sup.setdefault("resume", bool(payload.get("reuse_existing")))
     if payload.get("quiet"):
         sup["log_every"] = -1
     state = None
@@ -196,9 +207,9 @@ def supervised_unit(payload: dict) -> dict:
     if payload.get("state_path"):
         import torch
 
-        sp = Path(payload["state_path"])
-        sp.parent.mkdir(parents=True, exist_ok=True)
-        torch.save(_state_dict(model), sp)
+        from ..train.checkpoint import atomic_torch_save
+
+        atomic_torch_save(_state_dict(model), Path(payload["state_path"]))
     return {k: res[k] for k in ("val", "pretrained_tensors_loaded")} | (
         {"balance_scale_mean": res["balance_scale_mean"]}
         if "balance_scale_mean" in res else {})
@@ -231,15 +242,25 @@ def pretrain_unit(payload: dict) -> dict:
         # D9: consume a state produced by an earlier attempt of the SAME stamped
         # configuration (identical configurations are trained once); the file's
         # SHA-256 is returned so the report can chain attempt-1 -> attempt-2.
-        sd = torch.load(str(sp), map_location="cpu", weights_only=True)
-        model.load_state_dict(sd, strict=True)
-        model.to(pre.get("device", "cpu"))
-        reused = True
-    else:
+        # R9a: a corrupt (e.g. truncated) file is removed and retrained.
+        try:
+            sd = torch.load(str(sp), map_location="cpu", weights_only=True)
+            model.load_state_dict(sd, strict=True)
+            model.to(pre.get("device", "cpu"))
+            reused = True
+        except Exception as exc:                              # noqa: BLE001
+            print(f"[d9] {sp}: unusable state ({type(exc).__name__}); removed, "
+                  f"retraining", flush=True)
+            sp.unlink(missing_ok=True)
+    if not reused:
+        from ..train.checkpoint import atomic_torch_save
+
         model = _maybe_compile(model, payload)
+        pre.setdefault("ckpt_path", str(sp.with_suffix(".ckpt")))   # R9b
+        pre.setdefault("resume", bool(payload.get("reuse_existing")))
         pretrain(model, _load(payload["files"]), PretrainConfig(loss=loss, **pre))
-        sp.parent.mkdir(parents=True, exist_ok=True)
-        torch.save(_state_dict(model), sp)
+        atomic_torch_save(_state_dict(model), sp)
+        Path(pre["ckpt_path"]).unlink(missing_ok=True)          # unit complete
 
     import hashlib
 

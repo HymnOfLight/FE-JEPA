@@ -31,6 +31,12 @@ class PretrainConfig:
     desc: str = ""                # progress tag, e.g. "E8 AR pool1024 s0"
     precision: str = "fp32"       # fp32 | bf16 (r10: network compute autocast;
                                   # the energy anchor self-protects to fp32)
+    ckpt_path: str | None = None  # R9: epoch-boundary checkpoint file (always
+                                  # written when set; consumed only if resume)
+    ckpt_every_epochs: int = 1
+    resume: bool = False          # R9: resume from ckpt_path if present
+    stop_after_epoch: int | None = None   # test hook: return after this many
+                                          # epochs (simulates an interruption)
 
 
 def pretrain(model, archs, cfg: PretrainConfig, pairs=None) -> dict:
@@ -78,7 +84,18 @@ def pretrain(model, archs, cfg: PretrainConfig, pairs=None) -> dict:
 
     history = {"loss": []}
     step = 0
-    for _epoch in range(cfg.epochs):
+    start_epoch = 0
+    if cfg.ckpt_path and cfg.resume and not cfg.loss.use_pred:
+        from .checkpoint import load_epoch_checkpoint
+
+        ck = load_epoch_checkpoint(cfg.ckpt_path, model=model, opt=opt,
+                                   sched=sched, rng=rng, device=cfg.device)
+        if ck is not None:
+            start_epoch, step, extra = ck
+            history = extra.get("history", history)
+            print(f"[ckpt] resumed {cfg.desc or 'pretrain'} at epoch "
+                  f"{start_epoch}/{cfg.epochs} (step {step})", flush=True)
+    for _epoch in range(start_epoch, cfg.epochs):
         order = rng.permutation(len(prepared))
         for i in order:
             train_arch, pack, twin_pack, adj = prepared[i]
@@ -98,6 +115,14 @@ def pretrain(model, archs, cfg: PretrainConfig, pairs=None) -> dict:
                       f"({100.0 * step / total_steps:.0f}%) "
                       f"loss={float(loss):.4e}", flush=True)
         history["loss"].append(float(loss.detach()))
+        if cfg.ckpt_path and (_epoch + 1) % max(1, cfg.ckpt_every_epochs) == 0:
+            from .checkpoint import save_epoch_checkpoint
+
+            save_epoch_checkpoint(cfg.ckpt_path, epochs_done=_epoch + 1,
+                                  step=step, model=model, opt=opt, sched=sched,
+                                  rng=rng, extra={"history": history})
+        if cfg.stop_after_epoch is not None and _epoch + 1 >= cfg.stop_after_epoch:
+            return history                     # simulated interruption (tests)
     return history
 
 

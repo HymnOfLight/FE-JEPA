@@ -68,3 +68,26 @@ nothing: the configuration hash is unchanged (guard), the fixes are
 memory/resilience only, and the observed values are recorded in the
 preserved attempt-1 log. Attempt 2 is "the" deciding run of Sec. 10;
 attempt 1 is an infrastructure failure that produced no verdict.
+
+## D9 hardening (R9, 1 Sep 2026) -- power-loss resilience, no configuration change
+
+Prompted by the question "can attempt 2 survive a power cut?". Before R9 the
+answer was: at unit granularity only (the in-flight unit restarts from
+zero -- up to ~44 h for a balanced b=1024 unit), with non-atomic writes that
+could leave truncated states, caches or archives. R9 adds: (a) atomic writes
+(temp file + os.replace) for every durable artefact -- states, unit caches,
+epoch checkpoints, instance archives; (b) corrupt-artefact fallbacks (an
+unusable state or cache is reported, removed and retrained rather than
+crashing the unit); (c) epoch-boundary checkpoints inside every training
+unit, capturing parameters, optimiser moments, scheduler counter, the numpy
+order generator, the torch CPU/CUDA RNGs, the step counter and loop
+accumulators -- always written, consumed only under `--reuse-states`,
+removed when the unit completes. Resume reproduces the uninterrupted
+trajectory bitwise on CPU (tests for AR pretraining, balanced supervised
+training and a unit-level interruption). Worst-case loss after any
+interruption is now one epoch (~7-13 min at b=1024) plus the uncached
+recomputations (E6 ~1 h, P3 zero-shot evaluations ~2-3 h). Restart remains a
+manual, logged action (a new tmux session, a new log name, a D-note); no
+automatic retry loop is added, so a deterministic failure cannot burn cycles
+unnoticed. JEPA-loss units (2D legacy) do not resume (their pooled buffer is
+not checkpointed); the Phase-2 battery has none.
