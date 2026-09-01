@@ -138,6 +138,36 @@ def _state_dict(model):
     return getattr(model, "_orig_mod", model).state_dict()
 
 
+def _cache_path(payload: dict):
+    cd = payload.get("cache_dir")
+    if not cd:
+        return None
+    import re
+
+    key = re.sub(r"[^A-Za-z0-9_.-]+", "_", str(payload.get("tag", "unit")))
+    return Path(cd) / f"{key}.pkl"
+
+
+def cached_supervised_unit(payload: dict) -> dict:
+    """D9: supervised_unit with an on-disk result cache keyed by the unit tag.
+    A hit returns the stored result (marked from_cache=True); a miss trains,
+    stores, returns. Without payload['cache_dir'] it is supervised_unit verbatim."""
+    import pickle
+
+    cp = _cache_path(payload)
+    if cp is not None and cp.exists() and payload.get("reuse_existing"):
+        with cp.open("rb") as fh:
+            res = pickle.load(fh)
+        res["from_cache"] = True
+        return res
+    res = supervised_unit(payload)
+    if cp is not None:
+        cp.parent.mkdir(parents=True, exist_ok=True)
+        with cp.open("wb") as fh:
+            pickle.dump(res, fh)
+    return res
+
+
 def supervised_unit(payload: dict) -> dict:
     """One supervised training (any anchor_mode, optional pretrained state on disk).
 
@@ -195,14 +225,26 @@ def pretrain_unit(payload: dict) -> dict:
     if payload.get("quiet"):
         pre["log_every"] = -1
     loss = AR_CONFIG if payload.get("loss", "ar") == "ar" else JEPA_CONFIG
-    model = _maybe_compile(model, payload)
-    pretrain(model, _load(payload["files"]), PretrainConfig(loss=loss, **pre))
-
     sp = Path(payload["state_path"])
-    sp.parent.mkdir(parents=True, exist_ok=True)
-    torch.save(_state_dict(model), sp)
+    reused = False
+    if payload.get("reuse_existing") and sp.exists():
+        # D9: consume a state produced by an earlier attempt of the SAME stamped
+        # configuration (identical configurations are trained once); the file's
+        # SHA-256 is returned so the report can chain attempt-1 -> attempt-2.
+        sd = torch.load(str(sp), map_location="cpu", weights_only=True)
+        model.load_state_dict(sd, strict=True)
+        model.to(pre.get("device", "cpu"))
+        reused = True
+    else:
+        model = _maybe_compile(model, payload)
+        pretrain(model, _load(payload["files"]), PretrainConfig(loss=loss, **pre))
+        sp.parent.mkdir(parents=True, exist_ok=True)
+        torch.save(_state_dict(model), sp)
 
-    out = {"state_path": str(sp)}
+    import hashlib
+
+    out = {"state_path": str(sp), "reused_state": reused,
+           "state_sha256": hashlib.sha256(sp.read_bytes()).hexdigest()}
     if payload.get("eval_val_files"):
         out["val"] = evaluate_model(
             torch_predictor(model, pre.get("device", "cpu")),

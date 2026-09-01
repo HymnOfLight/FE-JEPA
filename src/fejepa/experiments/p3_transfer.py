@@ -23,7 +23,7 @@ import numpy as np
 
 from ..baselines import KNNFieldBaseline, ScaleAwarePolyBaseline
 from ..metrics import FIELD_KEYS, evaluate_model, torch_predictor
-from .parallel import _build_model, map_units, supervised_unit
+from .parallel import _build_model, cached_supervised_unit, map_units
 from .protocol import divergence_flags, load_archs, mean_std, result, seeds_list
 
 PLAN_REF = "PREREG_PHASE2 r8 Sec.3 P3 / Sec.2(c) / Sec.4 KP4"
@@ -107,8 +107,10 @@ def run_p3(model_cfg: dict, pool_files, val_archs, fine_eval_archs,
                     "val_files": [str(f) for f in fine_eval_files],
                     "sup": dict(sup, desc=f"P3 {arm} b{b} s{s}"),
                     "pretrained_path": init, "tag": f"P3 {arm} b{b} s{s}",
+                    "cache_dir": str(state_dir / "unit_cache_p3"),
+                    "reuse_existing": bool(cfg.get("reuse_states")),
                 })
-    fs_out = dict(zip(fs_keys, map_units(supervised_unit, fs_payloads, workers,
+    fs_out = dict(zip(fs_keys, map_units(cached_supervised_unit, fs_payloads, workers,
                                          "P3 (few-shot at fine)"), strict=True))
     fewshot = {b: {arm: _row([fs_out[(arm, b, s)]["val"] for s in seeds])
                    for arm in ("finetune", "scratch")}

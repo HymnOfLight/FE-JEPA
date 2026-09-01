@@ -25,8 +25,16 @@ def build_mesh_gnn(dim: int = 128, depth: int = 8,
                    scale_decode: bool = True):
     import torch
     from torch import nn
+    from torch.utils.checkpoint import checkpoint
 
     spec = features or FeatureSpec()
+
+    def _mgn_layer(e, h, src, dst, nu, eu):
+        """One message-passing layer: edge update, scatter-add, node update."""
+        e = e + eu(torch.cat([e, h[src], h[dst]], dim=-1))
+        agg = torch.zeros_like(h).index_add_(0, dst, e)
+        h = h + nu(torch.cat([h, agg], dim=-1))
+        return e, h
 
     class MLP(nn.Module):
         def __init__(self, i, o):
@@ -68,10 +76,19 @@ def build_mesh_gnn(dim: int = 128, depth: int = 8,
             src, dst = edges[0], edges[1]
             h = self.node_enc(x)
             e = self.edge_enc(efeat)
+            # D9 (Phase-2): per-layer activation checkpointing in training mode.
+            # Memory-only and exact (backward recomputes the identical ops on the
+            # identical inputs); 3D tet meshes carry ~30 GiB of edge activations
+            # across depth x load cases without it. use_checkpoint=False restores
+            # the original path verbatim (tests assert bitwise equality on CPU).
+            use_ckpt = (self.training and torch.is_grad_enabled()
+                        and getattr(self, "use_checkpoint", True))
             for nu, eu in zip(self.node_upd, self.edge_upd, strict=True):
-                e = e + eu(torch.cat([e, h[src], h[dst]], dim=-1))
-                agg = torch.zeros_like(h).index_add_(0, dst, e)
-                h = h + nu(torch.cat([h, agg], dim=-1))
+                if use_ckpt:
+                    e, h = checkpoint(_mgn_layer, e, h, src, dst, nu, eu,
+                                      use_reentrant=False)
+                else:
+                    e, h = _mgn_layer(e, h, src, dst, nu, eu)
             return self.head(h)
 
         def forward_instance(self, pack):

@@ -251,7 +251,8 @@ def _pool_need_in_memory(exps: dict) -> int:
 
 
 def run_config(path, device_override: str | None = None,
-               workers_override: int | None = None) -> dict:
+               workers_override: int | None = None,
+               reuse_states: bool = False) -> dict:
     cfg = json.loads(Path(path).read_text())
     prereg = None
     if cfg.get("prereg_guard"):
@@ -337,7 +338,12 @@ def run_config(path, device_override: str | None = None,
     dev = {"device": device}
     run_opts = {"device": device, "workers": workers, "tf32": policy["tf32"],
                 "compile": bool(cfg.get("runtime", {}).get("compile", False)),
-                "precision": (cfg.get("runtime") or {}).get("precision", "fp32")}
+                "precision": (cfg.get("runtime") or {}).get("precision", "fp32"),
+                # D9: CLI-level restart mode (not part of the stamped config)
+                "reuse_states": bool(reuse_states)}
+    if reuse_states:
+        print("[d9] restart mode: existing unit states/results are consumed and "
+              "recorded (see results.e8.metrics.d9_restart)", flush=True)
     results: dict = {}
 
     if (exps.get("e1") or {}).get("enabled"):
@@ -501,6 +507,7 @@ def run_config(path, device_override: str | None = None,
         "data_economy": data_economy_summary(ledger, len(split.val_files), need,
                                              _pool_need(exps), n_loads),
         "runtime_policy": policy,
+        "d9_reuse_states": bool(reuse_states),
         "planned_steps": count_steps(cfg),
         "results": results,
         gate_key: gate,

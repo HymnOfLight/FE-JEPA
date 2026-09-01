@@ -162,6 +162,32 @@ def main() -> None:
         }
         res["compile"].setdefault("first_counters", before)
 
+    # D9: the MGN comparator was never benchmarked (attempt 1 OOM'd at its first
+    # forward). Train-mode step on the LARGEST in-band instance with the
+    # checkpointed layers; dummy loss (memory/time envelope, not numerics).
+    mgn = _build_model({"kind": "mgn", "model": mcfg, "seed": 0}).to(dev)
+    mgn.train()
+    arch = sizes["inband_0"]
+    mpack = mgn.prepare_instance(arch, dev)
+    opt = torch.optim.Adam(mgn.parameters(), lr=1e-3)
+    if dev == "cuda":
+        torch.cuda.reset_peak_memory_stats()
+    t0 = time.perf_counter()
+    for _ in range(a.repeats):
+        opt.zero_grad(set_to_none=True)
+        u = mgn.forward_instance(mpack)
+        (u * u).mean().backward()
+        opt.step()
+    if dev == "cuda":
+        torch.cuda.synchronize()
+    res["phases"]["mgn_inband_0"] = {
+        "n_nodes": res["phases"]["inband_0"]["n_nodes"],
+        "ms_per_step": round((time.perf_counter() - t0) * 1000 / a.repeats, 2),
+        "peak_gib": (round(torch.cuda.max_memory_allocated() / 2**30, 3)
+                     if dev == "cuda" else None),
+        "note": "MGN train step, D9 per-layer checkpointing active, dummy loss"}
+    del mgn, mpack, opt
+
     plan = training_plan(cfg)
     ms_in = res["phases"]["inband_1"]["ms_per_step"]
     ms_fi = res["phases"]["fine"]["ms_per_step"]

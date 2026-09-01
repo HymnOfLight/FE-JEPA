@@ -31,7 +31,7 @@ from pathlib import Path
 from ..baselines import (KNNFieldBaseline, ScaleAwarePolyBaseline,
                          zero_predictor)
 from ..metrics import FIELD_KEYS, evaluate_model, label_efficiency_auc
-from .parallel import map_units, pretrain_unit, supervised_unit
+from .parallel import cached_supervised_unit, map_units, pretrain_unit
 
 POLICY_BALANCED_FROM = 64   # r8 Sec.6: fixed lambda=1 strictly below this budget
 
@@ -90,6 +90,8 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
     include_mgn = bool(cfg.get("include_mgn", False))
     include_ar_ft = bool(cfg.get("include_ar_ft", True))
     mgn_budgets = set(int(b) for b in cfg.get("mgn_budgets", budgets))
+    reuse = bool(cfg.get("reuse_states", False))        # D9 restart mode
+    cache_dir = str(state_dir / "unit_cache")   # always written; read only on reuse
     ft_pool = pool_sizes[0]
 
     if len(pool_files) < max(max(pool_sizes), max(budgets)):
@@ -112,6 +114,7 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
                 "files": [str(f) for f in pool_files[:p]], "loss": "ar",
                 "pre": dict(pre, desc=f"E8 AR pool{p} s{s}"),
                 "state_path": str(state_dir / f"ar_p{p}_s{s}.pt"),
+                "reuse_existing": reuse,
                 "eval_val_files": val_str, "tag": f"AR pool{p} s{s}",
             })
     pre_out = dict(zip(pre_keys,
@@ -149,9 +152,10 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
                                    if (b == max(budgets) and r in ("labels", "mgn"))
                                    else None),
                     "tag": f"{r} b{b} s{s}",
+                    "cache_dir": cache_dir, "reuse_existing": reuse,
                 })
     sup_out = dict(zip(sup_keys,
-                       map_units(supervised_unit, sup_payloads, workers,
+                       map_units(cached_supervised_unit, sup_payloads, workers,
                                  "E8 (supervised grid)"), strict=True))
     for r in regimes:
         r_buds = [b for b in budgets
@@ -200,6 +204,13 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
              "naive_baseline_rows": baseline_rows,
              "workers": workers, "state_dir": str(state_dir),
              "anchored_policy": "gradient-balanced (ratio 1.0), plan Sec.5 item 4"}
+    d9 = {"reuse_states": reuse,
+          "ar_states": {f"s{s_}": {"reused": pre_out[(s_, ft_pool)].get("reused_state", False),
+                                   "sha256": pre_out[(s_, ft_pool)].get("state_sha256")}
+                        for s_ in seeds},
+          "sup_units_from_cache": [" ".join(map(str, k)) for k, v in sup_out.items()
+                                   if v.get("from_cache")]}
     return result("E8", PLAN_REF, proto,
                   {"cells": cells, "label_efficiency_auc_disp": auc,
-                   "ar_egap_advantage_by_budget": advantages}, [k2, adv_kill])
+                   "ar_egap_advantage_by_budget": advantages,
+                   "d9_restart": d9}, [k2, adv_kill])
