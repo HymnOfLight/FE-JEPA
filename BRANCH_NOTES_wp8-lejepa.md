@@ -42,6 +42,19 @@ pre-registration stamps it.
    known dimension); SIGReg evaluated in checkpointed projection chunks
    (identical values/gradients, one chunk of memory) and self-protected to
    fp32 under autocast; default 17 knots within 0.5% of the closed form.
+   Stage 0.3 review record (1 Sep, executed checks): (i) the Epps-Pulley null
+   distribution is N-stable (median ~0.08-0.11, 95th ~0.28-0.39 at
+   N = 500/2000/8000 standardized Gaussian) -- the normalisation carries no
+   hidden N factor; (ii) LeWM's claim that a final LayerNorm blocks
+   distribution shaping DID NOT REPRODUCE on our encoder at toy scale: 60
+   Adam steps through the raw LN output reduced SIGReg by 93% (0.347 ->
+   0.023), the BatchNorm projector path by 63% from a lower start.
+   Consequence for E1: the projector head stays the DEFAULT (independent
+   reason -- it decouples the shaped space from the space the decoder and
+   the energy anchor consume), but the raw-LN variant is retained as a
+   cheap pre-registered ablation rather than excluded on the literature's
+   authority; (iii) the instrument's real (non-smoke) path executed end to
+   end against a saved state, a config and a corpus.
 4. Stage-0 gate for Stage 1: run instrument 2 on the Phase-2 AR states once
    the box is free. Reading rule (pre-declared): if TwoNN ID < 0.25 x latent
    dim, E1 uses a projector head of width ~2 x ID; otherwise full width.
