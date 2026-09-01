@@ -104,6 +104,8 @@ def _apply_runtime(payload) -> None:
 
 
 def _build_model(payload):
+    payload = dict(payload, model={k: v for k, v in payload["model"].items()
+                                   if k != "kind"})   # wp8: kind is routing, not a field
     from ..models.features import FeatureSpec
     from .protocol import seeded_factory
 

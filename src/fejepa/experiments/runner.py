@@ -375,6 +375,7 @@ def run_config(path, device_override: str | None = None,
 
         results["e8"] = run_e8(model_cfg, split.pool_files, split.val_files,
                                {**exps["e8"], **run_opts,
+                                "ar_loss_spec": (cfg.get("pretrain") or {}).get("loss_spec"),
                                 "state_dir": str(Path(cfg.get("out",
                                                  "runs/report_v2.json")).parent
                                                  / "e8_states")})

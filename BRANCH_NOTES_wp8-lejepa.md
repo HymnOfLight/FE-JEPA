@@ -86,6 +86,15 @@ pre-registration stamps it.
   --bottleneck-tokens M pair of phases (largest in-band + fine) so E2's
   kill/GO lines are written against measured step time and memory.
 
+- Stage 1.3 review record: the drafts were NOT executable -- e8 and p3
+  hardcoded the FE-JEPA-role architecture (`"fejepa"`) and the AR loss
+  (`"ar"`). Now config-driven: `model.kind` (routing key, stripped before
+  the builders) and `pretrain.loss_spec` (dict overrides on AR_CONFIG),
+  threaded runner -> e8 -> units and p3 zero/few-shot; defaults reproduce
+  Phase-2 byte for byte (legacy bitwise regression re-run: equal). A test
+  runs a bottleneck + SIGReg-head configuration through `run_config` end to
+  end (E8, P3, gate).
+
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
 **E1 -- latent shaping and cross-geometry separation.** Question: does adding

@@ -182,3 +182,53 @@ def test_e1_head_width_rule_plumbing(tmp_path):
                                                          head_width=6),
                                    log_every=-1))
     assert m.sigreg_head[1].num_features == 6 and m.sigreg_head[2].out_features == 6
+
+
+# --------------- E1 and E2 are executable through run-config ---------------
+def test_e1_and_e2_arms_run_through_run_config(tmp_path):
+    """The pre-registration drafts require model.kind = bottleneck (E2) and a
+    dict AR loss spec (E1) to be honoured by the production runner: E8 AR
+    pretraining, the supervised grid, P3 zero/few-shot and the gate."""
+    import json
+
+    from fejepa.experiments.runner import run_config
+
+    d = generate_synthetic_dataset(tmp_path / "corpus", n=10, seed=3)
+    df = generate_synthetic_dataset(tmp_path / "fine", n=6, seed=4)
+    cfg = {"data": {"dir": str(d), "n": 10, "seed": 3, "backend": "synthetic",
+                    "labelled_policy": "economy"},
+           "data_transfer": {"dir": str(df), "n": 6, "seed": 4, "backend": "synthetic",
+                             "labelled_policy": "economy",
+                             "split": {"n_eval": 3, "n_fewshot_prefix": 2}},
+           "split": {"n_val": 3, "seed": 1},
+           "model": {**BOTTLE, "kind": "bottleneck", "mgn_dim": 16, "mgn_depth": 2},
+           "sup": {"epochs": 1, "lr": 1e-3},
+           "pretrain": {"epochs": 1, "lr": 1e-3,
+                        "loss_spec": {"reg_mode": "sigreg_ep_head", "lambda_reg": 0.1,
+                                      "sigreg_n_proj": 16}},
+           "experiments": {
+               "e8": {"enabled": True, "budgets": [2, 4], "pool_sizes": [4], "seeds": 1,
+                      "ar_epochs": 1, "sup_epochs": 1, "include_mgn": True,
+                      "include_ar_ft": False, "mgn_budgets": [4]},
+               "p3_transfer": {"enabled": True, "fewshot_budgets": [2],
+                               "fewshot_epochs": 1, "naive_budget": 4},
+               "wp6": {"enabled": True, "n_check": 2, "seed": 0}},
+           "gate_g2": {"sanity_x": 3.0, "naive_set": ["knn_field", "scale_aware_poly"],
+                       "parity_band": 0.10, "egap_adv_min": 0.40, "transfer_win": 1.25,
+                       "decision_budget": 4},
+           "kills": {"KP1_parity_pct": 0.10, "KP2_egap_adv_min": 0.40,
+                     "KP3_anchor_improv_min": 0.25, "KP4_transfer_ratio": 1.5,
+                     "KP6_rho_within_min": 0.3},
+           "device": "cpu", "workers": 1, "tf32": False,
+           "runtime": {"compile": False, "amp": False, "precision": "fp32"},
+           "seeds": [0], "out": str(tmp_path / "out" / "report.json"), "prereg_guard": False}
+    cpath = tmp_path / "cfg.json"
+    cpath.write_text(json.dumps(cfg))
+    r = run_config(str(cpath))
+    e8 = r["results"]["e8"]["metrics"]
+    assert set(e8["cells"]) >= {"labels", "labels_anchor", "mgn", "ar"}
+    assert "p3_transfer" in r["results"] and "gate_g2" in r
+    st = torch.load(tmp_path / "out" / "e8_states" / "ar_p4_s0.pt", map_location="cpu",
+                    weights_only=True)
+    assert not any(k.startswith("sigreg_head.") for k in st)      # E1 head stripped
+    assert any(k.startswith("tok_enc.") for k in st)                # E2 architecture

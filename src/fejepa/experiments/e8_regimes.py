@@ -87,6 +87,10 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
                lr=float(cfg.get("sup_lr", 1.5e-3)), device=device)
     pre = dict(epochs=int(cfg.get("ar_epochs", 100)),
                lr=float(cfg.get("ar_lr", 1e-3)), device=device)
+    # wp8: the FE-JEPA-role architecture and the AR loss are config-driven
+    # (model.kind, pretrain.loss_spec); defaults reproduce Phase-2 exactly.
+    fe_kind = str(model_cfg.get("kind", "fejepa"))
+    ar_loss = cfg.get("ar_loss_spec") or "ar"
     include_mgn = bool(cfg.get("include_mgn", False))
     include_ar_ft = bool(cfg.get("include_ar_ft", True))
     mgn_budgets = set(int(b) for b in cfg.get("mgn_budgets", budgets))
@@ -108,10 +112,10 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
         for p in pool_sizes:
             pre_keys.append((s, p))
             pre_payloads.append({
-                "kind": "fejepa", "model": model_cfg, "seed": s, "tf32": tf32,
+                "kind": fe_kind, "model": model_cfg, "seed": s, "tf32": tf32,
                 "compile": cfg.get("compile", False),
                     "precision": cfg.get("precision", "fp32"),
-                "files": [str(f) for f in pool_files[:p]], "loss": "ar",
+                "files": [str(f) for f in pool_files[:p]], "loss": ar_loss,
                 "pre": dict(pre, desc=f"E8 AR pool{p} s{s}"),
                 "state_path": str(state_dir / f"ar_p{p}_s{s}.pt"),
                 "reuse_existing": reuse,
@@ -135,7 +139,7 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
                     continue   # r10 L4: comparator trains on a budget subset
                 sup_keys.append((r, b, s))
                 sup_payloads.append({
-                    "kind": "mgn" if r == "mgn" else "fejepa",
+                    "kind": "mgn" if r == "mgn" else fe_kind,
                     "model": model_cfg, "seed": s, "tf32": tf32,
                     "compile": cfg.get("compile", False),
                     "precision": cfg.get("precision", "fp32"),

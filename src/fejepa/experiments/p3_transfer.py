@@ -53,6 +53,7 @@ def _row(evals: list[dict]) -> dict:
 
 def run_p3(model_cfg: dict, pool_files, val_archs, fine_eval_archs,
            fine_eval_files, fine_prefix_files, cfg: dict) -> dict:
+    fe_kind = str(model_cfg.get("kind", "fejepa"))   # wp8: config-driven architecture
     seeds = seeds_list(cfg.get("seeds", 3))
     device = cfg.get("device", "cpu")
     workers = int(cfg.get("workers", 1))
@@ -80,13 +81,13 @@ def run_p3(model_cfg: dict, pool_files, val_archs, fine_eval_archs,
         return {"fine": _row(fine), "inband": _row(inb),
                 "fine_disp_mean": _mm(fine), "inband_disp_mean": _mm(inb)}
 
-    ar = zero_shot("fejepa", f"ar_p{p_max}_s{{s}}.pt")
+    ar = zero_shot(fe_kind, f"ar_p{p_max}_s{{s}}.pt")
     if ar is None:
         raise FileNotFoundError(
             f"P3 requires the shared AR checkpoints ar_p{p_max}_s*.pt in "
             f"{state_dir} (run E8 first; identical configurations are trained "
             f"once and shared, never re-run)")
-    reported = {"labels@max": zero_shot("fejepa", f"labels_b{b_max}_s{{s}}.pt"),
+    reported = {"labels@max": zero_shot(fe_kind, f"labels_b{b_max}_s{{s}}.pt"),
                 "mgn@max": zero_shot("mgn", f"mgn_b{b_max}_s{{s}}.pt")}
 
     ratio = ar["fine_disp_mean"] / (ar["inband_disp_mean"] + 1e-30)
@@ -99,7 +100,7 @@ def run_p3(model_cfg: dict, pool_files, val_archs, fine_eval_archs,
                               ("scratch", None)):
                 fs_keys.append((arm, b, s))
                 fs_payloads.append({
-                    "kind": "fejepa", "model": model_cfg, "seed": s,
+                    "kind": fe_kind, "model": model_cfg, "seed": s,
                     "tf32": tf32,
                     "compile": cfg.get("compile", False),
                     "precision": cfg.get("precision", "fp32"),
