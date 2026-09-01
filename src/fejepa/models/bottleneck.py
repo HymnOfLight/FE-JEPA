@@ -91,7 +91,8 @@ def build_bottleneck(cfg: BottleneckConfig):
             layer = nn.TransformerEncoderLayer(cfg.dim, cfg.heads, 4 * cfg.dim,
                                                dropout=0.0, batch_first=True,
                                                norm_first=True, activation="gelu")
-            self.tok_enc = nn.TransformerEncoder(layer, cfg.depth)
+            self.tok_enc = nn.TransformerEncoder(layer, cfg.depth,
+                                                 enable_nested_tensor=False)
             self.tok_norm = nn.LayerNorm(cfg.dim)
             self.dec = mlp(3 * cfg.dim, cfg.dim, 3)          # (..., N, 3*dim) -> (..., N, 3)
             self.out_dim = 3

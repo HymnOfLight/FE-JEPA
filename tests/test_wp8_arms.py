@@ -117,3 +117,55 @@ def test_bottleneck_trains_through_ar_and_supervised_units(tmp_path):
                       strict=True)
     ev = evaluate_model(torch_predictor(m, "cpu"), [load_instance(f) for f in sp.val_files])
     assert torch.isfinite(torch.tensor(ev["disp_rel_l2"]))
+
+
+# ------------------------- 3D path and resume interplay ----------------------
+def test_bottleneck_runs_on_a_real_3d_gmsh_instance(tmp_path):
+    """E2 targets 3D: the bottleneck must run on a tetrahedral gmsh instance
+    (3 coordinate columns, spatial_dim-3 features, ndof = 3N) through forward,
+    the exact anchor, a supervised step and evaluation."""
+    from fejepa.fe.gmsh3d import generate_gmsh3d_dataset
+    from fejepa.train.supervised import SupervisedConfig, train_supervised
+
+    d = generate_gmsh3d_dataset(tmp_path / "g3", 3, 5, labelled="none", lc_range=(0.45, 0.6))
+    sp = load_split(str(d), 1, 1)
+    led = SolveLedger()
+    _label_files(sp.val_files, led, "v")
+    _label_files(sp.pool_files[:2], led, "p")
+    m3 = {"dim": 16, "depth": 1, "heads": 2, "n_tokens": 16,
+          "features": {"load_summary": True, "geometry": True, "spatial_dim": 3}}
+    m = _build_model({"kind": "bottleneck", "model": m3, "seed": 0})
+    tr = [load_instance(f) for f in sp.pool_files[:2]]
+    val = [load_instance(f) for f in sp.val_files]
+    pack = m.prepare_instance(tr[0], "cpu")
+    assert pack["rel"].shape[1] == 3 and pack["seed_xyz"].shape[1] == 3
+    u = m.forward_instance(pack)
+    assert u.shape[1] == 3 * tr[0].nodes.shape[0] == pack["free"].numel()
+    e = AnchorCache(device="cpu").get(tr[0]).energies(u)
+    assert torch.isfinite(e).all()
+    res = train_supervised(m, tr, val, SupervisedConfig(epochs=1, lr=1e-3, seed=0, device="cpu",
+                                                        anchor_mode="none", log_every=-1))
+    assert torch.isfinite(torch.tensor(res["val"]["disp_rel_l2"]))
+    ev = evaluate_model(torch_predictor(m, "cpu"), val)
+    assert torch.isfinite(torch.tensor(ev["energy_gap_rel"]))
+
+
+def test_e1_sigreg_resume_is_bitwise_exact(tmp_path):
+    """SIGReg draws random directions from the global torch RNG every step; the
+    R9 checkpoint restores that RNG, so an interrupted E1 run must land on
+    the uninterrupted parameters bitwise (head included)."""
+    sp = _corpus(tmp_path, seed=41)
+    tr = [load_instance(f) for f in sp.pool_files[:3]]
+    base = dict(epochs=3, lr=1e-3, seed=0, device="cpu",
+                loss=ar_sigreg_config(0.1, head=True, n_proj=32), log_every=-1)
+    m_ref = _build_model({"kind": "fejepa", "model": MODEL, "seed": 0})
+    pretrain(m_ref, tr, PretrainConfig(**base))
+    ck = str(tmp_path / "e1.ckpt")
+    m_a = _build_model({"kind": "fejepa", "model": MODEL, "seed": 0})
+    pretrain(m_a, tr, PretrainConfig(**base, ckpt_path=ck, stop_after_epoch=1))
+    m_b = _build_model({"kind": "fejepa", "model": MODEL, "seed": 0})
+    pretrain(m_b, tr, PretrainConfig(**base, ckpt_path=ck, resume=True))
+    pa = dict(m_ref.named_parameters())
+    pb = dict(m_b.named_parameters())
+    assert set(pa) == set(pb) and any(k.startswith("sigreg_head.") for k in pa)
+    assert all(torch.equal(pa[k].detach(), pb[k].detach()) for k in pa)
