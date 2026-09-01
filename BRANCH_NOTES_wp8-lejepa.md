@@ -1,0 +1,83 @@
+# BRANCH NOTES -- wp8-lejepa
+
+Branched 1 Sep 2026 from `wp7-3d` at `99d3674` (post `prereg-phase2` tag,
+R10). Purpose: evaluate, under the project's falsification discipline, what
+the LeCun JEPA lineage (LeJEPA, LeWorldModel) and the adjacent PDE-JEPA work
+(PI-JEPA, AeroJEPA) can contribute to FE-JEPA's accuracy, training cost and
+instrumentation -- WITHOUT touching anything the Phase-2 deciding run depends
+on. Everything on this branch is exploratory until an E-series
+pre-registration stamps it.
+
+## Governance
+
+- No file that the stamped Phase-2 run reads is modified here
+  (`configs/phase2_v1.json`, `PREREG_PHASE2.md`, the training loops as
+  executed by `run-config`). New code lives in new modules and scripts; the
+  2D/3D test suites stay green and bitwise regression tests against the tag
+  are re-run before any merge.
+- Every experiment below is a falsifiable question with kill criteria declared
+  before execution (E-series, fresh SHA-256 per pre-registration). GO and
+  NO-GO are both publishable outcomes.
+- Prior art now on record and to be cited in the CMAME manuscript: PI-JEPA
+  (arXiv:2604.01349), AeroJEPA (arXiv:2605.05586), LeJEPA (2511.08544),
+  LeWorldModel (2603.19312). Our differentiator is the training signal: the
+  exactly assembled discrete potential energy (Lemma 1), not a residual
+  penalty, a teacher network or a reconstruction label.
+
+## Stage 0 -- instruments and code, CPU only (this week)
+
+1. `train/sigreg.py`: SIGReg (Epps–Pulley on random 1-D projections), knot
+   form (linear in N) cross-checked against the closed form; differentiable
+   regulariser + gradient-free monitor. Tests: closed-form agreement, shape
+   discrimination (Gaussian < uniform < collapsed), descent reduces it.
+2. `scripts/intrinsic_dimension.py`: TwoNN and PCA dimensions of the node-token
+   cloud from a trained state, the SIGReg baseline, and the output-LayerNorm
+   check. FINDING already on record: the FE-JEPA encoder ends with a
+   LayerNorm, so any latent shaping must act on a BatchNorm projector head
+   (LeWM's own fix), never on the raw encoder output.
+3. Literature note and CMAME related-work paragraph (delivered outside the
+   repo; see the assessment memo of 1 Sep 2026).
+4. Stage-0 gate for Stage 1: run instrument 2 on the Phase-2 AR states once
+   the box is free. Reading rule (pre-declared): if TwoNN ID < 0.25 x latent
+   dim, E1 uses a projector head of width ~2 x ID; otherwise full width.
+
+## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
+
+**E1 -- latent shaping and cross-geometry separation.** Question: does adding
+lambda * SIGReg to the AR arm improve latent separation ACROSS GEOMETRIES
+(the gap left open by Proposition 1, which bounds separation across load
+cases on a shared K only) and the P3 transfer ratio, at no cost to the
+in-band gate metrics? Arms: AR (current) vs AR+SIGReg (single lambda found by
+bisection on a pilot, then frozen), 3 seeds, shared corpus and labels.
+Kill: (a) in-band disp or energy-gap parity worsens by more than the
+Phase-2 parity band; (b) no measurable change in the cross-geometry
+separation statistic (pre-declared: silhouette-type score of instance means
+across geometry descriptors) at all seeds. GO: separation improves at every
+seed AND P3 ratio does not worsen. Cost estimate: one extra AR arm
+(~3 x 22 h at 3D scale) -- or run on the 2D corpus first (hours).
+
+**E2 -- token bottleneck with continuous decoder (speed lever).** Question:
+does an AeroJEPA-style architecture (FPS-seeded local aggregation into M
+tokens, attention over tokens, conditional per-node decoder; conditions
+injected by zero-initialised AdaLN) reach parity with the current per-node
+transformer in the energy norm while cutting the fine-scale step time by an
+order of magnitude? The energy anchor is untouched (decoded u feeds the same
+exact energy). Arms: current architecture vs bottleneck (M in {512, 1024}),
+AR training, 3 seeds. Kill: energy-norm parity worse than the Phase-2 band at
+b_max; or fine-scale step time not below 2 s (from 12.1 s). GO: parity within
+band AND fine step time < 1 s. Deliverable either way: the measured
+accuracy/cost frontier.
+
+**Explicitly out of scope on this branch:** any change to the Phase-2 gate,
+kills, thresholds or battery; any latent-prediction arm trained without the
+energy anchor (AeroJEPA needed a reconstruction term to keep physical
+validity -- our anchor is that guard and is never dropped); soft PDE-residual
+penalties (PI-JEPA's own ablation: neutral to harmful); EMA/stop-gradient
+heuristics (LeJEPA/LeWM: unnecessary with SIGReg).
+
+## Stage 2 -- decision
+
+With the Phase-2 verdict and E1/E2 on record, decide whether the bottleneck
+architecture becomes the Phase-3 main line (fire extension) and whether
+SIGReg enters the default AR loss. Both decisions are taken on measured
+numbers against pre-declared criteria, not on the literature.
