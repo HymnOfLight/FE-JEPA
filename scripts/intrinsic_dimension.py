@@ -38,9 +38,12 @@ def twonn(x, discard_frac: float = 0.1) -> float:
     r1 = np.empty(n)
     r2 = np.empty(n)
     chunk = 2048
+    sq = (x * x).sum(1)                                          # (N,)
     for s in range(0, n, chunk):
         blk = x[s:s + chunk]
-        d = ((blk[:, None, :] - x[None, :, :]) ** 2).sum(-1)
+        # |a-b|^2 = |a|^2 + |b|^2 - 2 a.b : (chunk, N) only -- never (chunk, N, d)
+        d = sq[s:s + chunk, None] + sq[None, :] - 2.0 * blk @ x.T
+        np.maximum(d, 0.0, out=d)
         d[np.arange(blk.shape[0]), np.arange(s, s + blk.shape[0])] = np.inf
         part = np.partition(d, 1, axis=1)[:, :2]
         part.sort(axis=1)
@@ -48,10 +51,12 @@ def twonn(x, discard_frac: float = 0.1) -> float:
         r2[s:s + chunk] = np.sqrt(part[:, 1])
     mu = r2 / np.maximum(r1, 1e-12)
     mu = np.sort(mu[np.isfinite(mu) & (mu > 1.0)])
-    keep = int((1.0 - discard_frac) * mu.size)
-    mu = mu[:keep]
+    # Facco et al. 2017: the empirical CDF is taken over ALL points; the
+    # top `discard_frac` of ratios is excluded from the FIT only (they are
+    # the noisy tail), never re-normalised away.
     f = np.arange(1, mu.size + 1) / (mu.size + 1)
-    xs, ys = np.log(mu), -np.log(1.0 - f)
+    keep = int((1.0 - discard_frac) * mu.size)
+    xs, ys = np.log(mu[:keep]), -np.log(1.0 - f[:keep])
     return float((xs * ys).sum() / max((xs * xs).sum(), 1e-12))
 
 
@@ -65,12 +70,28 @@ def pca_dims(x, levels=(0.90, 0.95, 0.99)) -> dict:
     return {f"pca_{int(l * 100)}": int(np.searchsorted(cum, l) + 1) for l in levels}
 
 
-def last_module_is_layernorm(encoder) -> bool:
+def last_executed_module(model, feats) -> str:
+    """Name of the leaf module that fires LAST in `model.encode(feats)`
+    (forward-hook order, not registration order)."""
     import torch
 
-    mods = [m for m in encoder.modules() if not isinstance(m, torch.nn.Sequential)]
-    leaf = [m for m in mods if len(list(m.children())) == 0]
-    return bool(leaf) and isinstance(leaf[-1], torch.nn.LayerNorm)
+    fired = []
+    hooks = []
+    for name, m in model.named_modules():
+        if len(list(m.children())) == 0:
+            hooks.append(m.register_forward_hook(
+                lambda mod, inp, out, n=name: fired.append((n, type(mod).__name__))))
+    try:
+        with torch.no_grad():
+            model.encode(feats)
+    finally:
+        for h in hooks:
+            h.remove()
+    return fired[-1][1] if fired else "none"
+
+
+def last_module_is_layernorm(model, feats) -> bool:
+    return last_executed_module(model, feats) == "LayerNorm"
 
 
 def main() -> None:
@@ -111,10 +132,13 @@ def main() -> None:
     model.eval()
 
     rows = []
+    first_feats = None
     with torch.no_grad():
         for f in files:
             arch = load_instance(f)
             pack = model.prepare_instance(arch, "cpu")
+            if first_feats is None:
+                first_feats = pack["feats"]
             z = model.encode(pack["feats"])                 # node tokens
             rows.append(z.reshape(-1, z.shape[-1]).cpu())
     z_all = torch.cat(rows, 0)
@@ -126,8 +150,8 @@ def main() -> None:
     res = {"n_rows": int(x.shape[0]), "latent_dim": int(x.shape[1]),
            "twonn_id": twonn(x), **pca_dims(x),
            "sigreg_monitor_raw": sigreg_monitor(z_all, n_proj=256),
-           "encoder_ends_with_layernorm": last_module_is_layernorm(
-               getattr(model, "encoder", model)),
+           "encoder_ends_with_layernorm": last_module_is_layernorm(model, first_feats),
+           "last_executed_module": last_executed_module(model, first_feats),
            "state": a.state, "smoke": a.smoke}
     res["b1_reading"] = (
         "intrinsic dimension << latent dim: shape the latent on a projector "

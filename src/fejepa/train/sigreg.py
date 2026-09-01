@@ -69,20 +69,46 @@ def epps_pulley_closed(h):
 def random_directions(d: int, n_proj: int, device, dtype, generator=None):
     import torch
 
-    u = torch.randn(n_proj, d, device=device, dtype=dtype, generator=generator)
-    return u / u.norm(dim=1, keepdim=True).clamp_min(1e-12)
+    gdev = generator.device if generator is not None else torch.device(device)
+    u = torch.randn(n_proj, d, device=gdev, dtype=dtype, generator=generator)
+    u = u / u.norm(dim=1, keepdim=True).clamp_min(1e-12)
+    return u.to(device)
+
+
+def _chunk_stat_sum(z2, u_chunk, n_knots, t_max):
+    h = z2 @ u_chunk.t()                                         # (N, m)
+    return epps_pulley_knots(h.t(), n_knots=n_knots, t_max=t_max).sum()
 
 
 def sigreg(z, n_proj: int = 1024, n_knots: int = 17, t_max: float = 5.0,
-           generator=None):
+           generator=None, proj_chunk: int = 128):
     """Differentiable SIGReg loss for embeddings `z` of shape (N, d):
     mean over `n_proj` random unit directions of the Epps–Pulley statistic of
-    the projected samples, normalised by N so the scale is O(1)."""
+    the projected samples, normalised by N so the scale is O(1).
+
+    Memory: the (m, N, K) intermediates of a chunk of m directions are what
+    autograd must keep; directions are drawn once and processed in chunks of
+    `proj_chunk` under activation checkpointing, so peak memory is one chunk's
+    worth (m*N*K floats) instead of the full M*N*K -- at N = 41k nodes and
+    M = 1024 the difference is ~9 GiB vs ~1 GiB. The result is identical to
+    the unchunked evaluation (same directions, same arithmetic)."""
+    import torch
+
     z2 = z.reshape(-1, z.shape[-1])
     u = random_directions(z2.shape[-1], n_proj, z2.device, z2.dtype, generator)
-    h = z2 @ u.t()                                               # (N, M)
-    stat = epps_pulley_knots(h.t(), n_knots=n_knots, t_max=t_max)   # (M,)
-    return stat.mean() / z2.shape[0]
+    total = None
+    need_ckpt = torch.is_grad_enabled() and z2.requires_grad
+    for s in range(0, n_proj, max(1, proj_chunk)):
+        uc = u[s:s + proj_chunk]
+        if need_ckpt:
+            from torch.utils.checkpoint import checkpoint
+
+            part = checkpoint(_chunk_stat_sum, z2, uc, n_knots, t_max,
+                              use_reentrant=False)
+        else:
+            part = _chunk_stat_sum(z2, uc, n_knots, t_max)
+        total = part if total is None else total + part
+    return total / (n_proj * z2.shape[0])
 
 
 def sigreg_monitor(z, n_proj: int = 256, seed: int = 0) -> float:

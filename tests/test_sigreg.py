@@ -57,3 +57,21 @@ def test_sigreg_is_differentiable_and_batched_shape_safe():
     assert z.grad is not None and torch.isfinite(z.grad).all()
     z3 = torch.randn(4, 75, 8)                             # (batch, nodes, d) flattens
     assert torch.isfinite(sigreg(z3, n_proj=16, generator=torch.Generator().manual_seed(1)))
+
+
+def test_chunked_sigreg_equals_unchunked_with_gradients():
+    g = torch.Generator().manual_seed(7)
+    z = torch.randn(3000, 32, generator=g).requires_grad_(True)
+    a = sigreg(z, n_proj=256, generator=torch.Generator().manual_seed(11), proj_chunk=256)
+    b = sigreg(z, n_proj=256, generator=torch.Generator().manual_seed(11), proj_chunk=32)
+    assert torch.allclose(a, b, rtol=1e-5, atol=1e-7)
+    ga = torch.autograd.grad(a, z)[0]
+    gb = torch.autograd.grad(b, z)[0]
+    assert torch.allclose(ga, gb, rtol=1e-4, atol=1e-8)
+
+
+def test_default_knots_match_closed_form_within_half_percent():
+    g = torch.Generator().manual_seed(8)
+    for x in (torch.randn(2000, generator=g), torch.randn(2000, generator=g) + 0.5):
+        ref = float(epps_pulley_closed(x))
+        assert abs(float(epps_pulley_knots(x)) - ref) <= 0.005 * abs(ref) + 1e-4
