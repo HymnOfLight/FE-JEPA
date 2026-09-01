@@ -34,6 +34,8 @@ class PretrainConfig:
     ckpt_path: str | None = None  # R9: epoch-boundary checkpoint file (always
                                   # written when set; consumed only if resume)
     ckpt_every_epochs: int = 1
+    ckpt_min_interval_s: float = 300.0   # R10: throttle saves (first and last
+                                         # epoch always save)
     resume: bool = False          # R9: resume from ckpt_path if present
     stop_after_epoch: int | None = None   # test hook: return after this many
                                           # epochs (simulates an interruption)
@@ -93,8 +95,11 @@ def pretrain(model, archs, cfg: PretrainConfig, pairs=None) -> dict:
         if ck is not None:
             start_epoch, step, extra = ck
             history = extra.get("history", history)
+            history["resumed_from_epoch"] = start_epoch          # R10 provenance
             print(f"[ckpt] resumed {cfg.desc or 'pretrain'} at epoch "
                   f"{start_epoch}/{cfg.epochs} (step {step})", flush=True)
+    import time as _time
+    last_ckpt_t = None
     for _epoch in range(start_epoch, cfg.epochs):
         order = rng.permutation(len(prepared))
         for i in order:
@@ -115,12 +120,16 @@ def pretrain(model, archs, cfg: PretrainConfig, pairs=None) -> dict:
                       f"({100.0 * step / total_steps:.0f}%) "
                       f"loss={float(loss):.4e}", flush=True)
         history["loss"].append(float(loss.detach()))
-        if cfg.ckpt_path and (_epoch + 1) % max(1, cfg.ckpt_every_epochs) == 0:
+        due = (cfg.ckpt_path and (_epoch + 1) % max(1, cfg.ckpt_every_epochs) == 0
+               and (last_ckpt_t is None or _epoch + 1 == cfg.epochs
+                    or _time.monotonic() - last_ckpt_t >= cfg.ckpt_min_interval_s))
+        if due:
             from .checkpoint import save_epoch_checkpoint
 
             save_epoch_checkpoint(cfg.ckpt_path, epochs_done=_epoch + 1,
                                   step=step, model=model, opt=opt, sched=sched,
                                   rng=rng, extra={"history": history})
+            last_ckpt_t = _time.monotonic()
         if cfg.stop_after_epoch is not None and _epoch + 1 >= cfg.stop_after_epoch:
             return history                     # simulated interruption (tests)
     return history

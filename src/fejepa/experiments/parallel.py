@@ -210,7 +210,9 @@ def supervised_unit(payload: dict) -> dict:
         from ..train.checkpoint import atomic_torch_save
 
         atomic_torch_save(_state_dict(model), Path(payload["state_path"]))
-    return {k: res[k] for k in ("val", "pretrained_tensors_loaded")} | (
+    extra = ({"resumed_from_epoch": res["resumed_from_epoch"]}
+             if "resumed_from_epoch" in res else {})
+    return extra | {k: res[k] for k in ("val", "pretrained_tensors_loaded")} | (
         {"balance_scale_mean": res["balance_scale_mean"]}
         if "balance_scale_mean" in res else {})
 
@@ -238,6 +240,7 @@ def pretrain_unit(payload: dict) -> dict:
     loss = AR_CONFIG if payload.get("loss", "ar") == "ar" else JEPA_CONFIG
     sp = Path(payload["state_path"])
     reused = False
+    resumed_from = None
     if payload.get("reuse_existing") and sp.exists():
         # D9: consume a state produced by an earlier attempt of the SAME stamped
         # configuration (identical configurations are trained once); the file's
@@ -258,14 +261,17 @@ def pretrain_unit(payload: dict) -> dict:
         model = _maybe_compile(model, payload)
         pre.setdefault("ckpt_path", str(sp.with_suffix(".ckpt")))   # R9b
         pre.setdefault("resume", bool(payload.get("reuse_existing")))
-        pretrain(model, _load(payload["files"]), PretrainConfig(loss=loss, **pre))
+        hist = pretrain(model, _load(payload["files"]), PretrainConfig(loss=loss, **pre))
         atomic_torch_save(_state_dict(model), sp)
         Path(pre["ckpt_path"]).unlink(missing_ok=True)          # unit complete
+        resumed_from = hist.get("resumed_from_epoch")
 
     import hashlib
 
     out = {"state_path": str(sp), "reused_state": reused,
            "state_sha256": hashlib.sha256(sp.read_bytes()).hexdigest()}
+    if not reused and resumed_from is not None:
+        out["resumed_from_epoch"] = int(resumed_from)
     if payload.get("eval_val_files"):
         out["val"] = evaluate_model(
             torch_predictor(model, pre.get("device", "cpu")),

@@ -137,3 +137,40 @@ def test_unit_level_resume_from_checkpoint(tmp_path):
     sd_new = torch.load(str(sp_path), map_location="cpu", weights_only=True)
     assert all(torch.equal(sd_ref[k], sd_new[k]) for k in sd_ref)
     assert not sp_path.with_suffix(".ckpt").exists()           # cleaned up
+
+
+def test_checkpoint_throttle_first_and_last_epoch_always_save(tmp_path):
+    """R10: with a huge min-interval only the first eligible epoch saves until
+    the final epoch, which always saves; interval 0 saves every epoch."""
+    _, sp = _corpus(tmp_path)
+    tr = [load_instance(f) for f in sp.pool_files[:3]]
+    base = dict(epochs=3, lr=1e-3, seed=0, device="cpu", loss=AR_CONFIG,
+                log_every=-1)
+    ck = str(tmp_path / "t.ckpt")
+    m = _build_model({"kind": "fejepa", "model": MODEL, "seed": 0})
+    pretrain(m, tr, PretrainConfig(**base, ckpt_path=ck, ckpt_min_interval_s=1e9,
+                                   stop_after_epoch=2))
+    assert torch.load(ck, weights_only=False)["epochs_done"] == 1     # throttled at 2
+    m = _build_model({"kind": "fejepa", "model": MODEL, "seed": 0})
+    pretrain(m, tr, PretrainConfig(**base, ckpt_path=ck, ckpt_min_interval_s=1e9))
+    assert torch.load(ck, weights_only=False)["epochs_done"] == 3     # last always
+    m = _build_model({"kind": "fejepa", "model": MODEL, "seed": 0})
+    pretrain(m, tr, PretrainConfig(**base, ckpt_path=ck, ckpt_min_interval_s=0,
+                                   stop_after_epoch=2))
+    assert torch.load(ck, weights_only=False)["epochs_done"] == 2     # every epoch
+
+
+def test_resume_provenance_is_reported(tmp_path):
+    _, sp = _corpus(tmp_path)
+    tr = [load_instance(f) for f in sp.pool_files[:3]]
+    val = [load_instance(f) for f in sp.val_files]
+    ck = str(tmp_path / "p.ckpt")
+    base = dict(epochs=3, lr=1e-3, seed=0, device="cpu", anchor_mode="none",
+                log_every=-1)
+    m = _build_model({"kind": "fejepa", "model": MODEL, "seed": 0})
+    train_supervised(m, tr, val, SupervisedConfig(**base, ckpt_path=ck,
+                                                  stop_after_epoch=1))
+    m = _build_model({"kind": "fejepa", "model": MODEL, "seed": 0})
+    out = train_supervised(m, tr, val, SupervisedConfig(**base, ckpt_path=ck,
+                                                        resume=True))
+    assert out["resumed_from_epoch"] == 1

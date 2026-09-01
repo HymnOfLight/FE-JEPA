@@ -91,3 +91,14 @@ manual, logged action (a new tmux session, a new log name, a D-note); no
 automatic retry loop is added, so a deterministic failure cannot burn cycles
 unnoticed. JEPA-loss units (2D legacy) do not resume (their pooled buffer is
 not checkpointed); the Phase-2 battery has none.
+
+**Numerical invariance evidence (1 Sep 2026).** With the stamped tag checked
+out in a separate worktree, the same seeds and data were trained in
+separate processes under the tag's code and under the current head (R8 +
+R9 + R10): FE-JEPA AR pretraining, FE-JEPA balanced supervised training and
+MGN supervised training (checkpointed layers active) all reproduce the
+tag's parameters BITWISE on CPU. The post-stamp engineering commits changed
+memory, resilience and provenance only. R10 adds a save throttle for the
+epoch checkpoints (first and last epoch always save; otherwise at most one
+save per 300 s) and records `resumed_from_epoch` per resumed unit in the
+report's `d9_restart` block.

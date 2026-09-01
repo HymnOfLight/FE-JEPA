@@ -209,7 +209,12 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
                                    "sha256": pre_out[(s_, ft_pool)].get("state_sha256")}
                         for s_ in seeds},
           "sup_units_from_cache": [" ".join(map(str, k)) for k, v in sup_out.items()
-                                   if v.get("from_cache")]}
+                                   if v.get("from_cache")],
+          "units_resumed_from_epoch": {
+              **{f"ar s{s_}": pre_out[(s_, ft_pool)]["resumed_from_epoch"]
+                 for s_ in seeds if "resumed_from_epoch" in pre_out[(s_, ft_pool)]},
+              **{" ".join(map(str, k)): v["resumed_from_epoch"]
+                 for k, v in sup_out.items() if "resumed_from_epoch" in v}}}
     return result("E8", PLAN_REF, proto,
                   {"cells": cells, "label_efficiency_auc_disp": auc,
                    "ar_egap_advantage_by_budget": advantages,
