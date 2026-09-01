@@ -68,6 +68,10 @@ def main() -> None:
     ap.add_argument("--config", default=None)
     ap.add_argument("--plan", action="store_true")
     ap.add_argument("--smoke", action="store_true")
+    ap.add_argument("--bottleneck-tokens", type=int, default=0,
+                    help="wp8 E2: also time the token-bottleneck model with this "
+                         "many tokens on the largest in-band and the fine instance "
+                         "(0 = skip; the Phase-2 measurement is unchanged)")
     ap.add_argument("--repeats", type=int, default=20)
     ap.add_argument("--out", default="runs/phase2/bench_preconditions.json")
     a = ap.parse_args()
@@ -161,6 +165,33 @@ def main() -> None:
                 "compare with previous phase; growth per new size = recompile",
         }
         res["compile"].setdefault("first_counters", before)
+
+    # wp8 E2 (branch only): the token bottleneck under the SAME AR step on the
+    # largest in-band and the fine instance -- the speed/memory numbers E2's
+    # kill and GO lines are written against (D8: measured, not extrapolated).
+    if a.bottleneck_tokens > 0:
+        bcfg = dict(mcfg, n_tokens=int(a.bottleneck_tokens))
+        bmodel = _build_model({"kind": "bottleneck", "model": bcfg, "seed": 0})
+        for tag in ("inband_0", "fine"):
+            if tag not in sizes:
+                continue
+            if dev == "cuda":
+                torch.cuda.reset_peak_memory_stats()
+            t0 = time.perf_counter()
+            pretrain(bmodel, [sizes[tag]],
+                     PretrainConfig(loss=AR_CONFIG, epochs=a.repeats,
+                                    lr=float(cfg.get("pretrain", {}).get("lr", 1e-3)),
+                                    device=dev, log_every=-1, seed=0))
+            if dev == "cuda":
+                torch.cuda.synchronize()
+            res["phases"][f"bottleneck{a.bottleneck_tokens}_{tag}"] = {
+                "n_nodes": int(sizes[tag].nodes.shape[0]),
+                "n_tokens": int(a.bottleneck_tokens),
+                "ms_per_step": round((time.perf_counter() - t0) * 1000 / a.repeats, 2),
+                "peak_gib": (round(torch.cuda.max_memory_allocated() / 2**30, 3)
+                             if dev == "cuda" else None),
+                "note": "wp8 E2 token bottleneck, same AR step as the FE-JEPA phases"}
+        del bmodel
 
     # D9: the MGN comparator was never benchmarked (attempt 1 OOM'd at its first
     # forward). Train-mode step on the LARGEST in-band instance with the

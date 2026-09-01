@@ -76,6 +76,15 @@ pre-registration stamps it.
   MGN) equal on this head; E1/E2 run through the production units.
 - Drafts r1 of PREREG_E1 and PREREG_E2 delivered outside the repo (stamp after
   the Phase-2 verdict).
+- Stage 1.1/1.2 review record: the bottleneck runs on a real tetrahedral
+  gmsh3d instance (forward, exact anchor, supervised step, evaluation); an
+  interrupted E1 run resumes bitwise (head included, RNG restored by R9);
+  CPU scaling probe on 3D meshes of 106-1,581 nodes: per-node transformer
+  t ~ N^1.29 (rising toward N^2, cf. the box's 3.7k->12.3k measurement),
+  bottleneck (M = 128) t ~ N^0.43 -- no hidden quadratic, 9.5x faster at
+  1.6k nodes and widening. The preconditions bench gains an opt-in
+  --bottleneck-tokens M pair of phases (largest in-band + fine) so E2's
+  kill/GO lines are written against measured step time and memory.
 
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 

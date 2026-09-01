@@ -169,3 +169,16 @@ def test_e1_sigreg_resume_is_bitwise_exact(tmp_path):
     pb = dict(m_b.named_parameters())
     assert set(pa) == set(pb) and any(k.startswith("sigreg_head.") for k in pa)
     assert all(torch.equal(pa[k].detach(), pb[k].detach()) for k in pa)
+
+
+def test_e1_head_width_rule_plumbing(tmp_path):
+    """The Stage-0 reading rule sizes the projector head by intrinsic dimension:
+    a narrower head must be honoured end to end."""
+    sp = _corpus(tmp_path, seed=43)
+    tr = [load_instance(f) for f in sp.pool_files[:2]]
+    m = _build_model({"kind": "fejepa", "model": MODEL, "seed": 0})
+    pretrain(m, tr, PretrainConfig(epochs=1, lr=1e-3, seed=0, device="cpu",
+                                   loss=ar_sigreg_config(0.1, head=True, n_proj=16,
+                                                         head_width=6),
+                                   log_every=-1))
+    assert m.sigreg_head[1].num_features == 6 and m.sigreg_head[2].out_features == 6
