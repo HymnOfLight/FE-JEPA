@@ -109,6 +109,12 @@ def _build_model(payload):
 
     seed = int(payload["seed"])
     mcfg = payload["model"]
+    if payload.get("kind", "fejepa") == "bottleneck":
+        from ..models.bottleneck import BottleneckConfig, build_bottleneck
+
+        return seeded_factory(
+            lambda: build_bottleneck(BottleneckConfig.from_dict(payload["model"])),
+            payload["seed"])
     if payload.get("kind", "fejepa") == "mgn":
         from ..models.gnn import build_mesh_gnn
 
@@ -237,7 +243,13 @@ def pretrain_unit(payload: dict) -> dict:
     pre.setdefault("precision", payload.get("precision", "fp32"))
     if payload.get("quiet"):
         pre["log_every"] = -1
-    loss = AR_CONFIG if payload.get("loss", "ar") == "ar" else JEPA_CONFIG
+    spec = payload.get("loss", "ar")
+    if isinstance(spec, dict):                      # wp8 E1: dict overrides on AR
+        from dataclasses import replace as _replace
+
+        loss = _replace(AR_CONFIG, **spec)
+    else:
+        loss = AR_CONFIG if spec == "ar" else JEPA_CONFIG
     sp = Path(payload["state_path"])
     reused = False
     resumed_from = None
@@ -262,7 +274,10 @@ def pretrain_unit(payload: dict) -> dict:
         pre.setdefault("ckpt_path", str(sp.with_suffix(".ckpt")))   # R9b
         pre.setdefault("resume", bool(payload.get("reuse_existing")))
         hist = pretrain(model, _load(payload["files"]), PretrainConfig(loss=loss, **pre))
-        atomic_torch_save(_state_dict(model), sp)
+        # the SIGReg head is training scaffolding: the deliverable state is the
+        # encoder/decoder only (strict-loadable into a fresh model)
+        atomic_torch_save({k: v for k, v in _state_dict(model).items()
+                           if not k.startswith("sigreg_head.")}, sp)
         Path(pre["ckpt_path"]).unlink(missing_ok=True)          # unit complete
         resumed_from = hist.get("resumed_from_epoch")
 

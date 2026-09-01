@@ -69,6 +69,11 @@ def pretrain(model, archs, cfg: PretrainConfig, pairs=None) -> dict:
                if cfg.loss.use_pred else None)
         prepared.append((train_arch, pack, twin_pack, adj))
 
+    if cfg.loss.reg_mode == "sigreg_ep_head" and not hasattr(model, "sigreg_head"):
+        from .losses import build_sigreg_head
+
+        model.sigreg_head = build_sigreg_head(int(model.cfg.dim),
+                                              cfg.loss.sigreg_head_width).to(cfg.device)
     opt = torch.optim.AdamW(model.parameters(), lr=cfg.lr,
                             weight_decay=cfg.weight_decay)
     total_steps = cfg.epochs * len(prepared)

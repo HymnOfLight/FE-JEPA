@@ -70,7 +70,7 @@ def pca_dims(x, levels=(0.90, 0.95, 0.99)) -> dict:
     return {f"pca_{int(l * 100)}": int(np.searchsorted(cum, l) + 1) for l in levels}
 
 
-def last_executed_module(model, feats) -> str:
+def last_executed_module(model, feats, pack_for_hooks=None) -> str:
     """Name of the leaf module that fires LAST in `model.encode(feats)`
     (forward-hook order, not registration order)."""
     import torch
@@ -83,15 +83,18 @@ def last_executed_module(model, feats) -> str:
                 lambda mod, inp, out, n=name: fired.append((n, type(mod).__name__))))
     try:
         with torch.no_grad():
-            model.encode(feats)
+            if getattr(model, "needs_pack", False):
+                model.encode(feats, pack_for_hooks)
+            else:
+                model.encode(feats)
     finally:
         for h in hooks:
             h.remove()
     return fired[-1][1] if fired else "none"
 
 
-def last_module_is_layernorm(model, feats) -> bool:
-    return last_executed_module(model, feats) == "LayerNorm"
+def last_module_is_layernorm(model, feats, pack_for_hooks=None) -> bool:
+    return last_executed_module(model, feats, pack_for_hooks) == "LayerNorm"
 
 
 def main() -> None:
@@ -138,8 +141,9 @@ def main() -> None:
             arch = load_instance(f)
             pack = model.prepare_instance(arch, "cpu")
             if first_feats is None:
-                first_feats = pack["feats"]
-            z = model.encode(pack["feats"])                 # node tokens
+                first_feats, first_pack = pack["feats"], pack
+            z = (model.encode(pack["feats"], pack) if getattr(model, "needs_pack", False)
+                 else model.encode(pack["feats"]))           # node (or bottleneck) tokens
             rows.append(z.reshape(-1, z.shape[-1]).cpu())
     z_all = torch.cat(rows, 0)
     if z_all.shape[0] > a.max_rows:
@@ -150,8 +154,8 @@ def main() -> None:
     res = {"n_rows": int(x.shape[0]), "latent_dim": int(x.shape[1]),
            "twonn_id": twonn(x), **pca_dims(x),
            "sigreg_monitor_raw": sigreg_monitor(z_all, n_proj=256),
-           "encoder_ends_with_layernorm": last_module_is_layernorm(model, first_feats),
-           "last_executed_module": last_executed_module(model, first_feats),
+           "encoder_ends_with_layernorm": last_module_is_layernorm(model, first_feats, first_pack),
+           "last_executed_module": last_executed_module(model, first_feats, first_pack),
            "state": a.state, "smoke": a.smoke}
     res["b1_reading"] = (
         "intrinsic dimension << latent dim: shape the latent on a projector "

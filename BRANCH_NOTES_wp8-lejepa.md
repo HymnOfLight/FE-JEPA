@@ -59,6 +59,24 @@ pre-registration stamps it.
    the box is free. Reading rule (pre-declared): if TwoNN ID < 0.25 x latent
    dim, E1 uses a projector head of width ~2 x ID; otherwise full width.
 
+## Stage 1.0 -- arm code in place (1 Sep 2026, CPU-validated)
+
+- E1 arm: `LossConfig.reg_mode = "sigreg_ep" | "sigreg_ep_head"` (the validated
+  Epps-Pulley SIGReg; the legacy 2D modes `sigreg`/`sigreg_pooled`/`vicreg_pooled`
+  used by the stamped 2D E3 battery are untouched); `ar_sigreg_config(lambda)`;
+  the BatchNorm projector head is attached by `pretrain()` before the optimiser
+  and stripped from the delivered state (strict-loadable). Pretrain units accept
+  a dict loss spec.
+- E2 arm: `models/bottleneck.py` (`kind = "bottleneck"`): deterministic FPS
+  seeding, Voronoi assignment, scatter-mean pooling, transformer over M tokens,
+  per-node decoding; same pack contract and output tail as FE-JEPA, so the
+  decoded u feeds the same exact anchor. `needs_pack` lets `compute_loss` and
+  the instruments pass the pack; the legacy call path is unchanged.
+- Evidence: suite 193; tag-vs-head bitwise regression (AR, balanced supervised,
+  MGN) equal on this head; E1/E2 run through the production units.
+- Drafts r1 of PREREG_E1 and PREREG_E2 delivered outside the repo (stamp after
+  the Phase-2 verdict).
+
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
 **E1 -- latent shaping and cross-geometry separation.** Question: does adding

@@ -31,12 +31,36 @@ class LossConfig:
     lambda_phys: float = 1.0
     lambda_reg: float = 0.1
     lambda_inv: float = 0.1
+    # wp8-lejepa E1: validated Epps-Pulley SIGReg (train/sigreg.py) under NEW
+    # mode names so the legacy 2D modes stay bitwise-unchanged:
+    #   reg_mode = "sigreg_ep"       -> on the raw encoder tokens
+    #   reg_mode = "sigreg_ep_head"  -> on a BatchNorm projector head attached
+    #                                   to the model by pretrain()
+    sigreg_n_proj: int = 256
+    sigreg_head_width: int = 0          # 0 = model dim
 
     def to_dict(self) -> dict:
         return self.__dict__.copy()
 
 
 AR_CONFIG = LossConfig(use_pred=False, use_phys=True, reg_mode="none", use_inv=False)
+
+
+def ar_sigreg_config(lambda_reg: float, head: bool = True, n_proj: int = 256,
+                     head_width: int = 0) -> LossConfig:
+    """wp8-lejepa E1 arm: the AR objective plus lambda * SIGReg (Epps-Pulley)."""
+    return replace(AR_CONFIG, reg_mode="sigreg_ep_head" if head else "sigreg_ep",
+                   lambda_reg=float(lambda_reg), sigreg_n_proj=int(n_proj),
+                   sigreg_head_width=int(head_width))
+
+
+def build_sigreg_head(dim: int, width: int = 0):
+    """Linear -> BatchNorm1d -> Linear projector (LeWorldModel's placement)."""
+    import torch
+
+    w = int(width) or int(dim)
+    return torch.nn.Sequential(torch.nn.Linear(dim, w), torch.nn.BatchNorm1d(w),
+                               torch.nn.Linear(w, w))
 JEPA_CONFIG = LossConfig(use_pred=True, use_phys=True, reg_mode="vicreg_pooled",
                          use_inv=False)
 
@@ -54,10 +78,14 @@ def compute_loss(model, pack, anchor, adj, buffer, rng: np.random.Generator,
     parts = {}
     total = None
 
-    z = model.encode(pack["feats"])                       # (L, N, dim)
+    needs_pack = bool(getattr(model, "needs_pack", False))   # wp8 E2 bottleneck
+    z = model.encode(pack["feats"], pack) if needs_pack else model.encode(pack["feats"])
 
     if cfg.use_phys:
-        u = model.decoder(z).reshape(z.shape[0], -1) * pack["free"]
+        if needs_pack:
+            u = model.decode(z, pack)                     # masked + scaled already
+        else:
+            u = model.decoder(z).reshape(z.shape[0], -1) * pack["free"]
         phys = anchor.energies(u).mean()
         parts["phys"] = phys.detach()        # tensors: no per-step device sync
         total = cfg.lambda_phys * phys
@@ -69,7 +97,14 @@ def compute_loss(model, pack, anchor, adj, buffer, rng: np.random.Generator,
         total = cfg.lambda_pred * pred if total is None else total + cfg.lambda_pred * pred
 
     if cfg.reg_mode != "none":
-        if cfg.reg_mode == "sigreg":
+        if cfg.reg_mode in ("sigreg_ep", "sigreg_ep_head"):
+            from .sigreg import sigreg as _sigreg_ep
+
+            zz = z.reshape(-1, z.shape[-1])
+            if cfg.reg_mode == "sigreg_ep_head":
+                zz = model.sigreg_head(zz)
+            reg = _sigreg_ep(zz, n_proj=cfg.sigreg_n_proj)
+        elif cfg.reg_mode == "sigreg":
             reg = R.sigreg_node(z)
         else:
             pooled = model.pooled(z)                      # (L, dim) rows as samples
