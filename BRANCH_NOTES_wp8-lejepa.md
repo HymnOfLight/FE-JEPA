@@ -37,6 +37,11 @@ pre-registration stamps it.
    (LeWM's own fix), never on the raw encoder output.
 3. Literature note and CMAME related-work paragraph (delivered outside the
    repo; see the assessment memo of 1 Sep 2026).
+   Stage 0.1/0.2 review record: TwoNN made memory-safe (matrix-product
+   distances) and corrected to Facco et al.'s fit (validated on manifolds of
+   known dimension); SIGReg evaluated in checkpointed projection chunks
+   (identical values/gradients, one chunk of memory) and self-protected to
+   fp32 under autocast; default 17 knots within 0.5% of the closed form.
 4. Stage-0 gate for Stage 1: run instrument 2 on the Phase-2 AR states once
    the box is free. Reading rule (pre-declared): if TwoNN ID < 0.25 x latent
    dim, E1 uses a projector head of width ~2 x ID; otherwise full width.

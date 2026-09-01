@@ -94,20 +94,27 @@ def sigreg(z, n_proj: int = 1024, n_knots: int = 17, t_max: float = 5.0,
     the unchunked evaluation (same directions, same arithmetic)."""
     import torch
 
-    z2 = z.reshape(-1, z.shape[-1])
-    u = random_directions(z2.shape[-1], n_proj, z2.device, z2.dtype, generator)
-    total = None
-    need_ckpt = torch.is_grad_enabled() and z2.requires_grad
-    for s in range(0, n_proj, max(1, proj_chunk)):
-        uc = u[s:s + proj_chunk]
-        if need_ckpt:
-            from torch.utils.checkpoint import checkpoint
+    # Precision self-protection (as for the energy anchor): the statistic
+    # shapes the latent distribution at fine resolution, so it is evaluated in
+    # fp32 regardless of any surrounding autocast (bf16 changed the value by
+    # ~2.5e-3 relative in a probe; gradients would be bf16-quality).
+    z2 = z.reshape(-1, z.shape[-1]).float()
+    with torch.autocast(device_type=z2.device.type, enabled=False):
+        u = random_directions(z2.shape[-1], n_proj, z2.device, z2.dtype, generator)
+        total = None
+        need_ckpt = torch.is_grad_enabled() and z2.requires_grad
+        for s in range(0, n_proj, max(1, proj_chunk)):
+            uc = u[s:s + proj_chunk]
+            if need_ckpt:
+                from torch.utils.checkpoint import checkpoint
 
-            part = checkpoint(_chunk_stat_sum, z2, uc, n_knots, t_max,
-                              use_reentrant=False)
-        else:
-            part = _chunk_stat_sum(z2, uc, n_knots, t_max)
-        total = part if total is None else total + part
+                part = checkpoint(_chunk_stat_sum, z2, uc, n_knots, t_max,
+                                  use_reentrant=False)
+            else:
+                part = _chunk_stat_sum(z2, uc, n_knots, t_max)
+            total = part if total is None else total + part
+    # Returned scale: T / N = the ECF-discrepancy integral itself, i.e. the
+    # per-direction LeJEPA loss; O(1/N) under normality, O(1) when collapsed.
     return total / (n_proj * z2.shape[0])
 
 

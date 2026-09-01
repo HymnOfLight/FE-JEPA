@@ -75,3 +75,12 @@ def test_default_knots_match_closed_form_within_half_percent():
     for x in (torch.randn(2000, generator=g), torch.randn(2000, generator=g) + 0.5):
         ref = float(epps_pulley_closed(x))
         assert abs(float(epps_pulley_knots(x)) - ref) <= 0.005 * abs(ref) + 1e-4
+
+
+def test_sigreg_self_protects_to_fp32_under_autocast():
+    z = torch.randn(3000, 32, generator=torch.Generator().manual_seed(4)) * 3 + 1
+    ref = sigreg(z, n_proj=64, generator=torch.Generator().manual_seed(9))
+    with torch.autocast(device_type="cpu", dtype=torch.bfloat16):
+        v = sigreg(z, n_proj=64, generator=torch.Generator().manual_seed(9))
+    assert v.dtype == torch.float32
+    assert torch.allclose(v, ref, rtol=1e-6, atol=1e-9)
