@@ -21,6 +21,10 @@ def main() -> None:
     ap.add_argument("--state", default=None)
     ap.add_argument("--data", default=None)
     ap.add_argument("--n-instances", type=int, default=256)
+    ap.add_argument("--subset", choices=("val", "pool"), default="val",
+                    help="which instances to measure on; 'val' = the run's held-out "
+                         "validation split from the config's `split` block (the "
+                         "pre-registered choice)")
     ap.add_argument("--smoke", action="store_true")
     ap.add_argument("--out", default="runs/wp8/latent_separation.json")
     a = ap.parse_args()
@@ -39,11 +43,12 @@ def main() -> None:
                 "features": {"load_summary": True, "geometry": True}}
         files, model = instance_files(ddir), build_model_from_config(mcfg)
     else:
-        mcfg = json.loads(Path(a.config).read_text())["model"]
-        files = instance_files(a.data, a.n_instances)
+        cfg = json.loads(Path(a.config).read_text())
+        mcfg = cfg["model"]
+        files = instance_files(a.data, a.n_instances, split=cfg.get("split"), subset=a.subset)
         model = build_model_from_config(mcfg, a.state)
     res = measure_separation(model, [load_instance(f) for f in files])
-    res.update({"state": a.state, "kind": mcfg.get("kind", "fejepa"), "smoke": a.smoke})
+    res.update({"subset": a.subset, "state": a.state, "kind": mcfg.get("kind", "fejepa"), "smoke": a.smoke})
     write_json(a.out, res)
     print(json.dumps(res, indent=1))
 

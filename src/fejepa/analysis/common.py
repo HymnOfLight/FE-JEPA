@@ -23,11 +23,24 @@ def build_model_from_config(model_cfg: dict, state_path: str | None = None, seed
     return model
 
 
-def instance_files(data_dir: str, n: int | None = None) -> list:
-    """The pool files of a corpus directory (manifest order), first `n`."""
+def instance_files(data_dir: str, n: int | None = None, split: dict | None = None,
+                   subset: str = "pool") -> list:
+    """Instance files of a corpus directory.
+
+    With `split` (the run config's {"n_val": ..., "seed": ...}) and
+    subset="val", returns the run's OWN held-out validation instances -- the
+    set the E-series pre-registrations measure on. Without a split, returns
+    the pool in manifest order. `n` truncates either list."""
     from ..experiments.protocol import load_split
 
-    files = load_split(str(data_dir), 0, 1).pool_files
+    if split and subset == "val":
+        sp = load_split(str(data_dir), int(split["n_val"]), seed=int(split.get("seed", 1)))
+        files = sp.val_files
+    elif split:
+        sp = load_split(str(data_dir), int(split["n_val"]), seed=int(split.get("seed", 1)))
+        files = sp.pool_files
+    else:
+        files = load_split(str(data_dir), 0, 1).pool_files
     return files if n is None else files[:n]
 
 

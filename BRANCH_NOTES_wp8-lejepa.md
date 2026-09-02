@@ -155,6 +155,14 @@ pre-registration stamps it.
   scripts now consistent); `tests/test_wp8_arms.py` consumes the shared
   `tiny_corpus` fixture (the fixture has a real consumer; local helper gone).
 
+- Stage 1.10 (semantic review of the instruments): the drafts measure on the
+  VAL set, but `instance_files` defaulted to the training pool prefix -- a
+  methodological mismatch (latents shaped on those very instances). The
+  instruments now select the run's held-out validation split from the
+  config's `split` block by default (`--subset val`; `pool` remains
+  available and is recorded in the output); tested against the runner's
+  own split and exercised on a run config. PREREG_E1 draft r4 pins it.
+
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
 **E1 -- latent shaping and cross-geometry separation.** Question: does adding

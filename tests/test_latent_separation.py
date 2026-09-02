@@ -34,3 +34,17 @@ def test_kind_guard_refuses_fejepa_only_probes_under_other_kinds(tmp_path):
     p.write_text(json.dumps(cfg))
     with pytest.raises(SystemExit, match="FE-JEPA-only"):
         run_config(str(p))
+
+
+def test_instance_files_returns_the_runs_val_split(tmp_path):
+    from fejepa.analysis.common import instance_files
+    from fejepa.experiments.protocol import load_split
+    from fejepa.fe.synthetic import generate_synthetic_dataset
+
+    d = generate_synthetic_dataset(tmp_path / "vs", n=10, seed=8)
+    split = {"n_val": 3, "seed": 1}
+    val = instance_files(d, split=split, subset="val")
+    assert [str(f) for f in val] == [str(f) for f in load_split(d, 3, seed=1).val_files]
+    pool = instance_files(d, split=split, subset="pool")
+    assert len(pool) == 7 and not set(map(str, pool)) & set(map(str, val))
+    assert len(instance_files(d)) == 10                      # no split: whole pool
