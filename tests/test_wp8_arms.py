@@ -212,7 +212,7 @@ def test_e1_and_e2_arms_run_through_run_config(tmp_path):
                       "include_ar_ft": False, "mgn_budgets": [4]},
                "p3_transfer": {"enabled": True, "fewshot_budgets": [2],
                                "fewshot_epochs": 1, "naive_budget": 4},
-               "wp6": {"enabled": True, "n_check": 2, "seed": 0}},
+               "wp6": {"enabled": False}},          # FE-JEPA-only probe: off under bottleneck
            "gate_g2": {"sanity_x": 3.0, "naive_set": ["knn_field", "scale_aware_poly"],
                        "parity_band": 0.10, "egap_adv_min": 0.40, "transfer_win": 1.25,
                        "decision_budget": 4},

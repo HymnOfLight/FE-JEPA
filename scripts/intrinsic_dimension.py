@@ -129,7 +129,7 @@ def main() -> None:
         cfg = json.loads(Path(a.config).read_text())
         mcfg = cfg["model"]
         files = load_split(a.data, 0, 1).pool_files[:a.n_instances]
-        model = _build_model({"kind": "fejepa", "model": mcfg, "seed": 0})
+        model = _build_model({"kind": mcfg.get("kind", "fejepa"), "model": mcfg, "seed": 0})
         sd = torch.load(a.state, map_location="cpu", weights_only=True)
         model.load_state_dict(sd, strict=True)
     model.eval()

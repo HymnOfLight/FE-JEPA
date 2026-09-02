@@ -95,6 +95,15 @@ pre-registration stamps it.
   runs a bottleneck + SIGReg-head configuration through `run_config` end to
   end (E8, P3, gate).
 
+- Stage 1.4 review record: E1's adjudication statistic had no instrument --
+  `scripts/latent_separation.py` now computes S (silhouette over quartile
+  bins of the first principal component of the per-instance geometry
+  descriptor), the 1-NN bin accuracy and the SIGReg monitors, kind-aware;
+  tests on constructed clusters (S > 0.95 tight/far, ~0 unstructured, exact
+  quartiles). `intrinsic_dimension.py` builds the configured kind. The runner
+  refuses a non-fejepa `model.kind` with e6/wp6/e1 enabled BEFORE any corpus
+  is generated (test). Drafts r2 carry the exact configuration keys.
+
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
 **E1 -- latent shaping and cross-geometry separation.** Question: does adding

@@ -254,6 +254,16 @@ def run_config(path, device_override: str | None = None,
                workers_override: int | None = None,
                reuse_states: bool = False) -> dict:
     cfg = json.loads(Path(path).read_text())
+    # wp8: e6 / wp6 / e1 probe the FE-JEPA architecture through its own
+    # interface; under another model.kind they must be disabled explicitly --
+    # fail here, before any corpus is generated or a run is started.
+    _mk = str((cfg.get("model") or {}).get("kind", "fejepa"))
+    if _mk != "fejepa":
+        _exps = cfg.get("experiments") or {}
+        bad = [k for k in ("e6", "wp6", "e1") if (_exps.get(k) or {}).get("enabled")]
+        if bad:
+            raise SystemExit(f"model.kind={_mk!r} but FE-JEPA-only experiments are "
+                             f"enabled: {bad}; disable them in the config")
     prereg = None
     if cfg.get("prereg_guard"):
         from ..report import verify_prereg
