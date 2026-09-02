@@ -1,14 +1,8 @@
 """The independent Phase-2 audit re-derives the gate from cells with explicit
 formulas: checked on a hand-built report where every answer is known."""
 
-import importlib.util
-from pathlib import Path
-from types import SimpleNamespace
+from fejepa.analysis.audit import AuditExpectations, audit
 
-_spec = importlib.util.spec_from_file_location(
-    "audit_phase2_report", Path(__file__).resolve().parents[1] / "scripts" / "audit_phase2_report.py")
-au = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(au)
 
 
 def _cell(disp, egap, seeds=(1, 1, 1)):
@@ -46,33 +40,32 @@ def _report(ar_disp=0.20, lab_disp=0.20, ar_egap=0.30, lab_egap=0.60, anc_egap=0
                         "passed": True}}
 
 
-ARGS = SimpleNamespace(expect_config_sha="abc", expect_git_prefix="prereg-phase2",
-                       expect_dataset_sha=[], expect_ledger=1280, ar_sha_file=None)
+ARGS = AuditExpectations(config_sha="abc", git_prefix="prereg-phase2", ledger_total=1280)
 
 
 def test_go_report_is_reproduced_and_all_checks_pass():
-    res = au.audit(_report(), ARGS)
+    res = audit(_report(), ARGS)
     assert res["all_ok"], [c for c in res["checks"] if not c["ok"]]
     assert res["derived"]["passed"] is True
 
 
 def test_each_kill_is_re_derived_from_cells():
-    d = au.audit(_report(ar_disp=0.25), ARGS)["derived"]          # +25% gap
+    d = audit(_report(ar_disp=0.25), ARGS)["derived"]          # +25% gap
     assert d["KP1"] is True and d["b"] is False
-    d = au.audit(_report(ar_egap=0.50), ARGS)["derived"]          # advantage 1-0.5/0.6 < 0.4
+    d = audit(_report(ar_egap=0.50), ARGS)["derived"]          # advantage 1-0.5/0.6 < 0.4
     assert d["KP2"] is True
-    d = au.audit(_report(anc_egap=0.55), ARGS)["derived"]         # anchor improv 1-0.55/0.6 < 0.25
+    d = audit(_report(anc_egap=0.55), ARGS)["derived"]         # anchor improv 1-0.55/0.6 < 0.25
     assert d["KP3"] is True
-    d = au.audit(_report(ratio=1.6), ARGS)["derived"]             # transfer ratio > 1.5
+    d = audit(_report(ratio=1.6), ARGS)["derived"]             # transfer ratio > 1.5
     assert d["KP4"] is True and d["c"] is False
-    d = au.audit(_report(wp6_holds=False), ARGS)["derived"]
+    d = audit(_report(wp6_holds=False), ARGS)["derived"]
     assert d["KP5"] is True
-    d = au.audit(_report(rho=0.1), ARGS)["derived"]
+    d = audit(_report(rho=0.1), ARGS)["derived"]
     assert d["KP6"] is True
 
 
 def test_disagreement_with_runner_block_is_flagged():
     rep = _report(ar_disp=0.25)                                    # truly KP1, runner claims clean
-    res = au.audit(rep, ARGS)
+    res = audit(rep, ARGS)
     assert not res["all_ok"]
     assert any("KP1" in c["check"] and not c["ok"] for c in res["checks"])

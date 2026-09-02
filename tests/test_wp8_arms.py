@@ -24,6 +24,8 @@ BOTTLE = {"dim": 16, "depth": 1, "heads": 2, "n_tokens": 8,
 
 
 def _corpus(tmp_path, seed=31):
+    """Local helper (the conftest `tiny_corpus` fixture is the canonical
+    version for new tests; kept here so existing signatures stay unchanged)."""
     d = generate_synthetic_dataset(tmp_path / f"c{seed}", n=6, seed=seed)
     sp = load_split(d, n_val=2, seed=1)
     led = SolveLedger()

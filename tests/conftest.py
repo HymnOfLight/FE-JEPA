@@ -41,3 +41,27 @@ def arch(instances):
 @pytest.fixture()
 def ledger():
     return SolveLedger()
+
+
+# ---- wp8-lejepa: shared tiny labelled corpus for the E-series tests ----------
+TINY_MODEL = {"dim": 16, "depth": 1, "heads": 2, "mgn_dim": 16, "mgn_depth": 2,
+              "features": {"load_summary": True, "geometry": True}}
+
+
+@pytest.fixture
+def tiny_corpus(tmp_path):
+    """Factory: tiny_corpus(seed=..., n=..., n_val=..., n_label=...) -> split with
+    the val set and the first `n_label` pool instances labelled (canonical
+    version of the per-file `_corpus` helpers; use it in new tests)."""
+    def make(seed: int = 21, n: int = 6, n_val: int = 2, n_label: int = 3):
+        from fejepa.experiments.protocol import load_split
+        from fejepa.experiments.runner import _label_files
+        from fejepa.fe.synthetic import generate_synthetic_dataset
+
+        d = generate_synthetic_dataset(tmp_path / f"corpus_{seed}", n=n, seed=seed)
+        sp = load_split(d, n_val=n_val, seed=1)
+        led = SolveLedger()
+        _label_files(sp.val_files, led, "v")
+        _label_files(sp.pool_files[:n_label], led, "p")
+        return sp
+    return make

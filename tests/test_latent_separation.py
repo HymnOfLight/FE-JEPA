@@ -1,18 +1,13 @@
 """E1 adjudication instrument: the separation statistic is exact on
 constructed cases and the script's real path runs kind-aware."""
 
-import importlib.util
-from pathlib import Path
 
 import numpy as np
 import pytest
 
 torch = pytest.importorskip("torch")
 
-_spec = importlib.util.spec_from_file_location(
-    "latent_separation", Path(__file__).resolve().parents[1] / "scripts" / "latent_separation.py")
-ls = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(ls)
+from fejepa.analysis import separation as ls
 
 
 def test_silhouette_and_bins_on_constructed_clusters():

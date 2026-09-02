@@ -1,0 +1,59 @@
+"""Shared plumbing for the analysis tools: model construction from a config
+and a state, instance iteration, kind-aware encoding, JSON output."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+
+def build_model_from_config(model_cfg: dict, state_path: str | None = None, seed: int = 0):
+    """Build the configured model kind (`model_cfg["kind"]`, default fejepa)
+    and, if given, strictly load a saved state."""
+    import torch
+
+    from ..experiments.parallel import _build_model
+
+    model = _build_model({"kind": model_cfg.get("kind", "fejepa"), "model": model_cfg,
+                          "seed": seed})
+    if state_path:
+        sd = torch.load(str(state_path), map_location="cpu", weights_only=True)
+        model.load_state_dict(sd, strict=True)
+    model.eval()
+    return model
+
+
+def instance_files(data_dir: str, n: int | None = None) -> list:
+    """The pool files of a corpus directory (manifest order), first `n`."""
+    from ..experiments.protocol import load_split
+
+    files = load_split(str(data_dir), 0, 1).pool_files
+    return files if n is None else files[:n]
+
+
+def encode_instance(model, arch, device: str = "cpu"):
+    """Kind-aware encoding: returns (tokens as (rows, d), pack)."""
+    import torch
+
+    pack = model.prepare_instance(arch, device)
+    with torch.no_grad():
+        if getattr(model, "needs_pack", False):
+            z = model.encode(pack["feats"], pack)
+        else:
+            z = model.encode(pack["feats"])
+    return z.reshape(-1, z.shape[-1]), pack
+
+
+def subsample_rows(x, max_rows: int, seed: int = 0):
+    import torch
+
+    if x.shape[0] <= max_rows:
+        return x
+    idx = torch.randperm(x.shape[0], generator=torch.Generator().manual_seed(seed))[:max_rows]
+    return x[idx]
+
+
+def write_json(path: str | Path, obj: dict) -> None:
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(obj, indent=1))

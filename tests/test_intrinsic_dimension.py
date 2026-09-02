@@ -2,20 +2,14 @@
 validated on manifolds of KNOWN dimension, its distance kernel is memory-safe,
 and the LayerNorm check follows execution order on the real encoder."""
 
-import importlib.util
 import math
-from pathlib import Path
 
 import numpy as np
 import pytest
 
 torch = pytest.importorskip("torch")
 
-_spec = importlib.util.spec_from_file_location(
-    "intrinsic_dimension",
-    Path(__file__).resolve().parents[1] / "scripts" / "intrinsic_dimension.py")
-idm = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(idm)
+from fejepa.analysis import intrinsic_dim as idm
 
 
 def test_twonn_recovers_known_dimensions():

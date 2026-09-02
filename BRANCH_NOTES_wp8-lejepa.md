@@ -133,6 +133,21 @@ pre-registration stamps it.
   run -> four separation readings -> verdict; E2 baseline run -> bottleneck
   run -> bench with bottleneck phase -> verdict. No interface mismatch.
 
+- Stage 1.8 (software-engineering review, behaviour-preserving): analysis
+  logic moved out of `scripts/` into the importable package `fejepa/analysis/`
+  (common plumbing, intrinsic_dim, separation, adjudicate, audit); scripts are
+  thin CLIs; tests import the package (no importlib loading of scripts);
+  `audit()` split into four single-purpose functions with an
+  `AuditExpectations` dataclass; a shared `tiny_corpus` fixture appended to
+  `tests/conftest.py`; the bottleneck is sized by `features.spatial_dim`
+  (padding/slicing hack removed; coordinate/spec mismatch raises). Evidence
+  of zero behaviour change: suite 205 unchanged; legacy paths bitwise-equal
+  to the tag; the audit CLI ALL OK on the dress-rehearsal report; the E1
+  chain re-run through the thin CLIs reproduces the previous verdict numbers
+  bitwise. Optimisation candidates assessed and declined (see the review
+  memo of 2 Sep): none justifies added complexity; the order-of-magnitude
+  lever is E2's architecture, adjudicated by experiment.
+
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
 **E1 -- latent shaping and cross-geometry separation.** Question: does adding

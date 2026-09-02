@@ -75,6 +75,7 @@ def build_bottleneck(cfg: BottleneckConfig):
 
     spec = cfg.features
     in_dim = spec.dim
+    sd = int(spec.spatial_dim)                 # coordinates and displacement components
 
     def mlp(i, h, o):
         return nn.Sequential(nn.Linear(i, h), nn.GELU(), nn.Linear(h, o))
@@ -86,16 +87,16 @@ def build_bottleneck(cfg: BottleneckConfig):
             super().__init__()
             self.cfg = cfg
             self.node_embed = mlp(in_dim, cfg.dim, cfg.dim)
-            self.seed_pos = mlp(3, cfg.dim, cfg.dim)
-            self.rel_pos = mlp(3, cfg.dim, cfg.dim)
+            self.seed_pos = mlp(sd, cfg.dim, cfg.dim)
+            self.rel_pos = mlp(sd, cfg.dim, cfg.dim)
             layer = nn.TransformerEncoderLayer(cfg.dim, cfg.heads, 4 * cfg.dim,
                                                dropout=0.0, batch_first=True,
                                                norm_first=True, activation="gelu")
             self.tok_enc = nn.TransformerEncoder(layer, cfg.depth,
                                                  enable_nested_tensor=False)
             self.tok_norm = nn.LayerNorm(cfg.dim)
-            self.dec = mlp(3 * cfg.dim, cfg.dim, 3)          # (..., N, 3*dim) -> (..., N, 3)
-            self.out_dim = 3
+            self.dec = mlp(3 * cfg.dim, cfg.dim, sd)         # (..., N, 3*dim) -> (..., N, sd)
+            self.out_dim = sd
 
         # ---- instance interface (same pack contract as FE-JEPA + token geometry) ----
         def prepare_instance(self, arch, device):
@@ -103,8 +104,9 @@ def build_bottleneck(cfg: BottleneckConfig):
             free = torch.as_tensor(arch.free_mask, device=device).float()
             fscale = torch.as_tensor(battery_fscale(arch.F), dtype=feats.dtype, device=device)
             xyz = np.asarray(arch.nodes, dtype=np.float64)
-            if xyz.shape[1] < 3:                              # 2D meshes: pad z = 0
-                xyz = np.concatenate([xyz, np.zeros((xyz.shape[0], 3 - xyz.shape[1]))], 1)
+            if xyz.shape[1] != sd:
+                raise ValueError(f"bottleneck: features.spatial_dim={sd} but the mesh has "
+                                 f"{xyz.shape[1]} coordinates")
             lo, hi = xyz.min(0), xyz.max(0)
             xyz = (xyz - lo) / max(float((hi - lo).max()), 1e-12)   # unit bbox
             seeds = farthest_point_sampling(xyz, cfg.n_tokens)
@@ -134,9 +136,7 @@ def build_bottleneck(cfg: BottleneckConfig):
             h = self.node_embed(pack["feats"])                      # (L, N, dim)
             zt = z[:, pack["tok_idx"], :]                           # (L, N, dim)
             r = self.rel_pos(pack["rel"]).unsqueeze(0).expand_as(h)
-            u = self.dec(torch.cat([h, zt, r], dim=-1))             # (L, N, 3)
-            sd = int(pack["arch"].nodes.shape[1])
-            u = u[..., :sd]                                         # spatial dofs
+            u = self.dec(torch.cat([h, zt, r], dim=-1))             # (L, N, sd)
             u = u.reshape(u.shape[0], -1) * pack["free"]
             if cfg.scale_decode:
                 u = u * pack["fscale"]
