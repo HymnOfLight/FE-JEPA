@@ -37,8 +37,8 @@ def main() -> None:
 
     import torch
 
+    from fejepa.analysis.common import build_model_from_config, write_json
     from fejepa.data.archive import load_instance
-    from fejepa.experiments.parallel import _build_model
     from fejepa.experiments.protocol import load_split
     from fejepa.experiments.runner import _label_files
     from fejepa.fe.solve import SolveLedger
@@ -70,7 +70,7 @@ def main() -> None:
     for lam in [0.0] + list(a.lambdas):
         loss = AR_CONFIG if lam == 0.0 else ar_sigreg_config(lam, head=True, n_proj=256,
                                                               head_width=a.head_width)
-        m = _build_model({"kind": mcfg.get("kind", "fejepa"), "model": mcfg, "seed": 0})
+        m = build_model_from_config(mcfg)
         pretrain(m, train, PretrainConfig(epochs=a.epochs, lr=lr, seed=0, device=dev,
                                           loss=loss, log_every=-1,
                                           desc=f"E1 pilot lambda={lam}"))
@@ -87,9 +87,7 @@ def main() -> None:
            "epochs": a.epochs, "n_train": a.n_train, "n_val": a.n_val, "seed": 0,
            "rows": rows, "admissible": admissible, "selected_lambda": selected,
            "pilot_ledger": ledger.as_dict(), "device": dev, "smoke": a.smoke}
-    out = Path(a.out)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(res, indent=1))
+    write_json(a.out, res)
     print(json.dumps({"selected_lambda": selected, "admissible": admissible}))
 
 

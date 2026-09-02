@@ -23,20 +23,11 @@ BOTTLE = {"dim": 16, "depth": 1, "heads": 2, "n_tokens": 8,
           "features": {"load_summary": True, "geometry": True}}
 
 
-def _corpus(tmp_path, seed=31):
-    """Local helper (the conftest `tiny_corpus` fixture is the canonical
-    version for new tests; kept here so existing signatures stay unchanged)."""
-    d = generate_synthetic_dataset(tmp_path / f"c{seed}", n=6, seed=seed)
-    sp = load_split(d, n_val=2, seed=1)
-    led = SolveLedger()
-    _label_files(sp.val_files, led, "v")
-    _label_files(sp.pool_files[:3], led, "p")
-    return sp
 
 
 # ------------------------------- E1 -----------------------------------------
-def test_e1_ar_sigreg_head_trains_and_state_is_strict_loadable(tmp_path):
-    sp = _corpus(tmp_path)
+def test_e1_ar_sigreg_head_trains_and_state_is_strict_loadable(tmp_path, tiny_corpus):
+    sp = tiny_corpus(seed=31)
     tr = [load_instance(f) for f in sp.pool_files[:3]]
     m = _build_model({"kind": "fejepa", "model": MODEL, "seed": 0})
     h = pretrain(m, tr, PretrainConfig(epochs=2, lr=1e-3, seed=0, device="cpu",
@@ -58,8 +49,8 @@ def test_e1_ar_sigreg_head_trains_and_state_is_strict_loadable(tmp_path):
     assert "val" in out and torch.isfinite(torch.tensor(out["val"]["disp_rel_l2"]))
 
 
-def test_e1_raw_mode_needs_no_head(tmp_path):
-    sp = _corpus(tmp_path)
+def test_e1_raw_mode_needs_no_head(tmp_path, tiny_corpus):
+    sp = tiny_corpus(seed=31)
     tr = [load_instance(f) for f in sp.pool_files[:2]]
     m = _build_model({"kind": "fejepa", "model": MODEL, "seed": 0})
     pretrain(m, tr, PretrainConfig(epochs=1, lr=1e-3, seed=0, device="cpu",
@@ -82,8 +73,8 @@ def test_fps_and_assignment_are_deterministic_and_cover():
     assert farthest_point_sampling(x[:5], 32).shape == (5,)   # n < M handled
 
 
-def test_bottleneck_matches_pack_contract_and_feeds_the_anchor(tmp_path):
-    sp = _corpus(tmp_path)
+def test_bottleneck_matches_pack_contract_and_feeds_the_anchor(tmp_path, tiny_corpus):
+    sp = tiny_corpus(seed=31)
     arch = load_instance(sp.pool_files[0])
     m = _build_model({"kind": "bottleneck", "model": BOTTLE, "seed": 0})
     pack = m.prepare_instance(arch, "cpu")
@@ -100,8 +91,8 @@ def test_bottleneck_matches_pack_contract_and_feeds_the_anchor(tmp_path):
     assert all(g is not None for g in grads) and all(torch.isfinite(g).all() for g in grads)
 
 
-def test_bottleneck_trains_through_ar_and_supervised_units(tmp_path):
-    sp = _corpus(tmp_path)
+def test_bottleneck_trains_through_ar_and_supervised_units(tmp_path, tiny_corpus):
+    sp = tiny_corpus(seed=31)
     base = {"kind": "bottleneck", "model": BOTTLE, "seed": 0, "tf32": False}
     out = pretrain_unit({**base, "files": [str(f) for f in sp.pool_files[:3]],
                          "pre": {"epochs": 1, "lr": 1e-3, "device": "cpu", "log_every": -1},
@@ -122,7 +113,7 @@ def test_bottleneck_trains_through_ar_and_supervised_units(tmp_path):
 
 
 # ------------------------- 3D path and resume interplay ----------------------
-def test_bottleneck_runs_on_a_real_3d_gmsh_instance(tmp_path):
+def test_bottleneck_runs_on_a_real_3d_gmsh_instance(tmp_path, tiny_corpus):
     """E2 targets 3D: the bottleneck must run on a tetrahedral gmsh instance
     (3 coordinate columns, spatial_dim-3 features, ndof = 3N) through forward,
     the exact anchor, a supervised step and evaluation."""
@@ -152,11 +143,11 @@ def test_bottleneck_runs_on_a_real_3d_gmsh_instance(tmp_path):
     assert torch.isfinite(torch.tensor(ev["energy_gap_rel"]))
 
 
-def test_e1_sigreg_resume_is_bitwise_exact(tmp_path):
+def test_e1_sigreg_resume_is_bitwise_exact(tmp_path, tiny_corpus):
     """SIGReg draws random directions from the global torch RNG every step; the
     R9 checkpoint restores that RNG, so an interrupted E1 run must land on
     the uninterrupted parameters bitwise (head included)."""
-    sp = _corpus(tmp_path, seed=41)
+    sp = tiny_corpus(seed=41)
     tr = [load_instance(f) for f in sp.pool_files[:3]]
     base = dict(epochs=3, lr=1e-3, seed=0, device="cpu",
                 loss=ar_sigreg_config(0.1, head=True, n_proj=32), log_every=-1)
@@ -173,10 +164,10 @@ def test_e1_sigreg_resume_is_bitwise_exact(tmp_path):
     assert all(torch.equal(pa[k].detach(), pb[k].detach()) for k in pa)
 
 
-def test_e1_head_width_rule_plumbing(tmp_path):
+def test_e1_head_width_rule_plumbing(tmp_path, tiny_corpus):
     """The Stage-0 reading rule sizes the projector head by intrinsic dimension:
     a narrower head must be honoured end to end."""
-    sp = _corpus(tmp_path, seed=43)
+    sp = tiny_corpus(seed=43)
     tr = [load_instance(f) for f in sp.pool_files[:2]]
     m = _build_model({"kind": "fejepa", "model": MODEL, "seed": 0})
     pretrain(m, tr, PretrainConfig(epochs=1, lr=1e-3, seed=0, device="cpu",
@@ -187,7 +178,7 @@ def test_e1_head_width_rule_plumbing(tmp_path):
 
 
 # --------------- E1 and E2 are executable through run-config ---------------
-def test_e1_and_e2_arms_run_through_run_config(tmp_path):
+def test_e1_and_e2_arms_run_through_run_config(tmp_path, tiny_corpus):
     """The pre-registration drafts require model.kind = bottleneck (E2) and a
     dict AR loss spec (E1) to be honoured by the production runner: E8 AR
     pretraining, the supervised grid, P3 zero/few-shot and the gate."""
@@ -236,7 +227,7 @@ def test_e1_and_e2_arms_run_through_run_config(tmp_path):
     assert any(k.startswith("tok_enc.") for k in st)                # E2 architecture
 
 
-def test_ar_only_runs_end_to_end_with_bottleneck_and_p3(tmp_path):
+def test_ar_only_runs_end_to_end_with_bottleneck_and_p3(tmp_path, tiny_corpus):
     """Both E-series drafts execute E8 as AR pretraining only: no supervised
     cells, no naive rows, label-dependent kills marked unevaluated, P3
     zero-shot tolerant of the missing supervised states, gate not crashing."""

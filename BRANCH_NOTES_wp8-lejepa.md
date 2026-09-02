@@ -148,6 +148,13 @@ pre-registration stamps it.
   memo of 2 Sep): none justifies added complexity; the order-of-magnitude
   lever is E2's architecture, adjudicated by experiment.
 
+- Stage 1.9 (review follow-through): the E2 chain (baseline run, bottleneck
+  run, bench bottleneck phase, adjudicate_e2 CLI, separation on a bottleneck
+  state) re-run through the thin CLIs on 3D gmsh after the refactor -- OK;
+  `e1_lambda_pilot.py` moved onto the package plumbing (all six analysis
+  scripts now consistent); `tests/test_wp8_arms.py` consumes the shared
+  `tiny_corpus` fixture (the fixture has a real consumer; local helper gone).
+
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
 **E1 -- latent shaping and cross-geometry separation.** Question: does adding
