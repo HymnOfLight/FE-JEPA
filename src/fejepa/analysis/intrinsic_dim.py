@@ -93,6 +93,8 @@ def measure_intrinsic_dimension(model, archs, max_rows: int = 20000) -> dict:
            "sigreg_monitor_raw": sigreg_monitor(z_all, n_proj=256),
            "encoder_ends_with_layernorm": last_module_is_layernorm(model, *first),
            "last_executed_module": last_executed_module(model, *first)}
+    narrow = res["twonn_id"] < 0.25 * res["latent_dim"]
+    res["suggested_head_width"] = int(round(2 * res["twonn_id"])) if narrow else 0   # 0 = full
     res["b1_reading"] = (
         "intrinsic dimension << latent dim: shape the latent on a projector head "
         "sized near the intrinsic dimension (LeWM Two-Room caveat)"

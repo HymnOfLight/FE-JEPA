@@ -271,3 +271,46 @@ def test_ar_only_runs_end_to_end_with_bottleneck_and_p3(tmp_path, tiny_corpus):
     assert all(not k["triggered"] for k in e8["kills"])
     assert "p3_transfer" in r["results"] and "gate_g2" in r
     assert r["solve_ledger"]["total"] > 0     # val labels only; no pool prefix labels bought
+
+
+def test_e_series_economy_is_zero_beyond_val_and_fine_eval(tmp_path):
+    """E-series configuration on FRESH corpora: e8.ar_only + P3 zero-shot only
+    (fewshot_budgets [], naive_budget 0) buys exactly the in-band val and the
+    fine evaluation labels -- no pool prefix, no fine prefix -- and still
+    yields the transfer ratio the E1 GO rule needs."""
+    import json
+
+    from fejepa.experiments.runner import run_config
+
+    d = generate_synthetic_dataset(tmp_path / "corpus", n=10, seed=3)
+    df = generate_synthetic_dataset(tmp_path / "fine", n=6, seed=4)
+    cfg = {"data": {"dir": str(d), "n": 10, "seed": 3, "backend": "synthetic",
+                    "labelled_policy": "economy"},
+           "data_transfer": {"dir": str(df), "n": 6, "seed": 4, "backend": "synthetic",
+                             "labelled_policy": "economy",
+                             "split": {"n_eval": 3, "n_fewshot_prefix": 2}},
+           "split": {"n_val": 3, "seed": 1}, "model": MODEL,
+           "sup": {"epochs": 1, "lr": 1e-3}, "pretrain": {"epochs": 1, "lr": 1e-3},
+           "experiments": {
+               "e8": {"enabled": True, "ar_only": True, "budgets": [2, 4], "pool_sizes": [4],
+                      "seeds": 1, "ar_epochs": 1},
+               "p3_transfer": {"enabled": True, "fewshot_budgets": [], "fewshot_epochs": 1,
+                               "naive_budget": 0},
+               "wp6": {"enabled": False}},
+           "gate_g2": {"sanity_x": 3.0, "naive_set": ["knn_field", "scale_aware_poly"],
+                       "parity_band": 0.10, "egap_adv_min": 0.40, "transfer_win": 1.25,
+                       "decision_budget": 4},
+           "kills": {"KP1_parity_pct": 0.10, "KP2_egap_adv_min": 0.40,
+                     "KP3_anchor_improv_min": 0.25, "KP4_transfer_ratio": 1.5,
+                     "KP6_rho_within_min": 0.3},
+           "device": "cpu", "workers": 1, "tf32": False,
+           "runtime": {"compile": False, "amp": False, "precision": "fp32"},
+           "seeds": [0], "out": str(tmp_path / "out" / "report.json"), "prereg_guard": False}
+    cpath = tmp_path / "cfg.json"
+    cpath.write_text(json.dumps(cfg))
+    r = run_config(str(cpath))
+    stages = r["solve_ledger"]["per_stage"]
+    assert set(stages) == {"labelling-val", "labelling-fine-val"}, stages
+    p3 = r["results"]["p3_transfer"]["metrics"]
+    assert p3["naive_at_fine"] == {} and p3["fewshot"] == {}
+    assert p3["ar"]["fine_disp_mean"] > 0 and p3["ar"]["inband_disp_mean"] > 0

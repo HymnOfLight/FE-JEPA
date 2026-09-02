@@ -118,13 +118,14 @@ def run_p3(model_cfg: dict, pool_files, val_archs, fine_eval_archs,
                for b in fewshot_budgets}
 
     # ---- naives at fine, strongest form (naive_budget in-band prefix) -------
-    naive_pool = load_archs(pool_files[:nb])
     naive_at_fine, naive_rows = {}, {}
-    for name, cls in (("knn_field", KNNFieldBaseline),
-                      ("scale_aware_poly", ScaleAwarePolyBaseline)):
-        ev = evaluate_model(cls().fit(naive_pool).predict, fine_eval_archs)
-        naive_rows[name] = _row([ev])
-        naive_at_fine[name] = float(ev["disp_rel_l2"])
+    if nb > 0:                          # wp8: naive_budget 0 = zero-shot-only run
+        naive_pool = load_archs(pool_files[:nb])
+        for name, cls in (("knn_field", KNNFieldBaseline),
+                          ("scale_aware_poly", ScaleAwarePolyBaseline)):
+            ev = evaluate_model(cls().fit(naive_pool).predict, fine_eval_archs)
+            naive_rows[name] = _row([ev])
+            naive_at_fine[name] = float(ev["disp_rel_l2"])
 
     proto = {"seeds": seeds, "n_fine_eval": len(fine_eval_archs),
              "n_inband_val": len(val_archs),

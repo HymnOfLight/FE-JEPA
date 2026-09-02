@@ -163,6 +163,16 @@ pre-registration stamps it.
   available and is recorded in the output); tested against the runner's
   own split and exercised on a run config. PREREG_E1 draft r4 pins it.
 
+- Stage 1.11 (text-to-code correspondence of the drafts): three findings.
+  E1's GO rule uses the transfer ratio while its mechanics disabled P3 --
+  P3 now supports a zero-shot-only form (`fewshot_budgets: []`,
+  `naive_budget: 0`) and the drafts enable it. The runner's label need
+  ignored `ar_only` (it would buy pool labels on a fresh corpus) and always
+  labelled the fine prefix -- both fixed, so the E-series economy is
+  guaranteed by construction (test: on fresh corpora exactly the val and
+  fine-eval labels are bought). The head-width rule is now computed by the
+  instrument (`suggested_head_width`). Drafts E1 r5 / E2 r4.
+
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
 **E1 -- latent shaping and cross-geometry separation.** Question: does adding

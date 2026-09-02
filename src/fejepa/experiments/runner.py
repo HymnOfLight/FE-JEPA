@@ -173,8 +173,9 @@ def _label_need(exps: dict) -> int:
     need = 0
     for name in ("e1", "e2", "e8"):
         e = exps.get(name) or {}
-        if e.get("enabled"):
+        if e.get("enabled") and not (name == "e8" and e.get("ar_only")):
             need = max(need, max(e.get("budgets", [1024]) or [0]))
+        # wp8: an ar_only E8 is label-free -- it contributes no pool labels
     e5 = exps.get("e5") or {}
     if e5.get("enabled"):
         b5 = e5.get("budgets", [16, 64, 256, 1024]) or [0]
@@ -451,6 +452,8 @@ def run_config(path, device_override: str | None = None,
 
     if (exps.get("p3_transfer") or {}).get("enabled"):
         from .p3_transfer import run_p3
+
+        p3_cfg = exps["p3_transfer"]
         stage("P3 (resolution transfer)")
 
         dt = dict(cfg["data_transfer"])
@@ -469,6 +472,8 @@ def run_config(path, device_override: str | None = None,
         fine_prefix_files = ffiles[n_eval:n_eval + n_pref]
         _label_files(fine_eval_files, ledger, "labelling-fine-val",
                      workers=label_workers)
+        if not (p3_cfg.get("fewshot_budgets", [16, 64]) or []):
+            fine_prefix_files = []          # wp8: zero-shot only -- no prefix labels
         _label_files(fine_prefix_files, ledger, "labelling-fine-prefix",
                      workers=label_workers)
         fine_eval_archs = [load_instance(f) for f in fine_eval_files]
