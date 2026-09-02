@@ -124,6 +124,15 @@ pre-registration stamps it.
   PREREG_E1 Sec. 3's selection rule (grid, seed 0, largest lambda within the
   tolerance of the AR pilot). Both smoke-validated.
 
+- Stage 1.7: the drafts' kill/GO rules are executable -- `adjudicate_e1.py`
+  (K1 parity per seed, K2 no-effect on S, GO with transfer-ratio guard) and
+  `adjudicate_e2.py` (K1 accuracy vs the Phase-2 baseline at the seed median,
+  K2 speed from the bench's bottleneck phase, GO), tests on hand-built
+  inputs for every rule. The COMPLETE chains were rehearsed through the real
+  scripts as subprocesses on small corpora: E1 pilot -> base run -> shaped
+  run -> four separation readings -> verdict; E2 baseline run -> bottleneck
+  run -> bench with bottleneck phase -> verdict. No interface mismatch.
+
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
 **E1 -- latent shaping and cross-geometry separation.** Question: does adding
