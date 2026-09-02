@@ -113,6 +113,17 @@ pre-registration stamps it.
   a bottleneck state (3D geometry-descriptor branch, kind-aware loading).
   Drafts r3 name the switch. Legacy bitwise regression against the tag: equal.
 
+- Stage 1.6 (tooling for the waiting window): `scripts/audit_phase2_report.py`
+  -- an INDEPENDENT audit of the Phase-2 report: provenance (config sha, tag
+  in git describe, guard record, TF32 policy, dataset SHAs), accounting
+  (ledger, d9 restart block, AR-state SHA chain against the box's sha256sum),
+  per-seed re-aggregation of every cell mean, and an explicit re-derivation of
+  G2 (a)(b)(c) and KP1-6 compared item by item with the runner's block
+  (agrees 10/10 on the mini reports; hand-built-report tests cover each kill
+  and a runner-disagreement case). `scripts/e1_lambda_pilot.py` implements
+  PREREG_E1 Sec. 3's selection rule (grid, seed 0, largest lambda within the
+  tolerance of the AR pilot). Both smoke-validated.
+
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
 **E1 -- latent shaping and cross-geometry separation.** Question: does adding
