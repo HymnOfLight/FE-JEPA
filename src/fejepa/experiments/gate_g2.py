@@ -50,7 +50,7 @@ def _egap(cell: dict) -> float:
 
 
 def _budgets(e8: dict) -> list:
-    lab = e8["metrics"]["cells"].get("labels", {})
+    lab = (e8 or {}).get("metrics", {}).get("cells", {}).get("labels", {})
     return sorted(lab.keys(), key=lambda b: int(b))
 
 
@@ -91,11 +91,11 @@ def gate_g2(e8_result: dict | None, e1_result: dict | None,
         reasons["a_sanity"] = "passed at every budget" if ok else "; ".join(why)
 
         # (b)
-        max_b = buds[-1]
+        max_b = buds[-1] if buds else None
         ar_cells = e8_result["metrics"]["cells"].get("ar", {})
         ar = (ar_cells[max(ar_cells, key=lambda k: int(k))]
               if ar_cells else None)   # keyed by pool size, not budget
-        lab_max = _cell(e8_result, "labels", max_b)
+        lab_max = _cell(e8_result, "labels", max_b) if max_b is not None else None
         if ar is None or lab_max is None:
             reasons["b_label_efficiency"] = "ar / labels cell missing"
         else:

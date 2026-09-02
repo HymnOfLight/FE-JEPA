@@ -98,13 +98,19 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
     cache_dir = str(state_dir / "unit_cache")   # always written; read only on reuse
     ft_pool = pool_sizes[0]
 
-    if len(pool_files) < max(max(pool_sizes), max(budgets)):
+    ar_only = bool(cfg.get("ar_only", False))   # wp8: AR pretraining only (E-series)
+    if ar_only:
+        budgets = []                              # no supervised cells at all
+    need = max([*pool_sizes, *budgets])
+    if len(pool_files) < need:
         raise ValueError(f"E8: pool has {len(pool_files)} archives; "
-                         f"needs {max(max(pool_sizes), max(budgets))}")
+                         f"needs {need}")
     val_str = [str(f) for f in val_files]
     regimes = (["labels", "labels_anchor"]
                + (["ar_ft"] if include_ar_ft else [])
                + (["mgn"] if include_mgn else []))
+    if ar_only:
+        regimes = []                          # no supervised rows exist
 
     # ---- phase A: AR pretrainings (states to disk, evaluated on val) ----------
     pre_keys, pre_payloads = [], []
@@ -170,7 +176,7 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
 
     # ---- plan Sec.4 mandatory naive rows in the headline table -----------------
     baseline_rows = []
-    if bool(cfg.get("include_naive_baselines", True)):
+    if bool(cfg.get("include_naive_baselines", True)) and not ar_only:
         pool_archs = load_archs(pool_files[:max(budgets)])
         val_archs = load_archs(val_files)
         cells.update(naive_baseline_cells(pool_archs, val_archs, budgets))
@@ -184,24 +190,31 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
         [cells[r][b]["disp_rel_l2"]["mean"] for b in _row_buds(r)])
         for r in regimes + baseline_rows}
 
-    b_max, p_max = max(budgets), max(pool_sizes)
+    p_max = max(pool_sizes)
     ar_disp = cells["ar"][p_max]["disp_rel_l2"]["mean"]
-    lab_disp = cells["labels"][b_max]["disp_rel_l2"]["mean"]
-    k2_val = (ar_disp - lab_disp) / (lab_disp + 1e-30)
-    k2 = kill(f"K2: AR (pool {p_max}) displacement > 30% worse than labels-only "
-              f"@ {b_max} over >= {len(seeds)} seeds",
-              triggered=bool(k2_val > 0.30),
-              note=f"AR {ar_disp:.4f} vs labels {lab_disp:.4f} (+{k2_val:.1%})")
-
     ar_egap = cells["ar"][p_max]["energy_gap_rel"]["mean"]
-    advantages = {b: (cells["labels"][b]["energy_gap_rel"]["mean"] - ar_egap)
-                  / (cells["labels"][b]["energy_gap_rel"]["mean"] + 1e-30)
-                  for b in budgets}
-    adv_kill = kill("C1-advantage: AR energy-gap advantage < 40% at every budget",
-                    triggered=bool(all(v < 0.40 for v in advantages.values())),
-                    note=str({b: round(v, 3) for b, v in advantages.items()}))
+    if ar_only:
+        k2 = kill("K2: not evaluated (ar_only run: no labels-only cells)",
+                  triggered=False, note=f"AR {ar_disp:.4f}")
+        advantages = {}
+        adv_kill = kill("C1-advantage: not evaluated (ar_only run)", triggered=False,
+                        note="")
+    else:
+        b_max = max(budgets)
+        lab_disp = cells["labels"][b_max]["disp_rel_l2"]["mean"]
+        k2_val = (ar_disp - lab_disp) / (lab_disp + 1e-30)
+        k2 = kill(f"K2: AR (pool {p_max}) displacement > 30% worse than labels-only "
+                  f"@ {b_max} over >= {len(seeds)} seeds",
+                  triggered=bool(k2_val > 0.30),
+                  note=f"AR {ar_disp:.4f} vs labels {lab_disp:.4f} (+{k2_val:.1%})")
+        advantages = {b: (cells["labels"][b]["energy_gap_rel"]["mean"] - ar_egap)
+                      / (cells["labels"][b]["energy_gap_rel"]["mean"] + 1e-30)
+                      for b in budgets}
+        adv_kill = kill("C1-advantage: AR energy-gap advantage < 40% at every budget",
+                        triggered=bool(all(v < 0.40 for v in advantages.values())),
+                        note=str({b: round(v, 3) for b, v in advantages.items()}))
 
-    proto = {"budgets": budgets, "pool_sizes": pool_sizes,
+    proto = {"budgets": budgets, "pool_sizes": pool_sizes, "ar_only": ar_only,
              "ar_axis": "unlabeled pool size (never conflated with label budget)",
              "n_seeds": len(seeds), "sup": sup, "ar": pre,
              "ft_pool": ft_pool, "include_mgn": include_mgn,

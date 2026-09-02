@@ -104,6 +104,15 @@ pre-registration stamps it.
   refuses a non-fejepa `model.kind` with e6/wp6/e1 enabled BEFORE any corpus
   is generated (test). Drafts r2 carry the exact configuration keys.
 
+- Stage 1.5 review record: the drafts' "AR pretraining only" mechanics did
+  not exist (`budgets: []` crashed in `max()`); `experiments.e8.ar_only`
+  now skips the supervised grid, naive rows and label-dependent kills
+  (marked unevaluated) and the gate tolerates a run without labels cells;
+  verified end to end through `run_config` with the bottleneck, the SIGReg
+  head and P3. Both instruments ran their real paths on a 3D gmsh corpus with
+  a bottleneck state (3D geometry-descriptor branch, kind-aware loading).
+  Drafts r3 name the switch. Legacy bitwise regression against the tag: equal.
+
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
 **E1 -- latent shaping and cross-geometry separation.** Question: does adding
