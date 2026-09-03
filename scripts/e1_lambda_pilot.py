@@ -70,7 +70,7 @@ def main() -> None:
     for lam in [0.0] + list(a.lambdas):
         loss = AR_CONFIG if lam == 0.0 else ar_sigreg_config(lam, head=True, n_proj=256,
                                                               head_width=a.head_width)
-        m = build_model_from_config(mcfg)
+        m = build_model_from_config(mcfg, mode="train")
         pretrain(m, train, PretrainConfig(epochs=a.epochs, lr=lr, seed=0, device=dev,
                                           loss=loss, log_every=-1,
                                           desc=f"E1 pilot lambda={lam}"))

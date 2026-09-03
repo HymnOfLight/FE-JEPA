@@ -62,9 +62,16 @@ def measure_separation(model, archs, token_rows_for_monitor: int = 20000) -> dic
     pc1 = Gc @ np.linalg.svd(Gc, full_matrices=False)[2][0]
     bins = quartile_bins(pc1)
     tok = torch.cat(tokens, 0)[:token_rows_for_monitor]
+    counts = np.bincount(bins, minlength=4)
+    S = silhouette(X, bins)
+    valid = bool(np.isfinite(S)) and bool((counts >= 2).all())
     return {"n_instances": int(X.shape[0]), "latent_dim": int(X.shape[1]),
-            "bins": np.bincount(bins, minlength=4).tolist(),
-            "S_silhouette": silhouette(X, bins),
+            "bins": counts.tolist(),
+            "S_valid": valid,
+            "S_invalid_reason": (None if valid else
+                                 "silhouette undefined: every bin needs >= 2 instances "
+                                 f"(counts {counts.tolist()})"),
+            "S_silhouette": S,
             "loo_1nn_bin_accuracy": loo_1nn_accuracy(X, bins),
             "sigreg_monitor_pooled": sigreg_monitor(torch.as_tensor(X, dtype=torch.float32),
                                                     n_proj=256),

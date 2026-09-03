@@ -28,6 +28,13 @@ def adjudicate_e1(base: dict, shaped: dict, s_base: list, s_shaped: list,
     """K1 parity per seed (disp or energy gap worse than `band`); K2 no effect
     (S delta <= 0 at every seed); GO = S improves at every seed and the
     transfer ratio does not worsen beyond `band`."""
+    import math
+
+    bad = [v for v in list(s_base) + list(s_shaped) if not math.isfinite(float(v))]
+    if bad:
+        raise ValueError("E1 adjudication refused: a separation statistic is not finite "
+                         f"({len(bad)} value(s)); the measurement is invalid (bins with "
+                         "< 2 instances?) -- fix the measurement, do not adjudicate")
     per_seed, k1 = [], False
     for i, (db, ds, eb, es) in enumerate(zip(ar_per_seed(base, "disp_rel_l2"),
                                              ar_per_seed(shaped, "disp_rel_l2"),

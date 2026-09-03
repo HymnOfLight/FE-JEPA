@@ -41,3 +41,11 @@ def test_e2_go_and_each_kill():
     assert nogo["verdict"] == "NO-GO"                                         # parity but 1-2 s
     missing = adjudicate_e2(base, _rep(0.20, 0.30), {"phases": {}}, 512, 0.10, 2.0, 1.0)
     assert missing["K2_speed"]                                                # no measurement = no case
+
+
+def test_e1_refuses_nonfinite_separation():
+    import pytest
+
+    base = _rep(0.20, 0.30)
+    with pytest.raises(ValueError, match="not finite"):
+        adjudicate_e1(base, _rep(0.20, 0.30), [0.1, float("nan"), 0.1], [0.2, 0.2, 0.2], 0.10)

@@ -7,9 +7,14 @@ import json
 from pathlib import Path
 
 
-def build_model_from_config(model_cfg: dict, state_path: str | None = None, seed: int = 0):
+def build_model_from_config(model_cfg: dict, state_path: str | None = None, seed: int = 0,
+                            mode: str = "eval"):
     """Build the configured model kind (`model_cfg["kind"]`, default fejepa)
-    and, if given, strictly load a saved state."""
+    and, if given, strictly load a saved state.
+
+    `mode="eval"` (the default) is for the measurement tools; a caller that
+    trains next passes `mode="train"` -- the training loops also force
+    train mode at entry, so this is about intent, not correctness."""
     import torch
 
     from ..experiments.parallel import _build_model
@@ -19,7 +24,7 @@ def build_model_from_config(model_cfg: dict, state_path: str | None = None, seed
     if state_path:
         sd = torch.load(str(state_path), map_location="cpu", weights_only=True)
         model.load_state_dict(sd, strict=True)
-    model.eval()
+    model.train(mode == "train")
     return model
 
 

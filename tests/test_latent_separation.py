@@ -48,3 +48,20 @@ def test_instance_files_returns_the_runs_val_split(tmp_path):
     pool = instance_files(d, split=split, subset="pool")
     assert len(pool) == 7 and not set(map(str, pool)) & set(map(str, val))
     assert len(instance_files(d)) == 10                      # no split: whole pool
+
+
+def test_separation_reports_validity_for_tiny_sets(tmp_path):
+    from fejepa.analysis.common import build_model_from_config
+    from fejepa.analysis.separation import measure_separation
+    from fejepa.data.archive import load_instance
+    from fejepa.experiments.protocol import load_split
+    from fejepa.fe.synthetic import generate_synthetic_dataset
+
+    mcfg = {"dim": 16, "depth": 1, "heads": 2, "features": {"load_summary": True, "geometry": True}}
+    m = build_model_from_config(mcfg)
+    d = generate_synthetic_dataset(tmp_path / "t", n=16, seed=6)
+    files = load_split(d, 0, 1).pool_files
+    small = measure_separation(m, [load_instance(f) for f in files[:3]])
+    assert small["S_valid"] is False and small["S_invalid_reason"]
+    big = measure_separation(m, [load_instance(f) for f in files])
+    assert big["S_valid"] is True and big["bins"] == [4, 4, 4, 4]
