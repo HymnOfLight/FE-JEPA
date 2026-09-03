@@ -212,8 +212,18 @@ def main() -> None:
             _label_files(load_split(str(cdir), 0, 1).pool_files, SolveLedger(), "smoke-lbl")
         if cdir is None:
             raise SystemExit("--resident-prefix needs --corpus (or --smoke)")
-        pref = load_split(str(cdir), 0, 1).pool_files[:a.resident_prefix]
+        # the unit's OWN instances: the run's pool prefix after its val split
+        # (manifest-first-N would mix in val and unlabelled pool instances)
+        sp_cfg = {} if a.corpus is None else (cfg.get("split") or {})   # smoke corpus: no split
+        rsplit = load_split(str(cdir), int(sp_cfg.get("n_val", 0)),
+                            seed=int(sp_cfg.get("seed", 1)))
+        pref = rsplit.pool_files[:a.resident_prefix]
         archs = [load_instance(f) for f in pref]
+        missing = [str(f) for f, ar in zip(pref, archs) if ar.U_star is None]
+        if missing:
+            raise SystemExit(f"resident phase: {len(missing)} of the first "
+                             f"{len(pref)} pool instances are unlabelled (e.g. "
+                             f"{missing[0]}); the prefix must be the run's labelled prefix")
         val = archs[:1]
         rmodel = _build_model({"kind": "fejepa", "model": mcfg, "seed": 0})
         if dev == "cuda":
