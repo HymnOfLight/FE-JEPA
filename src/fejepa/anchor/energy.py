@@ -49,24 +49,36 @@ def _torch():
 
 
 class EnergyAnchor:
-    """Callable anchor for one instance; runs on CPU or CUDA without host round-trips."""
+    """Callable anchor for one instance.
+
+    D10 (Phase-2 attempt 2): the anchor's sparse stiffness matrix is built and
+    kept on the CPU; `energies()` streams K, F and the mask to the device of
+    the prediction per call. A 3D anchor is ~10-16 MiB, so a cache of 1024 of
+    them resident on the GPU (~10-16 GiB) plus balanced-mode activations
+    exceeded 32 GiB at b = 1024; the per-call transfer costs ~ms against
+    sub-second steps and changes no value (same fp32 numbers, same kernels).
+    `resident="device"` restores the old on-device residency for callers that
+    want it; on a CPU device the two are identical."""
 
     def __init__(self, K: sp.spmatrix, F: np.ndarray, dirichlet_mask: np.ndarray,
-                 device="cpu", dtype=None):
+                 device="cpu", dtype=None, resident="cpu"):
         torch = _torch()
         dtype = dtype or torch.float32
         Kc = sp.coo_matrix(K)
         idx = torch.as_tensor(np.vstack([Kc.row, Kc.col]), dtype=torch.long)
         val = torch.as_tensor(Kc.data, dtype=dtype)
-        K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape,
-                                      device=device).coalesce()
+        K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape).coalesce()   # CPU
         # CSR spmm is the fast cuSPARSE path on CUDA (torch >= 2.x); COO stays the
         # portable CPU/float64 layout used by the machine-precision tests.
-        self.K_t = K_t.to_sparse_csr() if str(device).startswith("cuda") else K_t
-        self.F_t = torch.as_tensor(np.atleast_2d(F), dtype=dtype, device=device)
-        self.free_t = torch.as_tensor(~np.asarray(dirichlet_mask, dtype=bool),
-                                      device=device).to(dtype)
+        cuda_target = str(device).startswith("cuda")
+        self.K_t = K_t.to_sparse_csr() if cuda_target else K_t
+        self.F_t = torch.as_tensor(np.atleast_2d(F), dtype=dtype)
+        self.free_t = torch.as_tensor(~np.asarray(dirichlet_mask, dtype=bool)).to(dtype)
         self.device = device
+        self.resident = resident
+        if cuda_target and resident == "device":
+            self.K_t, self.F_t, self.free_t = (self.K_t.to(device), self.F_t.to(device),
+                                               self.free_t.to(device))
 
     def energies(self, u):
         """Per-load Pi_h of a (L, ndof) or (ndof,) prediction; masks Dirichlet dofs."""
@@ -79,10 +91,19 @@ class EnergyAnchor:
         with torch.autocast(device_type=u.device.type, enabled=False):
             return self._energies_fp32(u)
 
+    def _tensors_on(self, device):
+        """K, F, mask on `device` -- the resident copies when already there,
+        otherwise streamed per call (D10)."""
+        if self.K_t.device == device:
+            return self.K_t, self.F_t, self.free_t
+        return (self.K_t.to(device, non_blocking=True), self.F_t.to(device, non_blocking=True),
+                self.free_t.to(device, non_blocking=True))
+
     def _energies_fp32(self, u):
         u2 = u if u.dim() == 2 else u.unsqueeze(0)
-        u2 = u2 * self.free_t                      # autograd chains the mask
-        return _EnergyFn.apply(u2, self.K_t, self.F_t)
+        K_t, F_t, free_t = self._tensors_on(u2.device)
+        u2 = u2 * free_t                           # autograd chains the mask
+        return _EnergyFn.apply(u2, K_t, F_t)
 
     def __call__(self, u):
         return self.energies(u).mean()
@@ -122,15 +143,18 @@ _EnergyFn = _Lazy
 
 
 class AnchorCache:
-    """One on-device anchor per instance, reused across epochs (verified asset)."""
+    """One anchor per instance, reused across epochs (verified asset). D10: the
+    anchors are CPU-resident by default and streamed to the device per call, so
+    the cache's GPU footprint is zero however large the training prefix."""
 
-    def __init__(self, device="cpu", dtype=None):
-        self.device, self.dtype = device, dtype
+    def __init__(self, device="cpu", dtype=None, resident="cpu"):
+        self.device, self.dtype, self.resident = device, dtype, resident
         self._store: dict = {}
 
     def get(self, arch) -> EnergyAnchor:
         key = str(arch.path) if arch.path is not None else id(arch)
         if key not in self._store:
             self._store[key] = EnergyAnchor(arch.K, arch.F, arch.dirichlet_mask,
-                                            device=self.device, dtype=self.dtype)
+                                            device=self.device, dtype=self.dtype,
+                                            resident=self.resident)
         return self._store[key]
