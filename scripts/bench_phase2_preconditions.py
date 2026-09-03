@@ -72,6 +72,13 @@ def main() -> None:
                     help="wp8 E2: also time the token-bottleneck model with this "
                          "many tokens on the largest in-band and the fine instance "
                          "(0 = skip; the Phase-2 measurement is unchanged)")
+    ap.add_argument("--corpus", default=None,
+                    help="D10: a labelled corpus directory for the resident-set phase")
+    ap.add_argument("--resident-prefix", type=int, default=0,
+                    help="D10: run ONE balanced-anchor epoch on the first N labelled "
+                         "instances of --corpus and report the peak memory -- the "
+                         "per-unit resident set the earlier benches never measured "
+                         "(0 = skip)")
     ap.add_argument("--repeats", type=int, default=20)
     ap.add_argument("--out", default="runs/phase2/bench_preconditions.json")
     a = ap.parse_args()
@@ -218,6 +225,54 @@ def main() -> None:
                      if dev == "cuda" else None),
         "note": "MGN train step, D9 per-layer checkpointing active, dummy loss"}
     del mgn, mpack, opt
+
+    # D10: the per-UNIT resident set. Attempt 2 died in the first balanced
+    # b=1024 unit: 1024 GPU-resident 3D anchors (~10-16 GiB) plus balanced
+    # activations. One full balanced epoch on the real prefix fills the cache
+    # exactly as the run does; its peak is the number the restart is gated on.
+    if a.resident_prefix > 0:
+        from fejepa.train.supervised import SupervisedConfig, train_supervised
+
+        cdir = a.corpus
+        if cdir is None and a.smoke:
+            from fejepa.experiments.runner import _label_files
+            from fejepa.fe.solve import SolveLedger
+            from fejepa.fe.synthetic import generate_synthetic_dataset
+
+            cdir = generate_synthetic_dataset(work / "resident_smoke", n=6, seed=3)
+            _label_files(load_split(str(cdir), 0, 1).pool_files, SolveLedger(), "smoke-lbl")
+        if cdir is None:
+            raise SystemExit("--resident-prefix needs --corpus (or --smoke)")
+        # the unit's OWN instances: the run's pool prefix after its val split
+        # (manifest-first-N would mix in val and unlabelled pool instances)
+        sp_cfg = {} if a.corpus is None else (cfg.get("split") or {})   # smoke corpus: no split
+        rsplit = load_split(str(cdir), int(sp_cfg.get("n_val", 0)),
+                            seed=int(sp_cfg.get("seed", 1)))
+        pref = rsplit.pool_files[:a.resident_prefix]
+        archs = [load_instance(f) for f in pref]
+        missing = [str(f) for f, ar in zip(pref, archs) if ar.U_star is None]
+        if missing:
+            raise SystemExit(f"resident phase: {len(missing)} of the first "
+                             f"{len(pref)} pool instances are unlabelled (e.g. "
+                             f"{missing[0]}); the prefix must be the run's labelled prefix")
+        val = archs[:1]
+        rmodel = _build_model({"kind": "fejepa", "model": mcfg, "seed": 0})
+        if dev == "cuda":
+            torch.cuda.reset_peak_memory_stats()
+        t0 = time.perf_counter()
+        train_supervised(rmodel, archs, val,
+                         SupervisedConfig(epochs=1, lr=float(cfg.get("sup", {}).get("lr", 1.5e-3)),
+                                          seed=0, device=dev, anchor_mode="balanced",
+                                          balance_ratio=1.0, log_every=-1))
+        if dev == "cuda":
+            torch.cuda.synchronize()
+        res["phases"][f"resident_balanced_epoch_b{len(archs)}"] = {
+            "n_instances": len(archs), "seconds": round(time.perf_counter() - t0, 3),
+            "peak_gib": (round(torch.cuda.max_memory_allocated() / 2**30, 3)
+                         if dev == "cuda" else None),
+            "note": "one balanced-anchor epoch on the real prefix (cache filled); "
+                    "green if peak leaves headroom below the 32 GiB card"}
+        del rmodel, archs
 
     plan = training_plan(cfg)
     ms_in = res["phases"]["inband_1"]["ms_per_step"]

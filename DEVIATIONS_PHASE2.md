@@ -102,3 +102,51 @@ memory, resilience and provenance only. R10 adds a save throttle for the
 epoch checkpoints (first and last epoch always save; otherwise at most one
 save per 300 s) and records `resumed_from_epoch` per resumed unit in the
 report's `d9_restart` block.
+
+## D10 -- attempt 2 aborted by GPU OOM in the first balanced b=1024 unit (2 Sep 2026)
+
+**Facts.** Attempt 2 (restart mode, head `99d3674`) started 1 Sep; the D9
+mechanisms worked: the three AR states were reused (6 min), `mgn b64 s0`
+trained (44 min -- the checkpointed comparator fits), and eight supervised
+units completed and were cached (44 h, including the 22 h `labels b1024 s0`).
+Unit 9, `labels_anchor b1024 s0` (balanced anchor), raised
+`torch.OutOfMemoryError` inside the FE-JEPA encoder forward within its first
+10% of steps (no progress line yet; 26.82 GiB allocated by PyTorch). The
+in-band labelling progress lines in the attempt-2 log are cosmetic: the
+labeller prints progress for every file and counts only solves; no label was
+re-bought (ledger unaffected).
+
+**Root cause.** `AnchorCache` kept every instance's sparse stiffness matrix
+resident on the GPU and never evicted: a 3D anchor is ~10-16 MiB, so the
+cache of a b=1024 unit grows to ~10-16 GiB within its first epoch; balanced
+mode adds a second backward pass (~2x activations). b=256 units (~3 GiB of
+anchors) and the label-only b=1024 unit (no anchors) fit; the balanced
+b=1024 unit did not. The preconditions bench measured single-instance step
+memory (7.1 GiB at 12k nodes), never a unit's resident set -- the same
+instrument blind spot as D9, one level up.
+
+**Disposition (engineering only; configuration untouched; guard passes).**
+(A) `anchor/energy.py`: anchors are constructed and kept on the CPU;
+`energies()` streams K, F and the mask to the prediction's device per call
+(~ms per step against 0.4-0.8 s steps); the cache's GPU footprint is zero for
+any prefix. Values and gradients are unchanged (same fp32 numbers, same
+kernels): the CPU path is bitwise-identical to before (tag-vs-head regression
+equal; test asserts streaming == resident bitwise), and the CUDA path
+executes the identical kernels on identical tensors. (B) The preconditions
+bench gains `--corpus DIR --resident-prefix N`: one full balanced-anchor
+epoch on the first N labelled instances of the real corpus, reporting the
+peak -- the restart is gated on `resident_balanced_epoch_b1024` leaving
+headroom on the 32 GiB card. (C) Restart via `--reuse-states` (attempt 3):
+AR reused, the eight cached units served, unit 9 retrained from scratch (no
+epoch checkpoint existed).
+
+**Ledger accounting.** Attempt 2 bought no labels (all existed); attempt 3
+buys only the fine stages (1,280) -- the cross-attempt total remains 6,400.
+
+**Wall clock.** Remaining after the cache: three balanced b=1024 units
+(~44 h each), the b=1024 MGN units, seeds 1-2 of the smaller cells, the fine
+block and evaluations -- of order 14-15 days from restart.
+
+**Disclosure.** Partial results observed before the abort (eight supervised
+validation values and the AR reuse) influenced nothing: the configuration
+hash is unchanged and the fix is memory-placement only.
