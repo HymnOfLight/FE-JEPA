@@ -6,7 +6,7 @@ Governance: nothing here touches `configs/phase2_v1.json` or `PREREG_PHASE2.md`.
 
 ## 0. Preconditions (once)
 ```bash
-git checkout wp8-lejepa && git pull && python -m pytest -q        # 219 passed
+git checkout wp8-lejepa && git pull && python -m pytest -q        # 229 passed (check BRANCH_NOTES for the current count)
 ```
 
 ## 1. Stage-0 readings on the Phase-2 AR states (~10 min)
