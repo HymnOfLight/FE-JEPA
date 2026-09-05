@@ -77,8 +77,11 @@ def measure_separation(model, archs, token_rows_for_monitor: int = 20000) -> dic
         descs.append(np.asarray(geometry_descriptor(arch.meta), dtype=np.float64))
     X, G = np.stack(pooled), np.stack(descs)
     Gc = G - G.mean(0)
-    pc1 = Gc @ np.linalg.svd(Gc, full_matrices=False)[2][0]
+    _, sv, vt = np.linalg.svd(Gc, full_matrices=False)
+    pc1 = Gc @ vt[0]
     bins = quartile_bins(pc1)
+    pc1_loadings = (vt[0] / (np.abs(vt[0]).max() + 1e-30)).round(3).tolist()
+    pc1_variance_share = float(sv[0] ** 2 / ((sv ** 2).sum() + 1e-30))
     tok = torch.cat(tokens, 0)[:token_rows_for_monitor]
     counts = np.bincount(bins, minlength=4)
     S = silhouette(X, bins)
@@ -90,6 +93,8 @@ def measure_separation(model, archs, token_rows_for_monitor: int = 20000) -> dic
                                  "silhouette undefined: every bin needs >= 2 instances "
                                  f"(counts {counts.tolist()})"),
             "S_silhouette": S,
+            "pc1_loadings": pc1_loadings,             # which descriptor dims the bins follow
+            "pc1_variance_share": pc1_variance_share,
             "probe_r2_geometry": probe_r2(X, G) if X.shape[0] >= 8 else float("nan"),
             "loo_1nn_bin_accuracy": loo_1nn_accuracy(X, bins),
             "sigreg_monitor_pooled": sigreg_monitor(torch.as_tensor(X, dtype=torch.float32),

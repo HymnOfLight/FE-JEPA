@@ -14,8 +14,14 @@ def _rep(disp, egap, fine_ratio=1.2, seeds=3):
 
 def test_e1_go_and_each_kill():
     base = _rep(0.20, 0.30)
-    go = adjudicate_e1(base, _rep(0.20, 0.30), [0.1, 0.1, 0.1], [0.2, 0.15, 0.12], 0.10)
+    go = adjudicate_e1(base, _rep(0.20, 0.30), [0.1, 0.1, 0.1], [0.2, 0.15, 0.13], 0.10)
     assert go["verdict"] == "GO" and not go["K1_parity"] and not go["K2_no_effect"]
+    # noise-level improvements at every seed must NOT pass: effect floor
+    tiny = adjudicate_e1(base, _rep(0.20, 0.30), [0.1, 0.1, 0.1], [0.101, 0.102, 0.1005], 0.10)
+    assert tiny["verdict"] == "NO-GO" and not tiny["S_above_floor_all_seeds"]
+    # a floor scaled by the AR arm's seed spread: base seeds spread 0.05 -> floor 0.10
+    spread = adjudicate_e1(base, _rep(0.20, 0.30), [0.05, 0.10, 0.15], [0.10, 0.15, 0.20], 0.10)
+    assert spread["S_effect_floor"] > 0.05 and spread["verdict"] == "NO-GO"
     k1 = adjudicate_e1(base, _rep(0.24, 0.30), [0.1] * 3, [0.2] * 3, 0.10)     # +20% disp
     assert k1["K1_parity"] and k1["verdict"] == "KILLED"
     k2 = adjudicate_e1(base, _rep(0.20, 0.30), [0.1] * 3, [0.1, 0.05, 0.09], 0.10)

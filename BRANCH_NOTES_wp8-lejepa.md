@@ -248,6 +248,13 @@ pre-registration stamps it.
   names Phase-1's state directory concretely (`runs/e8_states/`, from its
   `out` of `runs/report_rec8_v2.json`).
 
+- Stage 1.22 (5 Sep, statistical power of the rules): E1's GO rule ("S
+  improves at every seed") had no effect-size floor, so three same-signed
+  noise-level deltas would have passed. `adjudicate_e1` now requires every
+  seed's delta to exceed max(0.02, 2 x the AR arm's seed SD of S) and
+  reports the floor; the separation reading reports PC1 loadings and
+  variance share (which descriptors the bins follow). PREREG_E1 draft r10.
+
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
 **E1 -- latent shaping and cross-geometry separation.** Question: does adding

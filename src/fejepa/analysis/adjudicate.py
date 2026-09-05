@@ -24,10 +24,14 @@ def _rel_change(new: float, old: float) -> float:
 
 
 def adjudicate_e1(base: dict, shaped: dict, s_base: list, s_shaped: list,
-                  band: float = 0.10) -> dict:
+                  band: float = 0.10, min_effect_abs: float = 0.02,
+                  min_effect_seed_sd: float = 2.0) -> dict:
     """K1 parity per seed (disp or energy gap worse than `band`); K2 no effect
-    (S delta <= 0 at every seed); GO = S improves at every seed and the
-    transfer ratio does not worsen beyond `band`."""
+    (S delta <= 0 at every seed); GO = S improves at every seed by at least the
+    pre-declared effect floor -- max(min_effect_abs, min_effect_seed_sd x the
+    AR arm's seed-to-seed standard deviation of S) -- and the transfer ratio
+    does not worsen beyond `band`. Without the floor, three same-signed
+    noise-level deltas would pass as GO."""
     import math
 
     bad = [v for v in list(s_base) + list(s_shaped) if not math.isfinite(float(v))]
@@ -45,15 +49,20 @@ def adjudicate_e1(base: dict, shaped: dict, s_base: list, s_shaped: list,
         per_seed.append({"seed": i, "disp_rel_change": cd, "egap_rel_change": ce})
     deltas = [b - a for a, b in zip(s_base, s_shaped, strict=True)]
     k2 = all(d <= 0.0 for d in deltas)
+    sd_base = statistics.pstdev(s_base) if len(s_base) > 1 else 0.0
+    floor = max(float(min_effect_abs), float(min_effect_seed_sd) * sd_base)
+    above_floor = all(d >= floor for d in deltas)
     rb, rs = transfer_ratio(base), transfer_ratio(shaped)
     if rb is None or rs is None:
         ratio_ok, guard = True, "not evaluated (no P3 transfer block in a run; 2D stage)"
     else:
         ratio_ok = _rel_change(rs, rb) <= band
         guard = "passed" if ratio_ok else f"failed (ratio worsened by {_rel_change(rs, rb):.3f} > {band})"
-    go = (not k1) and all(d > 0.0 for d in deltas) and ratio_ok
+    go = (not k1) and above_floor and ratio_ok
     return {"band": band, "per_seed": per_seed, "S_base": s_base, "S_shaped": s_shaped,
-            "S_delta": deltas, "transfer_ratio_base": rb, "transfer_ratio_shaped": rs,
+            "S_delta": deltas, "S_effect_floor": floor, "S_base_seed_sd": sd_base,
+            "S_above_floor_all_seeds": above_floor,
+            "transfer_ratio_base": rb, "transfer_ratio_shaped": rs,
             "transfer_guard": guard,
             "K1_parity": k1, "K2_no_effect": k2, "GO": go,
             "verdict": "GO" if go else ("KILLED" if (k1 or k2) else "NO-GO")}
