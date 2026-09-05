@@ -25,12 +25,12 @@ def build_model_from_config(model_cfg: dict, state_path: str | None = None, seed
     train mode at entry, so this is about intent, not correctness."""
     import torch
 
-    from ..experiments.parallel import _build_model
+    from ..experiments.parallel import _build_model, clean_state
 
     model = _build_model({"kind": model_cfg.get("kind", "fejepa"), "model": model_cfg,
                           "seed": seed})
     if state_path:
-        sd = torch.load(str(state_path), map_location="cpu", weights_only=True)
+        sd = clean_state(torch.load(str(state_path), map_location="cpu", weights_only=True))
         model.load_state_dict(sd, strict=True)
     model.train(mode == "train")
     return model.to(resolve_device(device))

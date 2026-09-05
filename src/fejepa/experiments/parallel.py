@@ -146,6 +146,13 @@ def _state_dict(model):
     return getattr(model, "_orig_mod", model).state_dict()
 
 
+def clean_state(sd: dict) -> dict:
+    """Normalise a loaded state dict: strip a torch.compile wrapper prefix
+    (`_orig_mod.`) so states saved by other tooling still load strictly."""
+    pre = "_orig_mod."
+    return {(k[len(pre):] if k.startswith(pre) else k): v for k, v in sd.items()}
+
+
 def _cache_path(payload: dict):
     cd = payload.get("cache_dir")
     if not cd:
@@ -261,7 +268,7 @@ def pretrain_unit(payload: dict) -> dict:
         # SHA-256 is returned so the report can chain attempt-1 -> attempt-2.
         # R9a: a corrupt (e.g. truncated) file is removed and retrained.
         try:
-            sd = torch.load(str(sp), map_location="cpu", weights_only=True)
+            sd = clean_state(torch.load(str(sp), map_location="cpu", weights_only=True))
             model.load_state_dict(sd, strict=True)
             model.to(pre.get("device", "cpu"))
             reused = True

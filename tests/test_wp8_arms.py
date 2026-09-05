@@ -333,3 +333,24 @@ def test_bottleneck_ar_resume_is_bitwise_exact(tmp_path, tiny_corpus):
     pa, pb = dict(m_ref.named_parameters()), dict(m_b.named_parameters())
     assert set(pa) == set(pb) and any(k.startswith("tok_enc.") for k in pa)
     assert all(torch.equal(pa[k].detach(), pb[k].detach()) for k in pa)
+
+
+def test_reuse_tolerates_compiled_state_prefix(tmp_path, tiny_corpus):
+    """A state saved under a torch.compile wrapper carries `_orig_mod.` keys;
+    the reuse path (and the analysis loader) normalise it instead of falling
+    back to a retrain."""
+    from fejepa.analysis.common import build_model_from_config
+
+    sp = tiny_corpus(seed=71)
+    payload = {"kind": "fejepa", "model": MODEL, "seed": 0, "tf32": False,
+               "files": [str(f) for f in sp.pool_files[:2]],
+               "pre": {"epochs": 1, "lr": 1e-3, "device": "cpu", "log_every": -1},
+               "state_path": str(tmp_path / "st" / "ar.pt"),
+               "eval_val_files": [str(f) for f in sp.val_files], "quiet": True}
+    pretrain_unit(payload)
+    sd = torch.load(payload["state_path"], map_location="cpu", weights_only=True)
+    torch.save({"_orig_mod." + k: v for k, v in sd.items()}, payload["state_path"])
+    out = pretrain_unit({**payload, "reuse_existing": True})
+    assert out["reused_state"] is True
+    m = build_model_from_config(MODEL, payload["state_path"])
+    assert m is not None

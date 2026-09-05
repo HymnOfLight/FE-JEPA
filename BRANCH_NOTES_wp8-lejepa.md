@@ -242,6 +242,12 @@ pre-registration stamps it.
   draft r9 pre-declares the pilot outcome when no lambda is admissible
   (NO-GO-AT-PILOT, pilot JSON as the record).
 
+- Stage 1.21 (5 Sep): state reuse and the analysis loader normalise a
+  torch.compile `_orig_mod.` key prefix (defensive: Phase-1 states are clean,
+  but a prefixed state would otherwise force a silent retrain); the runbook
+  names Phase-1's state directory concretely (`runs/e8_states/`, from its
+  `out` of `runs/report_rec8_v2.json`).
+
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
 **E1 -- latent shaping and cross-geometry separation.** Question: does adding
