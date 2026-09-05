@@ -15,7 +15,7 @@ from fejepa.fe.solve import SolveLedger
 from fejepa.fe.synthetic import generate_synthetic_dataset
 from fejepa.metrics import evaluate_model, torch_predictor
 from fejepa.models.bottleneck import farthest_point_sampling, nearest_seed
-from fejepa.train.losses import ar_sigreg_config
+from fejepa.train.losses import AR_CONFIG, ar_sigreg_config
 from fejepa.train.pretrain import PretrainConfig, pretrain
 
 MODEL = {"dim": 16, "depth": 1, "heads": 2, "features": {"load_summary": True, "geometry": True}}
@@ -314,3 +314,22 @@ def test_e_series_economy_is_zero_beyond_val_and_fine_eval(tmp_path):
     p3 = r["results"]["p3_transfer"]["metrics"]
     assert p3["naive_at_fine"] == {} and p3["fewshot"] == {}
     assert p3["ar"]["fine_disp_mean"] > 0 and p3["ar"]["inband_disp_mean"] > 0
+
+
+def test_bottleneck_ar_resume_is_bitwise_exact(tmp_path, tiny_corpus):
+    """E2's units rely on the R9 resume path: an interrupted bottleneck AR run
+    (FPS-seeded packs rebuilt from scratch on resume) must land on the
+    uninterrupted parameters bitwise."""
+    sp = tiny_corpus(seed=47)
+    tr = [load_instance(f) for f in sp.pool_files[:3]]
+    base = dict(epochs=3, lr=1e-3, seed=0, device="cpu", loss=AR_CONFIG, log_every=-1)
+    m_ref = _build_model({"kind": "bottleneck", "model": BOTTLE, "seed": 0})
+    pretrain(m_ref, tr, PretrainConfig(**base))
+    ck = str(tmp_path / "bt.ckpt")
+    m_a = _build_model({"kind": "bottleneck", "model": BOTTLE, "seed": 0})
+    pretrain(m_a, tr, PretrainConfig(**base, ckpt_path=ck, stop_after_epoch=1))
+    m_b = _build_model({"kind": "bottleneck", "model": BOTTLE, "seed": 0})
+    pretrain(m_b, tr, PretrainConfig(**base, ckpt_path=ck, resume=True))
+    pa, pb = dict(m_ref.named_parameters()), dict(m_b.named_parameters())
+    assert set(pa) == set(pb) and any(k.startswith("tok_enc.") for k in pa)
+    assert all(torch.equal(pa[k].detach(), pb[k].detach()) for k in pa)

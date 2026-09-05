@@ -206,6 +206,14 @@ pre-registration stamps it.
   `e8_states` and consumed via `--reuse-states`, SHA-chained) and corrects
   the 2D cost estimate (~9 h per arm).
 
+- Stage 1.16 (5 Sep): coverage gap closed -- the R9 resume path was only
+  tested for FE-JEPA; E2's bottleneck AR units (FPS-seeded packs rebuilt on
+  resume) now have a bitwise resume test. With this, every E-series unit
+  type (FE-JEPA AR, AR+SIGReg head, bottleneck AR, supervised) has an
+  executed resume proof. Branch checks have converged: the next information
+  comes from the box (Phase-2 verdict, intrinsic-dimension reading, E2 bench
+  phases).
+
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
 **E1 -- latent shaping and cross-geometry separation.** Question: does adding
