@@ -80,6 +80,8 @@ def adjudicate_e2(base: dict, e2: dict, bench: dict, m_tokens: int, band: float 
         return float(rep["results"]["p3_transfer"]["metrics"]["ar"]["fine_disp_mean"])
 
     eg_b, eg_e = ar_median(base, "energy_gap_rel"), ar_median(e2, "energy_gap_rel")
+    spread = {"egap_seed_sd_base": float(statistics.pstdev(ar_per_seed(base, "energy_gap_rel"))),
+              "egap_seed_sd_e2": float(statistics.pstdev(ar_per_seed(e2, "energy_gap_rel")))}
     fd_b, fd_e = fine_disp(base), fine_disp(e2)
     egap_change, fine_change = _rel_change(eg_e, eg_b), _rel_change(fd_e, fd_b)
     k1 = (egap_change > band) or (fine_change > band)
@@ -89,6 +91,6 @@ def adjudicate_e2(base: dict, e2: dict, bench: dict, m_tokens: int, band: float 
     go = (not k1) and (step_s is not None) and step_s < go_s
     return {"M": m_tokens, "band": band, "egap_median_base": eg_b, "egap_median_e2": eg_e,
             "egap_rel_change": egap_change, "fine_disp_base": fd_b, "fine_disp_e2": fd_e,
-            "fine_disp_rel_change": fine_change, "fine_step_s": step_s,
+            "fine_disp_rel_change": fine_change, "fine_step_s": step_s, **spread,
             "K1_accuracy": k1, "K2_speed": k2, "GO": go,
             "verdict": "GO" if go else ("KILLED" if (k1 or k2) else "NO-GO")}

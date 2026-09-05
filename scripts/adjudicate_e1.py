@@ -21,12 +21,13 @@ def main() -> None:
     a = ap.parse_args()
 
     from fejepa.analysis.adjudicate import adjudicate_e1
-    from fejepa.analysis.common import write_json
+    from fejepa.analysis.common import inputs_provenance, write_json
 
     load = lambda p: json.loads(Path(p).read_text())  # noqa: E731
     res = adjudicate_e1(load(a.base_report), load(a.shaped_report),
                         [load(p)["S_silhouette"] for p in a.base_sep],
                         [load(p)["S_silhouette"] for p in a.shaped_sep], a.band)
+    res["inputs_sha256"] = inputs_provenance([a.base_report, a.shaped_report, *a.base_sep, *a.shaped_sep])
     write_json(a.out, res)
     print(json.dumps({k: res[k] for k in ("K1_parity", "K2_no_effect", "GO", "verdict", "S_delta")}))
 

@@ -81,6 +81,18 @@ def subsample_rows(x, max_rows: int, seed: int = 0):
     return x[idx]
 
 
+def sha256_of(path: str | Path) -> str:
+    import hashlib
+
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def inputs_provenance(paths: list) -> dict:
+    """{path: sha256} for every adjudication input, so a verdict is traceable
+    to the exact files it was computed from."""
+    return {str(p): sha256_of(p) for p in paths}
+
+
 def write_json(path: str | Path, obj: dict) -> None:
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)

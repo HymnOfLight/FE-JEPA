@@ -255,6 +255,13 @@ pre-registration stamps it.
   reports the floor; the separation reading reports PC1 loadings and
   variance share (which descriptors the bins follow). PREREG_E1 draft r10.
 
+- Stage 1.23 (5 Sep): instance-level uncertainty of S (bootstrap 95% CI
+  over validation instances, bins fixed) reported next to the point
+  estimate; both verdict CLIs record the SHA-256 of every input file
+  (`inputs_sha256`) so a verdict is traceable to its exact inputs; the E2
+  verdict reports seed spreads of the energy gap for interpreting a marginal
+  K1.
+
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
 **E1 -- latent shaping and cross-geometry separation.** Question: does adding

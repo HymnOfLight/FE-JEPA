@@ -63,6 +63,23 @@ def probe_r2(x: np.ndarray, y: np.ndarray, ridge: float = 1e-3) -> float:
     return float(1.0 - ss_res / ss_tot)
 
 
+def bootstrap_silhouette(x: np.ndarray, labels: np.ndarray, n_boot: int = 200,
+                         seed: int = 0) -> tuple:
+    """Instance-level uncertainty of S: resample instances with replacement,
+    recompute S on the resample (bins fixed), return the 2.5/97.5 percentiles."""
+    rng = np.random.default_rng(seed)
+    vals = []
+    for _ in range(n_boot):
+        idx = rng.integers(0, x.shape[0], x.shape[0])
+        v = silhouette(x[idx], labels[idx])
+        if np.isfinite(v):
+            vals.append(v)
+    if len(vals) < 10:
+        return (float("nan"), float("nan"))
+    lo, hi = np.percentile(vals, [2.5, 97.5])
+    return (float(lo), float(hi))
+
+
 def measure_separation(model, archs, token_rows_for_monitor: int = 20000) -> dict:
     import torch
 
@@ -93,6 +110,7 @@ def measure_separation(model, archs, token_rows_for_monitor: int = 20000) -> dic
                                  "silhouette undefined: every bin needs >= 2 instances "
                                  f"(counts {counts.tolist()})"),
             "S_silhouette": S,
+            "S_bootstrap_ci95": list(bootstrap_silhouette(X, bins)) if valid else [float("nan")] * 2,
             "pc1_loadings": pc1_loadings,             # which descriptor dims the bins follow
             "pc1_variance_share": pc1_variance_share,
             "probe_r2_geometry": probe_r2(X, G) if X.shape[0] >= 8 else float("nan"),

@@ -55,3 +55,9 @@ def test_e1_refuses_nonfinite_separation():
     base = _rep(0.20, 0.30)
     with pytest.raises(ValueError, match="not finite"):
         adjudicate_e1(base, _rep(0.20, 0.30), [0.1, float("nan"), 0.1], [0.2, 0.2, 0.2], 0.10)
+
+
+def test_e2_reports_seed_spreads():
+    r = adjudicate_e2(_rep(0.20, 0.30), _rep(0.21, 0.31),
+                      {"phases": {"bottleneck512_fine": {"ms_per_step": 800.0}}}, 512, 0.10, 2.0, 1.0)
+    assert "egap_seed_sd_base" in r and "egap_seed_sd_e2" in r

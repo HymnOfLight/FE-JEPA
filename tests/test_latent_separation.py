@@ -65,3 +65,15 @@ def test_separation_reports_validity_for_tiny_sets(tmp_path):
     assert small["S_valid"] is False and small["S_invalid_reason"]
     big = measure_separation(m, [load_instance(f) for f in files])
     assert big["S_valid"] is True and big["bins"] == [4, 4, 4, 4]
+
+
+def test_bootstrap_ci_brackets_the_point_estimate():
+    from fejepa.analysis.separation import bootstrap_silhouette, silhouette
+
+    rng = np.random.default_rng(0)
+    centres = np.array([[0, 0], [6, 0], [0, 6], [6, 6]], dtype=float)
+    labels = np.repeat(np.arange(4), 30)
+    x = centres[labels] + 0.8 * rng.standard_normal((120, 2))
+    s = silhouette(x, labels)
+    lo, hi = bootstrap_silhouette(x, labels, n_boot=100)
+    assert lo <= s <= hi and (hi - lo) < 0.3
