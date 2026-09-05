@@ -198,6 +198,14 @@ pre-registration stamps it.
   Phase 1); the ledger reads 0 by construction. PREREG_E1 draft r7 records
   the precondition.
 
+- Stage 1.15 (5 Sep): the branch leaves the stamped Phase-2 artefacts
+  byte-unchanged (0-line diff against the tag); the committed E-series
+  configurations reproduce byte for byte from the generator, now enforced
+  by a test (a silent hand edit fails it). PREREG_E1 draft r8 names the
+  baseline-state reuse mechanism (Phase-1 AR states placed in the base run's
+  `e8_states` and consumed via `--reuse-states`, SHA-chained) and corrects
+  the 2D cost estimate (~9 h per arm).
+
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
 **E1 -- latent shaping and cross-geometry separation.** Question: does adding

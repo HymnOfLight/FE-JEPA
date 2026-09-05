@@ -74,3 +74,11 @@ def test_probe_r2_recovers_linear_structure():
     X = G @ W + 0.01 * rng.standard_normal((40, 32))
     assert probe_r2(X, G) > 0.95
     assert probe_r2(rng.standard_normal((40, 32)), G) < 0.5
+
+
+def test_committed_configs_are_exactly_the_generator_output(tmp_path):
+    """'Generated, not hand-edited': the committed E-series configurations must
+    reproduce byte for byte from the generator (a silent hand edit fails here)."""
+    out = _gen(tmp_path)
+    for name in ("e2_m512", "e2_m1024", "e1_2d_base", "e1_2d_shaped"):
+        assert (out / f"{name}.json").read_bytes() == (ROOT / "configs" / f"{name}.json").read_bytes(), name
