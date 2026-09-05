@@ -229,6 +229,13 @@ pre-registration stamps it.
   embedding; bottleneck units survive spawn pickling under workers=2.
   `RUNBOOK_E_SERIES.md` lists every E-series command in execution order.
 
+- Stage 1.19 (5 Sep): four more executed checks -- the bottleneck is
+  load-scale blind (prediction scales exactly with the load battery, the
+  invariance FE-JEPA rests on); SIGReg's gradient through the chunked,
+  checkpointed path matches finite differences; the configuration hash
+  changes with the nested `loss_spec` values (lambda, head width) so E1's
+  stamp covers them; `--dry-run` reports `verified` against a stamped file.
+
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
 **E1 -- latent shaping and cross-geometry separation.** Question: does adding
