@@ -45,6 +45,24 @@ def loo_1nn_accuracy(x: np.ndarray, labels: np.ndarray) -> float:
     return float((labels[np.argmin(d, axis=1)] == labels).mean())
 
 
+def probe_r2(x: np.ndarray, y: np.ndarray, ridge: float = 1e-3) -> float:
+    """Leave-one-out R^2 of a ridge regression from latents x (n, d) to targets
+    y (n, k) -- the LeWorldModel-style 'physical probing' reading: how linearly
+    decodable the geometry descriptor is from the pooled latent."""
+    n = x.shape[0]
+    xc = np.concatenate([x - x.mean(0), np.ones((n, 1))], 1)
+    yc = y - y.mean(0)
+    preds = np.empty_like(yc)
+    for i in range(n):
+        keep = np.arange(n) != i
+        A = xc[keep]
+        w = np.linalg.solve(A.T @ A + ridge * np.eye(A.shape[1]), A.T @ yc[keep])
+        preds[i] = xc[i] @ w
+    ss_res = ((yc - preds) ** 2).sum()
+    ss_tot = (yc ** 2).sum() + 1e-30
+    return float(1.0 - ss_res / ss_tot)
+
+
 def measure_separation(model, archs, token_rows_for_monitor: int = 20000) -> dict:
     import torch
 
@@ -72,6 +90,7 @@ def measure_separation(model, archs, token_rows_for_monitor: int = 20000) -> dic
                                  "silhouette undefined: every bin needs >= 2 instances "
                                  f"(counts {counts.tolist()})"),
             "S_silhouette": S,
+            "probe_r2_geometry": probe_r2(X, G) if X.shape[0] >= 8 else float("nan"),
             "loo_1nn_bin_accuracy": loo_1nn_accuracy(X, bins),
             "sigreg_monitor_pooled": sigreg_monitor(torch.as_tensor(X, dtype=torch.float32),
                                                     n_proj=256),

@@ -43,6 +43,9 @@ def main(argv=None) -> int:
                    help="D9 restart mode: consume existing AR states and cached "
                         "unit results from an earlier attempt (recorded in the "
                         "report); the stamped config is untouched")
+    r.add_argument("--dry-run", action="store_true",
+                   help="validate the configuration (guards, kind, plan, label need) "
+                        "and stop before any data is generated or trained")
     r.add_argument("--workers", type=int, default=None,
                    help="override the config's workers field (concurrent "
                         "training units on one GPU)")
@@ -142,7 +145,8 @@ def main(argv=None) -> int:
         from .experiments.runner import run_config
 
         run_config(a.config, device_override=a.device,
-                   workers_override=a.workers, reuse_states=a.reuse_states)
+                   workers_override=a.workers, reuse_states=a.reuse_states,
+                   dry_run=a.dry_run)
 
     elif a.cmd == "bench":
         from .experiments.cost import bench, count_steps

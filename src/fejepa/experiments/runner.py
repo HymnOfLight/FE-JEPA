@@ -253,11 +253,15 @@ def _pool_need_in_memory(exps: dict) -> int:
 
 def run_config(path, device_override: str | None = None,
                workers_override: int | None = None,
-               reuse_states: bool = False) -> dict:
+               reuse_states: bool = False, dry_run: bool = False) -> dict:
     cfg = json.loads(Path(path).read_text())
     # wp8: e6 / wp6 / e1 probe the FE-JEPA architecture through its own
     # interface; under another model.kind they must be disabled explicitly --
     # fail here, before any corpus is generated or a run is started.
+    _ls = (cfg.get("pretrain") or {}).get("loss_spec")
+    if isinstance(_ls, dict) and any(v is None for v in _ls.values()):
+        raise SystemExit(f"pretrain.loss_spec carries unfilled placeholders: "
+                         f"{[k for k, v in _ls.items() if v is None]} -- fill them at stamping")
     _mk = str((cfg.get("model") or {}).get("kind", "fejepa"))
     if _mk != "fejepa":
         _exps = cfg.get("experiments") or {}
@@ -266,13 +270,23 @@ def run_config(path, device_override: str | None = None,
             raise SystemExit(f"model.kind={_mk!r} but FE-JEPA-only experiments are "
                              f"enabled: {bad}; disable them in the config")
     prereg = None
+    prereg_status = "guard off"
     if cfg.get("prereg_guard"):
         from ..report import verify_prereg
 
         pf = cfg.get("prereg_file", "PREREG.md")
-        prereg = {"file": str(pf), "config_sha256": verify_prereg(cfg, pf)}
-        print(f"[prereg] verified against {pf}: {prereg['config_sha256'][:12]}...",
-              flush=True)
+        try:
+            prereg = {"file": str(pf), "config_sha256": verify_prereg(cfg, pf)}
+            prereg_status = "verified"
+            print(f"[prereg] verified against {pf}: {prereg['config_sha256'][:12]}...",
+                  flush=True)
+        except Exception as exc:                                  # noqa: BLE001
+            if not dry_run:
+                raise
+            # dry-run never trains: report the guard's verdict instead of stopping,
+            # so a configuration can be validated before its PREREG is stamped
+            prereg_status = f"would refuse: {exc}"
+            print(f"[dry-run] prereg guard {prereg_status}", flush=True)
     device = device_override or cfg.get("device", "auto")
     workers = int(workers_override or cfg.get("workers", 1))
     label_workers = int(cfg.get("label_workers", min(8, os.cpu_count() or 8)))
@@ -293,7 +307,24 @@ def run_config(path, device_override: str | None = None,
     exps = cfg.get("experiments", {})
     stage(f"fejepa v2 run: {path} | device={device} | workers={workers} "
           f"| tf32={policy['tf32']}")
-    print(f"[plan] steps by experiment: {count_steps(cfg)}", flush=True)
+    plan_steps = count_steps(cfg)
+    print(f"[plan] steps by experiment: {plan_steps}", flush=True)
+    if dry_run:
+        # wp8: validate a configuration end to end up to the point where data
+        # would be generated -- guards, model kind, plan, label need -- and stop.
+        exps_dry = cfg.get("experiments") or {}
+        summary = {"dry_run": True, "config": str(path), "device": device,
+                   "model_kind": str((cfg.get("model") or {}).get("kind", "fejepa")),
+                   "prereg_guard": bool(cfg.get("prereg_guard")),
+                   "prereg_status": prereg_status,
+                   "prereg_verified": prereg["config_sha256"] if prereg else None,
+                   "plan_steps": plan_steps, "label_need_pool_prefix": _label_need(exps_dry),
+                   "experiments_enabled": [k for k, v in exps_dry.items()
+                                           if (v or {}).get("enabled")],
+                   "ar_only": bool((exps_dry.get("e8") or {}).get("ar_only")),
+                   "loss_spec": (cfg.get("pretrain") or {}).get("loss_spec")}
+        print(f"[dry-run] {json.dumps(summary)}", flush=True)
+        return summary
     stage("dataset")
     ddir = _ensure_dataset(cfg["data"], ledger)
     split = load_split(ddir, int(cfg["split"]["n_val"]), int(cfg["split"]["seed"]))

@@ -1,0 +1,164 @@
+{
+ "_comment": "E2 arm M=512: bottleneck AR only; baseline = Phase-2 report AR cells; see PREREG_E2.md",
+ "data": {
+  "dir": "runs/data3d_phase2",
+  "n": 2000,
+  "seed": 0,
+  "backend": "gmsh3d",
+  "lc_range": [
+   0.0579,
+   0.0906
+  ],
+  "labelled_policy": "economy"
+ },
+ "data_transfer": {
+  "dir": "runs/data3d_phase2_fine",
+  "n": 320,
+  "seed": 0,
+  "backend": "gmsh3d",
+  "lc": 0.0374,
+  "labelled_policy": "economy",
+  "split": {
+   "n_eval": 256,
+   "n_fewshot_prefix": 64
+  }
+ },
+ "split": {
+  "n_val": 256,
+  "seed": 1
+ },
+ "labels": {
+  "inband_prefix": 1024,
+  "fine_prefix": 64,
+  "cg_tol": 1e-10,
+  "in_run_ledger": true,
+  "prefix_from_nonval": true,
+  "nested": true
+ },
+ "model": {
+  "dim": 256,
+  "depth": 8,
+  "heads": 8,
+  "mask_frac": 0.2,
+  "scale_decode": true,
+  "mgn_dim": 256,
+  "mgn_depth": 8,
+  "features": {
+   "load_summary": true,
+   "geometry": true,
+   "spatial_dim": 3
+  },
+  "kind": "bottleneck",
+  "n_tokens": 512
+ },
+ "sup": {
+  "epochs": 200,
+  "lr": 0.0015
+ },
+ "pretrain": {
+  "epochs": 200,
+  "lr": 0.001
+ },
+ "lambda_policy": {
+  "budget_16": "fixed_1.0",
+  "budget_ge_64": "balanced_1.0",
+  "grid": [
+   0.1,
+   0.3,
+   1.0,
+   3.0
+  ],
+  "grid_selection_bias": true
+ },
+ "experiments": {
+  "e8": {
+   "enabled": true,
+   "budgets": [
+    16,
+    64,
+    256,
+    1024
+   ],
+   "seeds": 3,
+   "ar_epochs": 200,
+   "sup_epochs": 200,
+   "include_mgn": true,
+   "pool_sizes": [
+    1024
+   ],
+   "report_vm": true,
+   "include_ar_ft": false,
+   "mgn_budgets": [
+    64,
+    1024
+   ],
+   "ar_only": true
+  },
+  "p3_transfer": {
+   "enabled": true,
+   "zero_shot_arms": [
+    "ar",
+    "labels@1024",
+    "mgn@1024"
+   ],
+   "fewshot_budgets": [],
+   "fewshot_init": "ar_seed_matched",
+   "fewshot_epochs": 50,
+   "fewshot_lr": 0.0015,
+   "scratch_at_fine": true,
+   "naive_budget": 0,
+   "gate_ratio": 1.25,
+   "kill_ratio": 1.5,
+   "ratio_def": "seed_mean_over_seed_mean"
+  },
+  "wp6": {
+   "enabled": false,
+   "n_check": 16,
+   "seed": 0
+  },
+  "e6": {
+   "enabled": false
+  }
+ },
+ "gate_g2": {
+  "sanity_x": 3.0,
+  "naive_set": [
+   "knn_field",
+   "scale_aware_poly"
+  ],
+  "parity_band": 0.1,
+  "egap_adv_min": 0.4,
+  "transfer_win": 1.25,
+  "decision_budget": 64,
+  "logic": "a AND (b OR c)"
+ },
+ "kills": {
+  "KP1_parity_pct": 0.1,
+  "KP2_egap_adv_min": 0.4,
+  "KP3_anchor_improv_min": 0.25,
+  "KP4_transfer_ratio": 1.5,
+  "KP5": "any_wp6_violation",
+  "KP6_rho_within_min": 0.3,
+  "directional": true,
+  "divergence": {
+   "nonfinite_or_disp_gt": 10.0,
+   "report": "per_seed_flag_no_exclusion"
+  }
+ },
+ "runtime": {
+  "compile": false,
+  "amp": false,
+  "precision": "fp32"
+ },
+ "out": "runs/e2_m512/report.json",
+ "prereg_guard": true,
+ "prereg_file": "PREREG_E2.md",
+ "seeds": [
+  0,
+  1,
+  2
+ ],
+ "device": "auto",
+ "workers": 1,
+ "tf32": true
+}

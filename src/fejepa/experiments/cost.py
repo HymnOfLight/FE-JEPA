@@ -65,9 +65,12 @@ def count_steps(cfg: dict) -> dict:
         s = int(e8.get("seeds", 3))
         ar = sum(p * int(e8.get("ar_epochs", pre_ep))
                  for p in e8.get("pool_sizes", [1024]))
-        n_sup = 3 + (1 if e8.get("include_mgn") else 0)   # labels, anchored, ar_ft(+mgn)
-        supd = sum(n_sup * int(e8.get("sup_epochs", sup_ep)) * b
-                   for b in e8.get("budgets", [16, 64, 256, 1024]))
+        if e8.get("ar_only"):                              # wp8 E-series: no supervised grid
+            supd = 0
+        else:
+            n_sup = 3 + (1 if e8.get("include_mgn") else 0)   # labels, anchored, ar_ft(+mgn)
+            supd = sum(n_sup * int(e8.get("sup_epochs", sup_ep)) * b
+                       for b in e8.get("budgets", [16, 64, 256, 1024]))
         out["e8"] = s * (ar + supd)
     out["total"] = sum(out.values())
     return out

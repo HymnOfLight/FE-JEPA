@@ -46,10 +46,15 @@ def adjudicate_e1(base: dict, shaped: dict, s_base: list, s_shaped: list,
     deltas = [b - a for a, b in zip(s_base, s_shaped, strict=True)]
     k2 = all(d <= 0.0 for d in deltas)
     rb, rs = transfer_ratio(base), transfer_ratio(shaped)
-    ratio_ok = (rb is None or rs is None) or (_rel_change(rs, rb) <= band)
+    if rb is None or rs is None:
+        ratio_ok, guard = True, "not evaluated (no P3 transfer block in a run; 2D stage)"
+    else:
+        ratio_ok = _rel_change(rs, rb) <= band
+        guard = "passed" if ratio_ok else f"failed (ratio worsened by {_rel_change(rs, rb):.3f} > {band})"
     go = (not k1) and all(d > 0.0 for d in deltas) and ratio_ok
     return {"band": band, "per_seed": per_seed, "S_base": s_base, "S_shaped": s_shaped,
             "S_delta": deltas, "transfer_ratio_base": rb, "transfer_ratio_shaped": rs,
+            "transfer_guard": guard,
             "K1_parity": k1, "K2_no_effect": k2, "GO": go,
             "verdict": "GO" if go else ("KILLED" if (k1 or k2) else "NO-GO")}
 

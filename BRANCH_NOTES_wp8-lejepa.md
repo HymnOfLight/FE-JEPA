@@ -173,6 +173,19 @@ pre-registration stamps it.
   fine-eval labels are bought). The head-width rule is now computed by the
   instrument (`suggested_head_width`). Drafts E1 r5 / E2 r4.
 
+- Stage 1.13 (plan gap review, 5 Sep): the E-series had no configuration
+  files and no cheap way to validate one. `scripts/make_e_series_configs.py`
+  derives `configs/e2_m{512,1024}.json` and `configs/e1_2d_{base,shaped}.json`
+  from the stamped Phase-2 / Phase-1 configurations (committed); `run-config
+  --dry-run` validates a configuration through the guards, model kind, plan
+  and label need and stops before any data work (the prereg guard becomes a
+  reported item under dry-run only); unfilled `loss_spec` placeholders are
+  refused. `count_steps` respects `ar_only`. The adjudicator reports the
+  transfer guard explicitly ("not evaluated" in 2D, where the Phase-1
+  configuration has no transfer set -- E1 draft r6 adjudicates the 2D stage
+  on K1/K2/S). B5 reading added: leave-one-out ridge R^2 from pooled latents
+  to the geometry descriptor (`probe_r2_geometry`).
+
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
 **E1 -- latent shaping and cross-geometry separation.** Question: does adding
