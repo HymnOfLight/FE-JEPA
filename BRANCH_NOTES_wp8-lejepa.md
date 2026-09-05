@@ -236,6 +236,12 @@ pre-registration stamps it.
   changes with the nested `loss_spec` values (lambda, head width) so E1's
   stamp covers them; `--dry-run` reports `verified` against a stamped file.
 
+- Stage 1.20 (5 Sep): the instruments build the model on the GPU when
+  available (`--device auto`; 256 in-band 3D encodes on the box CPU would
+  take ~25 min); load-case equivariance of the bottleneck tested; PREREG_E1
+  draft r9 pre-declares the pilot outcome when no lambda is admissible
+  (NO-GO-AT-PILOT, pilot JSON as the record).
+
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
 **E1 -- latent shaping and cross-geometry separation.** Question: does adding

@@ -26,6 +26,7 @@ def main() -> None:
                     help="which instances to measure on; 'val' = the run's held-out "
                          "validation split from the config's `split` block (the "
                          "pre-registered choice)")
+    ap.add_argument("--device", default="auto", help="cuda if available (default), or cpu")
     ap.add_argument("--smoke", action="store_true")
     ap.add_argument("--out", default="runs/wp8/intrinsic_dim.json")
     a = ap.parse_args()
@@ -47,7 +48,7 @@ def main() -> None:
         cfg = json.loads(Path(a.config).read_text())
         mcfg = cfg["model"]
         files = instance_files(a.data, a.n_instances, split=cfg.get("split"), subset=a.subset)
-        model = build_model_from_config(mcfg, a.state)
+        model = build_model_from_config(mcfg, a.state, device=a.device)
     res = measure_intrinsic_dimension(model, [load_instance(f) for f in files], a.max_rows)
     res.update({"subset": a.subset, "state": a.state, "smoke": a.smoke})
     write_json(a.out, res)

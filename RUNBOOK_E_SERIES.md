@@ -11,7 +11,7 @@ git checkout wp8-lejepa && git pull && python -m pytest -q        # 219 passed
 
 ## 1. Stage-0 readings on the Phase-2 AR states (~10 min)
 ```bash
-python scripts/intrinsic_dimension.py --config configs/phase2_v1.json \
+python scripts/intrinsic_dimension.py --config configs/phase2_v1.json --device auto \
     --state runs/phase2/e8_states/ar_p1024_s0.pt --data runs/data3d_phase2 \
     --n-instances 64 --out runs/wp8/intrinsic_dim_s0.json
 # repeat for s1, s2; read suggested_head_width (0 = full width) -> PREREG_E1

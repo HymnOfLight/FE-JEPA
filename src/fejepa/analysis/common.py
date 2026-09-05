@@ -7,8 +7,16 @@ import json
 from pathlib import Path
 
 
+def resolve_device(device: str = "auto") -> str:
+    import torch
+
+    if device == "auto":
+        return "cuda" if torch.cuda.is_available() else "cpu"
+    return device
+
+
 def build_model_from_config(model_cfg: dict, state_path: str | None = None, seed: int = 0,
-                            mode: str = "eval"):
+                            mode: str = "eval", device: str = "cpu"):
     """Build the configured model kind (`model_cfg["kind"]`, default fejepa)
     and, if given, strictly load a saved state.
 
@@ -25,7 +33,7 @@ def build_model_from_config(model_cfg: dict, state_path: str | None = None, seed
         sd = torch.load(str(state_path), map_location="cpu", weights_only=True)
         model.load_state_dict(sd, strict=True)
     model.train(mode == "train")
-    return model
+    return model.to(resolve_device(device))
 
 
 def instance_files(data_dir: str, n: int | None = None, split: dict | None = None,
@@ -49,10 +57,12 @@ def instance_files(data_dir: str, n: int | None = None, split: dict | None = Non
     return files if n is None else files[:n]
 
 
-def encode_instance(model, arch, device: str = "cpu"):
-    """Kind-aware encoding: returns (tokens as (rows, d), pack)."""
+def encode_instance(model, arch, device: str | None = None):
+    """Kind-aware encoding on the model's device: returns (tokens (rows, d), pack)."""
     import torch
 
+    if device is None:
+        device = str(next(model.parameters()).device)
     pack = model.prepare_instance(arch, device)
     with torch.no_grad():
         if getattr(model, "needs_pack", False):

@@ -148,3 +148,19 @@ def test_dry_run_reports_verified_when_stamped(tmp_path):
     s = run_config(str(p), dry_run=True)
     assert s["prereg_status"] == "verified" and s["prereg_verified"]
     assert not (tmp_path / "nope").exists()
+
+
+def test_bottleneck_is_load_case_equivariant(tiny_corpus):
+    """Load cases are a batch dimension: permuting them permutes the outputs."""
+    sp_ = tiny_corpus(seed=67)
+    arch = load_instance(sp_.pool_files[0])
+    L = arch.F.shape[0]
+    perm = np.array([L - 1] + list(range(L - 1)))
+    twin = dataclasses.replace(arch, F=arch.F[perm], U_star=None if arch.U_star is None else arch.U_star[perm])
+    m = _build_model({"kind": "bottleneck", "model": {"dim": 16, "depth": 1, "heads": 2, "n_tokens": 6,
+                      "features": {"load_summary": True, "geometry": True}}, "seed": 0})
+    m.eval()
+    with torch.no_grad():
+        u = m.forward_instance(m.prepare_instance(arch, "cpu"))
+        ut = m.forward_instance(m.prepare_instance(twin, "cpu"))
+    assert torch.allclose(ut, u[perm], rtol=1e-5, atol=1e-7)
