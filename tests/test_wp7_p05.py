@@ -121,7 +121,7 @@ def test_fejepa_scale_equivariance(dim3):
 
 
 def test_pack_carries_battery_fscale():
-    torch = pytest.importorskip("torch")
+    pytest.importorskip("torch")
     a = synthetic_instance(np.random.default_rng(3), labelled=False)
     pack = _fejepa(2, True).prepare_instance(a, "cpu")
     assert float(pack["fscale"]) == pytest.approx(battery_fscale(a.F), rel=1e-6)

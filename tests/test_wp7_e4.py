@@ -51,7 +51,7 @@ def test_tet3d_multires_pairs(tmp_path):
 
 
 def test_gmsh3d_multires_pairs(tmp_path):
-    gmsh = pytest.importorskip("gmsh")
+    pytest.importorskip("gmsh")
     from fejepa.fe.gmsh3d import generate_gmsh3d_multires
 
     out = generate_gmsh3d_multires(tmp_path / "g", n=2, seed=9, coarsen=2.0,

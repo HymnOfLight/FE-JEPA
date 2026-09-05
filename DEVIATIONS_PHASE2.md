@@ -137,8 +137,12 @@ bench gains `--corpus DIR --resident-prefix N`: one full balanced-anchor
 epoch on the first N labelled instances of the real corpus, reporting the
 peak -- the restart is gated on `resident_balanced_epoch_b1024` leaving
 headroom on the 32 GiB card. (C) Restart via `--reuse-states` (attempt 3):
-AR reused, the eight cached units served, unit 9 retrained from scratch (no
-epoch checkpoint existed).
+AR reused, the eight cached units served, and unit 9 RESUMED from its
+epoch-1 checkpoint (`[ckpt] resumed E8 labels_anchor b1024 s0 at epoch
+1/200`, 3 Sep) -- attempt 2 had completed one epoch of that unit before the
+OOM, which also dates the failure to the cache-filled second epoch. The
+first live use of the R9 resume path; the report's
+`d9_restart.units_resumed_from_epoch` records it.
 
 **Ledger accounting.** Attempt 2 bought no labels (all existed); attempt 3
 buys only the fine stages (1,280) -- the cross-attempt total remains 6,400.

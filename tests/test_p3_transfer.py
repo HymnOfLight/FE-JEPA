@@ -135,8 +135,6 @@ def test_e8_mgn_budget_subset(tmp_path):
 def test_bf16_precision_smoke(tmp_path):
     """r10 L5 wiring: both trainers run under bf16 autocast on CPU; the
     anchor self-protects to fp32; metrics finite."""
-    import torch
-
     from fejepa.data.archive import load_instance
     from fejepa.train.losses import AR_CONFIG
     from fejepa.train.pretrain import PretrainConfig, pretrain
