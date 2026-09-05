@@ -224,6 +224,11 @@ pre-registration stamps it.
   permutation test passes (outputs equal up to float summation order). No
   stamped or measured artefact depended on the previous order.
 
+- Stage 1.18 (5 Sep): edge-case and process tests -- SIGReg and the
+  BatchNorm head are finite (value and gradient) on a collapsed constant
+  embedding; bottleneck units survive spawn pickling under workers=2.
+  `RUNBOOK_E_SERIES.md` lists every E-series command in execution order.
+
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
 **E1 -- latent shaping and cross-geometry separation.** Question: does adding

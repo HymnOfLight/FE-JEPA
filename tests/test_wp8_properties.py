@@ -51,3 +51,36 @@ def test_bottleneck_output_is_independent_of_node_numbering(tiny_corpus):
         u = m.forward_instance(m.prepare_instance(arch, "cpu")).reshape(-1, arch.nodes.shape[0], sd)
         up = m.forward_instance(m.prepare_instance(parch, "cpu")).reshape(-1, arch.nodes.shape[0], sd)
     assert torch.allclose(up, u[:, perm, :], atol=1e-5, rtol=1e-4)
+
+
+def test_sigreg_and_head_are_finite_on_collapsed_embeddings():
+    """A collapsed (constant) embedding is exactly what the regulariser must
+    push away from: value and gradient must be finite there, also through the
+    BatchNorm head (zero batch variance -> eps path)."""
+    from fejepa.train.losses import build_sigreg_head
+
+    z = torch.full((500, 16), 0.7, requires_grad=True)
+    loss = sigreg(z, n_proj=64, generator=torch.Generator().manual_seed(0))
+    loss.backward()
+    assert torch.isfinite(loss) and torch.isfinite(z.grad).all()
+    head = build_sigreg_head(16, 8).train()
+    z2 = torch.full((500, 16), 0.7, requires_grad=True)
+    loss2 = sigreg(head(z2), n_proj=64, generator=torch.Generator().manual_seed(0))
+    loss2.backward()
+    assert torch.isfinite(loss2) and torch.isfinite(z2.grad).all()
+
+
+def test_bottleneck_units_run_under_spawned_workers(tmp_path, tiny_corpus):
+    """E-series runs use workers=1, but the unit path must survive spawn
+    pickling of payloads for the new kind (models are built in the worker)."""
+    from fejepa.experiments.parallel import map_units, pretrain_unit
+
+    sp_ = tiny_corpus(seed=59)
+    files = [str(f) for f in sp_.pool_files[:2]]
+    payloads = [{"kind": "bottleneck", "seed": s, "tf32": False, "files": files,
+                 "model": {"dim": 16, "depth": 1, "heads": 2, "n_tokens": 6,
+                           "features": {"load_summary": True, "geometry": True}},
+                 "pre": {"epochs": 1, "lr": 1e-3, "device": "cpu", "log_every": -1},
+                 "state_path": str(tmp_path / f"w{s}.pt"), "quiet": True} for s in (0, 1)]
+    out = map_units(pretrain_unit, payloads, 2, "spawn smoke")
+    assert len(out) == 2 and all((tmp_path / f"w{s}.pt").exists() for s in (0, 1))
