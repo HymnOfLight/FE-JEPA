@@ -186,6 +186,18 @@ pre-registration stamps it.
   on K1/K2/S). B5 reading added: leave-one-out ridge R^2 from pooled latents
   to the geometry descriptor (`probe_r2_geometry`).
 
+- Stage 1.14 (5 Sep): main-line R13 merged (D10 record corrected; test
+  hygiene -- the branch's bench and anchor files kept their already-merged
+  versions). The GENERATED configurations were executed end to end at
+  scaled size for the first time (only paths and sizes overridden):
+  E2 (bottleneck run + Phase-2-shaped baseline + bench phase + adjudicator)
+  and E1 (Phase-1 shape, both arms + separation + adjudicator with the
+  transfer guard reported "not evaluated"). Finding: the E1 configuration
+  inherits `labelled_policy: asis`, so the run buys no labels and requires
+  the val split to be pre-labelled (`fejepa label ...`, as on the box since
+  Phase 1); the ledger reads 0 by construction. PREREG_E1 draft r7 records
+  the precondition.
+
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
 **E1 -- latent shaping and cross-geometry separation.** Question: does adding
