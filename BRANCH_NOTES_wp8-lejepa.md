@@ -214,6 +214,16 @@ pre-registration stamps it.
   comes from the box (Phase-2 verdict, intrinsic-dimension reading, E2 bench
   phases).
 
+- Stage 1.17 (5 Sep, property tests): SIGReg is rotation-invariant in
+  expectation (isotropic sketch; test). The bottleneck was NOT independent
+  of the mesh's node numbering: FPS tie-breaking and seed order followed
+  node indices, so equidistant nodes could land in different tokens under a
+  renumbering (a permutation test on the shared feature battery first proved
+  the battery itself equivariant to 1e-16). FPS now breaks ties by
+  coordinates and returns seeds in canonical lexicographic order; the
+  permutation test passes (outputs equal up to float summation order). No
+  stamped or measured artefact depended on the previous order.
+
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
 **E1 -- latent shaping and cross-geometry separation.** Question: does adding

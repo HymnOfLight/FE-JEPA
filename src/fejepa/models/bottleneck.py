@@ -42,24 +42,39 @@ class BottleneckConfig:
         return cls(features=spec, **keep)
 
 
+def _canonical_pick(cands: np.ndarray, x: np.ndarray) -> int:
+    """Among tied candidates choose by lexicographic coordinates, never by
+    index -- keeps the result independent of the mesh's node numbering."""
+    if cands.size == 1:
+        return int(cands[0])
+    order = np.lexsort(x[cands].T[::-1])          # sort by x, then y, then z
+    return int(cands[order[0]])
+
+
 def farthest_point_sampling(x: np.ndarray, m: int) -> np.ndarray:
-    """Deterministic FPS on coordinates x (N, sd): first seed = node nearest the
-    centroid, then iteratively the node farthest from the chosen set."""
+    """Deterministic, numbering-independent FPS on coordinates x (N, sd):
+    first seed = node nearest the centroid, then iteratively the node farthest
+    from the chosen set; ties broken by coordinates; the seed set is returned
+    in canonical (lexicographic coordinate) order so token indices do not
+    depend on node numbering either."""
     n = x.shape[0]
     m = min(m, n)
-    start = int(np.argmin(((x - x.mean(0)) ** 2).sum(1)))
+    d0 = ((x - x.mean(0)) ** 2).sum(1)
+    start = _canonical_pick(np.flatnonzero(d0 == d0.min()), x)
     seeds = np.empty(m, dtype=np.int64)
     seeds[0] = start
     dmin = ((x - x[start]) ** 2).sum(1)
     for i in range(1, m):
-        nxt = int(np.argmax(dmin))
+        nxt = _canonical_pick(np.flatnonzero(dmin == dmin.max()), x)
         seeds[i] = nxt
         dmin = np.minimum(dmin, ((x - x[nxt]) ** 2).sum(1))
-    return seeds
+    return seeds[np.lexsort(x[seeds].T[::-1])]
 
 
 def nearest_seed(x: np.ndarray, seeds_xyz: np.ndarray, chunk: int = 8192) -> np.ndarray:
-    """Index of the nearest seed for every node (Voronoi assignment), chunked."""
+    """Index of the nearest seed for every node (Voronoi assignment), chunked.
+    Seeds arrive in canonical coordinate order (see farthest_point_sampling),
+    so argmin's lowest-index tie-break is itself numbering-independent."""
     out = np.empty(x.shape[0], dtype=np.int64)
     s2 = (seeds_xyz ** 2).sum(1)
     for a in range(0, x.shape[0], chunk):
