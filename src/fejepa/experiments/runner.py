@@ -443,6 +443,13 @@ def run_config(path, device_override: str | None = None,
 
         results["e7"] = run_e7(factory, pool_archs, val_archs, {**exps["e7"], **dev})
 
+    from ..data.archive import count_labelled
+
+    labels_present = {"inband_val": count_labelled(split.val_files),
+                      "inband_val_n": len(split.val_files),
+                      "inband_prefix": count_labelled(split.pool_files[:need]),
+                      "inband_prefix_n": need,
+                      "n_loads": int(val_archs[0].n_loads) if val_archs else None}
     if (exps.get("p3_transfer") or {}).get("enabled"):
         from .p3_transfer import run_p3
         stage("P3 (resolution transfer)")
@@ -472,6 +479,10 @@ def run_config(path, device_override: str | None = None,
                      workers=label_workers)
         _label_files(fine_prefix_files, ledger, "labelling-fine-prefix",
                      workers=label_workers)
+        labels_present.update({"fine_val": count_labelled(fine_eval_files),
+                               "fine_val_n": len(fine_eval_files),
+                               "fine_prefix": count_labelled(fine_prefix_files),
+                               "fine_prefix_n": len(fine_prefix_files)})
         # D12: the fine evaluation set is iterated per evaluation, not held
         # (256 x ~76 MiB would sit in host RAM for the whole of P3)
         from ..data.archive import LazyArchives
@@ -524,6 +535,10 @@ def run_config(path, device_override: str | None = None,
                                              _pool_need(exps), n_loads),
         "runtime_policy": policy,
         "d9_reuse_states": bool(reuse_states),
+        # D11 accounting: labels persist across attempts while a ledger only
+        # covers its own attempt -- record what is PRESENT so the cross-attempt
+        # total (instances x loads) is auditable from the report alone.
+        "labels_present": labels_present,
         "planned_steps": count_steps(cfg),
         "results": results,
         gate_key: gate,

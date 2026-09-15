@@ -164,3 +164,13 @@ class LazyArchives:
         if isinstance(i, slice):
             return LazyArchives(self.files[i])
         return load_instance(self.files[i])
+
+
+def has_labels(path) -> bool:
+    """Cheap presence check: reads only the npz member list, not the arrays."""
+    with np.load(Path(path), allow_pickle=False) as d:
+        return "U_star" in d.files
+
+
+def count_labelled(files) -> int:
+    return sum(1 for f in files if has_labels(f))

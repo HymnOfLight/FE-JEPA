@@ -207,6 +207,15 @@ regression equal).
 P3 (fine labelling, zero-shot, few-shot 53-81 h, naives), WP6 and the gate:
 of order 3-4 days.
 
+**Accounting across attempts (R16).** Attempts 3, 4 and 5 died before their
+ledger summaries were printed, so the fine solves they bought are recorded
+nowhere but in the archives themselves. The report now carries
+`labels_present` -- the number of labelled instances in each set the run
+relies on (in-band val and prefix, fine val and prefix) with the set sizes
+and the load count -- so the cross-attempt total (320 fine instances x 4
+loads = 1,280; 1,280 in-band x 4 = 5,120 from attempt 1) is auditable from
+the report alone, while each attempt's own ledger covers only its tail.
+
 ## D12 -- host-RAM residency of the fine evaluation set (pre-emptive, 15 Sep 2026)
 
 **Facts.** Walking the remaining timeline of attempt 6 after D11: once the

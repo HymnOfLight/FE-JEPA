@@ -126,6 +126,11 @@ def test_restart_mode_end_to_end(tmp_path):
     assert len(d9["sup_units_from_cache"]) == 2 * 2 + 1   # labels/anchor x2 budgets + mgn@4
     assert r2["d9_reuse_states"] is True
     assert "gate_g2" in r2
+    # D11 accounting: the second attempt buys nothing (labels persist), and the
+    # report states what is PRESENT so the cross-attempt total is auditable
+    lp = r2["labels_present"]
+    assert lp["inband_val"] == lp["inband_val_n"] and lp["inband_prefix"] == lp["inband_prefix_n"]
+    assert lp["n_loads"] >= 1 and r2["solve_ledger"]["total"] == 0
 
 
 def test_label_workers_override_and_p3_after_release(tmp_path):
