@@ -262,6 +262,16 @@ pre-registration stamps it.
   verdict reports seed spreads of the energy gap for interpreting a marginal
   K1.
 
+- Stage 1.24 (15 Sep, compatibility finding): the Phase-1 2D AR state
+  `ar_p1024_s0.pt` loads strictly into the Phase-1 configuration but, under
+  the current code, predicts ~300x too small unless `scale_decode = false`:
+  it predates WP7's `scale_decode` (decode multiplies the battery scale back
+  in) and the Phase-1 configuration carries no such key (default true).
+  Evaluated with `scale_decode = false` on four unseen instances it gives
+  1.4-22% relative displacement error with the certificate identity exact
+  to 12 digits. Consequence: E1 retrains its AR baseline under the current
+  code instead of consuming Phase-1 states (draft r11, runbook 2d).
+
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
 **E1 -- latent shaping and cross-geometry separation.** Question: does adding

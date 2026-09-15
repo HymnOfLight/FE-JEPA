@@ -26,10 +26,9 @@ python scripts/e1_lambda_pilot.py --config configs/phase1_rec8_v2.json \
 #     regenerate nothing by hand: edit the two placeholders only, then
 python -m fejepa.cli run-config configs/e1_2d_shaped.json --dry-run   # must print [dry-run] ... verified
 # 2c. stamp PREREG_E1.md (same four steps as Phase 2: stamp, commit, blob sha, tag e1-stamped)
-# 2d. base arm: reuse the Phase-1 AR states if present
-# Phase-1's out was runs/report_rec8_v2.json, so its states live in runs/e8_states/
-mkdir -p runs/e1_2d_base/e8_states && cp runs/e8_states/ar_p1024_s*.pt runs/e1_2d_base/e8_states/
-tmux new -s e1 ; python -m fejepa.cli run-config configs/e1_2d_base.json --reuse-states 2>&1 | tee runs/e1_2d_base/run.log
+# 2d. base arm: RETRAIN under the current code (do NOT reuse the Phase-1 AR states:
+#     they predate scale_decode and are not comparable under today's code -- see PREREG_E1 r11)
+tmux new -s e1 ; python -m fejepa.cli run-config configs/e1_2d_base.json 2>&1 | tee runs/e1_2d_base/run.log
 python -m fejepa.cli run-config configs/e1_2d_shaped.json 2>&1 | tee runs/e1_2d_shaped/run.log
 # 2e. separation readings on the val split (both arms, every seed)
 for arm in base shaped; do for s in 0 1 2; do
