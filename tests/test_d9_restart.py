@@ -162,3 +162,26 @@ def test_label_workers_override_and_p3_after_release(tmp_path):
     cpath.write_text(json.dumps(cfg))
     r = run_config(str(cpath), label_workers_override=2)
     assert "p3_transfer" in r["results"] and r["solve_ledger"]["total"] > 0
+
+
+def test_lazy_archives_evaluate_identically_to_eager_lists(tmp_path):
+    """D12: the lazily loaded evaluation set yields exactly the eager metrics."""
+    from fejepa.data.archive import LazyArchives, load_instance
+    from fejepa.experiments.protocol import load_split
+    from fejepa.experiments.runner import _label_files
+    from fejepa.fe.solve import SolveLedger
+    from fejepa.fe.synthetic import generate_synthetic_dataset
+    from fejepa.metrics import evaluate_model, torch_predictor
+
+    d = generate_synthetic_dataset(tmp_path / "lz", n=6, seed=8)
+    sp = load_split(d, 3, 1)
+    _label_files(sp.val_files, SolveLedger(), "v")
+    m = _build_model({"kind": "fejepa", "model": MODEL, "seed": 0})
+    m.eval()
+    eager = [load_instance(f) for f in sp.val_files]
+    lazy = LazyArchives(sp.val_files)
+    assert len(lazy) == len(eager) and lazy[0].nodes.shape == eager[0].nodes.shape
+    a = evaluate_model(torch_predictor(m, "cpu"), eager)
+    b = evaluate_model(torch_predictor(m, "cpu"), lazy)
+    assert a["disp_rel_l2"] == b["disp_rel_l2"] and a["energy_gap_rel"] == b["energy_gap_rel"]
+    assert len(lazy[1:]) == 2 and isinstance(lazy[1:], LazyArchives)

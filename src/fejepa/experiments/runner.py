@@ -472,7 +472,11 @@ def run_config(path, device_override: str | None = None,
                      workers=label_workers)
         _label_files(fine_prefix_files, ledger, "labelling-fine-prefix",
                      workers=label_workers)
-        fine_eval_archs = [load_instance(f) for f in fine_eval_files]
+        # D12: the fine evaluation set is iterated per evaluation, not held
+        # (256 x ~76 MiB would sit in host RAM for the whole of P3)
+        from ..data.archive import LazyArchives
+
+        fine_eval_archs = LazyArchives(fine_eval_files)
         e8c = exps.get("e8") or {}
         results["p3_transfer"] = run_p3(
             model_cfg, split.pool_files, val_archs, fine_eval_archs,

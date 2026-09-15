@@ -206,3 +206,25 @@ regression equal).
 **Cost.** E8 is entirely cached; the restart recomputes E6 (~1 h) and runs
 P3 (fine labelling, zero-shot, few-shot 53-81 h, naives), WP6 and the gate:
 of order 3-4 days.
+
+## D12 -- host-RAM residency of the fine evaluation set (pre-emptive, 15 Sep 2026)
+
+**Facts.** Walking the remaining timeline of attempt 6 after D11: once the
+fine labelling completes, P3 loaded all 256 fine evaluation archives into
+the main process (`fine_eval_archs` as a list) and every few-shot unit
+loaded the same 256 again in-process as its validation set. A labelled 3D
+archive is ~1.85 KiB per node (measured: 6.1 MiB at 3.6k nodes, 46.5 MiB at
+25k nodes), so a 41k-node fine archive is ~76 MiB and the evaluation set
+~15-19 GiB -- held for the whole of P3, and doubled inside each few-shot
+unit -- on top of the training archives, anchors and CUDA context. No
+attempt reached this point; it is the next cliff of the D11 class.
+
+**Disposition (engineering only; configuration untouched; guard passes).**
+Evaluation sets are iterated once per evaluation (metrics, naive
+predictions, the supervised loop's final validation), so they are now
+`LazyArchives` -- loaded on access, never resident: the runner's fine
+evaluation set, and the validation/evaluation sets inside the supervised
+and pretrain units. Training archives stay resident (<= 64 fine instances,
+~5 GiB). Values are identical to the eager lists (same files, same order;
+test asserts equal metrics). Cost: ~2 min of disk I/O per evaluation pass
+(~20 passes in P3).
