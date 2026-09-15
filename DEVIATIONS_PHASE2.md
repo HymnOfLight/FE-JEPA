@@ -154,3 +154,55 @@ block and evaluations -- of order 14-15 days from restart.
 **Disclosure.** Partial results observed before the abort (eight supervised
 validation values and the AR reuse) influenced nothing: the configuration
 hash is unchanged and the fix is memory-placement only.
+
+## D11 -- attempt 3 main process died at the start of P3 (13 Sep 2026; cause pending)
+
+**Facts.** Attempt 3 (restart mode, head `e672110`) completed all 30 E8
+supervised units (239 h 25 min; every unit cached, AR states reused) and
+E6, then entered P3. The log shows no P3 progress line: sixteen
+`SpawnPoolWorker` tracebacks with `BrokenPipeError` on `put(...)` -- the
+fine-set labelling workers found the result pipe closed -- followed only by
+the resource tracker's shutdown warning. No Python traceback from the main
+process exists in the log, and `tee` stayed alive (it recorded the workers'
+tracebacks), so the main process alone was terminated by a signal while
+waiting for pool results. The most plausible cause is the host OOM killer:
+P3 spawns eight labelling workers (each importing torch and solving a
+41k-node instance) while the main process still held the 256 in-band prefix
+archives, the CUDA context and all E8 results. Confirmation requested from
+the box (`dmesg`, `free -g`, `uptime`); this entry is updated when it
+arrives.
+
+**Attempt 4 (14 Sep, restarted per manual v6, i.e. without the fix) and
+one further restart.** E8 served entirely from cache (30/30 in 0 s), E6
+recomputed, P3 entered; the fine-val labelling advanced to 175/256 (labels
+written atomically persist across attempts) before the main process died in
+the same way; the next restart died again. Three reproductions at varying
+points inside the fine labelling -- a memory-driven death that accumulates
+(eight workers' resident sets grow across solves on top of the main
+process's footprint), not a single-step failure. Dr Song stopped after the
+second consecutive repeat, as the manual instructs.
+
+**Root cause (quantified, 15 Sep).** Labelling uses the direct sparse LU
+(`method="direct"`, splu) -- the label definition of record. On the in-band
+instances (9k-37k dof) a factorisation costs well under 1 GiB, so eight
+parallel workers were harmless (attempt 1 labelled 1,280 in-band instances
+that way). The fine instances have ~124k dof: measured in the sandbox, a 3D
+factorisation grows superlinearly -- 0.2 GiB / 11.5 s at 35k dof, 1.8 GiB /
+81 s at 75k dof -- extrapolating to ~7 GiB and several minutes at 124k dof.
+Eight workers factorising large fine instances concurrently reach tens of
+GiB on top of the main process's footprint; the cgroup OOM killer then
+removes the largest process, the main run. A size-driven peak, not a leak;
+the death point advances across attempts because solved labels persist.
+
+**Disposition (engineering only; configuration untouched; guard passes).**
+(A) `run-config --label-workers N` (CLI, outside the stamped config) so a
+restart can trade labelling speed for host-RAM headroom. (B) The in-band
+prefix archives are released (`del` + `gc.collect()`) before P3, where they
+are no longer used. (C) Labelling workers are bounded with
+`maxtasksperchild=64`. None changes any value: labels are computed by the
+same solver, the training paths are untouched (tag-vs-head bitwise
+regression equal).
+
+**Cost.** E8 is entirely cached; the restart recomputes E6 (~1 h) and runs
+P3 (fine labelling, zero-shot, few-shot 53-81 h, naives), WP6 and the gate:
+of order 3-4 days.

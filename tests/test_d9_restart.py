@@ -126,3 +126,39 @@ def test_restart_mode_end_to_end(tmp_path):
     assert len(d9["sup_units_from_cache"]) == 2 * 2 + 1   # labels/anchor x2 budgets + mgn@4
     assert r2["d9_reuse_states"] is True
     assert "gate_g2" in r2
+
+
+def test_label_workers_override_and_p3_after_release(tmp_path):
+    """D11: the labelling fan-out can be overridden from the CLI layer and the
+    in-band prefix archives are released before P3 without breaking P3."""
+    from fejepa.experiments.runner import run_config
+
+    d = generate_synthetic_dataset(tmp_path / "corpus", n=10, seed=3)
+    df = generate_synthetic_dataset(tmp_path / "fine", n=6, seed=4)
+    cfg = {"data": {"dir": str(d), "n": 10, "seed": 3, "backend": "synthetic",
+                    "labelled_policy": "economy"},
+           "data_transfer": {"dir": str(df), "n": 6, "seed": 4, "backend": "synthetic",
+                             "labelled_policy": "economy",
+                             "split": {"n_eval": 3, "n_fewshot_prefix": 2}},
+           "split": {"n_val": 3, "seed": 1}, "model": MODEL,
+           "sup": {"epochs": 1, "lr": 1e-3}, "pretrain": {"epochs": 1, "lr": 1e-3},
+           "experiments": {
+               "e8": {"enabled": True, "budgets": [2, 4], "pool_sizes": [4], "seeds": 1,
+                      "ar_epochs": 1, "sup_epochs": 1, "include_mgn": False,
+                      "include_ar_ft": False},
+               "p3_transfer": {"enabled": True, "fewshot_budgets": [2], "fewshot_epochs": 1,
+                               "naive_budget": 4},
+               "wp6": {"enabled": True, "n_check": 2, "seed": 0}},
+           "gate_g2": {"sanity_x": 3.0, "naive_set": ["knn_field", "scale_aware_poly"],
+                       "parity_band": 0.10, "egap_adv_min": 0.40, "transfer_win": 1.25,
+                       "decision_budget": 4},
+           "kills": {"KP1_parity_pct": 0.10, "KP2_egap_adv_min": 0.40,
+                     "KP3_anchor_improv_min": 0.25, "KP4_transfer_ratio": 1.5,
+                     "KP6_rho_within_min": 0.3},
+           "device": "cpu", "workers": 1, "tf32": False,
+           "runtime": {"compile": False, "amp": False, "precision": "fp32"},
+           "seeds": [0], "out": str(tmp_path / "out" / "report.json"), "prereg_guard": False}
+    cpath = tmp_path / "cfg.json"
+    cpath.write_text(json.dumps(cfg))
+    r = run_config(str(cpath), label_workers_override=2)
+    assert "p3_transfer" in r["results"] and r["solve_ledger"]["total"] > 0

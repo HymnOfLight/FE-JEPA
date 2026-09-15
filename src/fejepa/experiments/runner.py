@@ -141,7 +141,7 @@ def _label_files(files, ledger: SolveLedger, stage_name: str,
     if workers > 1 and len(files) > 1:
         import multiprocessing as mp
 
-        with mp.get_context("spawn").Pool(processes=workers) as pool:
+        with mp.get_context("spawn").Pool(processes=workers, maxtasksperchild=64) as pool:
             it = pool.imap_unordered(_label_one, files, chunksize=4)
             for i, (fstr, n, dt) in enumerate(it, 1):
                 if n:
@@ -252,7 +252,8 @@ def _pool_need_in_memory(exps: dict) -> int:
 
 def run_config(path, device_override: str | None = None,
                workers_override: int | None = None,
-               reuse_states: bool = False) -> dict:
+               reuse_states: bool = False,
+               label_workers_override: int | None = None) -> dict:
     cfg = json.loads(Path(path).read_text())
     prereg = None
     if cfg.get("prereg_guard"):
@@ -264,7 +265,11 @@ def run_config(path, device_override: str | None = None,
               flush=True)
     device = device_override or cfg.get("device", "auto")
     workers = int(workers_override or cfg.get("workers", 1))
-    label_workers = int(cfg.get("label_workers", min(8, os.cpu_count() or 8)))
+    label_workers = int(label_workers_override or
+                        cfg.get("label_workers", min(8, os.cpu_count() or 8)))
+    # D11: the labelling fan-out is a host-RAM knob (each spawned worker imports
+    # torch and holds a 3D instance plus its CG workspace); a CLI override lets
+    # a restart trade labelling speed for headroom without touching the config.
     if device == "auto":
         try:
             import torch
@@ -441,6 +446,13 @@ def run_config(path, device_override: str | None = None,
     if (exps.get("p3_transfer") or {}).get("enabled"):
         from .p3_transfer import run_p3
         stage("P3 (resolution transfer)")
+        # D11: the in-memory in-band prefix archives are not used from here on
+        # (P3 needs val_archs and the fine set); release them before the
+        # labelling pool spawns so host RAM is not the sum of both.
+        import gc
+
+        del pool_archs
+        gc.collect()
 
         dt = dict(cfg["data_transfer"])
         dt_split = dt.pop("split", {})

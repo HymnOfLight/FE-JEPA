@@ -43,6 +43,9 @@ def main(argv=None) -> int:
                    help="D9 restart mode: consume existing AR states and cached "
                         "unit results from an earlier attempt (recorded in the "
                         "report); the stamped config is untouched")
+    r.add_argument("--label-workers", type=int, default=None,
+                   help="override the labelling fan-out (host-RAM knob; not part "
+                        "of the stamped config)")
     r.add_argument("--workers", type=int, default=None,
                    help="override the config's workers field (concurrent "
                         "training units on one GPU)")
@@ -142,7 +145,8 @@ def main(argv=None) -> int:
         from .experiments.runner import run_config
 
         run_config(a.config, device_override=a.device,
-                   workers_override=a.workers, reuse_states=a.reuse_states)
+                   workers_override=a.workers, reuse_states=a.reuse_states,
+                   label_workers_override=a.label_workers)
 
     elif a.cmd == "bench":
         from .experiments.cost import bench, count_steps
