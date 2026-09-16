@@ -190,3 +190,26 @@ def test_lazy_archives_evaluate_identically_to_eager_lists(tmp_path):
     b = evaluate_model(torch_predictor(m, "cpu"), lazy)
     assert a["disp_rel_l2"] == b["disp_rel_l2"] and a["energy_gap_rel"] == b["energy_gap_rel"]
     assert len(lazy[1:]) == 2 and isinstance(lazy[1:], LazyArchives)
+
+
+def test_fejepa_block_checkpointing_is_bitwise_exact(tmp_path):
+    """D13: per-block activation checkpointing in the FE-JEPA encoder is
+    memory-only -- training with and without it lands on identical parameters."""
+    from fejepa.experiments.protocol import load_split
+    from fejepa.experiments.runner import _label_files
+    from fejepa.fe.solve import SolveLedger
+    from fejepa.fe.synthetic import generate_synthetic_dataset
+    from fejepa.train.supervised import SupervisedConfig, train_supervised
+
+    d = generate_synthetic_dataset(tmp_path / "ck", n=6, seed=13)
+    sp = load_split(d, 2, 1)
+    _label_files(sp.val_files, SolveLedger(), "v"); _label_files(sp.pool_files[:3], SolveLedger(), "p")
+    tr = [load_instance(f) for f in sp.pool_files[:3]]; val = [load_instance(f) for f in sp.val_files]
+    outs = []
+    for flag in (True, False):
+        m = _build_model({"kind": "fejepa", "model": MODEL, "seed": 0})
+        m.encoder.use_checkpoint = flag
+        train_supervised(m, tr, val, SupervisedConfig(epochs=3, lr=1e-3, seed=0, device="cpu",
+                                                      anchor_mode="none", log_every=-1))
+        outs.append([p.detach().clone() for p in m.parameters()])
+    assert all(torch.equal(a, b) for a, b in zip(outs[0], outs[1], strict=True))

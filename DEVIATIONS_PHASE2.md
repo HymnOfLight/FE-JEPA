@@ -237,3 +237,32 @@ and pretrain units. Training archives stay resident (<= 64 fine instances,
 ~5 GiB). Values are identical to the eager lists (same files, same order;
 test asserts equal metrics). Cost: ~2 min of disk I/O per evaluation pass
 (~20 passes in P3).
+
+## D13 -- attempt 6: CUDA OOM at the first fine few-shot training step (16 Sep 2026)
+
+**Facts.** Attempt 6 (restart mode, `--label-workers 1`, head `4856e90`) passed
+everything D11 had blocked: E8 served from cache (30/30), E6 recomputed, the
+fine labelling completed sequentially (val 256/256, prefix 64/64). It then
+died at the first training step of the first P3 few-shot unit with
+`torch.OutOfMemoryError`: 30.43 GiB in use on the 31.36 GiB card (26.70
+allocated by PyTorch, 3.15 reserved but unallocated), 1.06 GiB requested
+inside the encoder MLP at ~4e4 nodes x 4 load cases. The bench's fine phase
+had measured 23.4 GiB as the allocated peak of one training step; the unit
+adds the resident packs of its training instances, the CUDA context and the
+allocator's fragmentation reserve, and the sum exceeds the card. Same class
+as D9 (MGN), one architecture later.
+
+**Disposition (engineering only; configuration untouched; guard passes).**
+Per-block activation checkpointing in the FE-JEPA encoder in training mode,
+mirroring D9's MGN treatment: the backward pass recomputes the identical
+ops on the identical inputs, so values and gradients are unchanged. Tests
+assert bitwise equality of trained parameters with and without it on CPU,
+and the three legacy training paths remain bitwise-equal to the tag with
+checkpointing on by default. Restart additionally sets
+`PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` to reduce fragmentation.
+Gate before restart: the bench's `fine.peak_gib` must fall below 16 GiB
+(from 23.4), leaving headroom for packs, context and reserve.
+
+**Cost.** Recomputation adds roughly 30% to fine-step time: the few-shot
+block grows from ~81 h to ~105 h. E8 remains cached; E6 (~1.3 h) and the
+few-shot units restart from scratch (no unit had completed a step).
