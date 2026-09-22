@@ -27,4 +27,4 @@ Move `runs/phase2/e8_states/ar_p1024_s{0,1,2}.pt`, any `*.ckpt`, and `unit_cache
 ## 6. Reporting
 Both verdicts (Phase-2 G2 as recorded; Phase-2b G2b with the G2 reference) are reported with D14 in full, GO or NO-GO. The supervised-grid readings (including the labels-only energy-gap blow-up at 1,024 and its anchored repair) are reported either way.
 
-CONFIG_SHA256 = <fill before tagging>
+CONFIG_SHA256 = 316f5e6e282db9c11509d8d1d2ed54d229ded9d6367c63b3a13abd7709ba4899
