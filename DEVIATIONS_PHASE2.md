@@ -351,3 +351,10 @@ named after its report (`report_phase2b.json` -> `RESULTS_phase2b.md`) so the
 amendment, which shares `runs/phase2/` with the deciding run, cannot overwrite
 the Phase-2 page; the reference gate is rendered beside G2b. Rendering and
 naming only: no value changes, configuration untouched, guard verifies.
+
+**PREREG_PHASE2B r1 withdrawn before execution (22 Sep).** Stamped at
+`fc2bbaf` (tag `prereg-phase2b`) and withdrawn the same day, with no pilot
+and no run executed under it, because the pre-run audit of the execution
+path had not been completed on the stamped head (R20 landed after the
+stamp). The tag is deleted; the commit remains in history; the file carries
+the withdrawal record. r2 follows the audit.
