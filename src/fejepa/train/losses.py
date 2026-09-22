@@ -85,7 +85,9 @@ def compute_loss(model, pack, anchor, adj, buffer, rng: np.random.Generator,
         if needs_pack:
             u = model.decode(z, pack)                     # masked + scaled already
         else:
-            u = model.decoder(z).reshape(z.shape[0], -1) * pack["free"]
+            # D14: the model's single decode path (free mask AND battery scale)
+            u = (model.decode_battery(z, pack) if hasattr(model, "decode_battery")
+                 else model.decoder(z).reshape(z.shape[0], -1) * pack["free"])
         phys = anchor.energies(u).mean()
         parts["phys"] = phys.detach()        # tensors: no per-step device sync
         total = cfg.lambda_phys * phys

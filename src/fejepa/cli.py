@@ -46,6 +46,9 @@ def main(argv=None) -> int:
     r.add_argument("--dry-run", action="store_true",
                    help="validate the configuration (guards, kind, plan, label need) "
                         "and stop before any data is generated or trained")
+    r.add_argument("--label-workers", type=int, default=None,
+                   help="override the labelling fan-out (host-RAM knob; not part "
+                        "of the stamped config)")
     r.add_argument("--workers", type=int, default=None,
                    help="override the config's workers field (concurrent "
                         "training units on one GPU)")
@@ -146,7 +149,7 @@ def main(argv=None) -> int:
 
         run_config(a.config, device_override=a.device,
                    workers_override=a.workers, reuse_states=a.reuse_states,
-                   dry_run=a.dry_run)
+                   dry_run=a.dry_run, label_workers_override=a.label_workers)
 
     elif a.cmd == "bench":
         from .experiments.cost import bench, count_steps

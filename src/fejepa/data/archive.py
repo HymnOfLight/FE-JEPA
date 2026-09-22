@@ -138,3 +138,39 @@ def mark_labelled(data_dir: Path, filenames: set[str]) -> None:
 
 def manifest_sha256(data_dir: Path) -> str:
     return hashlib.sha256((Path(data_dir) / MANIFEST_NAME).read_bytes()).hexdigest()
+
+
+class LazyArchives:
+    """A sequence of instances loaded on access and never held resident.
+
+    D12: evaluation sets are iterated once per evaluation (metrics, naive
+    predictions, the supervised loop's final validation), so holding all of
+    them in memory -- ~76 MiB per 41k-node fine archive, ~19 GiB for the 256
+    fine evaluation instances, and a second copy inside every few-shot unit --
+    is host-RAM residency for nothing. Values are identical to an eager list
+    (same files, same order); only residency changes."""
+
+    def __init__(self, files):
+        self.files = [Path(f) for f in files]
+
+    def __len__(self) -> int:
+        return len(self.files)
+
+    def __iter__(self):
+        for f in self.files:
+            yield load_instance(f)
+
+    def __getitem__(self, i):
+        if isinstance(i, slice):
+            return LazyArchives(self.files[i])
+        return load_instance(self.files[i])
+
+
+def has_labels(path) -> bool:
+    """Cheap presence check: reads only the npz member list, not the arrays."""
+    with np.load(Path(path), allow_pickle=False) as d:
+        return "U_star" in d.files
+
+
+def count_labelled(files) -> int:
+    return sum(1 for f in files if has_labels(f))

@@ -69,3 +69,41 @@ def test_disagreement_with_runner_block_is_flagged():
     res = audit(rep, ARGS)
     assert not res["all_ok"]
     assert any("KP1" in c["check"] and not c["ok"] for c in res["checks"])
+
+
+def test_audit_adjudicates_a_phase2b_shaped_report(tmp_path):
+    """PREREG_PHASE2B: with the sanity floor raised, the audit re-derives (a)
+    at budgets >= the floor, demands the reference gate, and re-derives it too."""
+    import json
+
+    from fejepa.analysis.audit import AuditExpectations, audit
+    from fejepa.experiments.runner import run_config
+    from fejepa.fe.synthetic import generate_synthetic_dataset
+
+    MODEL = {"dim": 16, "depth": 1, "heads": 2, "mgn_dim": 16, "mgn_depth": 2,
+             "features": {"load_summary": True, "geometry": True}}
+    d = generate_synthetic_dataset(tmp_path / "c", n=12, seed=3)
+    df = generate_synthetic_dataset(tmp_path / "f", n=8, seed=4)
+    cfg = {"data": {"dir": str(d), "n": 12, "seed": 3, "backend": "synthetic", "labelled_policy": "economy"},
+           "data_transfer": {"dir": str(df), "n": 8, "seed": 4, "backend": "synthetic", "labelled_policy": "economy",
+                             "split": {"n_eval": 3, "n_fewshot_prefix": 3}},
+           "split": {"n_val": 3, "seed": 1}, "model": MODEL, "sup": {"epochs": 1, "lr": 1e-3},
+           "pretrain": {"epochs": 1, "lr": 1e-3},
+           "experiments": {"e8": {"enabled": True, "budgets": [2, 4], "pool_sizes": [4], "seeds": 1, "ar_epochs": 1,
+                                  "sup_epochs": 1, "include_mgn": True, "include_ar_ft": False, "mgn_budgets": [4]},
+                           "p3_transfer": {"enabled": True, "fewshot_budgets": [2], "fewshot_epochs": 1, "naive_budget": 4},
+                           "wp6": {"enabled": True, "n_check": 2, "seed": 0}},
+           "gate_g2": {"sanity_x": 3.0, "naive_set": ["knn_field", "scale_aware_poly"], "parity_band": 0.10,
+                       "egap_adv_min": 0.40, "transfer_win": 1.25, "decision_budget": 4, "sanity_min_budget": 4},
+           "kills": {"KP1_parity_pct": 0.10, "KP2_egap_adv_min": 0.40, "KP3_anchor_improv_min": 0.25,
+                     "KP4_transfer_ratio": 1.5, "KP6_rho_within_min": 0.3},
+           "device": "cpu", "workers": 1, "tf32": False, "runtime": {"compile": False, "amp": False, "precision": "fp32"},
+           "seeds": [0], "out": str(tmp_path / "run" / "report_phase2b.json"), "prereg_guard": False}
+    p = tmp_path / "cfg.json"; p.write_text(json.dumps(cfg))
+    run_config(str(p))
+    report = json.loads((tmp_path / "run" / "report_phase2b.json").read_text())
+    assert report["gate_g2_reference_all_budgets"] is not None
+    out = audit(report, AuditExpectations(git_prefix=""))
+    names = [c["check"] for c in out["checks"]]
+    assert "reference gate (all budgets) present when the sanity floor is raised" in names
+    assert all(c["ok"] for c in out["checks"] if "re-derived" in c["check"]), [c for c in out["checks"] if not c["ok"]]

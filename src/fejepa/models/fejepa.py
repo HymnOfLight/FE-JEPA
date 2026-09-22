@@ -142,8 +142,23 @@ def build_encoder(in_dim: int, dim: int, depth: int, heads: int):
             if squeeze:
                 x = x.unsqueeze(0)
             x = self.inp(x)
+            # D13 (Phase-2): per-block activation checkpointing in training mode,
+            # mirroring D9's MGN treatment. Memory-only and exact: the backward
+            # pass recomputes the identical ops on the identical inputs, so
+            # values and gradients are unchanged (tests assert bitwise equality
+            # on CPU). At 4e4 nodes x 4 load cases the eight stored blocks
+            # exceeded the 32 GiB card once the fine few-shot units' resident
+            # packs and allocator reserve were added to the 23 GiB step peak.
+            # use_checkpoint=False restores the original path verbatim.
+            use_ckpt = (self.training and torch.is_grad_enabled()
+                        and getattr(self, "use_checkpoint", True))
+            if use_ckpt:
+                from torch.utils.checkpoint import checkpoint
             for blk in self.blocks:
-                x = blk(x)
+                if use_ckpt:
+                    x = checkpoint(blk, x, use_reentrant=False)
+                else:
+                    x = blk(x)
             x = self.norm(x)
             return x.squeeze(0) if squeeze else x
 
@@ -206,15 +221,22 @@ def build_fejepa(cfg: FEJEPAConfig):
             return {"feats": feats, "free": free, "fscale": fscale,
                     "arch": arch}
 
-        def forward_instance(self, pack):
-            """(L, ndof) masked displacement battery, differentiable."""
-            z = self.encoder(pack["feats"])
+        def decode_battery(self, z, pack):
+            """(L, ndof) masked displacement battery from a latent z -- THE single
+            decode path. D14: the AR loss and inference must see the same u;
+            the stamped Phase-2 code applied the battery scale here but not in
+            the AR loss, so label-free models trained the unscaled field and
+            predicted it scaled by fscale (~1e-4 to 1e-2) at inference."""
             u = self.decoder(z)
             L = u.shape[0]
             u = u.reshape(L, -1) * pack["free"]
             if self.cfg.scale_decode:      # WP7 3D-P0.5: exact by linearity
                 u = u * pack["fscale"]
             return u
+
+        def forward_instance(self, pack):
+            """(L, ndof) masked displacement battery, differentiable."""
+            return self.decode_battery(self.encoder(pack["feats"]), pack)
 
         # ---- latent utilities -------------------------------------------------
         def encode(self, feats):

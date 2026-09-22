@@ -164,3 +164,30 @@ def test_bottleneck_is_load_case_equivariant(tiny_corpus):
         u = m.forward_instance(m.prepare_instance(arch, "cpu"))
         ut = m.forward_instance(m.prepare_instance(twin, "cpu"))
     assert torch.allclose(ut, u[perm], rtol=1e-5, atol=1e-7)
+
+
+@pytest.mark.parametrize("kind", ["fejepa", "bottleneck"])
+def test_ar_loss_scores_exactly_the_inference_field_for_every_kind(tiny_corpus, kind):
+    """D14 across architectures: the anchor inside the AR loss must receive
+    bitwise the field forward_instance returns (free mask AND battery scale)."""
+    from fejepa.anchor.energy import AnchorCache
+    from fejepa.train.losses import AR_CONFIG, compute_loss
+
+    sp_ = tiny_corpus(seed=73)
+    arch = load_instance(sp_.pool_files[0])
+    cfg = {"dim": 16, "depth": 1, "heads": 2, "features": {"load_summary": True, "geometry": True}}
+    if kind == "bottleneck":
+        cfg["n_tokens"] = 6
+    m = _build_model({"kind": kind, "model": cfg, "seed": 0})
+    m.train()
+    pack = m.prepare_instance(arch, "cpu")
+    anchor = AnchorCache(device="cpu").get(arch)
+    seen = {}
+    real = anchor.energies
+
+    def spy(u):
+        seen["u"] = u.detach().clone()
+        return real(u)
+    anchor.energies = spy
+    compute_loss(m, pack, anchor, None, None, np.random.default_rng(0), AR_CONFIG)
+    assert torch.equal(seen["u"], m.forward_instance(pack).detach())

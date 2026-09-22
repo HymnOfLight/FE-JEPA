@@ -27,6 +27,7 @@ import multiprocessing as mp
 import os
 from pathlib import Path
 
+from ..data.archive import LazyArchives
 from ..progress import Task
 
 # --------------------------------------------------------------- bootstrap ----
@@ -217,7 +218,7 @@ def supervised_unit(payload: dict) -> dict:
                            weights_only=True)
     model = _maybe_compile(model, payload)
     res = train_supervised(model, _load(payload["train_files"]),
-                           _load(payload["val_files"]),
+                           LazyArchives(payload["val_files"]),     # D12: val is iterated once
                            SupervisedConfig(**sup), pretrained_state=state)
     if payload.get("state_path"):
         import torch
@@ -299,5 +300,5 @@ def pretrain_unit(payload: dict) -> dict:
     if payload.get("eval_val_files"):
         out["val"] = evaluate_model(
             torch_predictor(model, pre.get("device", "cpu")),
-            _load(payload["eval_val_files"]))
+            LazyArchives(payload["eval_val_files"]))       # D12: iterated once
     return out

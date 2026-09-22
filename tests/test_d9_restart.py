@@ -126,3 +126,121 @@ def test_restart_mode_end_to_end(tmp_path):
     assert len(d9["sup_units_from_cache"]) == 2 * 2 + 1   # labels/anchor x2 budgets + mgn@4
     assert r2["d9_reuse_states"] is True
     assert "gate_g2" in r2
+    # D11 accounting: the second attempt buys nothing (labels persist), and the
+    # report states what is PRESENT so the cross-attempt total is auditable
+    lp = r2["labels_present"]
+    assert lp["inband_val"] == lp["inband_val_n"] and lp["inband_prefix"] == lp["inband_prefix_n"]
+    assert lp["n_loads"] >= 1 and r2["solve_ledger"]["total"] == 0
+
+
+def test_label_workers_override_and_p3_after_release(tmp_path):
+    """D11: the labelling fan-out can be overridden from the CLI layer and the
+    in-band prefix archives are released before P3 without breaking P3."""
+    from fejepa.experiments.runner import run_config
+
+    d = generate_synthetic_dataset(tmp_path / "corpus", n=10, seed=3)
+    df = generate_synthetic_dataset(tmp_path / "fine", n=6, seed=4)
+    cfg = {"data": {"dir": str(d), "n": 10, "seed": 3, "backend": "synthetic",
+                    "labelled_policy": "economy"},
+           "data_transfer": {"dir": str(df), "n": 6, "seed": 4, "backend": "synthetic",
+                             "labelled_policy": "economy",
+                             "split": {"n_eval": 3, "n_fewshot_prefix": 2}},
+           "split": {"n_val": 3, "seed": 1}, "model": MODEL,
+           "sup": {"epochs": 1, "lr": 1e-3}, "pretrain": {"epochs": 1, "lr": 1e-3},
+           "experiments": {
+               "e8": {"enabled": True, "budgets": [2, 4], "pool_sizes": [4], "seeds": 1,
+                      "ar_epochs": 1, "sup_epochs": 1, "include_mgn": False,
+                      "include_ar_ft": False},
+               "p3_transfer": {"enabled": True, "fewshot_budgets": [2], "fewshot_epochs": 1,
+                               "naive_budget": 4},
+               "wp6": {"enabled": True, "n_check": 2, "seed": 0}},
+           "gate_g2": {"sanity_x": 3.0, "naive_set": ["knn_field", "scale_aware_poly"],
+                       "parity_band": 0.10, "egap_adv_min": 0.40, "transfer_win": 1.25,
+                       "decision_budget": 4},
+           "kills": {"KP1_parity_pct": 0.10, "KP2_egap_adv_min": 0.40,
+                     "KP3_anchor_improv_min": 0.25, "KP4_transfer_ratio": 1.5,
+                     "KP6_rho_within_min": 0.3},
+           "device": "cpu", "workers": 1, "tf32": False,
+           "runtime": {"compile": False, "amp": False, "precision": "fp32"},
+           "seeds": [0], "out": str(tmp_path / "out" / "report.json"), "prereg_guard": False}
+    cpath = tmp_path / "cfg.json"
+    cpath.write_text(json.dumps(cfg))
+    r = run_config(str(cpath), label_workers_override=2)
+    assert "p3_transfer" in r["results"] and r["solve_ledger"]["total"] > 0
+
+
+def test_lazy_archives_evaluate_identically_to_eager_lists(tmp_path):
+    """D12: the lazily loaded evaluation set yields exactly the eager metrics."""
+    from fejepa.data.archive import LazyArchives, load_instance
+    from fejepa.experiments.protocol import load_split
+    from fejepa.experiments.runner import _label_files
+    from fejepa.fe.solve import SolveLedger
+    from fejepa.fe.synthetic import generate_synthetic_dataset
+    from fejepa.metrics import evaluate_model, torch_predictor
+
+    d = generate_synthetic_dataset(tmp_path / "lz", n=6, seed=8)
+    sp = load_split(d, 3, 1)
+    _label_files(sp.val_files, SolveLedger(), "v")
+    m = _build_model({"kind": "fejepa", "model": MODEL, "seed": 0})
+    m.eval()
+    eager = [load_instance(f) for f in sp.val_files]
+    lazy = LazyArchives(sp.val_files)
+    assert len(lazy) == len(eager) and lazy[0].nodes.shape == eager[0].nodes.shape
+    a = evaluate_model(torch_predictor(m, "cpu"), eager)
+    b = evaluate_model(torch_predictor(m, "cpu"), lazy)
+    assert a["disp_rel_l2"] == b["disp_rel_l2"] and a["energy_gap_rel"] == b["energy_gap_rel"]
+    assert len(lazy[1:]) == 2 and isinstance(lazy[1:], LazyArchives)
+
+
+def test_fejepa_block_checkpointing_is_bitwise_exact(tmp_path):
+    """D13: per-block activation checkpointing in the FE-JEPA encoder is
+    memory-only -- training with and without it lands on identical parameters."""
+    from fejepa.experiments.protocol import load_split
+    from fejepa.experiments.runner import _label_files
+    from fejepa.fe.solve import SolveLedger
+    from fejepa.fe.synthetic import generate_synthetic_dataset
+    from fejepa.train.supervised import SupervisedConfig, train_supervised
+
+    d = generate_synthetic_dataset(tmp_path / "ck", n=6, seed=13)
+    sp = load_split(d, 2, 1)
+    _label_files(sp.val_files, SolveLedger(), "v"); _label_files(sp.pool_files[:3], SolveLedger(), "p")
+    tr = [load_instance(f) for f in sp.pool_files[:3]]; val = [load_instance(f) for f in sp.val_files]
+    outs = []
+    for flag in (True, False):
+        m = _build_model({"kind": "fejepa", "model": MODEL, "seed": 0})
+        m.encoder.use_checkpoint = flag
+        train_supervised(m, tr, val, SupervisedConfig(epochs=3, lr=1e-3, seed=0, device="cpu",
+                                                      anchor_mode="none", log_every=-1))
+        outs.append([p.detach().clone() for p in m.parameters()])
+    assert all(torch.equal(a, b) for a, b in zip(outs[0], outs[1], strict=True))
+
+
+def test_ar_loss_scores_exactly_the_field_inference_returns(tmp_path):
+    """D14: the anchor inside the AR loss must see the same displacement battery
+    that forward_instance returns (free mask AND battery scale). The stamped
+    Phase-2 code applied the scale at inference only, so label-free models
+    predicted u* x fscale at inference (~1e-4 in 3D)."""
+    import numpy as np
+
+    from fejepa.experiments.protocol import load_split
+    from fejepa.fe.synthetic import generate_synthetic_dataset
+    from fejepa.train.losses import AR_CONFIG, compute_loss
+    from fejepa.anchor.energy import AnchorCache
+
+    d = generate_synthetic_dataset(tmp_path / "d14", n=4, seed=5)
+    arch = load_instance(load_split(d, 1, 1).pool_files[0])
+    m = _build_model({"kind": "fejepa", "model": MODEL, "seed": 0})
+    m.train()
+    pack = m.prepare_instance(arch, "cpu")
+    seen = {}
+    anchor = AnchorCache(device="cpu").get(arch)              # the EnergyAnchor the loop passes in
+    real = anchor.energies
+
+    def spy(u):
+        seen["u"] = u.detach().clone()
+        return real(u)
+    anchor.energies = spy
+    compute_loss(m, pack, anchor, None, None, np.random.default_rng(0), AR_CONFIG)
+    assert "u" in seen, "the AR loss did not call the anchor"
+    torch.manual_seed(0)
+    assert torch.equal(seen["u"], m.forward_instance(pack).detach())

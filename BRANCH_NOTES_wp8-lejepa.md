@@ -272,6 +272,18 @@ pre-registration stamps it.
   to 12 digits. Consequence: E1 retrains its AR baseline under the current
   code instead of consuming Phase-1 states (draft r11, runbook 2d).
 
+- Stage 1.25 (22 Sep): main-line R17-R20 merged (per-block checkpointing;
+  D14 single decode path; Phase-2b mechanics: sanity floor, reference gate,
+  ar_only, results-page naming). D14 on the branch: the FE-JEPA branch of the
+  AR loss now decodes through `decode_battery`; the bottleneck already
+  decoded through its own `decode` (mask and scale) and was never affected.
+  A cross-architecture test asserts the anchor sees exactly the inference
+  field for both kinds. The audit honours `sanity_min_budget` and re-derives
+  the reference gate; it still passes on the Phase-2 report. Bitwise: the
+  branch's AR path equals main R20; supervised and MGN paths equal the tag.
+  Consequence for the E-series: E1 and E2 run on the corrected objective;
+  E2's baseline is the Phase-2b AR cells, so E2 waits for Phase-2b.
+
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
 **E1 -- latent shaping and cross-geometry separation.** Question: does adding

@@ -82,15 +82,20 @@ def check_reaggregation(cells: dict, chk) -> None:
     chk("every cell mean equals the mean of its per-seed values", not bad, ", ".join(bad[:8]))
 
 
-def derive_gate(report: dict) -> dict:
-    """Explicit re-derivation of G2 (a)(b)(c) and KP1-6 from cells."""
+def derive_gate(report: dict, sanity_min_budget: int | None = None) -> dict:
+    """Explicit re-derivation of G2 (a)(b)(c) and KP1-6 from cells.
+    PREREG_PHASE2B: budgets below `sanity_min_budget` (default: the report's
+    own `gate_g2.sanity_min_budget`, 0 = every budget) are exempt from (a)."""
     g, k = report["config"]["gate_g2"], report["config"]["kills"]
     cells = report["results"]["e8"]["metrics"]["cells"]
     buds = sorted((cells.get("labels") or {}).keys(), key=int)
+    floor = int(g.get("sanity_min_budget", 0) if sanity_min_budget is None else sanity_min_budget)
     d = {}
     # (a) sanity
     a_ok = True
     for b in buds:
+        if int(b) < floor:
+            continue
         anc, zero = _cell(cells, "labels_anchor", b), _cell(cells, "zero", b)
         if not anc or not zero:
             a_ok = False; continue
@@ -158,6 +163,16 @@ def audit(report: dict, exp: AuditExpectations) -> dict:
     check_accounting(report, exp, chk)
     check_reaggregation(report["results"]["e8"]["metrics"]["cells"], chk)
     derived = derive_gate(report)
+    ref = report.get("gate_g2_reference_all_budgets")
+    if int(report["config"]["gate_g2"].get("sanity_min_budget", 0)) > 0:
+        chk("reference gate (all budgets) present when the sanity floor is raised", ref is not None,
+            "PREREG_PHASE2B requires both readings")
+        if ref is not None:
+            dref = derive_gate(report, sanity_min_budget=0)
+            chk("reference (a) over all budgets re-derived == runner", dref["a"] == bool(ref["conditions"]["a"]),
+                f"derived {dref['a']} vs runner {ref['conditions']['a']}")
+            chk("reference verdict re-derived == runner", dref["passed"] == bool(ref["passed"]),
+                f"derived {dref['passed']} vs runner {ref['passed']}")
     runner = report["gate_g2"]
     for key in ("a", "b", "c"):
         chk(f"condition ({key}) re-derived == runner", derived[key] == bool(runner["conditions"][key]),

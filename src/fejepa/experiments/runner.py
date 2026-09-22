@@ -141,7 +141,7 @@ def _label_files(files, ledger: SolveLedger, stage_name: str,
     if workers > 1 and len(files) > 1:
         import multiprocessing as mp
 
-        with mp.get_context("spawn").Pool(processes=workers) as pool:
+        with mp.get_context("spawn").Pool(processes=workers, maxtasksperchild=64) as pool:
             it = pool.imap_unordered(_label_one, files, chunksize=4)
             for i, (fstr, n, dt) in enumerate(it, 1):
                 if n:
@@ -253,7 +253,8 @@ def _pool_need_in_memory(exps: dict) -> int:
 
 def run_config(path, device_override: str | None = None,
                workers_override: int | None = None,
-               reuse_states: bool = False, dry_run: bool = False) -> dict:
+               reuse_states: bool = False, dry_run: bool = False,
+               label_workers_override: int | None = None) -> dict:
     cfg = json.loads(Path(path).read_text())
     # wp8: e6 / wp6 / e1 probe the FE-JEPA architecture through its own
     # interface; under another model.kind they must be disabled explicitly --
@@ -289,7 +290,11 @@ def run_config(path, device_override: str | None = None,
             print(f"[dry-run] prereg guard {prereg_status}", flush=True)
     device = device_override or cfg.get("device", "auto")
     workers = int(workers_override or cfg.get("workers", 1))
-    label_workers = int(cfg.get("label_workers", min(8, os.cpu_count() or 8)))
+    label_workers = int(label_workers_override or
+                        cfg.get("label_workers", min(8, os.cpu_count() or 8)))
+    # D11: the labelling fan-out is a host-RAM knob (each spawned worker imports
+    # torch and holds a 3D instance plus its CG workspace); a CLI override lets
+    # a restart trade labelling speed for headroom without touching the config.
     if device == "auto":
         try:
             import torch
@@ -481,11 +486,25 @@ def run_config(path, device_override: str | None = None,
 
         results["e7"] = run_e7(factory, pool_archs, val_archs, {**exps["e7"], **dev})
 
+    from ..data.archive import count_labelled
+
+    labels_present = {"inband_val": count_labelled(split.val_files),
+                      "inband_val_n": len(split.val_files),
+                      "inband_prefix": count_labelled(split.pool_files[:need]),
+                      "inband_prefix_n": need,
+                      "n_loads": int(val_archs[0].n_loads) if val_archs else None}
     if (exps.get("p3_transfer") or {}).get("enabled"):
         from .p3_transfer import run_p3
 
         p3_cfg = exps["p3_transfer"]
         stage("P3 (resolution transfer)")
+        # D11: the in-memory in-band prefix archives are not used from here on
+        # (P3 needs val_archs and the fine set); release them before the
+        # labelling pool spawns so host RAM is not the sum of both.
+        import gc
+
+        del pool_archs
+        gc.collect()
 
         dt = dict(cfg["data_transfer"])
         dt_split = dt.pop("split", {})
@@ -507,7 +526,15 @@ def run_config(path, device_override: str | None = None,
             fine_prefix_files = []          # wp8: zero-shot only -- no prefix labels
         _label_files(fine_prefix_files, ledger, "labelling-fine-prefix",
                      workers=label_workers)
-        fine_eval_archs = [load_instance(f) for f in fine_eval_files]
+        labels_present.update({"fine_val": count_labelled(fine_eval_files),
+                               "fine_val_n": len(fine_eval_files),
+                               "fine_prefix": count_labelled(fine_prefix_files),
+                               "fine_prefix_n": len(fine_prefix_files)})
+        # D12: the fine evaluation set is iterated per evaluation, not held
+        # (256 x ~76 MiB would sit in host RAM for the whole of P3)
+        from ..data.archive import LazyArchives
+
+        fine_eval_archs = LazyArchives(fine_eval_files)
         e8c = exps.get("e8") or {}
         results["p3_transfer"] = run_p3(
             model_cfg, split.pool_files, val_archs, fine_eval_archs,
@@ -527,6 +554,7 @@ def run_config(path, device_override: str | None = None,
         stage("WP6 theory falsification pass (GPU-free)")
         results["wp6"] = run_theory_checks(val_archs, exps["wp6"])
 
+    gate_reference = None
     if cfg.get("gate_g2"):
         from .gate_g2 import gate_g2
 
@@ -536,6 +564,17 @@ def run_config(path, device_override: str | None = None,
                        results.get("wp6"), gate_cfg=cfg.get("gate_g2"),
                        kill_cfg=cfg.get("kills"))
         gate_key = "gate_g2"
+        # PREREG_PHASE2B: when the sanity floor is raised, the stamped Phase-2
+        # form (every budget assessed) is computed as well and reported beside
+        # the deciding gate, so both readings are public.
+        if int((cfg.get("gate_g2") or {}).get("sanity_min_budget", 0)) > 0:
+            ref_cfg = dict(cfg.get("gate_g2") or {}); ref_cfg["sanity_min_budget"] = 0
+            gate_reference = gate_g2(results.get("e8"), results.get("e1"),
+                                     results.get("p3_transfer"), results.get("e6"),
+                                     results.get("wp6"), gate_cfg=ref_cfg,
+                                     kill_cfg=cfg.get("kills"))
+        else:
+            gate_reference = None
     else:
         stage("gate G1'")
         gate = gate_mod.g1_prime(results.get("e5"), results.get("e8"),
@@ -555,6 +594,11 @@ def run_config(path, device_override: str | None = None,
                                              _pool_need(exps), n_loads),
         "runtime_policy": policy,
         "d9_reuse_states": bool(reuse_states),
+        # D11 accounting: labels persist across attempts while a ledger only
+        # covers its own attempt -- record what is PRESENT so the cross-attempt
+        # total (instances x loads) is auditable from the report alone.
+        "labels_present": labels_present,
+        "gate_g2_reference_all_budgets": gate_reference,
         "planned_steps": count_steps(cfg),
         "results": results,
         gate_key: gate,
@@ -570,7 +614,13 @@ def run_config(path, device_override: str | None = None,
     # The report JSON above is already on disk; a rendering bug must never
     # cost a finished (possibly multi-day) run. Fail loud, not fatal.
     try:
-        md = write_results(payload, Path(out).parent / "RESULTS.md")
+        # results page named after the report so runs sharing a directory never
+        # overwrite each other's page: report.json -> RESULTS.md,
+        # report_phase2b.json -> RESULTS_phase2b.md (Phase-2b amendment)
+        stem = Path(out).stem
+        md_name = "RESULTS.md" if stem == "report" else f"RESULTS{stem[len('report'):]}.md" \
+            if stem.startswith("report") else f"RESULTS_{stem}.md"
+        md = write_results(payload, Path(out).parent / md_name)
         print(f"[fejepa] RESULTS.md -> {md}")
     except Exception as e:                                    # noqa: BLE001
         print(f"[fejepa] WARNING: RESULTS.md rendering failed "
