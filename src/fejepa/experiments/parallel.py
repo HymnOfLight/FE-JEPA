@@ -139,6 +139,12 @@ def _state_dict(model):
     return getattr(model, "_orig_mod", model).state_dict()
 
 
+def _file_sha256(path) -> str:
+    import hashlib
+
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
 def _cache_path(payload: dict):
     cd = payload.get("cache_dir")
     if not cd:
@@ -155,13 +161,22 @@ def cached_supervised_unit(payload: dict) -> dict:
     stores, returns. Without payload['cache_dir'] it is supervised_unit verbatim."""
     import pickle
 
+    # R22 (Phase-2b): a unit initialised from a pretrained state records that
+    # state's SHA-256; a cache hit is honoured only if the state on disk still
+    # has that hash. A forgotten cache surgery therefore cannot serve results
+    # built on superseded AR states -- they are retrained, and it is logged.
+    lineage = _file_sha256(payload["pretrained_path"]) if payload.get("pretrained_path") else None
     cp = _cache_path(payload)
     if cp is not None and cp.exists() and payload.get("reuse_existing"):
         try:                                                  # R9a fallback
             with cp.open("rb") as fh:
                 res = pickle.load(fh)
-            res["from_cache"] = True
-            return res
+            if lineage is not None and res.get("pretrained_sha256") != lineage:
+                print(f"[r22] {cp.name}: cached unit was initialised from a different "
+                      f"pretrained state (lineage mismatch); retraining", flush=True)
+            else:
+                res["from_cache"] = True
+                return res
         except Exception as exc:                              # noqa: BLE001
             print(f"[d9] {cp}: unusable cache ({type(exc).__name__}); removed, "
                   f"retraining", flush=True)
@@ -169,6 +184,8 @@ def cached_supervised_unit(payload: dict) -> dict:
     if cp is not None:                                        # R9b in-unit ckpt
         payload = dict(payload, ckpt_path=str(cp.with_suffix(".ckpt")))
     res = supervised_unit(payload)
+    if lineage is not None:
+        res["pretrained_sha256"] = lineage
     if cp is not None:
         from ..train.checkpoint import atomic_pickle_dump
 

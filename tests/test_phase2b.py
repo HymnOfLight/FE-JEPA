@@ -124,3 +124,43 @@ def test_results_page_shows_the_reference_gate(tmp_path):
                "results": {}, "provenance": {}, "solve_ledger": {"total": 0}}
     md = write_results(payload, tmp_path / "R.md").read_text()
     assert "reference G2 (all budgets): **NO-GO**" in md and "budgets >= 64" in md
+
+
+def test_figure_named_after_the_report_too(tmp_path):
+    pytest.importorskip("matplotlib")
+    d = generate_synthetic_dataset(tmp_path / "c", n=12, seed=3)
+    df = generate_synthetic_dataset(tmp_path / "f", n=8, seed=4)
+    cfg = _cfg(tmp_path, d, df, tmp_path / "run" / "report_phase2b.json")
+    for k in ("p3_transfer", "wp6"):
+        cfg["experiments"][k]["enabled"] = False
+    p = tmp_path / "c.json"; p.write_text(json.dumps(cfg))
+    run_config(str(p))
+    names = sorted(q.name for q in (tmp_path / "run").glob("*.png"))
+    assert names == ["figure1_energy_gap_phase2b.png"], names
+
+
+def test_finetune_cache_is_not_served_across_a_changed_pretrained_state(tmp_path):
+    """R22: if the AR state a fine-tune unit was initialised from changes (or the
+    cache surgery is forgotten), the cached result is not served."""
+    d = generate_synthetic_dataset(tmp_path / "c", n=12, seed=3)
+    df = generate_synthetic_dataset(tmp_path / "f", n=8, seed=4)
+    run_dir = tmp_path / "run"
+    c = _cfg(tmp_path, d, df, run_dir / "report_phase2.json")
+    p = tmp_path / "phase2.json"; p.write_text(json.dumps(c))
+    run_config(str(p))
+    states = run_dir / "e8_states"
+    ar = sorted(states.glob("ar_p*_s*.pt"))[0]
+    # replace the AR state by a differently trained one (a second seed's state, retrained here)
+    # by moving the state away and retraining with a different seed -- simplest: corrupt lineage
+    # by rewriting the state file with a permuted copy of itself
+    sd = torch.load(ar, map_location="cpu", weights_only=True)
+    torch.save({k: (v * 1.0001 if v.dtype.is_floating_point else v) for k, v in sd.items()}, ar)
+    # fine-tune caches deliberately NOT moved (forgotten surgery): observe the caches themselves
+    p3c = states / "unit_cache_p3"
+    ft = sorted(p3c.glob("P3_finetune_*.pkl")); sc = sorted(p3c.glob("P3_scratch_*.pkl"))
+    assert ft and sc
+    before = {q.name: q.stat().st_mtime_ns for q in ft + sc}
+    run_config(str(p), reuse_states=True, label_workers_override=1)
+    after = {q.name: q.stat().st_mtime_ns for q in ft + sc}
+    assert all(after[q.name] != before[q.name] for q in ft), "fine-tune units must be retrained (lineage mismatch)"
+    assert all(after[q.name] == before[q.name] for q in sc), "scratch units must be served from cache"

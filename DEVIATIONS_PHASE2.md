@@ -358,3 +358,18 @@ and no run executed under it, because the pre-run audit of the execution
 path had not been completed on the stamped head (R20 landed after the
 stamp). The tag is deleted; the commit remains in history; the file carries
 the withdrawal record. r2 follows the audit.
+
+**R21 (engineering, 22 Sep).** The energy-gap figure is named after its
+report as the results page is (`figure1_energy_gap_phase2b.png`). A full
+inventory of the runtime's filesystem writes (report, results page, figure,
+per-unit states and checkpoints, per-unit caches, labels into the corpus,
+manifests at generation only) shows no remaining fixed-name output that a
+Phase-2b run could overwrite in the shared `runs/phase2/` directory.
+
+**R22 (engineering, 22 Sep).** Unit-cache lineage: a supervised unit that
+starts from a pretrained state records that state's SHA-256, and a cache
+hit is honoured only if the state on disk still carries it; otherwise the
+unit is retrained and the mismatch logged. This makes Phase-2b robust to a
+forgotten cache surgery: fine-tune units built on the superseded AR states
+can never be served silently. Scratch and supervised units carry no
+lineage and are unaffected. No value changes (paths bitwise-equal to R20).

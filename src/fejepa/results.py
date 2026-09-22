@@ -344,7 +344,7 @@ def write_results(payload_or_path, out_path) -> Path:
 
 # ---------------------------------------------------------------- Figure 1 ----
 
-def write_figures(payload_or_path, out_dir) -> list[Path]:
+def write_figures(payload_or_path, out_dir, suffix: str = "") -> list[Path]:
     """Deliverable 4: the energy-gap label-efficiency curve from E8's cells."""
     payload = _load(payload_or_path)
     e8 = payload.get("results", {}).get("e8")
@@ -386,7 +386,7 @@ def write_figures(payload_or_path, out_dir) -> list[Path]:
     ax.set_title("Figure 1 -- physics faithfulness vs. labels (E8)")
     ax.legend(fontsize=8)
     fig.tight_layout()
-    out = Path(out_dir) / "figure1_energy_gap.png"
+    out = Path(out_dir) / f"figure1_energy_gap{suffix}.png"     # suffix: report-derived (Phase-2b)
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out, dpi=150)
     plt.close(fig)
