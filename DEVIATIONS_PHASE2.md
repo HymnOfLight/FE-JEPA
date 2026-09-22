@@ -266,3 +266,61 @@ Gate before restart: the bench's `fine.peak_gib` must fall below 16 GiB
 **Cost.** Recomputation adds roughly 30% to fine-step time: the few-shot
 block grows from ~81 h to ~105 h. E8 remains cached; E6 (~1.3 h) and the
 few-shot units restart from scratch (no unit had completed a step).
+
+## D14 -- instrument defect in the label-free (AR) objective, found after the verdict (22 Sep 2026)
+
+**Status of the verdict.** Attempt 8 completed the stamped protocol on 21
+Sep 2026 (`prereg-phase2-10-g46cad81`, config `e3bdd1e8778d` verified).
+Gate G2: NO-GO -- (a) False, (b) False, (c) False; kills KP1, KP2, KP4
+triggered; KP3, KP5, KP6 not. That verdict is the outcome of the stamped
+instrument and stands as recorded. Everything below is post-hoc analysis,
+labelled as such, and it changes what the next pre-registration must be,
+not what this one said.
+
+**Facts.** The AR arm (0 labels, pool 1024) scored disp_rel_l2 0.99964 and
+energy_gap_rel 0.99928 on the 256 held-out in-band instances, identical to
+five decimals across the three seeds, and 0.99991 at fine. Both numbers are
+consistent with a prediction that is the true field scaled by a constant:
+with u_hat = alpha u*, disp = 1 - alpha and egap = (1 - alpha)^2; alpha =
+3.6e-4 reproduces both to five decimals. In P3, fine-tuning from the AR
+states beat training from scratch at every budget (b16: 0.380 vs 0.799;
+b64: 0.061 vs 0.193), so the representation was informative while the
+zero-shot output was ~1e-4 of the true magnitude.
+
+**Root cause (code, stamped tag).** `forward_instance` applies the battery
+scale in decode (`u = decoder(z) * free * fscale`, WP7 3D-P0.5
+`scale_decode`); the AR loss in `train/losses.py::compute_loss` decoded
+`u = decoder(z) * free` WITHOUT the scale and scored that field with the
+anchor. Training therefore drove the unscaled decoder output toward u*;
+inference returned it multiplied by fscale = max|F| of the battery (~3.6e-4
+on this corpus), giving alpha = fscale. The Phase-1 (2D) code predates
+`scale_decode`, so the same objective was consistent there (AR disp 0.166).
+The tag-vs-head bitwise regressions could not see this: both sides carried
+the defect. No test asserted that the loss and inference decode the same
+field.
+
+**What it invalidates.** Every quantity that depends on the AR objective:
+the AR cells (in-band and fine), the E6 probe (trained with the same loss),
+P3's AR zero-shot and the P3 fine-tune arm (initialised from AR states),
+and therefore gate conditions (b) and (c) and kills KP1, KP2, KP4 as
+evaluated. What stands: the supervised grid (30 units; labels,
+labels_anchor, mgn -- trained and evaluated through `forward_instance`),
+the naive baselines, the P3 scratch arm, WP6, the labels, the corpora and
+their hashes, and the compute ledger. Gate condition (a) (supervised b=16
+only 2.71x better than zero, threshold 3.0x) failed independently of the
+defect and is NOT addressed by the fix.
+
+**Fix (R18).** A single decode path: `decode_battery(z, pack)` on the model
+(free mask and, when `scale_decode` is on, the battery scale), used by
+`forward_instance` and by the AR loss. Test: the anchor inside the AR loss
+receives bitwise the field `forward_instance` returns (fails on the stamped
+code, passes on R18). Tag regression: the AR path changes by design; the
+supervised and MGN paths remain bitwise-equal to the tag. On a CPU corpus
+the corrected objective trains (disp 0.44, egap 0.20 at toy scale) under
+both decode conventions.
+
+**Disposition.** No re-run under the Phase-2 pre-registration. A
+pre-registered amendment (Phase-2b) re-runs the AR-dependent arms with the
+corrected instrument, reuses the standing supervised units by SHA chain,
+adds an instrument pilot with a pre-declared 'leaves zero' threshold before
+the full AR arms, and must state in advance how condition (a) is treated.

@@ -221,15 +221,22 @@ def build_fejepa(cfg: FEJEPAConfig):
             return {"feats": feats, "free": free, "fscale": fscale,
                     "arch": arch}
 
-        def forward_instance(self, pack):
-            """(L, ndof) masked displacement battery, differentiable."""
-            z = self.encoder(pack["feats"])
+        def decode_battery(self, z, pack):
+            """(L, ndof) masked displacement battery from a latent z -- THE single
+            decode path. D14: the AR loss and inference must see the same u;
+            the stamped Phase-2 code applied the battery scale here but not in
+            the AR loss, so label-free models trained the unscaled field and
+            predicted it scaled by fscale (~1e-4 to 1e-2) at inference."""
             u = self.decoder(z)
             L = u.shape[0]
             u = u.reshape(L, -1) * pack["free"]
             if self.cfg.scale_decode:      # WP7 3D-P0.5: exact by linearity
                 u = u * pack["fscale"]
             return u
+
+        def forward_instance(self, pack):
+            """(L, ndof) masked displacement battery, differentiable."""
+            return self.decode_battery(self.encoder(pack["feats"]), pack)
 
         # ---- latent utilities -------------------------------------------------
         def encode(self, feats):

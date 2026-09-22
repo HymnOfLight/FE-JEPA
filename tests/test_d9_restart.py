@@ -213,3 +213,34 @@ def test_fejepa_block_checkpointing_is_bitwise_exact(tmp_path):
                                                       anchor_mode="none", log_every=-1))
         outs.append([p.detach().clone() for p in m.parameters()])
     assert all(torch.equal(a, b) for a, b in zip(outs[0], outs[1], strict=True))
+
+
+def test_ar_loss_scores_exactly_the_field_inference_returns(tmp_path):
+    """D14: the anchor inside the AR loss must see the same displacement battery
+    that forward_instance returns (free mask AND battery scale). The stamped
+    Phase-2 code applied the scale at inference only, so label-free models
+    predicted u* x fscale at inference (~1e-4 in 3D)."""
+    import numpy as np
+
+    from fejepa.experiments.protocol import load_split
+    from fejepa.fe.synthetic import generate_synthetic_dataset
+    from fejepa.train.losses import AR_CONFIG, compute_loss
+    from fejepa.anchor.energy import AnchorCache
+
+    d = generate_synthetic_dataset(tmp_path / "d14", n=4, seed=5)
+    arch = load_instance(load_split(d, 1, 1).pool_files[0])
+    m = _build_model({"kind": "fejepa", "model": MODEL, "seed": 0})
+    m.train()
+    pack = m.prepare_instance(arch, "cpu")
+    seen = {}
+    anchor = AnchorCache(device="cpu").get(arch)              # the EnergyAnchor the loop passes in
+    real = anchor.energies
+
+    def spy(u):
+        seen["u"] = u.detach().clone()
+        return real(u)
+    anchor.energies = spy
+    compute_loss(m, pack, anchor, None, None, np.random.default_rng(0), AR_CONFIG)
+    assert "u" in seen, "the AR loss did not call the anchor"
+    torch.manual_seed(0)
+    assert torch.equal(seen["u"], m.forward_instance(pack).detach())

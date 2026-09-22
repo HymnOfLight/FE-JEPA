@@ -57,7 +57,11 @@ def compute_loss(model, pack, anchor, adj, buffer, rng: np.random.Generator,
     z = model.encode(pack["feats"])                       # (L, N, dim)
 
     if cfg.use_phys:
-        u = model.decoder(z).reshape(z.shape[0], -1) * pack["free"]
+        # D14: decode through the model's single decode path so the anchor
+        # scores exactly the field that inference returns (free mask AND the
+        # battery scale when scale_decode is on).
+        u = (model.decode_battery(z, pack) if hasattr(model, "decode_battery")
+             else model.decoder(z).reshape(z.shape[0], -1) * pack["free"])
         phys = anchor.energies(u).mean()
         parts["phys"] = phys.detach()        # tensors: no per-step device sync
         total = cfg.lambda_phys * phys
