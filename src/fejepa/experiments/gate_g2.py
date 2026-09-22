@@ -71,9 +71,14 @@ def gate_g2(e8_result: dict | None, e1_result: dict | None,
             "P1/E8 not run -- condition unmeasured, gate fails closed"
     else:
         buds = _budgets(e8_result)
-        # (a)
+        # (a) -- PREREG_PHASE2B: budgets below `sanity_min_budget` are exempt
+        # from the sanity condition (default 0 = every budget, the Phase-2 form)
         ok, why = True, []
+        floor = int(g.get("sanity_min_budget", 0))
         for bud in buds:
+            if int(bud) < floor:
+                why.append(f"b={bud}: below sanity_min_budget {floor}, not assessed")
+                continue
             anc = _cell(e8_result, "labels_anchor", bud)
             zero = _cell(e8_result, "zero", bud)
             if anc is None or zero is None:
@@ -88,10 +93,12 @@ def gate_g2(e8_result: dict | None, e1_result: dict | None,
                 elif _disp(anc) >= _disp(nc):
                     ok = False; why.append(f"b={bud}: anchored does not beat {nv}")
         a = ok
-        reasons["a_sanity"] = "passed at every budget" if ok else "; ".join(why)
+        reasons["a_sanity"] = ("passed at every assessed budget" + (f" ({'; '.join(why)})" if why else "")
+                               if ok else "; ".join(why))
 
-        # (b)
-        max_b = buds[-1]
+        # (b) -- an AR-only run (Phase-2b pilot / E-series) has no supervised
+        # cells: (b) is unmeasured and the gate fails closed, by design
+        max_b = buds[-1] if buds else None
         ar_cells = e8_result["metrics"]["cells"].get("ar", {})
         ar = (ar_cells[max(ar_cells, key=lambda k: int(k))]
               if ar_cells else None)   # keyed by pool size, not budget

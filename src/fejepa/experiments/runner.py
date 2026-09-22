@@ -507,6 +507,7 @@ def run_config(path, device_override: str | None = None,
         stage("WP6 theory falsification pass (GPU-free)")
         results["wp6"] = run_theory_checks(val_archs, exps["wp6"])
 
+    gate_reference = None
     if cfg.get("gate_g2"):
         from .gate_g2 import gate_g2
 
@@ -516,6 +517,17 @@ def run_config(path, device_override: str | None = None,
                        results.get("wp6"), gate_cfg=cfg.get("gate_g2"),
                        kill_cfg=cfg.get("kills"))
         gate_key = "gate_g2"
+        # PREREG_PHASE2B: when the sanity floor is raised, the stamped Phase-2
+        # form (every budget assessed) is computed as well and reported beside
+        # the deciding gate, so both readings are public.
+        if int((cfg.get("gate_g2") or {}).get("sanity_min_budget", 0)) > 0:
+            ref_cfg = dict(cfg.get("gate_g2") or {}); ref_cfg["sanity_min_budget"] = 0
+            gate_reference = gate_g2(results.get("e8"), results.get("e1"),
+                                     results.get("p3_transfer"), results.get("e6"),
+                                     results.get("wp6"), gate_cfg=ref_cfg,
+                                     kill_cfg=cfg.get("kills"))
+        else:
+            gate_reference = None
     else:
         stage("gate G1'")
         gate = gate_mod.g1_prime(results.get("e5"), results.get("e8"),
@@ -539,6 +551,7 @@ def run_config(path, device_override: str | None = None,
         # covers its own attempt -- record what is PRESENT so the cross-attempt
         # total (instances x loads) is auditable from the report alone.
         "labels_present": labels_present,
+        "gate_g2_reference_all_budgets": gate_reference,
         "planned_steps": count_steps(cfg),
         "results": results,
         gate_key: gate,

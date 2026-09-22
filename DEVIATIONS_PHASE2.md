@@ -324,3 +324,24 @@ pre-registered amendment (Phase-2b) re-runs the AR-dependent arms with the
 corrected instrument, reuses the standing supervised units by SHA chain,
 adds an instrument pilot with a pre-declared 'leaves zero' threshold before
 the full AR arms, and must state in advance how condition (a) is treated.
+
+## D15 -- attempt 7: silent death inside the seventh few-shot unit (18-19 Sep 2026)
+
+Attempt 7 ran six fine few-shot units (39.8 h) and died at 90% of the seventh
+(`P3 finetune b64 s1`) with no Python traceback in the log, the D11 signature
+of a signal death; cgroup counters were requested and are pending. Attempt 8
+restarted per the manual, resumed that unit from its epoch-48/50 checkpoint
+(128 steps lost), served the six completed units from cache and completed the
+protocol. No code change; the R9 mechanism worked as designed.
+
+## Phase-2b amendment mechanics (R19, 22 Sep 2026; post-verdict)
+
+`gate_g2.sanity_min_budget` (default 0 = every budget, the stamped Phase-2
+form) exempts budgets below the floor from condition (a); when it is raised
+the runner also computes the all-budget form and reports it as
+`gate_g2_reference_all_budgets`. E8 gains `ar_only` on the main line (ported
+from the wp8 branch) for the instrument pilot. Configurations
+`configs/phase2b_v1.json` and `configs/phase2b_pilot.json` and
+`PREREG_PHASE2B.md` are added; nothing in `configs/phase2_v1.json` or
+`PREREG_PHASE2.md` changes. The choice of the sanity floor (64, the decision
+budget) is a post-hoc change and is disclosed in PREREG_PHASE2B Sec. 4.
