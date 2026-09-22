@@ -1,10 +1,10 @@
-# PREREG_PHASE2B -- amendment to the Phase-2 pre-registration (DRAFT r2; r1 WITHDRAWN)
+# PREREG_PHASE2B -- amendment to the Phase-2 pre-registration (r2 STAMPED; r1 WITHDRAWN)
 
 **Withdrawal record.** r1 of this file was stamped on 22 September 2026 (commit `fc2bbaf`, tag `prereg-phase2b`, CONFIG_SHA256 `316f5e6e…`) and WITHDRAWN the same day before any pilot or run had been executed under it. Reason: the pre-run audit of the exact execution path had not been completed on the head to be stamped, and an engineering change (R20, results-page naming) was found necessary after the stamp -- the order that PREREG_PHASE2 itself prescribes ("fixes land first, so that the hash freezes the code that will actually run") was not followed. The tag is deleted; the stamp commit stays in history. r2 is stamped only after the pre-run audit report is on record and the head it names has been rehearsed end to end. Nothing that follows was changed by the withdrawal; the text below is r1 verbatim, with the hash line reset to the placeholder.
 
 # (r2 text)
 
-# PREREG_PHASE2B -- amendment to the Phase-2 pre-registration (DRAFT r2, 22 September 2026)
+# PREREG_PHASE2B -- amendment to the Phase-2 pre-registration (r2, stamped 22 September 2026 on wp7-3d `bfd14c0` + this stamp commit; tag `prereg-phase2b-r2`)
 
 **Relation to PREREG_PHASE2.** The Phase-2 verdict (attempt 8, 21 September 2026, `prereg-phase2-10-g46cad81`, config `e3bdd1e8778d…`, gate G2 NO-GO with (a), (b), (c) all False and kills KP1, KP2, KP4 triggered) stands as recorded. This amendment re-runs only what deviation D14 invalidated, with the corrected instrument, on the same corpora, splits, labels and supervised units, and it declares in advance how the independently failed sanity condition (a) is treated. Nothing in PREREG_PHASE2 is edited. r2 differs from the withdrawn r1 only in Secs. 3, 5 and 6 (the engineering heads R20-R23 it names, the lineage guard, and the output names); no threshold, budget, kill or gate logic changed.
 
@@ -33,4 +33,4 @@ Move `runs/phase2/e8_states/ar_p1024_s{0,1,2}.pt`, any `*.ckpt`, and `unit_cache
 ## 6. Reporting
 Both verdicts (Phase-2 G2 as recorded; Phase-2b G2b with the G2 reference) are reported with D14 in full, GO or NO-GO. The supervised-grid readings (including the labels-only energy-gap blow-up at 1,024 and its anchored repair) are reported either way. The independent audit (`scripts/audit_phase2_report.py`, wp8-lejepa) re-derives G2b at the floor and the reference gate over all budgets and must agree with the runner before the verdict is announced.
 
-CONFIG_SHA256 = <fill before tagging>
+CONFIG_SHA256 = 316f5e6e282db9c11509d8d1d2ed54d229ded9d6367c63b3a13abd7709ba4899
