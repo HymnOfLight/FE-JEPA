@@ -93,6 +93,8 @@ def derive_gate(report: dict, sanity_min_budget: int | None = None) -> dict:
     d = {}
     # (a) sanity
     a_ok = True
+    if not any(int(b) >= floor for b in buds):
+        a_ok = False                            # fail closed, as the runner does (R23)
     for b in buds:
         if int(b) < floor:
             continue

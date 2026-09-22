@@ -107,3 +107,17 @@ def test_audit_adjudicates_a_phase2b_shaped_report(tmp_path):
     names = [c["check"] for c in out["checks"]]
     assert "reference gate (all budgets) present when the sanity floor is raised" in names
     assert all(c["ok"] for c in out["checks"] if "re-derived" in c["check"]), [c for c in out["checks"] if not c["ok"]]
+
+
+def test_audit_fails_closed_when_the_floor_exceeds_every_budget():
+    from fejepa.analysis.audit import derive_gate
+
+    def cell(v): return {"disp_rel_l2": {"mean": v, "per_seed": [v]}, "energy_gap_rel": {"mean": v, "per_seed": [v]}}
+    cells = {"labels_anchor": {"16": cell(0.2)}, "labels": {"16": cell(0.4)}, "zero": {"16": cell(1.0)},
+             "knn_field": {"16": cell(0.65)}, "scale_aware_poly": {"16": cell(1.5)}, "ar": {"16": cell(0.9)}}
+    report = {"config": {"gate_g2": {"sanity_x": 3.0, "naive_set": ["knn_field", "scale_aware_poly"], "parity_band": 0.1,
+                                     "egap_adv_min": 0.4, "transfer_win": 1.25, "decision_budget": 16, "sanity_min_budget": 1024},
+                         "kills": {"KP1_parity_pct": 0.1, "KP2_egap_adv_min": 0.4, "KP3_anchor_improv_min": 0.25,
+                                   "KP4_transfer_ratio": 1.5, "KP6_rho_within_min": 0.3}},
+              "results": {"e8": {"metrics": {"cells": cells}}}}
+    assert derive_gate(report)["a"] is False
