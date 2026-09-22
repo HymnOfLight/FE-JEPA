@@ -97,6 +97,15 @@ def render_results(payload: dict) -> str:
         for k, v in g2.get("reasons", {}).items():
             add(f"- `{k}`: {v}")
         add("")
+        floor = (g2.get("thresholds", {}).get("gate", {}) or {}).get("sanity_min_budget", 0)
+        ref = payload.get("gate_g2_reference_all_budgets")
+        if floor and ref:
+            add(f"Sanity condition (a) assessed at budgets >= {floor} (PREREG_PHASE2B); "
+                "the stamped Phase-2 form (every budget) is reported as reference:")
+            rc = ref["conditions"]
+            add(f"- reference G2 (all budgets): **{'GO' if ref['passed'] else 'NO-GO'}** -- "
+                f"(a)={rc['a']} (b)={rc['b']} (c)={rc['c']}; a_sanity: {ref.get('reasons', {}).get('a_sanity', '--')}")
+            add("")
 
     g = payload.get("gate_g1_prime")
     add("## Gate G1'" if not g2 else "## Gate G1' (legacy; not the Phase-2 gate)")

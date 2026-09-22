@@ -97,3 +97,30 @@ def test_ar_only_pilot_shape(tmp_path):
     assert r["results"]["e8"]["protocol"]["ar_only"] is True
     key = next(iter(cells["ar"]))                                # keyed by pool size
     assert isinstance(cells["ar"][key]["disp_rel_l2"]["mean"], float)
+
+
+def test_results_page_named_after_the_report(tmp_path):
+    """Phase-2b writes report_phase2b.json into the Phase-2 directory: its results
+    page must not overwrite RESULTS.md of the deciding run."""
+    d = generate_synthetic_dataset(tmp_path / "c", n=12, seed=3)
+    df = generate_synthetic_dataset(tmp_path / "f", n=8, seed=4)
+    cfg = _cfg(tmp_path, d, df, tmp_path / "run" / "report_phase2b.json", extra_e8={"ar_only": True, "seeds": 1})
+    for k in ("p3_transfer", "wp6"):
+        cfg["experiments"][k]["enabled"] = False
+    p = tmp_path / "c.json"; p.write_text(json.dumps(cfg))
+    run_config(str(p))
+    assert (tmp_path / "run" / "RESULTS_phase2b.md").exists()
+    assert not (tmp_path / "run" / "RESULTS.md").exists()
+
+
+def test_results_page_shows_the_reference_gate(tmp_path):
+    from fejepa.results import write_results
+
+    payload = {"gate_g2": {"passed": True, "logic": "a AND (b OR c)", "conditions": {"a": True, "b": True, "c": False},
+                           "transfer_zone": "retired", "kills": {"KP1": False}, "reasons": {"a_sanity": "passed at every assessed budget"},
+                           "thresholds": {"gate": {"sanity_min_budget": 64}}},
+               "gate_g2_reference_all_budgets": {"passed": False, "conditions": {"a": False, "b": True, "c": False},
+                                                 "reasons": {"a_sanity": "b=16: 2.71x over zero < 3.0x"}},
+               "results": {}, "provenance": {}, "solve_ledger": {"total": 0}}
+    md = write_results(payload, tmp_path / "R.md").read_text()
+    assert "reference G2 (all budgets): **NO-GO**" in md and "budgets >= 64" in md

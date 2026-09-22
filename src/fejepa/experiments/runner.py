@@ -567,7 +567,13 @@ def run_config(path, device_override: str | None = None,
     # The report JSON above is already on disk; a rendering bug must never
     # cost a finished (possibly multi-day) run. Fail loud, not fatal.
     try:
-        md = write_results(payload, Path(out).parent / "RESULTS.md")
+        # results page named after the report so runs sharing a directory never
+        # overwrite each other's page: report.json -> RESULTS.md,
+        # report_phase2b.json -> RESULTS_phase2b.md (Phase-2b amendment)
+        stem = Path(out).stem
+        md_name = "RESULTS.md" if stem == "report" else f"RESULTS{stem[len('report'):]}.md" \
+            if stem.startswith("report") else f"RESULTS_{stem}.md"
+        md = write_results(payload, Path(out).parent / md_name)
         print(f"[fejepa] RESULTS.md -> {md}")
     except Exception as e:                                    # noqa: BLE001
         print(f"[fejepa] WARNING: RESULTS.md rendering failed "

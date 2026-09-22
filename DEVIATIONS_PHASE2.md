@@ -345,3 +345,9 @@ from the wp8 branch) for the instrument pilot. Configurations
 `PREREG_PHASE2B.md` are added; nothing in `configs/phase2_v1.json` or
 `PREREG_PHASE2.md` changes. The choice of the sanity floor (64, the decision
 budget) is a post-hoc change and is disclosed in PREREG_PHASE2B Sec. 4.
+
+**R20 (engineering, 22 Sep, after the Phase-2b stamp).** The results page is
+named after its report (`report_phase2b.json` -> `RESULTS_phase2b.md`) so the
+amendment, which shares `runs/phase2/` with the deciding run, cannot overwrite
+the Phase-2 page; the reference gate is rendered beside G2b. Rendering and
+naming only: no value changes, configuration untouched, guard verifies.
