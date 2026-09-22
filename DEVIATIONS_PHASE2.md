@@ -373,3 +373,7 @@ unit is retrained and the mismatch logged. This makes Phase-2b robust to a
 forgotten cache surgery: fine-tune units built on the superseded AR states
 can never be served silently. Scratch and supervised units carry no
 lineage and are unaffected. No value changes (paths bitwise-equal to R20).
+
+**R23 (engineering, 22 Sep).** Fail-closed guard on the sanity floor: a
+`sanity_min_budget` above every budget makes condition (a) FAIL ("(a)
+unassessed") instead of passing vacuously. No value changes.

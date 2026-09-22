@@ -164,3 +164,9 @@ def test_finetune_cache_is_not_served_across_a_changed_pretrained_state(tmp_path
     after = {q.name: q.stat().st_mtime_ns for q in ft + sc}
     assert all(after[q.name] != before[q.name] for q in ft), "fine-tune units must be retrained (lineage mismatch)"
     assert all(after[q.name] == before[q.name] for q in sc), "scratch units must be served from cache"
+
+
+def test_sanity_floor_above_every_budget_fails_closed():
+    e8 = _e8(anc16=0.2, anc64=0.2)
+    g = gate_g2(e8, None, None, None, None, gate_cfg={"sanity_x": 3.0, "sanity_min_budget": 1024})
+    assert g["conditions"]["a"] is False and "unassessed" in g["reasons"]["a_sanity"]

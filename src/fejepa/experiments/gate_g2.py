@@ -92,6 +92,9 @@ def gate_g2(e8_result: dict | None, e1_result: dict | None,
                     ok = False; why.append(f"b={bud}: naive {nv} cell missing")
                 elif _disp(anc) >= _disp(nc):
                     ok = False; why.append(f"b={bud}: anchored does not beat {nv}")
+        assessed = [b for b in buds if int(b) >= floor]
+        if not assessed:                       # fail closed: a floor above every budget assesses nothing
+            ok = False; why.append(f"no budget at or above sanity_min_budget {floor}: (a) unassessed")
         a = ok
         reasons["a_sanity"] = ("passed at every assessed budget" + (f" ({'; '.join(why)})" if why else "")
                                if ok else "; ".join(why))
