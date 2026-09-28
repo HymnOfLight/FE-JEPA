@@ -284,6 +284,23 @@ pre-registration stamps it.
   Consequence for the E-series: E1 and E2 run on the corrected objective;
   E2's baseline is the Phase-2b AR cells, so E2 waits for Phase-2b.
 
+- Stage 1.26 (22 Sep): the audit mirrors main R23 -- a sanity floor above
+  every budget assesses nothing and (a) fails closed.
+
+- Stage 1.27 (28 Sep, found on the Phase-2b report): the audit's verdict
+  line used a AND b AND c AND no-kill, which is stricter than the stamped
+  formula. PREREG_PHASE2 Sec. 2 fixes G2 = (a) AND ((b) OR (c)) and Sec. 4
+  says of KP4 that "(b) may still carry G2"; the runner computes exactly
+  that. On the Phase-2b report ((a) true, (b) true, (c) false, KP4
+  triggered) the tool therefore reported one false discrepancy against a
+  runner that was right; every earlier audited report was NO-GO on (a), so
+  the defect never surfaced. The derivation now uses the stamped formula;
+  kills stay reported beside the verdict, entering it only through the
+  condition they negate. Test: a KP4-only report audits GO with all checks
+  green; (b)-false/(c)-true audits GO; (a)-false audits NO-GO. Suite 243.
+  With this the Phase-2b report audits ALL OK (22/22): provenance, AR-state
+  SHA chain, re-aggregation, both gates, all six kills.
+
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
 **E1 -- latent shaping and cross-geometry separation.** Question: does adding

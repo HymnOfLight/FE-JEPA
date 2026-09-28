@@ -64,6 +64,28 @@ def test_each_kill_is_re_derived_from_cells():
     assert d["KP6"] is True
 
 
+def test_verdict_is_the_stamped_formula_a_and_b_or_c():
+    """PREREG_PHASE2 Sec. 2: G2 = (a) AND ((b) OR (c)); Sec. 4 KP4 retires the
+    transfer claim but '(b) may still carry G2'. A triggered kill is reported,
+    not folded into the verdict (Stage 1.27, found on the Phase-2b report)."""
+    rep = _report(ratio=1.6)                                       # KP4 fires, (c) false
+    rep["gate_g2"] = {"conditions": {"a": True, "b": True, "c": False},
+                      "kills": {k: (k == "KP4") for k in ("KP1", "KP2", "KP3", "KP4", "KP5", "KP6")},
+                      "passed": True}
+    res = audit(rep, ARGS)
+    d = res["derived"]
+    assert d["KP4"] is True and d["c"] is False and d["any_kill"] is True
+    assert d["passed"] is True, "GO must be carried by (b) alone"
+    assert res["all_ok"], [c for c in res["checks"] if not c["ok"]]
+    # (b) false but (c) true also carries G2; (a) false never does
+    d = audit(_report(ar_disp=0.25), ARGS)["derived"]              # KP1: (b) false, (c) true
+    assert d["b"] is False and d["c"] is True and d["passed"] is True
+    rep = _report()
+    rep["results"]["e8"]["metrics"]["cells"]["labels_anchor"]["16"] = _cell(0.40, 0.40)  # 2.5x < 3x
+    d = audit(rep, ARGS)["derived"]
+    assert d["a"] is False and d["passed"] is False
+
+
 def test_disagreement_with_runner_block_is_flagged():
     rep = _report(ar_disp=0.25)                                    # truly KP1, runner claims clean
     res = audit(rep, ARGS)

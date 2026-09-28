@@ -151,7 +151,15 @@ def derive_gate(report: dict, sanity_min_budget: int | None = None) -> dict:
     e6 = (report["results"].get("e6") or {}).get("metrics")
     d["KP6"] = bool(e6) and float(e6.get("rho_within_mean", 1.0)) < k["KP6_rho_within_min"]
     d["any_kill"] = any(d[x] for x in ("KP1", "KP2", "KP3", "KP4", "KP5", "KP6"))
-    d["passed"] = bool(d["a"] and d["b"] and d["c"] and not d["any_kill"])
+    # Stage 1.27: the verdict is the stamped formula of PREREG_PHASE2 Sec. 2,
+    # G2 = (a) AND ((b) OR (c)), exactly as the runner computes it. Kills retire
+    # individual claims (Sec. 4) and are reported beside the verdict; they do
+    # not enter G2 except through the condition they negate (KP1/KP2 -> (b),
+    # KP4 -> (c); "in either case (b) may still carry G2"). The earlier
+    # a AND b AND c AND no-kill form was stricter than the pre-registration and
+    # would have contradicted a runner that is right; it never surfaced while
+    # every audited report was NO-GO on (a).
+    d["passed"] = bool(d["a"] and (d["b"] or d["c"]))
     return d
 
 
