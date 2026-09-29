@@ -584,7 +584,9 @@ def run_config(path, device_override: str | None = None,
                                  thresholds=cfg.get("gate", {}).get("thresholds"))
         gate_key = "gate_g1_prime"
 
-    seeds = sorted({int(s) for e in exps.values() if isinstance(e, dict)
+    # Stage 1.31: seeds of the ENABLED experiments only -- a disabled block's
+    # "seeds": 3 made the one-seed E1 raw ablation record seeds [0, 1, 2]
+    seeds = sorted({int(s) for e in exps.values() if isinstance(e, dict) and e.get("enabled")
                     for s in range(int(e.get("seeds", 0) or 0))}) or [0]
     n_loads = val_archs[0].n_loads if val_archs else 4
     payload = {

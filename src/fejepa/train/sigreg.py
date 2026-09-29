@@ -98,6 +98,10 @@ def sigreg(z, n_proj: int = 1024, n_knots: int = 17, t_max: float = 5.0,
     # shapes the latent distribution at fine resolution, so it is evaluated in
     # fp32 regardless of any surrounding autocast (bf16 changed the value by
     # ~2.5e-3 relative in a probe; gradients would be bf16-quality).
+    # Stage 1.31 note: "fp32" here means no autocast; the projection matmul
+    # follows the run's global matmul policy like every other matmul (TF32
+    # on CUDA under the E-series configs, identical in the pilot and every
+    # arm), so the statistic is TF32-quality on the box, fp32 on a CPU.
     z2 = z.reshape(-1, z.shape[-1]).float()
     with torch.autocast(device_type=z2.device.type, enabled=False):
         u = random_directions(z2.shape[-1], n_proj, z2.device, z2.dtype, generator)

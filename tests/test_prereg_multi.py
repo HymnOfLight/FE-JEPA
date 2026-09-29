@@ -4,7 +4,6 @@ be stamped before any arm runs; each config verifies against its own line;
 unlabelled single-line files (Phase 1 / 2 / 2b) behave exactly as before."""
 
 import json
-from pathlib import Path
 
 import pytest
 

@@ -150,3 +150,102 @@ def test_raw_ablation_config_is_one_seed_and_refuses_its_placeholder(tmp_path):
         p.write_text(json.dumps(c))
         with pytest.raises(SystemExit, match="unfilled placeholders"):
             run_config(str(p), dry_run=True)
+
+
+# ---- Stage 1.31: the pilot JSON fills the configurations AND PREREG_E1 ------------
+
+def _pilot_json(tmp_path, **over):
+    import hashlib
+
+    p1 = ROOT / "configs" / "phase1_rec8_v2.json"
+    rec = {"selected_lambda": 0.1, "head_width": 20, "smoke": False,
+           "pilot_ledger": {"per_stage": {}, "total": 0, "wall_clock_s": 0.0},
+           "manifest_sha256_before": "m", "manifest_sha256_after": "m",
+           "split": {"n_val": 256, "seed": 1}, "numeric_policy": {"tf32": True},
+           "config_sha256": hashlib.sha256(p1.read_bytes()).hexdigest()}
+    rec.update(over)
+    f = tmp_path / "e1_pilot.json"
+    f.write_text(json.dumps(rec))
+    return f
+
+
+def _gen_from_pilot(tmp_path, pilot, prereg=None, extra=()):
+    out = tmp_path / "cfgs"
+    out.mkdir(parents=True, exist_ok=True)
+    args = [sys.executable, str(ROOT / "scripts" / "make_e_series_configs.py"),
+            "--phase2b", str(ROOT / "configs" / "phase2b_v1.json"),
+            "--phase1", str(ROOT / "configs" / "phase1_rec8_v2.json"),
+            "--out-dir", str(out), "--e1-from-pilot", str(pilot), *extra]
+    if prereg is not None:
+        args += ["--fill-prereg", str(prereg)]
+    return out, subprocess.run(args, capture_output=True, text=True, cwd=tmp_path,
+                                env={"PYTHONPATH": str(ROOT / "src"),
+                                     "PATH": "/usr/bin:/bin:/usr/local/bin"})
+
+
+def test_generator_fills_configs_and_prereg_from_the_pilot_json(tmp_path):
+    import hashlib
+
+    pilot = _pilot_json(tmp_path)
+    prereg = tmp_path / "PREREG_E1.md"
+    prereg.write_text((ROOT / "PREREG_E1.md").read_text())
+    out, r = _gen_from_pilot(tmp_path, pilot, prereg)
+    assert r.returncode == 0, r.stderr
+    sh = json.loads((out / "e1_2d_shaped.json").read_text())["pretrain"]["loss_spec"]
+    raw = json.loads((out / "e1_2d_raw_s0.json").read_text())["pretrain"]["loss_spec"]
+    assert (sh["lambda_reg"], sh["sigreg_head_width"], raw["lambda_reg"]) == (0.1, 20, 0.1)
+    text = prereg.read_text()
+    sha = hashlib.sha256(pilot.read_bytes()).hexdigest()
+    assert f"LAMBDA = `0.1`; WIDTH = `20`; pilot record SHA-256 = `{sha}`" in text
+    # identical to the explicit-value path, byte for byte
+    same = _gen(tmp_path / "explicit", 0.1, 20)
+    for name in E_SERIES:
+        assert (out / f"{name}.json").read_bytes() == (same / f"{name}.json").read_bytes(), name
+    # re-filling with the same pilot is a no-op; another pilot's values are refused
+    _, r2 = _gen_from_pilot(tmp_path, pilot, prereg)
+    assert r2.returncode == 0 and prereg.read_text() == text
+    od = tmp_path / "o"
+    od.mkdir()
+    _, r3 = _gen_from_pilot(od, _pilot_json(od, selected_lambda=1.0), prereg)
+    assert r3.returncode != 0 and "already filled" in r3.stderr
+    assert prereg.read_text() == text
+
+
+def test_generator_refuses_pilots_that_cannot_configure_e1(tmp_path):
+    cases = [({"selected_lambda": None}, "NO-GO-AT-PILOT"),
+             ({"smoke": True}, "smoke pilot"),
+             ({"pilot_ledger": {"total": 5}}, "bought labels"),
+             ({"manifest_sha256_after": "changed"}, "manifest changed"),
+             ({"split": {"n_val": 128, "seed": 1}}, "not the E1 split"),
+             ({"numeric_policy": {"tf32": False}}, "numeric policy"),
+             ({"config_sha256": "0" * 64}, "not this Phase-1 config")]
+    for i, (over, msg) in enumerate(cases):
+        d = tmp_path / f"c{i}"
+        d.mkdir()
+        _, r = _gen_from_pilot(d, _pilot_json(d, **over))
+        assert r.returncode != 0 and msg in r.stderr, (over, r.stderr[-300:])
+    d = tmp_path / "contra"
+    d.mkdir()
+    _, r = _gen_from_pilot(d, _pilot_json(d), extra=("--e1-lambda", "0.01"))
+    assert r.returncode != 0 and "contradicts the pilot" in r.stderr
+
+
+def test_committed_prereg_e1_parameters_agree_with_the_committed_configs():
+    """PREREG_E1 Sec. 2's LAMBDA / WIDTH line and the committed shaped / raw
+    configurations are one fact: placeholders with null values before
+    stamping, identical numbers after."""
+    from scripts.make_e_series_configs import PLACEHOLDER, PREREG_E1_PARAMS
+
+    hits = list(PREREG_E1_PARAMS.finditer((ROOT / "PREREG_E1.md").read_text()))
+    assert len(hits) == 1
+    m = hits[0]
+    sh = json.loads((ROOT / "configs" / "e1_2d_shaped.json").read_text())["pretrain"]["loss_spec"]
+    raw = json.loads((ROOT / "configs" / "e1_2d_raw_s0.json").read_text())["pretrain"]["loss_spec"]
+    if m.group("lam") == PLACEHOLDER:
+        assert m.group("width") == PLACEHOLDER and m.group("sha") == PLACEHOLDER
+        assert sh["lambda_reg"] is None and sh["sigreg_head_width"] is None
+        assert raw["lambda_reg"] is None
+    else:
+        assert float(m.group("lam")) == sh["lambda_reg"] == raw["lambda_reg"]
+        assert int(m.group("width")) == sh["sigreg_head_width"]
+        assert len(m.group("sha")) == 64

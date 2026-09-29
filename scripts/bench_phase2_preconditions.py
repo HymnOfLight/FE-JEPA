@@ -33,6 +33,28 @@ def load_cfg(path: str) -> dict:
     return json.loads(Path(path).read_text())
 
 
+def differential_step(pairs, n1: int, n2: int) -> dict:
+    """Stage 1.31: the set-up-free step time from K repeated (T(n1), T(n2))
+    pairs of whole pretrain() calls (seconds). Each pair gives
+    (T2 - T1) / (n2 - n1); the estimate is the MEDIAN over pairs (one
+    set-up hiccup cannot move it), and it is `valid` only if every pair's
+    estimate is finite and positive -- a non-positive pair means set-up
+    jitter exceeded the timed steps and the number must not be used."""
+    import math
+    import statistics
+
+    if n2 <= n1 or not pairs:
+        raise ValueError("differential_step: need n2 > n1 and at least one pair")
+    est = [(t2 - t1) / (n2 - n1) for t1, t2 in pairs]
+    step = statistics.median(est)
+    ok = all(math.isfinite(e) and e > 0.0 for e in est)
+    setup = [t1 - n1 * step for t1, _ in pairs]
+    return {"step_s": step, "estimates_s": est, "valid": bool(ok),
+            "spread_rel": ((max(est) - min(est)) / step) if ok else None,
+            "setup_s": statistics.median(setup),
+            "incl_setup_s": statistics.median(t2 / n2 for _, t2 in pairs)}
+
+
 def training_plan(cfg: dict) -> dict:
     """Per-arm honest step counts (r10): supervised arms train on b instances,
     not the corpus; mgn on its budget subset; no E1' battery (P2 subsumed)."""
@@ -80,6 +102,11 @@ def main() -> None:
                          "per-unit resident set the earlier benches never measured "
                          "(0 = skip)")
     ap.add_argument("--repeats", type=int, default=20)
+    ap.add_argument("--bottleneck-steps", type=int, default=100,
+                    help="Stage 1.31: n2 - n1 of each differential pair of the bottleneck "
+                         "phases (independent of --repeats, which sizes the FE-JEPA phases)")
+    ap.add_argument("--bottleneck-pairs", type=int, default=3,
+                    help="Stage 1.31: repeated (n1, n2) pairs; the median estimate is used")
     ap.add_argument("--out", default="runs/phase2/bench_preconditions.json")
     a = ap.parse_args()
     cfg_path = a.config or a.config_pos
@@ -187,22 +214,44 @@ def main() -> None:
     # charges that set-up to the step -- negligible at 14.7 s/step, but a
     # material share of E2's absolute 1.0 s / 2.0 s thresholds. The inclusive
     # number is recorded beside it for like-for-like comparison.
+    # Stage 1.31: one (n1, n2) pair of 20 steps was at the mercy of set-up
+    # jitter (tokenization and assembly are seconds of CPU at 41k nodes, the
+    # step tens of ms): the pairs now span --bottleneck-steps (100) steps, are
+    # repeated --bottleneck-pairs (3) times, and the MEDIAN is reported with
+    # every pair and a validity flag (all estimates positive); the instance
+    # preparation (features + farthest-point seeds + token assignment) is
+    # timed on its own for the cost frontier.
     if a.bottleneck_tokens > 0:
+        import statistics
+
         bcfg = dict(mcfg, n_tokens=int(a.bottleneck_tokens))
         bmodel = _build_model({"kind": "bottleneck", "model": bcfg, "seed": 0})
-        blr = float(cfg.get("pretrain", {}).get("lr", 1e-3))
-        n1 = max(2, a.repeats // 4)
-        n2 = n1 + max(2, a.repeats)
+        e8c = (cfg.get("experiments") or {}).get("e8") or {}
+        blr = float(e8c.get("ar_lr", 1e-3))                  # the E8 AR units' lr
+        n1 = 2 if a.smoke else 10
+        n2 = n1 + max(2, int(a.bottleneck_steps))
 
-        def _timed(arch, epochs):
+        def _sync():
             if dev == "cuda":
                 torch.cuda.synchronize()
+
+        def _timed(arch, epochs):
+            _sync()
             t0 = time.perf_counter()
             pretrain(bmodel, [arch], PretrainConfig(loss=AR_CONFIG, epochs=epochs, lr=blr,
                                                     device=dev, log_every=-1, seed=0))
-            if dev == "cuda":
-                torch.cuda.synchronize()
+            _sync()
             return time.perf_counter() - t0
+
+        def _prepare_s(arch, k=3):
+            ts = []
+            for _ in range(k):
+                _sync()
+                t0 = time.perf_counter()
+                bmodel.prepare_instance(arch, dev)
+                _sync()
+                ts.append(time.perf_counter() - t0)
+            return statistics.median(ts)
 
         for tag in ("inband_0", "fine"):
             if tag not in sizes:
@@ -210,19 +259,32 @@ def main() -> None:
             if dev == "cuda":
                 torch.cuda.reset_peak_memory_stats()
             _timed(sizes[tag], 2)                                  # warm-up
-            t1, t2 = _timed(sizes[tag], n1), _timed(sizes[tag], n2)
-            step = (t2 - t1) / (n2 - n1)
+            pairs = [(_timed(sizes[tag], n1), _timed(sizes[tag], n2))
+                     for _ in range(max(1, int(a.bottleneck_pairs)))]
+            d = differential_step(pairs, n1, n2)
             res["phases"][f"bottleneck{a.bottleneck_tokens}_{tag}"] = {
                 "n_nodes": int(sizes[tag].nodes.shape[0]),
                 "n_tokens": int(a.bottleneck_tokens),
-                "ms_per_step": round(step * 1000, 2),
-                "ms_per_step_incl_setup": round(t2 * 1000 / n2, 2),
-                "setup_ms": round(max(t1 - n1 * step, 0.0) * 1000, 1),
+                "ms_per_step": round(d["step_s"] * 1000, 2),
+                "estimates_ms": [round(e * 1000, 2) for e in d["estimates_s"]],
+                "valid": d["valid"],
+                "spread_rel": None if d["spread_rel"] is None else round(d["spread_rel"], 3),
+                "ms_per_step_incl_setup": round(d["incl_setup_s"] * 1000, 2),
+                "setup_ms": round(d["setup_s"] * 1000, 1),
+                "prepare_ms": round(_prepare_s(sizes[tag]) * 1000, 1),
+                "pairs": [[round(t1, 4), round(t2, 4)] for t1, t2 in pairs],
                 "timing": "differential", "steps": [n1, n2],
+                "estimator": "median over pairs of (T(n2) - T(n1)) / (n2 - n1)",
                 "peak_gib": (round(torch.cuda.max_memory_allocated() / 2**30, 3)
                              if dev == "cuda" else None),
                 "note": "wp8 E2 token bottleneck, same AR step as the FE-JEPA phases; "
-                        "ms_per_step excludes per-call set-up (E2's K2/GO number)"}
+                        "ms_per_step excludes per-call set-up (E2's K2/GO number); "
+                        "prepare_ms = one instance preparation (features, seeds, "
+                        "token assignment), paid once per instance per unit"}
+            if not d["valid"]:
+                print(f"[bench] WARNING bottleneck{a.bottleneck_tokens}_{tag}: a differential "
+                      f"estimate is not positive ({res['phases'][f'bottleneck{a.bottleneck_tokens}_{tag}']['estimates_ms']} ms)"
+                      " -- the phase is marked invalid; re-run on an idle GPU", flush=True)
         del bmodel
 
     # D9: the MGN comparator was never benchmarked (attempt 1 OOM'd at its first

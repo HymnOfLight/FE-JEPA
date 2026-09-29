@@ -104,11 +104,19 @@ def build_bottleneck(cfg: BottleneckConfig):
             self.node_embed = mlp(in_dim, cfg.dim, cfg.dim)
             self.seed_pos = mlp(sd, cfg.dim, cfg.dim)
             self.rel_pos = mlp(sd, cfg.dim, cfg.dim)
-            layer = nn.TransformerEncoderLayer(cfg.dim, cfg.heads, 4 * cfg.dim,
-                                               dropout=0.0, batch_first=True,
-                                               norm_first=True, activation="gelu")
-            self.tok_enc = nn.TransformerEncoder(layer, cfg.depth,
+            def enc_layer():
+                return nn.TransformerEncoderLayer(cfg.dim, cfg.heads, 4 * cfg.dim,
+                                                  dropout=0.0, batch_first=True,
+                                                  norm_first=True, activation="gelu")
+
+            self.tok_enc = nn.TransformerEncoder(enc_layer(), cfg.depth,
                                                  enable_nested_tensor=False)
+            # Stage 1.31: nn.TransformerEncoder deep-copies ONE initialised
+            # layer, so every layer would start from identical weights; the
+            # FE-JEPA baseline initialises its blocks independently. Layers
+            # 1..depth-1 get their own draws (layer 0 keeps the first one).
+            for i in range(1, cfg.depth):
+                self.tok_enc.layers[i] = enc_layer()
             self.tok_norm = nn.LayerNorm(cfg.dim)
             self.dec = mlp(3 * cfg.dim, cfg.dim, sd)         # (..., N, 3*dim) -> (..., N, sd)
             self.out_dim = sd

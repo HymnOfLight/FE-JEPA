@@ -1,6 +1,10 @@
 """E1 / E2 adjudicators: every kill and the GO rule fire on hand-built inputs
 exactly as PREREG_E1 Sec. 5 and PREREG_E2 Sec. 4 state them; Stage 1.28 adds
-the refusals (wrong baseline, incomparable reports, set-up-inclusive bench)."""
+the refusals (wrong baseline, incomparable reports, set-up-inclusive bench);
+Stage 1.31 the refusals of unstamped reports, swapped arms, non-finite
+metrics and missing / invalid / non-CUDA / smoke / other-M bench phases."""
+
+import json
 
 import pytest
 
@@ -11,7 +15,8 @@ PHASE2_D14 = "e3bdd1e8778d063ff024b30354e1cd95b492953b2baf8dd25bc0aac863ce04da"
 
 def _rep(disp, egap, fine_ratio=1.2, seeds=3, kind=None, n_tokens=None,
          config_sha=PHASE2B_CONFIG_SHA256, loss_spec=None, manifest="m-inband",
-         fine_per_seed=None, ar_epochs=200, disp_per_seed=None, egap_per_seed=None):
+         fine_per_seed=None, ar_epochs=200, disp_per_seed=None, egap_per_seed=None,
+         prereg_file="PREREG_E1.md", stamped=True):
     model = {"dim": 256, "depth": 8, "heads": 8, "scale_decode": True}
     if kind:
         model.update(kind=kind, n_tokens=n_tokens)
@@ -19,7 +24,8 @@ def _rep(disp, egap, fine_ratio=1.2, seeds=3, kind=None, n_tokens=None,
     if loss_spec:
         pre["loss_spec"] = loss_spec
     fine = fine_per_seed or [disp * fine_ratio] * seeds
-    return {"config": {"model": model, "pretrain": pre, "split": {"n_val": 256, "seed": 1},
+    return {"prereg": ({"file": prereg_file, "config_sha256": config_sha} if stamped else None),
+            "config": {"model": model, "pretrain": pre, "split": {"n_val": 256, "seed": 1},
                        "data": {"dir": "runs/c"}, "tf32": True,
                        "experiments": {"e8": {"pool_sizes": [1024], "ar_epochs": ar_epochs,
                                               "seeds": seeds}}},
@@ -34,14 +40,21 @@ def _rep(disp, egap, fine_ratio=1.2, seeds=3, kind=None, n_tokens=None,
 
 
 def _e2(disp, egap, m=512, **kw):
+    kw.setdefault("prereg_file", "PREREG_E2.md")
     return _rep(disp, egap, kind="bottleneck", n_tokens=m, config_sha="e2cfg", **kw)
 
 
-def _bench(ms, m=512, timing="differential"):
-    return {"phases": {f"bottleneck{m}_fine": {"ms_per_step": ms, "timing": timing}}}
+def _bench(ms, m=512, timing="differential", valid=True, device="cuda", smoke=False,
+           n_tokens=None):
+    return {"device": device, "smoke": smoke, "git": "abc",
+            "phases": {f"bottleneck{m}_fine": {
+                "ms_per_step": ms, "timing": timing, "valid": valid, "n_nodes": 41367,
+                "n_tokens": m if n_tokens is None else n_tokens,
+                "estimates_ms": [ms, ms, ms], "steps": [10, 110]}}}
 
 
-SHAPED = {"reg_mode": "sigreg_ep_head", "lambda_reg": 0.1}
+SHAPED = {"reg_mode": "sigreg_ep_head", "lambda_reg": 0.1, "sigreg_n_proj": 256,
+          "sigreg_head_width": 20}
 
 
 def test_e1_go_and_each_kill():
@@ -83,8 +96,8 @@ def test_e2_go_and_each_kill():
     assert k2["K2_speed"] and k2["verdict"] == "KILLED"
     nogo = adjudicate_e2(base, _e2(0.20, 0.30), _bench(1500.0), 512, 0.10, 2.0, 1.0)
     assert nogo["verdict"] == "NO-GO"                                         # parity but 1-2 s
-    missing = adjudicate_e2(base, _e2(0.20, 0.30), {"phases": {}}, 512, 0.10, 2.0, 1.0)
-    assert missing["K2_speed"]                                                # no measurement = no case
+    assert go["kill_s"] == 2.0 and go["go_s"] == 1.0                         # speed lines echoed
+    assert go["bench_fine_phase"]["n_nodes"] == 41367
 
 
 def test_e2_k1_compares_seed_means_behind_a_noise_guard():
@@ -140,3 +153,59 @@ def test_e1_k1_is_on_seed_means_with_a_noise_guard():
     worse = _rep(0.30, 0.30, loss_spec=SHAPED, disp_per_seed=[0.30, 0.31, 0.29])
     r = adjudicate_e1(base, worse, [0.1] * 3, [0.2] * 3, 0.10)
     assert r["K1_parity"] and r["verdict"] == "KILLED"
+
+
+def test_stage131_e1_refuses_unstamped_swapped_and_nonfinite_inputs():
+    base, shaped = _rep(0.20, 0.30), _rep(0.20, 0.30, loss_spec=SHAPED)
+    s_b, s_s = [0.1] * 3, [0.2] * 3
+    assert adjudicate_e1(base, shaped, s_b, s_s)["verdict"] == "GO"
+    with pytest.raises(ValueError, match="not a stamped"):
+        adjudicate_e1(_rep(0.20, 0.30, stamped=False), shaped, s_b, s_s)
+    with pytest.raises(ValueError, match="not PREREG_E1.md"):
+        adjudicate_e1(_rep(0.20, 0.30, prereg_file="PREREG_E2.md"), shaped, s_b, s_s)
+    with pytest.raises(ValueError, match="not the AR arm"):                 # swapped arms
+        adjudicate_e1(shaped, base, s_s, s_b)
+    with pytest.raises(ValueError, match="not the AR\\+SIGReg"):            # base twice
+        adjudicate_e1(base, base, s_b, s_s)
+    for bad in ({**SHAPED, "lambda_reg": None}, {**SHAPED, "sigreg_head_width": None},
+                {**SHAPED, "reg_mode": "sigreg_ep"}):                       # raw arm or unfilled
+        with pytest.raises(ValueError, match="not the AR\\+SIGReg"):
+            adjudicate_e1(base, _rep(0.20, 0.30, loss_spec=bad), s_b, s_s)
+    nan = _rep(0.20, 0.30, loss_spec=SHAPED, disp_per_seed=[0.2, float("nan"), 0.2])
+    with pytest.raises(ValueError, match="non-finite"):
+        adjudicate_e1(base, nan, s_b, s_s)
+
+
+def test_stage131_e2_refuses_bad_bench_phases_and_nonfinite_seeds():
+    base, e2 = _rep(0.20, 0.30), _e2(0.21, 0.31)
+    ok = adjudicate_e2(base, e2, _bench(800.0), 512)
+    assert ok["verdict"] == "GO"
+    cases = [({"phases": {}}, "no bottleneck512_fine phase"),                # was read as KILLED
+             (_bench(800.0, valid=False), "not valid"),
+             (_bench(800.0, device="cpu"), "not the box's GPU"),
+             (_bench(800.0, smoke=True), "smoke"),
+             (_bench(800.0, n_tokens=1024), "n_tokens=1024"),
+             (_bench(-40.0), "positive finite"),
+             (_bench(float("nan")), "positive finite")]
+    for bench, msg in cases:
+        with pytest.raises(ValueError, match=msg):
+            adjudicate_e2(base, e2, bench, 512)
+    with pytest.raises(ValueError, match="not a stamped"):
+        adjudicate_e2(base, _e2(0.21, 0.31, stamped=False), _bench(800.0), 512)
+    with pytest.raises(ValueError, match="not PREREG_E2.md"):
+        adjudicate_e2(base, _e2(0.21, 0.31, prereg_file="PREREG_E1.md"), _bench(800.0), 512)
+    nan = _e2(0.21, 0.31, fine_per_seed=[0.25, 0.26, float("nan")])     # was GO
+    with pytest.raises(ValueError, match="non-finite"):
+        adjudicate_e2(base, nan, _bench(800.0), 512)
+    # a NaN survives a JSON round trip (the report writer emits NaN) and is still refused
+    rt = json.loads(json.dumps(nan))
+    with pytest.raises(ValueError, match="non-finite"):
+        adjudicate_e2(base, rt, _bench(800.0), 512)
+
+
+def test_stage131_comparability_includes_the_e8_learning_rate():
+    base = _rep(0.20, 0.30)
+    other = _rep(0.20, 0.30, loss_spec=SHAPED)
+    other["config"]["experiments"]["e8"]["ar_lr"] = 5e-4
+    with pytest.raises(ValueError, match="differ beyond the loss"):
+        adjudicate_e1(base, other, [0.1] * 3, [0.2] * 3)

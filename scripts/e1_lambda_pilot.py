@@ -97,7 +97,9 @@ def main() -> None:
         cfg = json.loads(Path(a.config).read_text())
         mcfg, ddir = cfg["model"], a.data or cfg["data"]["dir"]
         split = cfg["split"]
-        lr = float(cfg.get("pretrain", {}).get("lr", 1e-3))
+        # Stage 1.31: the learning rate the E1 arms actually train with -- run_e8
+        # reads experiments.e8.ar_lr (default 1e-3); pretrain.lr never reaches E8
+        lr = float(((cfg.get("experiments") or {}).get("e8") or {}).get("ar_lr", 1e-3))
         cfg_sha = hashlib.sha256(Path(a.config).read_bytes()).hexdigest()
     # Stage 1.30: the E1 runs' numeric policy (TF32 per the config), not torch's
     # defaults -- lambda is selected under the arithmetic the arms will use
@@ -156,6 +158,7 @@ def main() -> None:
     selected = max(admissible) if admissible else None
     res = {"rule": f"largest lambda with pilot-val disp <= AR * (1 + {a.tol})",
            "epochs": a.epochs, "n_train": a.n_train, "n_val": a.n_val, "seed": 0,
+           "lr": lr, "lr_source": "experiments.e8.ar_lr (default 1e-3), as the E8 AR units",
            "split": {"n_val": int(split["n_val"]), "seed": int(split["seed"])},
            "pilot_val": f"pool[{a.n_train}:{a.n_train + a.n_val}] of the E1 split "
                         "(disjoint from E1's validation set)",

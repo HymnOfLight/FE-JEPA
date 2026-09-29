@@ -20,12 +20,74 @@ the PREREG file carries one labelled line per configuration,
 `CONFIG_SHA256[<config stem>] = ...` (report.stamp_prereg / verify_prereg).
 
     python scripts/make_e_series_configs.py [--e1-lambda L --e1-head-width W]
+    python scripts/make_e_series_configs.py --e1-from-pilot runs/wp8/e1_pilot.json \
+        --fill-prereg PREREG_E1.md                      # stamping time (Stage 1.31)
+
+Stage 1.31: `--e1-from-pilot` reads lambda and the head width from the pilot
+JSON itself (refusing a smoke pilot, NO-GO-AT-PILOT, bought labels or a
+changed manifest), and `--fill-prereg` writes LAMBDA, WIDTH and the pilot
+record's SHA-256 into PREREG_E1.md's parameter line -- the pre-registration
+and the configurations are filled from one source, never typed by hand
+(tests/test_e_series_configs.py checks that the committed line and the
+committed configurations agree).
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import re
 from pathlib import Path
+
+PREREG_E1_PARAMS = re.compile(
+    r"LAMBDA = `(?P<lam>[^`]*)`; WIDTH = `(?P<width>[^`]*)`; "
+    r"pilot record SHA-256 = `(?P<sha>[^`]*)`")
+PLACEHOLDER = "<from the pilot>"
+
+
+def read_pilot(path: str, phase1: dict, phase1_sha256: str | None = None) -> tuple:
+    """(lambda, head_width, sha256) from an E1 pilot JSON, or SystemExit."""
+    raw = Path(path).read_bytes()
+    p = json.loads(raw)
+    if p.get("smoke"):
+        raise SystemExit(f"{path}: a smoke pilot cannot configure E1")
+    if phase1_sha256 and p.get("config_sha256") != phase1_sha256:
+        raise SystemExit(f"{path}: the pilot ran on config {str(p.get('config_sha256'))[:12]}, "
+                         f"not this Phase-1 config ({phase1_sha256[:12]})")
+    if bool((p.get("numeric_policy") or {}).get("tf32")) != bool(phase1.get("tf32", True)):
+        raise SystemExit(f"{path}: the pilot's numeric policy {p.get('numeric_policy')} is not "
+                         "the E1 runs' TF32 setting")
+    if p.get("selected_lambda") is None:
+        raise SystemExit(f"{path}: selected_lambda is null -- NO-GO-AT-PILOT (PREREG_E1 Sec. 3); "
+                         "no E1 arm is configured or trained")
+    if int((p.get("pilot_ledger") or {}).get("total", -1)) != 0:
+        raise SystemExit(f"{path}: the pilot bought labels (ledger {p.get('pilot_ledger')})")
+    if not p.get("manifest_sha256_before") or \
+            p.get("manifest_sha256_before") != p.get("manifest_sha256_after"):
+        raise SystemExit(f"{path}: the corpus manifest changed during the pilot")
+    want = {"n_val": int(phase1["split"]["n_val"]), "seed": int(phase1["split"]["seed"])}
+    if p.get("split") != want:
+        raise SystemExit(f"{path}: pilot split {p.get('split')} is not the E1 split {want}")
+    return float(p["selected_lambda"]), int(p["head_width"]), hashlib.sha256(raw).hexdigest()
+
+
+def fill_prereg_e1(path: str, lam: float, width: int, pilot_sha: str) -> None:
+    """Write the pilot's values into PREREG_E1.md's parameter line (placeholders
+    only; re-filling with the same values is a no-op, different values refuse)."""
+    pf = Path(path)
+    text = pf.read_text()
+    hits = list(PREREG_E1_PARAMS.finditer(text))
+    if len(hits) != 1:
+        raise SystemExit(f"{path}: expected exactly one LAMBDA/WIDTH/pilot-record line, "
+                         f"found {len(hits)}")
+    m = hits[0]
+    new = {"lam": repr(float(lam)), "width": str(int(width)), "sha": pilot_sha}
+    for k, v in new.items():
+        if m.group(k) not in (PLACEHOLDER, v):
+            raise SystemExit(f"{path}: {k} already filled with {m.group(k)!r}, refusing {v!r}")
+    line = (f"LAMBDA = `{new['lam']}`; WIDTH = `{new['width']}`; "
+            f"pilot record SHA-256 = `{new['sha']}`")
+    pf.write_text(text[:m.start()] + line + text[m.end():])
 
 
 def _disable_all_but_e8(exps: dict) -> dict:
@@ -80,10 +142,27 @@ def main() -> None:
                     help="the pilot-selected lambda (PREREG_E1 Sec. 3); fills shaped and raw")
     ap.add_argument("--e1-head-width", type=int, default=None,
                     help="the pilot's head width (0 = model dim); fills the shaped arm")
+    ap.add_argument("--e1-from-pilot", default=None,
+                    help="Stage 1.31: take lambda and head width from this pilot JSON")
+    ap.add_argument("--fill-prereg", default=None,
+                    help="Stage 1.31: with --e1-from-pilot, also fill this PREREG_E1.md's "
+                         "LAMBDA / WIDTH / pilot-record line")
     ap.add_argument("--out-dir", default="configs")
     a = ap.parse_args()
     p2b = json.loads(Path(a.phase2b).read_text())
     p1 = json.loads(Path(a.phase1).read_text())
+    if a.fill_prereg and not a.e1_from_pilot:
+        ap.error("--fill-prereg needs --e1-from-pilot (the PREREG line records the pilot file)")
+    if a.e1_from_pilot:
+        lam, width, pilot_sha = read_pilot(
+            a.e1_from_pilot, p1, hashlib.sha256(Path(a.phase1).read_bytes()).hexdigest())
+        for given, got, name in ((a.e1_lambda, lam, "--e1-lambda"),
+                                 (a.e1_head_width, width, "--e1-head-width")):
+            if given is not None and given != got:
+                ap.error(f"{name} {given} contradicts the pilot's {got}")
+        a.e1_lambda, a.e1_head_width = lam, width
+        if a.fill_prereg:
+            fill_prereg_e1(a.fill_prereg, lam, width, pilot_sha)
     out = Path(a.out_dir)
     written = []
     for m in (512, 1024):

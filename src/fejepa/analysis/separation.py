@@ -21,6 +21,13 @@ def quartile_bins(scalar: np.ndarray) -> np.ndarray:
 
 
 def _pairwise(x: np.ndarray) -> np.ndarray:
+    """Euclidean distance matrix. Stage 1.31: float64 and centred before the
+    Gram expansion |a|^2 + |b|^2 - 2ab -- distances are translation-invariant,
+    and in float32 a large shared offset of the pooled latents (small
+    inter-instance distances relative to the latent norm) cancels
+    catastrophically and biases S downward."""
+    x = np.asarray(x, dtype=np.float64)
+    x = x - x.mean(0, keepdims=True)
     sq = (x * x).sum(1)
     return np.sqrt(np.maximum(sq[:, None] + sq[None, :] - 2.0 * x @ x.T, 0.0))
 
@@ -102,21 +109,25 @@ def measure_separation(model, archs, token_rows_for_monitor: int = 20000) -> dic
 
     from ..models.features import geometry_descriptor
     from ..train.sigreg import sigreg_monitor
+    from .common import subsample_rows
 
     pooled, descs, tokens = [], [], []
-    for arch in archs:
+    # Stage 1.31: the token monitor samples every instance (a fixed-seed draw
+    # of ~token_rows_for_monitor / n rows each), not the first instances' rows
+    per_inst = max(1, int(token_rows_for_monitor) // max(1, len(archs)))
+    for i, arch in enumerate(archs):
         z, _ = encode_instance(model, arch)
-        pooled.append(z.mean(0).cpu().numpy())
-        tokens.append(z.cpu())
+        pooled.append(z.mean(0).double().cpu().numpy())
+        tokens.append(subsample_rows(z.cpu(), per_inst, seed=i))
         descs.append(np.asarray(geometry_descriptor(arch.meta), dtype=np.float64))
-    X, G = np.stack(pooled), np.stack(descs)
+    X, G = np.stack(pooled), np.stack(descs)                  # float64 (Stage 1.31)
     Gc = G - G.mean(0)
     _, sv, vt = np.linalg.svd(Gc, full_matrices=False)
     pc1 = Gc @ vt[0]
     bins = quartile_bins(pc1)
     pc1_loadings = (vt[0] / (np.abs(vt[0]).max() + 1e-30)).round(3).tolist()
     pc1_variance_share = float(sv[0] ** 2 / ((sv ** 2).sum() + 1e-30))
-    tok = torch.cat(tokens, 0)[:token_rows_for_monitor]
+    tok = torch.cat(tokens, 0)
     counts = np.bincount(bins, minlength=4)
     S = silhouette(X, bins)
     valid = bool(np.isfinite(S)) and bool((counts >= 2).all())

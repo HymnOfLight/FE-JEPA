@@ -205,7 +205,8 @@ def test_e1_and_e2_arms_run_through_run_config(tmp_path, tiny_corpus):
                       "include_ar_ft": False, "mgn_budgets": [4]},
                "p3_transfer": {"enabled": True, "fewshot_budgets": [2],
                                "fewshot_epochs": 1, "naive_budget": 4},
-               "wp6": {"enabled": False}},          # FE-JEPA-only probe: off under bottleneck
+               "wp6": {"enabled": False},           # FE-JEPA-only probe: off under bottleneck
+               "e1": {"enabled": False, "seeds": 3}},   # disabled: must not count (Stage 1.31)
            "gate_g2": {"sanity_x": 3.0, "naive_set": ["knn_field", "scale_aware_poly"],
                        "parity_band": 0.10, "egap_adv_min": 0.40, "transfer_win": 1.25,
                        "decision_budget": 4},
@@ -225,6 +226,27 @@ def test_e1_and_e2_arms_run_through_run_config(tmp_path, tiny_corpus):
                     weights_only=True)
     assert not any(k.startswith("sigreg_head.") for k in st)      # E1 head stripped
     assert any(k.startswith("tok_enc.") for k in st)                # E2 architecture
+    # Stage 1.31: provenance counts the seeds of ENABLED experiments only (the
+    # disabled e1 block's "seeds": 3 made one-seed runs record seeds [0, 1, 2])
+    assert r["provenance"]["seeds"] == [0]
+
+
+def test_bottleneck_token_layers_are_initialised_independently():
+    """Stage 1.31: nn.TransformerEncoder deep-copies one initialised layer;
+    the bottleneck re-draws layers 1..depth-1 so no two start identical (as
+    FE-JEPA's blocks), and the draw is still a function of the seed."""
+    cfg = dict(BOTTLE, depth=3)
+    m = _build_model({"kind": "bottleneck", "model": cfg, "seed": 0})
+    w = [lay.self_attn.in_proj_weight.detach() for lay in m.tok_enc.layers]
+    l1 = [lay.linear1.weight.detach() for lay in m.tok_enc.layers]
+    for i in range(3):
+        for j in range(i + 1, 3):
+            assert not torch.equal(w[i], w[j]) and not torch.equal(l1[i], l1[j])
+    again = _build_model({"kind": "bottleneck", "model": cfg, "seed": 0})
+    for (ka, va), (kb, vb) in zip(m.state_dict().items(), again.state_dict().items()):
+        assert ka == kb and torch.equal(va, vb)
+    other = _build_model({"kind": "bottleneck", "model": cfg, "seed": 1})
+    assert not torch.equal(other.tok_enc.layers[1].linear1.weight, l1[1])
 
 
 def test_ar_only_runs_end_to_end_with_bottleneck_and_p3(tmp_path, tiny_corpus):

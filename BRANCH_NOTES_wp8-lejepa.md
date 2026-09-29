@@ -383,6 +383,50 @@ pre-registration stamps it.
   from the rule, ledger 0, manifest unchanged. Branch tests pin the CPU for
   every bitwise assertion; the instrument smoke tests run on the GPU when one
   is present. Suite 264.
+- Stage 1.31 (29 Sep, second pre-run audit before the same box session: three
+  independent reviews -- the E1 path, the E2 path, CUDA-only failure modes --
+  every claim re-verified before any change): (i) bench: the bottleneck step
+  is the median of three differential pairs of 100 steps (was one pair of 20
+  steps, at the mercy of seconds of CPU set-up jitter at 41k nodes; a negative
+  estimate would have read as GO), every pair recorded, a `valid` flag (every
+  estimate positive), and the per-instance preparation time (`prepare_ms`:
+  features, seeds, token assignment) for the cost frontier; the smoke test no
+  longer asserts a positive time from a 4-step pair (it could flake on the
+  GPU box); (ii) adjudicators refuse unstamped reports, swapped E1 arms (the
+  swap flipped the sign of every kill), non-finite per-seed metrics (a NaN
+  seed passed K1 -- GO), a missing E2 bench phase (was read as KILLED),
+  invalid / non-CUDA / smoke / other-M bench phases and non-positive step
+  times, and E1 separation files not tied to the report's trained state
+  (SHA-256), its configuration, the full validation split, or invalid; the
+  E2 verdict echoes its speed lines and bench phase; (iii) `e8.ar_lr`, the
+  key the E8 AR units read, joins the comparability signature and is the
+  pilot's learning rate (the pilot read `pretrain.lr`, which never reaches
+  E8; both 1e-3 today); (iv) separation distances in float64 on centred
+  latents -- a shared offset of the pooled latents cancelled catastrophically
+  in float32 (a constructed S of 0.064 read -0.002); the token monitor samples
+  every instance; separation files record the state and configuration
+  SHA-256; (v) the bottleneck's token-encoder layers are initialised
+  independently (nn.TransformerEncoder deep-copied one initialised layer into
+  all eight; the baseline's blocks are independent); (vi) the generator reads
+  lambda and the head width from the pilot JSON (`--e1-from-pilot`: refuses a
+  smoke pilot, null lambda, bought labels, a changed manifest, another
+  split / configuration / TF32 policy) and writes them with the pilot
+  record's SHA-256 into PREREG_E1's parameter line (`--fill-prereg`); a test
+  keeps that line and the configurations in agreement; (vii) provenance seeds
+  count enabled experiments only (the one-seed raw ablation recorded [0, 1,
+  2]); (viii) PREREG_E1 r14, PREREG_E2 r8 (decoder assignment raised as an
+  open PI decision: hard nearest-token decoding; 47% / 59% of the in-band and
+  32% / 41% of the fine mesh edges join nodes of different tokens at M = 512
+  / 1024), runbook (CUDA runs and resumptions are not bitwise reproducible;
+  the bitwise tests pin the CPU). Recorded, not changed: SIGReg's projection
+  follows the global TF32 policy on CUDA (identical in the pilot and every
+  arm; docstring made exact); the standalone separation / ID scripts run pure
+  fp32; tokenization costs ~0.3-1.8 s of CPU per instance per unit and per
+  evaluation; the E2 RESULTS page still prints the legacy E2 section and a G2
+  block without naive rows (cosmetic; the verdict is adjudicate_e2's). Full
+  E1 chain re-run at small scale with the guards on (pilot -> generator from
+  the pilot JSON -> stamp -> three arms, ledger 0 -> separation -> verdict;
+  swapped arms and cross-arm files refused). Suite 275.
 
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 

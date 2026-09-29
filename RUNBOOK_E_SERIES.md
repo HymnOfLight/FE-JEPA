@@ -1,6 +1,6 @@
 # RUNBOOK -- E-series (wp8-lejepa), commands in execution order
 
-Stage 1.28-1.30 (29 Sep 2026). Every block below was executed end to end at small
+Stage 1.28-1.31 (29 Sep 2026). Every block below was executed end to end at small
 scale in the sandbox with the guards ON (scaled copies of the configurations,
 labelled PREREG files stamped through the CLI). The lambda pilot (1b) and the
 bench (2a) run BEFORE stamping, by design: they produce the numbers the stamp
@@ -15,7 +15,7 @@ generation, stamping, commit and tag (from the pilot's returned JSON).
 ## 0. Preconditions (box, once)
 ```bash
 cd ~/autodl-tmp/FE-JEPA && git fetch --tags && git checkout wp8-lejepa && git pull
-python -m pytest -q                     # 264 passed (BRANCH_NOTES carries the current count)
+python -m pytest -q                     # 275 passed (BRANCH_NOTES carries the current count)
 mkdir -p runs/wp8                       # tee opens its log before any script creates the directory
 ```
 
@@ -35,15 +35,19 @@ python scripts/e1_lambda_pilot.py --config configs/phase1_rec8_v2.json --data ru
     2>&1 | tee runs/wp8/e1_pilot.log
 ```
 Checks in the JSON: `pilot_ledger.total == 0`, `manifest_sha256_before == manifest_sha256_after`,
-`pilot_val` names pool[512:640] of the E1 split, `numeric_policy.tf32` is true, `prereg.sha256`
-is the SHA-256 of the committed `PREREG_E1.md` draft (the rule the pilot executes), `git` names the head. Return `e1_pilot.json` + log.
+`pilot_val` names pool[512:640] of the E1 split, `numeric_policy.tf32` is true, `lr` is the
+arms' `e8.ar_lr` (1e-3), `prereg.sha256` is the SHA-256 of the committed `PREREG_E1.md` draft
+(the rule the pilot executes), `git` names the head. Return `e1_pilot.json` + log.
 `selected_lambda: null` = NO-GO-AT-PILOT: E1 ends here and the JSON is the record.
 
 ### 1c. Fill, stamp, tag (repo)
 ```bash
-python scripts/make_e_series_configs.py --e1-lambda <selected_lambda> --e1-head-width <head_width>
-python -m pytest -q                                   # the generator test reproduces the filled configs
-# PREREG_E1.md (in the repo since Stage 1.30; write LAMBDA and WIDTH from the pilot JSON) carries three labelled lines:
+python scripts/make_e_series_configs.py --e1-from-pilot runs/wp8/e1_pilot.json --fill-prereg PREREG_E1.md
+#   reads lambda and head width FROM the pilot JSON (refuses smoke, null lambda, ledger > 0,
+#   a changed manifest, another split/config/TF32 policy) and writes them, with the pilot
+#   JSON's SHA-256, into PREREG_E1.md's parameter line and the shaped/raw configs
+python -m pytest -q                                   # generator + PREREG/config agreement tests
+# PREREG_E1.md carries three labelled lines:
 #   CONFIG_SHA256[e1_2d_base]   = <fill before tagging>
 #   CONFIG_SHA256[e1_2d_shaped] = <fill before tagging>
 #   CONFIG_SHA256[e1_2d_raw_s0] = <fill before tagging>
@@ -70,6 +74,7 @@ Each log starts with `[prereg] verified against PREREG_E1.md`; each solve ledger
 
 ### 1e. Separation readings (box; minutes)
 ```bash
+# each file records the measured state's SHA-256 and the configuration's canonical SHA-256
 for arm in base shaped; do for s in 0 1 2; do
   python scripts/latent_separation.py --config configs/e1_2d_$arm.json \
       --state runs/e1_2d_$arm/e8_states/ar_p1024_s$s.pt --data runs/data2d \
@@ -89,7 +94,12 @@ python scripts/adjudicate_e1.py --base-report runs/e1_2d_base/report.json \
 K1 compares seed means behind a noise guard, max(10%, 2 x SE_rel), and
 reports the threshold it applied. The adjudicator pairs S with seeds through
 the state paths the separation files record, refuses files from the other arm or not measured on `val`, and
-refuses reports that differ beyond the loss specification.
+refuses reports that differ beyond the loss specification. Stage 1.31: it also
+refuses unstamped reports, swapped arms (the base must carry no loss_spec, the
+shaped arm must be sigreg_ep_head with a filled lambda and width), non-finite
+per-seed metrics, and separation files that are invalid, not on all 256
+validation instances, measured with another configuration, or on a state
+whose SHA-256 is not the one the report trained.
 
 ## 2. E2 -- token bottleneck (3D; baseline = the Phase-2b AR cells)
 
@@ -100,9 +110,12 @@ for M in 512 1024; do
       --out runs/wp8/bench_e2_m$M.json 2>&1 | tee runs/wp8/bench_e2_m$M.log
 done
 ```
-Green: `bottleneck<M>_fine.peak_gib` well below the card. `ms_per_step` of the
-bottleneck phases is set-up-free (differential timing, `"timing": "differential"`)
--- the number E2's K2/GO lines use.
+Green: `bottleneck<M>_fine.peak_gib` well below the card and `"valid": true` on both
+bottleneck phases. `ms_per_step` of the bottleneck phases is set-up-free: the median
+of three differential pairs of n1 = 10 / n2 = 110 steps (`estimates_ms`, `pairs`;
+`"valid"` = every pair positive) -- the number E2's K2/GO lines use; `prepare_ms` is
+one instance preparation (features, seeds, token assignment) for the cost frontier.
+Run it on an otherwise idle GPU (no other process in `nvidia-smi`).
 
 ### 2b. Stamp and tag (repo)
 PREREG_E2.md (in the repo since Stage 1.30) records the baseline file's SHA-256
@@ -137,9 +150,16 @@ K1 compares seed means behind a noise guard, max(10%, 2 x SE_rel); the
 verdict reports the achieved resolution. The adjudicator refuses any baseline
 whose config SHA-256 is not the Phase-2b stamp (the Phase-2 report's AR cells are the D14 defect: against them any
 architecture passes parity), a report of the wrong M, reports that differ
-beyond the architecture, and a bench without set-up-free timing.
+beyond the architecture, and a bench without set-up-free timing. Stage 1.31:
+also an unstamped E2 report, non-finite per-seed values, and a bench whose
+bottleneck<M>_fine phase is missing (formerly read as KILLED), invalid, not
+from CUDA, from a smoke run, or of another M.
 
 ## 3. Interruptions
 Same command with `--reuse-states`, in a new tmux session and with a new log
 name (units cached, the in-flight unit resumed from its epoch checkpoint).
-Never delete a run's `e8_states/`.
+Never delete a run's `e8_states/`. On CUDA a resumed unit is not bitwise
+identical to an uninterrupted one (nor are two fresh runs: atomic reductions
+in the attention backward and the bottleneck's scatter-mean); the report's
+`d9_restart` block records every resumption -- state it, do not hide it. The
+bitwise-resume tests pin the CPU.

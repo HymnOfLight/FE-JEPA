@@ -30,10 +30,13 @@ def main() -> None:
     ap.add_argument("--out", default="runs/wp8/latent_separation.json")
     a = ap.parse_args()
 
-    from fejepa.analysis.common import build_model_from_config, instance_files, write_json
+    from fejepa.analysis.common import (build_model_from_config, instance_files, sha256_of,
+                                        write_json)
     from fejepa.analysis.separation import measure_separation
     from fejepa.data.archive import load_instance
+    from fejepa.report import config_sha256
 
+    cfg_sha = state_sha = None
     if a.smoke:
         import tempfile
 
@@ -48,8 +51,14 @@ def main() -> None:
         mcfg = cfg["model"]
         files = instance_files(a.data, a.n_instances, split=cfg.get("split"), subset=a.subset)
         model = build_model_from_config(mcfg, a.state, device=a.device)
+        # Stage 1.31: tie the reading to the exact configuration (the report's
+        # canonical config SHA-256) and the exact state file it measured
+        cfg_sha = config_sha256(cfg)
+        state_sha = sha256_of(a.state) if a.state else None
     res = measure_separation(model, [load_instance(f) for f in files])
-    res.update({"subset": a.subset, "state": a.state, "kind": mcfg.get("kind", "fejepa"), "smoke": a.smoke})
+    res.update({"subset": a.subset, "state": a.state, "state_sha256": state_sha,
+                "config": a.config if not a.smoke else None, "config_sha256": cfg_sha,
+                "kind": mcfg.get("kind", "fejepa"), "smoke": a.smoke})
     write_json(a.out, res)
     print(json.dumps(res, indent=1))
 
