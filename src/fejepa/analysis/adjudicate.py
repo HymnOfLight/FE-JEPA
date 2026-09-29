@@ -23,6 +23,31 @@ def _rel_change(new: float, old: float) -> float:
     return new / (old + 1e-30) - 1.0
 
 
+NOISE_GUARD_K = 2.0
+"""Multiplier of the standard error in the parity kills (PI decision, 29 Sep
+2026, recorded in PREREG_E1 r13 / PREREG_E2 r7)."""
+
+
+def noise_guarded_worse(base_vals, new_vals, band: float = 0.10,
+                        k: float = NOISE_GUARD_K) -> dict:
+    """Parity-kill test on seed means (the Phase-2 aggregation rule) with a
+    noise guard: fires iff the relative change of the seed means exceeds
+    max(band, k x SE_rel), where SE_rel is the standard error of the
+    difference of the two seed means -- sample SDs (n - 1) of both arms,
+    sqrt(s_b^2/n_b + s_n^2/n_n) -- divided by the baseline mean. `threshold`
+    is the resolution actually achieved and is reported with the verdict."""
+    b = [float(v) for v in base_vals]
+    a = [float(v) for v in new_vals]
+    mb, ma = statistics.fmean(b), statistics.fmean(a)
+    var = ((statistics.variance(b) / len(b)) if len(b) > 1 else 0.0) + \
+          ((statistics.variance(a) / len(a)) if len(a) > 1 else 0.0)
+    se_rel = var ** 0.5 / (abs(mb) + 1e-30)
+    tau = max(float(band), float(k) * se_rel)
+    change = _rel_change(ma, mb)
+    return {"base_mean": mb, "new_mean": ma, "rel_change": change, "se_rel": se_rel,
+            "threshold": tau, "fires": bool(change > tau)}
+
+
 PHASE2B_CONFIG_SHA256 = "316f5e6e282db9c11509d8d1d2ed54d229ded9d6367c63b3a13abd7709ba4899"
 """E2's baseline (PREREG_PHASE2B r2 stamp). The Phase-2 report (config
 e3bdd1e8...) must never serve as a baseline: its AR cells are the D14
@@ -59,11 +84,13 @@ def comparability(base: dict, other: dict) -> list:
 def adjudicate_e1(base: dict, shaped: dict, s_base: list, s_shaped: list,
                   band: float = 0.10, min_effect_abs: float = 0.02,
                   min_effect_seed_sd: float = 2.0) -> dict:
-    """K1 parity per seed (disp or energy gap worse than `band`); K2 no effect
-    (S delta <= 0 at every seed); GO = S improves at every seed by at least the
+    """K1 parity (PREREG_E1 r13): the shaped arm's seed-mean displacement error
+    or seed-mean energy gap is worse than the AR arm's by more than
+    max(band, 2 x SE_rel) (`noise_guarded_worse`); K2 no effect (S delta <= 0
+    at every seed); GO = no K1 and S improves at every seed by at least the
     pre-declared effect floor -- max(min_effect_abs, min_effect_seed_sd x the
-    AR arm's seed-to-seed standard deviation of S) -- and the transfer ratio
-    does not worsen beyond `band`. Without the floor, three same-signed
+    AR arm's seed-to-seed sample standard deviation of S) -- and the transfer
+    ratio does not worsen beyond `band`. Without the floor, three same-signed
     noise-level deltas would pass as GO."""
     import math
 
@@ -76,14 +103,16 @@ def adjudicate_e1(base: dict, shaped: dict, s_base: list, s_shaped: list,
     if diff:
         raise ValueError(f"E1 adjudication refused: the two reports differ beyond the loss "
                          f"specification on {diff} -- not the same corpus/split/seeds/schedule")
-    per_seed, k1 = [], False
+    per_seed = []                                  # informational since r13
     for i, (db, ds, eb, es) in enumerate(zip(ar_per_seed(base, "disp_rel_l2"),
                                              ar_per_seed(shaped, "disp_rel_l2"),
                                              ar_per_seed(base, "energy_gap_rel"),
                                              ar_per_seed(shaped, "energy_gap_rel"), strict=True)):
-        cd, ce = _rel_change(ds, db), _rel_change(es, eb)
-        k1 |= (cd > band) or (ce > band)
-        per_seed.append({"seed": i, "disp_rel_change": cd, "egap_rel_change": ce})
+        per_seed.append({"seed": i, "disp_rel_change": _rel_change(ds, db),
+                         "egap_rel_change": _rel_change(es, eb)})
+    k1_detail = {m: noise_guarded_worse(ar_per_seed(base, m), ar_per_seed(shaped, m), band)
+                 for m in ("disp_rel_l2", "energy_gap_rel")}
+    k1 = any(d["fires"] for d in k1_detail.values())
     deltas = [b - a for a, b in zip(s_base, s_shaped, strict=True)]
     k2 = all(d <= 0.0 for d in deltas)
     # Stage 1.28: the SAMPLE standard deviation (n - 1), pinned in PREREG_E1
@@ -98,7 +127,11 @@ def adjudicate_e1(base: dict, shaped: dict, s_base: list, s_shaped: list,
         ratio_ok = _rel_change(rs, rb) <= band
         guard = "passed" if ratio_ok else f"failed (ratio worsened by {_rel_change(rs, rb):.3f} > {band})"
     go = (not k1) and above_floor and ratio_ok
-    return {"band": band, "per_seed": per_seed, "S_base": s_base, "S_shaped": s_shaped,
+    return {"band": band, "per_seed": per_seed,
+            "K1_rule": f"seed means; kill iff relative change > max({band}, "
+                       f"{NOISE_GUARD_K} x SE_rel of the difference) (PREREG_E1 r13)",
+            "K1_detail": k1_detail,
+            "S_base": s_base, "S_shaped": s_shaped,
             "S_delta": deltas, "S_effect_floor": floor, "S_base_seed_sd": sd_base,
             "S_base_seed_sd_ddof": 1, "comparability": "identical beyond loss_spec",
             "S_above_floor_all_seeds": above_floor,
@@ -111,11 +144,13 @@ def adjudicate_e1(base: dict, shaped: dict, s_base: list, s_shaped: list,
 def adjudicate_e2(base: dict, e2: dict, bench: dict, m_tokens: int, band: float = 0.10,
                   kill_s: float = 2.0, go_s: float = 1.0,
                   expect_base_config_sha: str | None = PHASE2B_CONFIG_SHA256) -> dict:
-    """K1 accuracy (in-band energy gap, or fine zero-shot displacement, worse
-    than the baseline by more than `band`, BOTH at the seed median -- PREREG_E2
-    Sec. 4); K2 speed (fine step time not below `kill_s`); GO = parity and fine
-    step time below `go_s`. Refuses a baseline other than the Phase-2b report,
-    reports that are not comparable, and a bench without setup-free timing."""
+    """K1 accuracy (PREREG_E2 r7): the in-band energy gap or the fine zero-shot
+    displacement, compared on seed means, worse than the baseline by more than
+    max(band, 2 x SE_rel) (`noise_guarded_worse`; the achieved resolution is
+    reported); K2 speed (set-up-free fine step time not below `kill_s`); GO =
+    no K1 and fine step time below `go_s`. Refuses a baseline other than the
+    Phase-2b report, reports that are not comparable, and a bench without
+    set-up-free timing."""
     got = (base.get("provenance") or {}).get("config_sha256")
     if expect_base_config_sha and got != expect_base_config_sha:
         raise ValueError(f"E2 adjudication refused: the baseline report's config SHA-256 is "
@@ -130,19 +165,16 @@ def adjudicate_e2(base: dict, e2: dict, bench: dict, m_tokens: int, band: float 
         raise ValueError(f"E2 adjudication refused: baseline and E2 reports differ beyond the "
                          f"architecture on {diff}")
 
-    def ar_median(rep, metric):
-        return float(statistics.median(ar_per_seed(rep, metric)))
+    def fine_per_seed(rep):
+        return [float(v) for v in
+                rep["results"]["p3_transfer"]["metrics"]["ar"]["fine"]["disp_rel_l2"]["per_seed"]]
 
-    def fine_disp(rep):
-        return float(statistics.median(
-            rep["results"]["p3_transfer"]["metrics"]["ar"]["fine"]["disp_rel_l2"]["per_seed"]))
-
-    eg_b, eg_e = ar_median(base, "energy_gap_rel"), ar_median(e2, "energy_gap_rel")
-    spread = {"egap_seed_sd_base": float(statistics.pstdev(ar_per_seed(base, "energy_gap_rel"))),
-              "egap_seed_sd_e2": float(statistics.pstdev(ar_per_seed(e2, "energy_gap_rel")))}
-    fd_b, fd_e = fine_disp(base), fine_disp(e2)
-    egap_change, fine_change = _rel_change(eg_e, eg_b), _rel_change(fd_e, fd_b)
-    k1 = (egap_change > band) or (fine_change > band)
+    eg = noise_guarded_worse(ar_per_seed(base, "energy_gap_rel"),
+                             ar_per_seed(e2, "energy_gap_rel"), band)
+    fd = noise_guarded_worse(fine_per_seed(base), fine_per_seed(e2), band)
+    spread = {"egap_seed_sd_base": float(statistics.stdev(ar_per_seed(base, "energy_gap_rel"))),
+              "egap_seed_sd_e2": float(statistics.stdev(ar_per_seed(e2, "energy_gap_rel")))}
+    k1 = eg["fires"] or fd["fires"]
     phase = bench["phases"].get(f"bottleneck{m_tokens}_fine")
     if phase is not None and phase.get("timing") != "differential":
         raise ValueError("E2 adjudication refused: the bench's bottleneck phase is not "
@@ -150,10 +182,16 @@ def adjudicate_e2(base: dict, e2: dict, bench: dict, m_tokens: int, band: float 
     step_s = float(phase["ms_per_step"]) / 1000.0 if phase else None
     k2 = step_s is None or step_s >= kill_s
     go = (not k1) and (step_s is not None) and step_s < go_s
-    return {"M": m_tokens, "band": band, "egap_median_base": eg_b, "egap_median_e2": eg_e,
-            "egap_rel_change": egap_change, "fine_disp_base": fd_b, "fine_disp_e2": fd_e,
-            "fine_disp_rel_change": fine_change, "fine_step_s": step_s, **spread,
-            "aggregation": "seed median (both K1 quantities)",
+    return {"M": m_tokens, "band": band,
+            "egap_mean_base": eg["base_mean"], "egap_mean_e2": eg["new_mean"],
+            "egap_rel_change": eg["rel_change"], "egap_threshold": eg["threshold"],
+            "fine_disp_base": fd["base_mean"], "fine_disp_e2": fd["new_mean"],
+            "fine_disp_rel_change": fd["rel_change"], "fine_disp_threshold": fd["threshold"],
+            "fine_step_s": step_s, **spread,
+            "aggregation": "seed means with noise guard (both K1 quantities)",
+            "K1_rule": f"kill iff relative change of seed means > max({band}, "
+                       f"{NOISE_GUARD_K} x SE_rel of the difference) (PREREG_E2 r7)",
+            "resolution": {"egap": eg["threshold"], "fine_disp": fd["threshold"]},
             "base_config_sha256": got, "comparability": "identical beyond the architecture",
             "K1_accuracy": k1, "K2_speed": k2, "GO": go,
             "verdict": "GO" if go else ("KILLED" if (k1 or k2) else "NO-GO")}

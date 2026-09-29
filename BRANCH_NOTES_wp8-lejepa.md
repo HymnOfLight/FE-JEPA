@@ -352,6 +352,21 @@ pre-registration stamps it.
   small scale with guards on. Open, for the PI before stamping: the parity
   kills' calibration against seed noise (see the Stage 1.28 audit report).
 
+- Stage 1.29 (29 Sep, PI decision before stamping): the parity kills of E1
+  and E2 compare SEED MEANS and fire only beyond max(10%, 2 x SE_rel), SE_rel
+  = sqrt(s_base^2/3 + s_new^2/3) / mean_base with sample SDs
+  (`analysis.adjudicate.noise_guarded_worse`); the thresholds actually applied
+  are reported as the achieved resolution. Replaces E1's per-seed rule (false
+  kill 90% with no true effect at Phase-2b-like seed noise) and E2's
+  seed-median rule (53% for an exactly equivalent architecture). Simulated
+  properties of the adopted rule (3 seeds per arm): false kill about 10%
+  (Phase-2b-like noise) / 1% (Phase-1 2D noise); median resolution 14%
+  (displacement), 37% (energy gap), 27% (fine displacement). The Stage 1.28
+  audit report's "about 5% at any noise level" assumed a known standard
+  error; with SDs estimated from 3 seeds the ratio is t-like with ~4 degrees
+  of freedom, hence ~10% -- corrected in PREREG_E1 r13 / PREREG_E2 r7.
+  Suite 264.
+
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
 **E1 -- latent shaping and cross-geometry separation.** Question: does adding

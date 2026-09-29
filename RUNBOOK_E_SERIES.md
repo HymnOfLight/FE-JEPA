@@ -1,6 +1,6 @@
 # RUNBOOK -- E-series (wp8-lejepa), commands in execution order
 
-Stage 1.28 (29 Sep 2026). Every block below was executed end to end at small
+Stage 1.28-1.29 (29 Sep 2026). Every block below was executed end to end at small
 scale in the sandbox with the guards ON (scaled copies of the configurations,
 labelled PREREG files stamped through the CLI). Run on the box only after the
 pre-registration of the experiment is stamped and tagged.
@@ -13,7 +13,7 @@ generation, stamping, commit and tag (from the pilot's returned JSON).
 ## 0. Preconditions (box, once)
 ```bash
 cd ~/autodl-tmp/FE-JEPA && git fetch --tags && git checkout wp8-lejepa && git pull
-python -m pytest -q                     # 263 passed (BRANCH_NOTES carries the current count)
+python -m pytest -q                     # 264 passed (BRANCH_NOTES carries the current count)
 ```
 
 ## 1. E1 -- 2D latent shaping
@@ -82,8 +82,9 @@ python scripts/adjudicate_e1.py --base-report runs/e1_2d_base/report.json \
     --base-sep runs/wp8/sep_base_s*.json --shaped-sep runs/wp8/sep_shaped_s*.json \
     --out runs/wp8/e1_verdict.json
 ```
-The adjudicator pairs S with seeds through the state paths the separation
-files record, refuses files from the other arm or not measured on `val`, and
+K1 compares seed means behind a noise guard, max(10%, 2 x SE_rel), and
+reports the threshold it applied. The adjudicator pairs S with seeds through
+the state paths the separation files record, refuses files from the other arm or not measured on `val`, and
 refuses reports that differ beyond the loss specification.
 
 ## 2. E2 -- token bottleneck (3D; baseline = the Phase-2b AR cells)
@@ -128,8 +129,9 @@ for M in 512 1024; do
       --out runs/wp8/e2_verdict_M$M.json
 done
 ```
-The adjudicator refuses any baseline whose config SHA-256 is not the Phase-2b
-stamp (the Phase-2 report's AR cells are the D14 defect: against them any
+K1 compares seed means behind a noise guard, max(10%, 2 x SE_rel); the
+verdict reports the achieved resolution. The adjudicator refuses any baseline
+whose config SHA-256 is not the Phase-2b stamp (the Phase-2 report's AR cells are the D14 defect: against them any
 architecture passes parity), a report of the wrong M, reports that differ
 beyond the architecture, and a bench without set-up-free timing.
 

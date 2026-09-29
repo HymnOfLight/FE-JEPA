@@ -11,7 +11,7 @@ PHASE2_D14 = "e3bdd1e8778d063ff024b30354e1cd95b492953b2baf8dd25bc0aac863ce04da"
 
 def _rep(disp, egap, fine_ratio=1.2, seeds=3, kind=None, n_tokens=None,
          config_sha=PHASE2B_CONFIG_SHA256, loss_spec=None, manifest="m-inband",
-         fine_per_seed=None, ar_epochs=200):
+         fine_per_seed=None, ar_epochs=200, disp_per_seed=None, egap_per_seed=None):
     model = {"dim": 256, "depth": 8, "heads": 8, "scale_decode": True}
     if kind:
         model.update(kind=kind, n_tokens=n_tokens)
@@ -26,8 +26,8 @@ def _rep(disp, egap, fine_ratio=1.2, seeds=3, kind=None, n_tokens=None,
             "provenance": {"config_sha256": config_sha, "seeds": list(range(seeds)),
                            "datasets": [{"dir": "runs/c", "manifest_sha256": manifest}]},
             "results": {"e8": {"metrics": {"cells": {"ar": {"1024": {
-                "disp_rel_l2": {"mean": disp, "per_seed": [disp] * seeds},
-                "energy_gap_rel": {"mean": egap, "per_seed": [egap] * seeds}}}}}},
+                "disp_rel_l2": {"mean": disp, "per_seed": disp_per_seed or [disp] * seeds},
+                "energy_gap_rel": {"mean": egap, "per_seed": egap_per_seed or [egap] * seeds}}}}}},
                 "p3_transfer": {"metrics": {"ar": {
                     "fine_disp_mean": sum(fine) / len(fine), "inband_disp_mean": disp,
                     "fine": {"disp_rel_l2": {"per_seed": fine}}}}}}}
@@ -87,14 +87,19 @@ def test_e2_go_and_each_kill():
     assert missing["K2_speed"]                                                # no measurement = no case
 
 
-def test_e2_fine_displacement_is_compared_at_the_seed_median():
-    """PREREG_E2 Sec. 4: both K1 quantities at the seed median. Phase-2b's
-    fine per-seed values (0.281, 0.287, 0.207) have median 0.281, mean 0.258."""
+def test_e2_k1_compares_seed_means_behind_a_noise_guard():
+    """PREREG_E2 r7 (PI decision 29 Sep): seed means, kill iff the relative
+    change exceeds max(10%, 2 x SE_rel). Phase-2b's fine zero-shot seeds
+    (0.281, 0.287, 0.207; mean 0.258) give SE_rel 0.100 -> threshold 0.201."""
     base = _rep(0.03, 0.0104, fine_per_seed=[0.2811, 0.2874, 0.2066])
-    e2 = _e2(0.03, 0.0104, fine_per_seed=[0.30, 0.30, 0.30])   # +6.7% vs median, +16% vs mean
-    r = adjudicate_e2(base, e2, _bench(800.0), 512, 0.10, 2.0, 1.0)
-    assert r["fine_disp_base"] == pytest.approx(0.2811)
-    assert not r["K1_accuracy"] and r["verdict"] == "GO"
+    r = adjudicate_e2(base, _e2(0.03, 0.0104, fine_per_seed=[0.30] * 3), _bench(800.0), 512)
+    assert r["fine_disp_base"] == pytest.approx(0.2584, abs=1e-4)
+    assert r["fine_disp_threshold"] == pytest.approx(0.2008, abs=2e-3)
+    assert r["fine_disp_rel_change"] == pytest.approx(0.161, abs=2e-3)
+    assert not r["K1_accuracy"] and r["verdict"] == "GO"          # +16% is within the noise
+    r = adjudicate_e2(base, _e2(0.03, 0.0104, fine_per_seed=[0.336] * 3), _bench(800.0), 512)
+    assert r["K1_accuracy"] and r["verdict"] == "KILLED"           # +30% is beyond it
+    assert set(r["resolution"]) == {"egap", "fine_disp"}
 
 
 def test_e2_refuses_the_d14_baseline_wrong_arm_incomparable_and_setup_timing():
@@ -120,3 +125,18 @@ def test_e1_refuses_nonfinite_separation():
 def test_e2_reports_seed_spreads():
     r = adjudicate_e2(_rep(0.20, 0.30), _e2(0.21, 0.31), _bench(800.0), 512, 0.10, 2.0, 1.0)
     assert "egap_seed_sd_base" in r and "egap_seed_sd_e2" in r
+
+
+def test_e1_k1_is_on_seed_means_with_a_noise_guard():
+    """PREREG_E1 r13 (PI decision 29 Sep): one noisy seed pair no longer kills;
+    a degradation of the seed mean beyond max(10%, 2 x SE_rel) does."""
+    base = _rep(0.20, 0.30, disp_per_seed=[0.20, 0.22, 0.18])
+    noisy = _rep(0.2133, 0.30, loss_spec=SHAPED, disp_per_seed=[0.21, 0.19, 0.24])
+    r = adjudicate_e1(base, noisy, [0.1] * 3, [0.2] * 3, 0.10)
+    assert max(p["disp_rel_change"] for p in r["per_seed"]) > 0.30   # the r12 rule would kill
+    assert not r["K1_parity"] and r["verdict"] == "GO"
+    d = r["K1_detail"]["disp_rel_l2"]
+    assert d["rel_change"] == pytest.approx(0.0667, abs=1e-3) and d["threshold"] > 0.10
+    worse = _rep(0.30, 0.30, loss_spec=SHAPED, disp_per_seed=[0.30, 0.31, 0.29])
+    r = adjudicate_e1(base, worse, [0.1] * 3, [0.2] * 3, 0.10)
+    assert r["K1_parity"] and r["verdict"] == "KILLED"
