@@ -135,7 +135,10 @@ def main() -> None:
     if cfg.get("runtime", {}).get("compile", False) and not a.smoke:
         model = torch.compile(model)
 
+    from fejepa.report import _git_describe
+
     res = {"device": dev, "torch": torch.__version__, "smoke": a.smoke,
+           "git": _git_describe(), "config": str(cfg_path),
            "numeric_policy": policy,
            "phases": {}, "compile": {"enabled": bool(
                cfg.get("runtime", {}).get("compile", False))}}

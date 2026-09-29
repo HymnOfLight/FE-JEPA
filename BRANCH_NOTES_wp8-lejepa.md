@@ -367,6 +367,23 @@ pre-registration stamps it.
   of freedom, hence ~10% -- corrected in PREREG_E1 r13 / PREREG_E2 r7.
   Suite 264.
 
+- Stage 1.30 (29 Sep, pre-run check before the box session that runs the
+  E1 lambda pilot and the E2 bench): (i) the pilot ran under torch's default
+  numeric policy (TF32 off) while the E1 runs use the config's TF32 policy;
+  it now calls `setup_torch` with the config's `tf32`, so lambda is selected
+  under the arithmetic the arms use, and records the policy; (ii) the pilot
+  and the bench record `git describe` (the bench also its config path), and
+  the pilot records the SHA-256 and stamp-line state of `PREREG_E1.md`, tying
+  the selected lambda to the rule text it executed; (iii) the drafts enter the
+  repository as `PREREG_E1.md` (r13) and `PREREG_E2.md` (r7), unstamped, so
+  the pilot rule is committed before the pilot runs; (iv) runbook: `mkdir -p
+  runs/wp8` before the first `tee` into it (the pilot and bench logs would
+  otherwise be lost). Pilot exercised with the real Phase-1 model dimensions
+  (256/8/8) on a small 2D corpus: ID measured on 7,208 token rows, head width
+  from the rule, ledger 0, manifest unchanged. Branch tests pin the CPU for
+  every bitwise assertion; the instrument smoke tests run on the GPU when one
+  is present. Suite 264.
+
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
 **E1 -- latent shaping and cross-geometry separation.** Question: does adding

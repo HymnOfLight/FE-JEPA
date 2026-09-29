@@ -1,9 +1,11 @@
 # RUNBOOK -- E-series (wp8-lejepa), commands in execution order
 
-Stage 1.28-1.29 (29 Sep 2026). Every block below was executed end to end at small
+Stage 1.28-1.30 (29 Sep 2026). Every block below was executed end to end at small
 scale in the sandbox with the guards ON (scaled copies of the configurations,
-labelled PREREG files stamped through the CLI). Run on the box only after the
-pre-registration of the experiment is stamped and tagged.
+labelled PREREG files stamped through the CLI). The lambda pilot (1b) and the
+bench (2a) run BEFORE stamping, by design: they produce the numbers the stamp
+records, under rules already committed in PREREG_E1.md / PREREG_E2.md. Every
+run (1d, 2c) starts only after its pre-registration is stamped and tagged.
 Governance: nothing here touches `configs/phase2_v1.json`, `configs/phase2b_v1.json`,
 `PREREG_PHASE2.md` or `PREREG_PHASE2B.md`.
 
@@ -14,6 +16,7 @@ generation, stamping, commit and tag (from the pilot's returned JSON).
 ```bash
 cd ~/autodl-tmp/FE-JEPA && git fetch --tags && git checkout wp8-lejepa && git pull
 python -m pytest -q                     # 264 passed (BRANCH_NOTES carries the current count)
+mkdir -p runs/wp8                       # tee opens its log before any script creates the directory
 ```
 
 ## 1. E1 -- 2D latent shaping
@@ -25,21 +28,22 @@ python -m fejepa.cli info runs/data2d
 # (the Phase-1 corpus: val 256 + pool prefix 1024 labelled). Any other hash: STOP and report.
 ```
 
-### 1b. lambda pilot (box; ~1-2 h; buys no labels)
+### 1b. lambda pilot (box; ~1-2 h; buys no labels; runs under the E1 runs' TF32 policy)
 ```bash
 python scripts/e1_lambda_pilot.py --config configs/phase1_rec8_v2.json --data runs/data2d \
     --n-train 512 --n-val 128 --epochs 20 --head-width auto --out runs/wp8/e1_pilot.json \
     2>&1 | tee runs/wp8/e1_pilot.log
 ```
 Checks in the JSON: `pilot_ledger.total == 0`, `manifest_sha256_before == manifest_sha256_after`,
-`pilot_val` names pool[512:640] of the E1 split. Return `e1_pilot.json` + log.
+`pilot_val` names pool[512:640] of the E1 split, `numeric_policy.tf32` is true, `prereg.sha256`
+is the SHA-256 of the committed `PREREG_E1.md` draft (the rule the pilot executes), `git` names the head. Return `e1_pilot.json` + log.
 `selected_lambda: null` = NO-GO-AT-PILOT: E1 ends here and the JSON is the record.
 
 ### 1c. Fill, stamp, tag (repo)
 ```bash
 python scripts/make_e_series_configs.py --e1-lambda <selected_lambda> --e1-head-width <head_width>
 python -m pytest -q                                   # the generator test reproduces the filled configs
-# PREREG_E1.md (from the r12 draft, lambda and width written in) carries three labelled lines:
+# PREREG_E1.md (in the repo since Stage 1.30; write LAMBDA and WIDTH from the pilot JSON) carries three labelled lines:
 #   CONFIG_SHA256[e1_2d_base]   = <fill before tagging>
 #   CONFIG_SHA256[e1_2d_shaped] = <fill before tagging>
 #   CONFIG_SHA256[e1_2d_raw_s0] = <fill before tagging>
@@ -101,7 +105,7 @@ bottleneck phases is set-up-free (differential timing, `"timing": "differential"
 -- the number E2's K2/GO lines use.
 
 ### 2b. Stamp and tag (repo)
-PREREG_E2.md (r6 draft) records the baseline file's SHA-256
+PREREG_E2.md (in the repo since Stage 1.30) records the baseline file's SHA-256
 (`report_phase2b.json` = 320b6db5060ecae9f4747327228c7705d30877bece67d09af2f68d6c466f2794)
 and carries two labelled lines, `CONFIG_SHA256[e2_m512]` and `CONFIG_SHA256[e2_m1024]`.
 Dry-run both (refuse), stamp both with `fejepa prereg configs/e2_m<M>.json --stamp

@@ -27,6 +27,8 @@ def test_lambda_pilot_uses_the_e1_split_without_its_validation_set(tmp_path):
     assert r["head_width_source"].startswith("auto")
     assert r["intrinsic_dimension"]["suggested_head_width"] == r["head_width"]
     assert set(r["rows"]) == {"0.0", "0.01", "0.1", "1.0"}
+    assert r["numeric_policy"]["tf32"] is True and r["git"]           # the runs' policy, traceable
+    assert "sha256" in r["prereg"]
 
 
 def test_bench_times_the_bottleneck_differentially(tmp_path):
@@ -34,7 +36,9 @@ def test_bench_times_the_bottleneck_differentially(tmp_path):
     _run([str(ROOT / "scripts" / "bench_phase2_preconditions.py"),
           str(ROOT / "configs" / "phase2_v1.json"), "--smoke", "--bottleneck-tokens", "4",
           "--repeats", "4", "--out", str(out)], tmp_path)
-    ph = json.loads(out.read_text())["phases"]
+    res = json.loads(out.read_text())
+    assert res["git"] and res["numeric_policy"]["tf32"] is True
+    ph = res["phases"]
     for tag in ("bottleneck4_inband_0", "bottleneck4_fine"):
         p = ph[tag]
         assert p["timing"] == "differential" and p["steps"][1] > p["steps"][0]

@@ -59,6 +59,9 @@ def main() -> None:
     ap.add_argument("--allow-labelling", action="store_true",
                     help="buy labels for unlabelled pilot-validation instances "
                          "(rewrites the corpus manifest; never on the Phase-1 corpus)")
+    ap.add_argument("--prereg", default="PREREG_E1.md",
+                    help="the pre-registration whose Sec. 3 rule this pilot executes; its "
+                         "SHA-256 is recorded so the result is tied to the rule text")
     ap.add_argument("--smoke", action="store_true")
     ap.add_argument("--out", default="runs/wp8/e1_pilot.json")
     a = ap.parse_args()
@@ -72,6 +75,8 @@ def main() -> None:
     from fejepa.experiments.runner import _label_files
     from fejepa.fe.solve import SolveLedger
     from fejepa.metrics import evaluate_model, torch_predictor
+    from fejepa.report import _git_describe, read_prereg_entries
+    from fejepa.runtime import setup_torch
     from fejepa.train.losses import AR_CONFIG, ar_sigreg_config
     from fejepa.train.pretrain import PretrainConfig, pretrain
 
@@ -94,6 +99,13 @@ def main() -> None:
         split = cfg["split"]
         lr = float(cfg.get("pretrain", {}).get("lr", 1e-3))
         cfg_sha = hashlib.sha256(Path(a.config).read_bytes()).hexdigest()
+    # Stage 1.30: the E1 runs' numeric policy (TF32 per the config), not torch's
+    # defaults -- lambda is selected under the arithmetic the arms will use
+    policy = setup_torch(dev, tf32=bool(True if a.smoke else cfg.get("tf32", True)))
+    pf = Path(a.prereg)
+    prereg = ({"file": str(pf), "sha256": hashlib.sha256(pf.read_bytes()).hexdigest(),
+               "lines": [(lab, v if "<" in v else v[:12]) for lab, v in read_prereg_entries(pf)]}
+              if pf.exists() else {"file": str(pf), "sha256": None})
     sp = load_split(str(ddir), int(split["n_val"]), seed=int(split["seed"]))
     train_files = sp.pool_files[:a.n_train]
     pval_files = sp.pool_files[a.n_train:a.n_train + a.n_val]
@@ -153,6 +165,7 @@ def main() -> None:
            "intrinsic_dimension": id_reading,
            "rows": rows, "admissible": admissible, "selected_lambda": selected,
            "pilot_ledger": ledger.as_dict(), "config_sha256": cfg_sha,
+           "numeric_policy": policy, "git": _git_describe(), "prereg": prereg,
            "manifest_sha256_before": manifest_before,
            "manifest_sha256_after": manifest_sha256(ddir),
            "device": dev, "smoke": a.smoke}
