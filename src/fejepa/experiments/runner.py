@@ -277,7 +277,7 @@ def run_config(path, device_override: str | None = None,
 
         pf = cfg.get("prereg_file", "PREREG.md")
         try:
-            prereg = {"file": str(pf), "config_sha256": verify_prereg(cfg, pf)}
+            prereg = {"file": str(pf), "config_sha256": verify_prereg(cfg, pf, label=Path(path).stem)}
             prereg_status = "verified"
             print(f"[prereg] verified against {pf}: {prereg['config_sha256'][:12]}...",
                   flush=True)
@@ -618,9 +618,8 @@ def run_config(path, device_override: str | None = None,
         # overwrite each other's page: report.json -> RESULTS.md,
         # report_phase2b.json -> RESULTS_phase2b.md (Phase-2b amendment)
         stem = Path(out).stem
-        md_name = "RESULTS.md" if stem == "report" else f"RESULTS{stem[len('report'):]}.md" \
-            if stem.startswith("report") else f"RESULTS_{stem}.md"
-        md = write_results(payload, Path(out).parent / md_name)
+        suffix = "" if stem == "report" else (stem[len("report"):] if stem.startswith("report") else f"_{stem}")
+        md = write_results(payload, Path(out).parent / f"RESULTS{suffix}.md")
         print(f"[fejepa] RESULTS.md -> {md}")
     except Exception as e:                                    # noqa: BLE001
         print(f"[fejepa] WARNING: RESULTS.md rendering failed "
@@ -628,7 +627,7 @@ def run_config(path, device_override: str | None = None,
               f"`fejepa results {out}`", flush=True)
     if results.get("e8"):
         try:
-            for f in write_figures(payload, Path(out).parent):
+            for f in write_figures(payload, Path(out).parent, suffix=suffix):
                 print(f"[fejepa] figure -> {f}")
         except ImportError as e:
             print(f"[fejepa] figures skipped: {e}")

@@ -19,15 +19,19 @@ def main() -> None:
     ap.add_argument("--band", type=float, default=0.10)
     ap.add_argument("--kill-s", type=float, default=2.0)
     ap.add_argument("--go-s", type=float, default=1.0)
+    ap.add_argument("--expect-base-config-sha", default=None,
+                    help="config SHA-256 the baseline report must carry (default: the "
+                         "Phase-2b stamp; the Phase-2 report is refused -- D14)")
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
 
-    from fejepa.analysis.adjudicate import adjudicate_e2
+    from fejepa.analysis.adjudicate import PHASE2B_CONFIG_SHA256, adjudicate_e2
     from fejepa.analysis.common import inputs_provenance, write_json
 
     load = lambda p: json.loads(Path(p).read_text())  # noqa: E731
     res = adjudicate_e2(load(a.base_report), load(a.e2_report), load(a.bench), a.tokens,
-                        a.band, a.kill_s, a.go_s)
+                        a.band, a.kill_s, a.go_s,
+                        expect_base_config_sha=a.expect_base_config_sha or PHASE2B_CONFIG_SHA256)
     res["inputs_sha256"] = inputs_provenance([a.base_report, a.e2_report, a.bench])
     write_json(a.out or f"runs/wp8/e2_verdict_M{a.tokens}.json", res)
     print(json.dumps({k: res[k] for k in ("K1_accuracy", "K2_speed", "GO", "verdict", "fine_step_s")}))

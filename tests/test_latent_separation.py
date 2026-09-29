@@ -77,3 +77,25 @@ def test_bootstrap_ci_brackets_the_point_estimate():
     s = silhouette(x, labels)
     lo, hi = bootstrap_silhouette(x, labels, n_boot=100)
     assert lo <= s <= hi and (hi - lo) < 0.3
+
+
+def test_interval_has_no_duplicate_inflation_and_tracks_sampling_spread():
+    """Stage 1.28: on clouds with a known population, the interval contains
+    the point estimate and its half-width is of the order of the true
+    sampling spread (population redraws); the retired with-replacement
+    bootstrap put its whole interval above S."""
+    from fejepa.analysis.separation import bootstrap_silhouette, silhouette
+
+    rng = np.random.default_rng(0)
+    labels = np.repeat(np.arange(4), 64)
+    for shift in (0.0, 0.4):
+        centres = rng.standard_normal((4, 64)) * shift
+        x = centres[labels] + rng.standard_normal((256, 64))
+        s = silhouette(x, labels)
+        lo, hi = bootstrap_silhouette(x, labels, n_boot=80)
+        assert lo <= s <= hi
+        redraw = [silhouette(centres[labels] + np.random.default_rng(100 + k).standard_normal((256, 64)),
+                             labels) for k in range(30)]
+        half = 0.5 * (hi - lo)
+        sd = float(np.std(redraw))
+        assert 0.5 * 1.96 * sd < half < 2.5 * 1.96 * sd, (half, sd)

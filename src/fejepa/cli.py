@@ -207,23 +207,30 @@ def main(argv=None) -> int:
                 print(f"figure -> {f}")
 
     elif a.cmd == "prereg":
-        from .report import config_sha256, read_prereg_hash, stamp_prereg
+        from .report import config_sha256, read_prereg_entries, stamp_prereg
 
         cfg = json.loads(Path(a.config).read_text())
+        label = Path(a.config).stem          # labelled (multi-config) files only
         if a.stamp:
-            h = stamp_prereg(a.prereg_file, cfg)
-            print(f"stamped {a.prereg_file}: CONFIG_SHA256 = {h}")
-            print("now: git add + commit + `git tag prereg-v2.0`")
+            h = stamp_prereg(a.prereg_file, cfg, label=label)
+            print(f"stamped {a.prereg_file}: CONFIG_SHA256 = {h}  ({a.config})")
+            print("when every CONFIG_SHA256 line is stamped: git add + commit, "
+                  "record the file's blob SHA-256, git tag, push the tag")
         else:
             h = config_sha256(cfg)
-            rec = read_prereg_hash(a.prereg_file) if Path(a.prereg_file).exists() \
-                else None
+            ents = read_prereg_entries(a.prereg_file) if Path(a.prereg_file).exists() \
+                else []
+            own = [v for lab, v in ents if lab is not None and lab.strip() == label]
+            rec = own[0] if own else (ents[0][1] if len(ents) == 1 else None)
             state = ("MATCH" if rec == h else
                      "unstamped placeholder" if rec and "<" in rec else
                      f"MISMATCH (recorded {rec[:12]}...)" if rec else
-                     "no CONFIG_SHA256 line / file missing")
+                     "no CONFIG_SHA256 line for this config / file missing")
             print(f"config hash: {h}")
             print(f"{a.prereg_file}: {state}")
+            if len(ents) > 1:
+                for lab, v in ents:
+                    print(f"  CONFIG_SHA256[{lab}] = {v if '<' in v else v[:12] + '...'}")
 
     elif a.cmd == "info":
         from .data.archive import load_manifest, manifest_sha256

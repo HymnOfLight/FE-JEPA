@@ -143,3 +143,20 @@ def test_audit_fails_closed_when_the_floor_exceeds_every_budget():
                                    "KP4_transfer_ratio": 1.5, "KP6_rho_within_min": 0.3}},
               "results": {"e8": {"metrics": {"cells": cells}}}}
     assert derive_gate(report)["a"] is False
+
+
+def test_ar_sha_listing_prefers_the_runs_own_e8_states(tmp_path):
+    """Stage 1.28: a box listing that also holds the superseded AR states
+    (Phase-2b cache surgery) must chain to the run's own e8_states/ lines, and
+    a seed that stays ambiguous fails instead of taking the last line."""
+    rep = _report()
+    new, old = "a" * 64, "b" * 64
+    rep["results"]["e8"]["metrics"]["d9_restart"]["ar_states"] = {"s0": {"sha256": new}}
+    f = tmp_path / "states.txt"
+    f.write_text(f"{new}  runs/phase2/e8_states/ar_p1024_s0.pt\n"
+                 f"{old}  runs/phase2/e8_states_phase2_invalid_ar/ar_p1024_s0.pt\n")
+    res = audit(rep, AuditExpectations(config_sha="abc", ledger_total=1280, ar_sha_file=str(f)))
+    assert [c["ok"] for c in res["checks"] if "SHA-256 chain" in c["check"]] == [True]
+    f.write_text(f"{new}  x/ar_p1024_s0.pt\n{old}  y/ar_p1024_s0.pt\n")      # no e8_states dir
+    res = audit(rep, AuditExpectations(config_sha="abc", ledger_total=1280, ar_sha_file=str(f)))
+    assert [c["ok"] for c in res["checks"] if "SHA-256 chain" in c["check"]] == [False]

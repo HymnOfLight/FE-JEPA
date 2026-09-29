@@ -59,15 +59,29 @@ def check_accounting(report: dict, exp: AuditExpectations, chk) -> None:
         json.dumps({k: d9.get(k) for k in ("reuse_states", "sup_units_from_cache",
                                            "units_resumed_from_epoch")}))
     if exp.ar_sha_file:
-        want = {}
+        # Stage 1.28: a box listing may hold several AR states per seed (the
+        # Phase-2b cache surgery keeps the superseded ones in
+        # e8_states_phase2_invalid_ar/). The run's own states live in a
+        # directory named exactly `e8_states`; those lines win, and a seed that
+        # is still ambiguous fails the check instead of silently taking the
+        # last line listed.
+        cands: dict = {}
         for line in Path(exp.ar_sha_file).read_text().splitlines():
-            m = re.match(r"([0-9a-f]{64})\s+.*ar_p\d+_s(\d)\.pt", line.strip())
+            m = re.match(r"([0-9a-f]{64})\s+(\S*ar_p\d+_s(\d+)\.pt)\s*$", line.strip())
             if m:
-                want[f"s{m.group(2)}"] = m.group(1)
+                cands.setdefault(f"s{m.group(3)}", []).append((m.group(2), m.group(1)))
+        want, ambiguous = {}, []
+        for k, lst in sorted(cands.items()):
+            prim = [(pth, h) for pth, h in lst if Path(pth).parent.name == "e8_states"] or lst
+            hs = {h for _, h in prim}
+            if len(hs) == 1:
+                want[k] = hs.pop()
+            else:
+                ambiguous.append(k)
         got = {k: v.get("sha256") for k, v in (d9.get("ar_states") or {}).items()}
         chk("AR state SHA-256 chain (report == box sha256sum)",
-            bool(want) and all(got.get(k) == v for k, v in want.items()),
-            json.dumps({"box": want, "report": got}))
+            bool(want) and not ambiguous and all(got.get(k) == v for k, v in want.items()),
+            json.dumps({"box": want, "report": got, "ambiguous_seeds": ambiguous}))
 
 
 def check_reaggregation(cells: dict, chk) -> None:

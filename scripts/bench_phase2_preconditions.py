@@ -176,28 +176,50 @@ def main() -> None:
     # wp8 E2 (branch only): the token bottleneck under the SAME AR step on the
     # largest in-band and the fine instance -- the speed/memory numbers E2's
     # kill and GO lines are written against (D8: measured, not extrapolated).
+    # Stage 1.28: timed DIFFERENTIALLY -- after a warm-up, two runs of n1 and
+    # n2 steps; per-step time = (T(n2) - T(n1)) / (n2 - n1). Each pretrain()
+    # call re-does the per-instance set-up (features, farthest-point seeds,
+    # token assignment, stiffness assembly); dividing one call's wall time by
+    # its steps (the FE-JEPA phases' convention, kept there for continuity)
+    # charges that set-up to the step -- negligible at 14.7 s/step, but a
+    # material share of E2's absolute 1.0 s / 2.0 s thresholds. The inclusive
+    # number is recorded beside it for like-for-like comparison.
     if a.bottleneck_tokens > 0:
         bcfg = dict(mcfg, n_tokens=int(a.bottleneck_tokens))
         bmodel = _build_model({"kind": "bottleneck", "model": bcfg, "seed": 0})
+        blr = float(cfg.get("pretrain", {}).get("lr", 1e-3))
+        n1 = max(2, a.repeats // 4)
+        n2 = n1 + max(2, a.repeats)
+
+        def _timed(arch, epochs):
+            if dev == "cuda":
+                torch.cuda.synchronize()
+            t0 = time.perf_counter()
+            pretrain(bmodel, [arch], PretrainConfig(loss=AR_CONFIG, epochs=epochs, lr=blr,
+                                                    device=dev, log_every=-1, seed=0))
+            if dev == "cuda":
+                torch.cuda.synchronize()
+            return time.perf_counter() - t0
+
         for tag in ("inband_0", "fine"):
             if tag not in sizes:
                 continue
             if dev == "cuda":
                 torch.cuda.reset_peak_memory_stats()
-            t0 = time.perf_counter()
-            pretrain(bmodel, [sizes[tag]],
-                     PretrainConfig(loss=AR_CONFIG, epochs=a.repeats,
-                                    lr=float(cfg.get("pretrain", {}).get("lr", 1e-3)),
-                                    device=dev, log_every=-1, seed=0))
-            if dev == "cuda":
-                torch.cuda.synchronize()
+            _timed(sizes[tag], 2)                                  # warm-up
+            t1, t2 = _timed(sizes[tag], n1), _timed(sizes[tag], n2)
+            step = (t2 - t1) / (n2 - n1)
             res["phases"][f"bottleneck{a.bottleneck_tokens}_{tag}"] = {
                 "n_nodes": int(sizes[tag].nodes.shape[0]),
                 "n_tokens": int(a.bottleneck_tokens),
-                "ms_per_step": round((time.perf_counter() - t0) * 1000 / a.repeats, 2),
+                "ms_per_step": round(step * 1000, 2),
+                "ms_per_step_incl_setup": round(t2 * 1000 / n2, 2),
+                "setup_ms": round(max(t1 - n1 * step, 0.0) * 1000, 1),
+                "timing": "differential", "steps": [n1, n2],
                 "peak_gib": (round(torch.cuda.max_memory_allocated() / 2**30, 3)
                              if dev == "cuda" else None),
-                "note": "wp8 E2 token bottleneck, same AR step as the FE-JEPA phases"}
+                "note": "wp8 E2 token bottleneck, same AR step as the FE-JEPA phases; "
+                        "ms_per_step excludes per-call set-up (E2's K2/GO number)"}
         del bmodel
 
     # D9: the MGN comparator was never benchmarked (attempt 1 OOM'd at its first

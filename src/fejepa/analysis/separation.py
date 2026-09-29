@@ -65,18 +65,35 @@ def probe_r2(x: np.ndarray, y: np.ndarray, ridge: float = 1e-3) -> float:
 
 def bootstrap_silhouette(x: np.ndarray, labels: np.ndarray, n_boot: int = 200,
                          seed: int = 0) -> tuple:
-    """Instance-level uncertainty of S: resample instances with replacement,
-    recompute S on the resample (bins fixed), return the 2.5/97.5 percentiles."""
+    """Instance-level uncertainty of S, reported beside the point estimate
+    (not used by any verdict).
+
+    Stage 1.28: stratified half-sampling WITHOUT replacement, centred on the
+    point estimate. The earlier with-replacement bootstrap duplicated
+    instances; a duplicate sits at distance 0 from its copy in the same bin,
+    which shrinks the within-bin distance a(i) and inflates S -- measured
+    +0.012 to +0.014 on 256-instance latent clouds (65% of E1's 0.02 effect
+    floor), and the reported "95% interval" then excluded its own point
+    estimate. Half-samples (half of every bin) have no duplicates; for
+    mean-like statistics their spread approximates the full-sample sampling
+    spread (the classical half-sampling result), which a population-redraw
+    check reproduces for S. Centring on S removes the small finite-sample
+    shift of the half-size silhouette. Returns (lo, hi) of the 95% interval."""
     rng = np.random.default_rng(seed)
+    point = silhouette(x, labels)
+    groups = [np.flatnonzero(labels == lab) for lab in np.unique(labels)]
+    if not np.isfinite(point) or any(g.size < 4 for g in groups):
+        return (float("nan"), float("nan"))
     vals = []
     for _ in range(n_boot):
-        idx = rng.integers(0, x.shape[0], x.shape[0])
+        idx = np.concatenate([rng.choice(g, size=g.size // 2, replace=False) for g in groups])
         v = silhouette(x[idx], labels[idx])
         if np.isfinite(v):
             vals.append(v)
     if len(vals) < 10:
         return (float("nan"), float("nan"))
-    lo, hi = np.percentile(vals, [2.5, 97.5])
+    dev = np.asarray(vals) - np.median(vals)
+    lo, hi = point + np.percentile(dev, [2.5, 97.5])
     return (float(lo), float(hi))
 
 
@@ -111,6 +128,7 @@ def measure_separation(model, archs, token_rows_for_monitor: int = 20000) -> dic
                                  f"(counts {counts.tolist()})"),
             "S_silhouette": S,
             "S_bootstrap_ci95": list(bootstrap_silhouette(X, bins)) if valid else [float("nan")] * 2,
+            "S_ci95_method": "stratified half-sampling without replacement, centred on S",
             "pc1_loadings": pc1_loadings,             # which descriptor dims the bins follow
             "pc1_variance_share": pc1_variance_share,
             "probe_r2_geometry": probe_r2(X, G) if X.shape[0] >= 8 else float("nan"),

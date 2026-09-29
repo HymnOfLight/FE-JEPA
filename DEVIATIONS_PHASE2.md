@@ -351,3 +351,85 @@ named after its report (`report_phase2b.json` -> `RESULTS_phase2b.md`) so the
 amendment, which shares `runs/phase2/` with the deciding run, cannot overwrite
 the Phase-2 page; the reference gate is rendered beside G2b. Rendering and
 naming only: no value changes, configuration untouched, guard verifies.
+
+**PREREG_PHASE2B r1 withdrawn before execution (22 Sep).** Stamped at
+`fc2bbaf` (tag `prereg-phase2b`) and withdrawn the same day, with no pilot
+and no run executed under it, because the pre-run audit of the execution
+path had not been completed on the stamped head (R20 landed after the
+stamp). The tag is deleted; the commit remains in history; the file carries
+the withdrawal record. r2 follows the audit.
+
+**R21 (engineering, 22 Sep).** The energy-gap figure is named after its
+report as the results page is (`figure1_energy_gap_phase2b.png`). A full
+inventory of the runtime's filesystem writes (report, results page, figure,
+per-unit states and checkpoints, per-unit caches, labels into the corpus,
+manifests at generation only) shows no remaining fixed-name output that a
+Phase-2b run could overwrite in the shared `runs/phase2/` directory.
+
+**R22 (engineering, 22 Sep).** Unit-cache lineage: a supervised unit that
+starts from a pretrained state records that state's SHA-256, and a cache
+hit is honoured only if the state on disk still carries it; otherwise the
+unit is retrained and the mismatch logged. This makes Phase-2b robust to a
+forgotten cache surgery: fine-tune units built on the superseded AR states
+can never be served silently. Scratch and supervised units carry no
+lineage and are unaffected. No value changes (paths bitwise-equal to R20).
+
+**R23 (engineering, 22 Sep).** Fail-closed guard on the sanity floor: a
+`sanity_min_budget` above every budget makes condition (a) FAIL ("(a)
+unassessed") instead of passing vacuously. No value changes.
+
+## Phase-2b execution record (28 Sep 2026)
+
+Executed once under PREREG_PHASE2B r2 (tag `prereg-phase2b-r2` = `4aaa60d`,
+CONFIG_SHA256 `316f5e6e…`, guard verified at start). Instrument pilot P0
+(config `7e43ebd3…`, 20 AR epochs): disp 0.3087 < 0.90, passed, 22 Sep.
+Full run 22-28 Sep on the same container as the pilot: one attempt, no
+interruption, no checkpoint resume, no lineage retrain (`[r22]` never
+fired -- the cache surgery of PREREG_PHASE2B Sec. 5 was performed and is
+verified by hash: the three superseded AR states preserved in
+`e8_states_phase2_invalid_ar/` carry exactly the SHA-256s recorded in the
+22 Sep return package; the 30 supervised and 6 scratch unit caches are
+byte-identical; the 6 fine-tune caches are new). AR 3 x 27.3 h, few-shot 12
+units 50.1 h, 5 d 18 h in all; solve ledger 0 (labels solved and persisted
+during Phase-2, 6,400 solves in the attempt-1 and attempt-6 ledgers).
+Outputs `report_phase2b.json`, `RESULTS_phase2b.md`,
+`figure1_energy_gap_phase2b.png`; the Phase-2 report and page are
+byte-identical to the 22 Sep package (R20/R21 held).
+
+Verdict as recorded by the stamped instrument: **G2 (PREREG_PHASE2B) GO** --
+(a) true at every assessed budget (>= 64), (b) true (parity gap -0.363
+against the +0.10 band; energy-gap advantage 0.989-0.9997 against 0.40),
+(c) false; **KP4 triggered** (zero-shot fine/in-band ratio 8.62 > 1.5;
+transfer zone retired), KP1/2/3/5/6 not triggered. **Reference gate
+(stamped Phase-2 form) NO-GO** on (a) at b = 16 (2.71x < 3.0x), as
+PREREG_PHASE2B foresaw; (b) true, (c) false. Both readings are published
+together. Independent audit (branch `scripts/audit_phase2_report.py`):
+22/22 after the audit tool's own verdict line was corrected to the stamped
+formula (branch Stage 1.27; the tool had a AND b AND c AND no-kill, stricter
+than Sec. 2 -- its first pass reported 21/22 with that single false
+discrepancy; the uncorrected output is archived beside the corrected one).
+Reported-only rows: AR zero-shot at fine 0.258 (labels@1024 0.257, mgn@1024
+0.459, knn 0.401, poly 1.949); few-shot from the AR state 0.053 (16 fine
+labels) and 0.030 (64) against scratch 0.799 and 0.193; E6 rho_within
+0.827; WP6 all inequalities hold.
+
+## D16 -- prose-configuration divergence on the label-free arm's pool (found 28 Sep 2026, after the Phase-2b run)
+
+PREREG_PHASE2 Sec. 7 states that the label-free arm "trains on the 1,744
+non-validation in-band instances". The stamped configuration
+(`experiments.e8.pool_sizes = [1024]`, unchanged from `e3bdd1e8…` through
+`316f5e6e…`) trains the AR arm on `pool_files[:1024]` -- the same
+1,024-instance prefix the supervised arms train on, labels ignored (E8
+`AR pool1024`; 204,800 steps per seed = 200 epochs x 1,024; the report's
+`unlabeled_pool_depth_used = 1024`). Every Phase-2 attempt, the pilot and
+the Phase-2b run executed this way. The pre-stamp bench projection
+(1,046,400 AR steps = 3 x 200 x 1,744) and the seventh-round check's
+defence of a "data asymmetry (1,744 unlabelled vs 1,024 labelled)" followed
+the prose, not the configuration. Under Sec. 5 precedence the stamped
+implementation is authoritative and the divergence is recorded here.
+Direction: against the label-free arm (fewer instances than the prose
+promised), and the comparison it leaves is the cleaner one -- identical
+instances, with and without labels. No threshold, formula or configuration
+is affected; the verdict is unaffected. Publication text states 1,024 and
+corrects the 1,744 sentence; the 720 in-band instances the prose calls
+"never labelled" were also never trained on by any arm.

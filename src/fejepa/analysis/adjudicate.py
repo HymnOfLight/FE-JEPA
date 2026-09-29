@@ -23,6 +23,39 @@ def _rel_change(new: float, old: float) -> float:
     return new / (old + 1e-30) - 1.0
 
 
+PHASE2B_CONFIG_SHA256 = "316f5e6e282db9c11509d8d1d2ed54d229ded9d6367c63b3a13abd7709ba4899"
+"""E2's baseline (PREREG_PHASE2B r2 stamp). The Phase-2 report (config
+e3bdd1e8...) must never serve as a baseline: its AR cells are the D14
+instrument defect (prediction = u* x fscale), against which any architecture
+passes parity trivially."""
+
+
+def _signature(report: dict, model_ignore=("kind", "n_tokens")) -> dict:
+    """Everything that shapes an AR cell except the architecture kind and the
+    loss specification: corpus identity (manifest SHA-256s), split, seeds,
+    labels, schedule, numeric policy, model dims and features."""
+    cfg = report.get("config") or {}
+    e8 = (cfg.get("experiments") or {}).get("e8") or {}
+    pre = {k: v for k, v in (cfg.get("pretrain") or {}).items() if k != "loss_spec"}
+    prov = report.get("provenance") or {}
+    return {"datasets": [(d.get("dir"), d.get("manifest_sha256"))
+                         for d in prov.get("datasets", [])],
+            "seeds": prov.get("seeds"),
+            "data": cfg.get("data"), "data_transfer": cfg.get("data_transfer"),
+            "split": cfg.get("split"), "labels": cfg.get("labels"),
+            "pretrain": pre, "tf32": cfg.get("tf32"), "runtime": cfg.get("runtime"),
+            "model": {k: v for k, v in (cfg.get("model") or {}).items()
+                      if k not in model_ignore},
+            "e8": {k: e8.get(k) for k in ("pool_sizes", "ar_epochs", "seeds")}}
+
+
+def comparability(base: dict, other: dict) -> list:
+    """Keys on which two reports differ beyond architecture kind and loss spec
+    (empty = comparable). A verdict on incomparable reports is refused."""
+    sb, so = _signature(base), _signature(other)
+    return sorted(k for k in sb if sb[k] != so[k])
+
+
 def adjudicate_e1(base: dict, shaped: dict, s_base: list, s_shaped: list,
                   band: float = 0.10, min_effect_abs: float = 0.02,
                   min_effect_seed_sd: float = 2.0) -> dict:
@@ -39,6 +72,10 @@ def adjudicate_e1(base: dict, shaped: dict, s_base: list, s_shaped: list,
         raise ValueError("E1 adjudication refused: a separation statistic is not finite "
                          f"({len(bad)} value(s)); the measurement is invalid (bins with "
                          "< 2 instances?) -- fix the measurement, do not adjudicate")
+    diff = comparability(base, shaped)
+    if diff:
+        raise ValueError(f"E1 adjudication refused: the two reports differ beyond the loss "
+                         f"specification on {diff} -- not the same corpus/split/seeds/schedule")
     per_seed, k1 = [], False
     for i, (db, ds, eb, es) in enumerate(zip(ar_per_seed(base, "disp_rel_l2"),
                                              ar_per_seed(shaped, "disp_rel_l2"),
@@ -49,7 +86,9 @@ def adjudicate_e1(base: dict, shaped: dict, s_base: list, s_shaped: list,
         per_seed.append({"seed": i, "disp_rel_change": cd, "egap_rel_change": ce})
     deltas = [b - a for a, b in zip(s_base, s_shaped, strict=True)]
     k2 = all(d <= 0.0 for d in deltas)
-    sd_base = statistics.pstdev(s_base) if len(s_base) > 1 else 0.0
+    # Stage 1.28: the SAMPLE standard deviation (n - 1), pinned in PREREG_E1
+    # r12; the population form (n) understated the floor by sqrt(2/3) at 3 seeds
+    sd_base = statistics.stdev(s_base) if len(s_base) > 1 else 0.0
     floor = max(float(min_effect_abs), float(min_effect_seed_sd) * sd_base)
     above_floor = all(d >= floor for d in deltas)
     rb, rs = transfer_ratio(base), transfer_ratio(shaped)
@@ -61,6 +100,7 @@ def adjudicate_e1(base: dict, shaped: dict, s_base: list, s_shaped: list,
     go = (not k1) and above_floor and ratio_ok
     return {"band": band, "per_seed": per_seed, "S_base": s_base, "S_shaped": s_shaped,
             "S_delta": deltas, "S_effect_floor": floor, "S_base_seed_sd": sd_base,
+            "S_base_seed_sd_ddof": 1, "comparability": "identical beyond loss_spec",
             "S_above_floor_all_seeds": above_floor,
             "transfer_ratio_base": rb, "transfer_ratio_shaped": rs,
             "transfer_guard": guard,
@@ -69,15 +109,33 @@ def adjudicate_e1(base: dict, shaped: dict, s_base: list, s_shaped: list,
 
 
 def adjudicate_e2(base: dict, e2: dict, bench: dict, m_tokens: int, band: float = 0.10,
-                  kill_s: float = 2.0, go_s: float = 1.0) -> dict:
-    """K1 accuracy (in-band energy gap at the seed median, or fine zero-shot
-    displacement, worse than the baseline by more than `band`); K2 speed (fine
-    step time not below `kill_s`); GO = parity and fine step time below `go_s`."""
+                  kill_s: float = 2.0, go_s: float = 1.0,
+                  expect_base_config_sha: str | None = PHASE2B_CONFIG_SHA256) -> dict:
+    """K1 accuracy (in-band energy gap, or fine zero-shot displacement, worse
+    than the baseline by more than `band`, BOTH at the seed median -- PREREG_E2
+    Sec. 4); K2 speed (fine step time not below `kill_s`); GO = parity and fine
+    step time below `go_s`. Refuses a baseline other than the Phase-2b report,
+    reports that are not comparable, and a bench without setup-free timing."""
+    got = (base.get("provenance") or {}).get("config_sha256")
+    if expect_base_config_sha and got != expect_base_config_sha:
+        raise ValueError(f"E2 adjudication refused: the baseline report's config SHA-256 is "
+                         f"{str(got)[:12]}..., expected {expect_base_config_sha[:12]}... "
+                         "(the Phase-2b report; the Phase-2 AR cells are D14-invalid)")
+    mk = (e2.get("config") or {}).get("model") or {}
+    if mk.get("kind") != "bottleneck" or int(mk.get("n_tokens", -1)) != int(m_tokens):
+        raise ValueError(f"E2 adjudication refused: the E2 report is kind={mk.get('kind')!r} "
+                         f"n_tokens={mk.get('n_tokens')}, expected bottleneck M={m_tokens}")
+    diff = comparability(base, e2)
+    if diff:
+        raise ValueError(f"E2 adjudication refused: baseline and E2 reports differ beyond the "
+                         f"architecture on {diff}")
+
     def ar_median(rep, metric):
         return float(statistics.median(ar_per_seed(rep, metric)))
 
     def fine_disp(rep):
-        return float(rep["results"]["p3_transfer"]["metrics"]["ar"]["fine_disp_mean"])
+        return float(statistics.median(
+            rep["results"]["p3_transfer"]["metrics"]["ar"]["fine"]["disp_rel_l2"]["per_seed"]))
 
     eg_b, eg_e = ar_median(base, "energy_gap_rel"), ar_median(e2, "energy_gap_rel")
     spread = {"egap_seed_sd_base": float(statistics.pstdev(ar_per_seed(base, "energy_gap_rel"))),
@@ -86,11 +144,16 @@ def adjudicate_e2(base: dict, e2: dict, bench: dict, m_tokens: int, band: float 
     egap_change, fine_change = _rel_change(eg_e, eg_b), _rel_change(fd_e, fd_b)
     k1 = (egap_change > band) or (fine_change > band)
     phase = bench["phases"].get(f"bottleneck{m_tokens}_fine")
+    if phase is not None and phase.get("timing") != "differential":
+        raise ValueError("E2 adjudication refused: the bench's bottleneck phase is not "
+                         "setup-free (re-bench with Stage >= 1.28: differential timing)")
     step_s = float(phase["ms_per_step"]) / 1000.0 if phase else None
     k2 = step_s is None or step_s >= kill_s
     go = (not k1) and (step_s is not None) and step_s < go_s
     return {"M": m_tokens, "band": band, "egap_median_base": eg_b, "egap_median_e2": eg_e,
             "egap_rel_change": egap_change, "fine_disp_base": fd_b, "fine_disp_e2": fd_e,
             "fine_disp_rel_change": fine_change, "fine_step_s": step_s, **spread,
+            "aggregation": "seed median (both K1 quantities)",
+            "base_config_sha256": got, "comparability": "identical beyond the architecture",
             "K1_accuracy": k1, "K2_speed": k2, "GO": go,
             "verdict": "GO" if go else ("KILLED" if (k1 or k2) else "NO-GO")}

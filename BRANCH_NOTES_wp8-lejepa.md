@@ -301,6 +301,57 @@ pre-registration stamps it.
   With this the Phase-2b report audits ALL OK (22/22): provenance, AR-state
   SHA chain, re-aggregation, both gates, all six kills.
 
+- Stage 1.28 (29 Sep, pre-stamp audit of the E-series execution path; every
+  item below failed or misled on the committed head and is fixed with a test):
+  (i) stamping: one PREREG file governs several configurations (E1: base,
+  shaped, raw_s0; E2: M = 512, 1024) but the tool stamped and verified only
+  the FIRST `CONFIG_SHA256` line, so every arm but one would have been
+  refused by the guard; the drafts also carried `<fill at stamping>`, which
+  the tool does not recognise (the Phase-2 r9 lesson). Now labelled lines
+  `CONFIG_SHA256[<config stem>] = <fill before tagging>`; the CLI and the
+  runner use the config's stem; verification refuses while any line is
+  unstamped (no arm runs before every arm is frozen); unlabelled single-line
+  files (Phase 1/2/2b) behave exactly as before (verified on the stamped
+  PREREG_PHASE2 and PREREG_PHASE2B). (ii) filling lambda / head width at
+  stamping broke the byte-equality test of the generated configurations;
+  the generator now fills them (--e1-lambda, --e1-head-width) and the test
+  regenerates with the committed values. (iii) the E1 raw-LN ablation arm was
+  pre-registered with no configuration: `configs/e1_2d_raw_s0.json` (seed 0).
+  (iv) E2 now derives from `configs/phase2b_v1.json` (its baseline's config;
+  a test pins every AR-shaping section to it byte for byte). (v) the runbook
+  pointed E2's adjudication at `report_phase2.json`, whose AR cells are the
+  D14 defect (egap 0.999, fine 0.9999): any architecture would have passed
+  parity -- a false GO; the adjudicator now refuses any baseline but the
+  Phase-2b stamp, the wrong M, and incomparable reports (corpus manifests,
+  split, seeds, schedule, dims). (vi) E2's fine-displacement comparison used
+  the seed mean; PREREG_E2 fixes the seed median (Phase-2b: 0.281 vs 0.258).
+  (vii) the lambda pilot drew its own 128-instance split with the E1 seed:
+  it validated on half of E1's validation set and trained on the other half;
+  it now uses E1's split and validates on pool[512:640] (labelled, disjoint
+  from E1's validation set), refuses to buy labels on the Phase-1 corpus, and
+  sizes the SIGReg head from its own AR model (--head-width auto) so lambda is
+  selected under the arm's head. (viii) the effect floor used the population
+  SD; now the sample SD (the tests' stated intent). (ix) the adjudicator
+  paired S values by the order the shell listed the files; now by the seed
+  in the recorded state path, arm-checked. (x) the instance-level "95% CI" of
+  S came from a with-replacement bootstrap whose duplicates inflate S by
+  +0.012-0.014 (65% of the effect floor) -- the interval excluded its own
+  point estimate; now stratified half-sampling without replacement, centred
+  on S, checked against population redraws. (xi) the bench's bottleneck step
+  time included each call's set-up (features, FPS, stiffness assembly), a
+  material share of E2's absolute 1.0/2.0 s lines; now differential timing
+  (inclusive number kept beside it); the adjudicator refuses a bench without
+  it. (xii) the audit's AR-SHA chain took the LAST line per seed, so a listing
+  that also held the superseded states (e8_states_phase2_invalid_ar/) failed
+  it; the run's own e8_states/ lines win, ambiguity fails. (xiii) main-line
+  R21-R23 ported (figure naming, unit-cache lineage, fail-closed floor) and
+  PREREG_PHASE2B / DEVIATIONS_PHASE2 synced from wp7-3d: shared files now
+  differ from main only by E-series additions. Runbook rewritten (corpus
+  identity check, mkdir before tee, allocator and label-worker flags, Phase-2b
+  baseline, labelled stamping). Suite 263. Full E1 and E2 chains rehearsed at
+  small scale with guards on. Open, for the PI before stamping: the parity
+  kills' calibration against seed noise (see the Stage 1.28 audit report).
+
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
 **E1 -- latent shaping and cross-geometry separation.** Question: does adding

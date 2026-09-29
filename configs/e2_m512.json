@@ -1,5 +1,5 @@
 {
- "_comment": "E2 arm M=512: bottleneck AR only; baseline = Phase-2 report AR cells; see PREREG_E2.md",
+ "_comment": "E2 arm M=512: bottleneck AR only; baseline = the Phase-2b report's AR cells (runs/phase2/report_phase2b.json); see PREREG_E2.md",
  "data": {
   "dir": "runs/data3d_phase2",
   "n": 2000,
@@ -130,7 +130,8 @@
   "egap_adv_min": 0.4,
   "transfer_win": 1.25,
   "decision_budget": 64,
-  "logic": "a AND (b OR c)"
+  "logic": "a AND (b OR c)",
+  "sanity_min_budget": 64
  },
  "kills": {
   "KP1_parity_pct": 0.1,
