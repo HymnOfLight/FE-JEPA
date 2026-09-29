@@ -33,10 +33,10 @@ def main() -> None:
     from fejepa.analysis.common import (build_model_from_config, instance_files, sha256_of,
                                         write_json)
     from fejepa.analysis.separation import measure_separation
-    from fejepa.data.archive import load_instance
+    from fejepa.data.archive import load_instance, manifest_sha256
     from fejepa.report import config_sha256
 
-    cfg_sha = state_sha = None
+    cfg_sha = state_sha = data_sha = None
     if a.smoke:
         import tempfile
 
@@ -55,9 +55,11 @@ def main() -> None:
         # canonical config SHA-256) and the exact state file it measured
         cfg_sha = config_sha256(cfg)
         state_sha = sha256_of(a.state) if a.state else None
+        data_sha = manifest_sha256(a.data)            # Stage 1.33: which corpus was read
     res = measure_separation(model, [load_instance(f) for f in files])
     res.update({"subset": a.subset, "state": a.state, "state_sha256": state_sha,
                 "config": a.config if not a.smoke else None, "config_sha256": cfg_sha,
+                "data": a.data if not a.smoke else None, "data_manifest_sha256": data_sha,
                 "kind": mcfg.get("kind", "fejepa"), "smoke": a.smoke})
     write_json(a.out, res)
     print(json.dumps(res, indent=1))

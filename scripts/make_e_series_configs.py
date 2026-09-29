@@ -5,7 +5,7 @@ configurations (wp8-lejepa, PREREG_E1 / PREREG_E2 mechanics).
 Every E-series run is a `run-config` on a derived configuration:
   * E2 (M = 512 and 1024): the Phase-2b configuration (whose AR cells are
     E2's baseline) with model.kind = bottleneck, model.n_tokens = M,
-    model.decode_k = 4 (the continuous decoder, Stage 1.32), E8 as AR
+    model.decode_k = 6 (the continuous decoder, Stage 1.32/1.33), E8 as AR
     pretraining only, P3 in zero-shot-only form, and the FE-JEPA-only probes
     (e6, wp6, e1) disabled. Everything else -- corpus, split, seeds, pool,
     epochs, learning rate, numeric policy -- is the baseline's, byte for byte
@@ -40,6 +40,10 @@ import json
 import re
 from pathlib import Path
 
+PILOT_PROTOCOL = {"epochs": 20, "n_train": 512, "n_val": 128, "tol": 0.05,
+                  "lambdas": (0.01, 0.1, 1.0)}
+"""PREREG_E1 Sec. 3 -- the pilot a configuration may be filled from (Stage 1.33)."""
+
 PREREG_E1_PARAMS = re.compile(
     r"LAMBDA = `(?P<lam>[^`]*)`; WIDTH = `(?P<width>[^`]*)`; "
     r"pilot record SHA-256 = `(?P<sha>[^`]*)`")
@@ -69,6 +73,28 @@ def read_pilot(path: str, phase1: dict, phase1_sha256: str | None = None) -> tup
     want = {"n_val": int(phase1["split"]["n_val"]), "seed": int(phase1["split"]["seed"])}
     if p.get("split") != want:
         raise SystemExit(f"{path}: pilot split {p.get('split')} is not the E1 split {want}")
+    # Stage 1.33: the pilot must have run the pre-registered protocol, and its
+    # selection must follow from its own rows
+    pp = PILOT_PROTOCOL
+    for key in ("epochs", "n_train", "n_val"):
+        if p.get(key) != pp[key]:
+            raise SystemExit(f"{path}: pilot {key} = {p.get(key)}, PREREG_E1 Sec. 3 fixes {pp[key]}")
+    rows = p.get("rows") or {}
+    grid = {str(float(lam)) for lam in pp["lambdas"]}
+    if set(rows) != grid | {"0.0"}:
+        raise SystemExit(f"{path}: pilot lambda grid {sorted(rows)} is not {sorted(grid)} + 0")
+    if f"(1 + {pp['tol']})" not in str(p.get("rule", "")):
+        raise SystemExit(f"{path}: pilot rule {p.get('rule')!r} is not the 5% tolerance")
+    if not str(p.get("head_width_source", "")).startswith("auto"):
+        raise SystemExit(f"{path}: head width not set by the intrinsic-dimension rule "
+                         f"({p.get('head_width_source')!r})")
+    base = float(rows["0.0"]["disp_rel_l2"])
+    adm = sorted(float(lam) for lam in pp["lambdas"]
+                 if float(rows[str(float(lam))]["disp_rel_l2"]) <= base * (1.0 + pp["tol"]))
+    if sorted(float(v) for v in p.get("admissible") or []) != adm or not adm or \
+            float(p["selected_lambda"]) != max(adm):
+        raise SystemExit(f"{path}: selected_lambda {p.get('selected_lambda')} / admissible "
+                         f"{p.get('admissible')} do not follow from the rows ({adm})")
     return float(p["selected_lambda"]), int(p["head_width"]), hashlib.sha256(raw).hexdigest()
 
 
@@ -103,9 +129,11 @@ def _disable_all_but_e8(exps: dict) -> dict:
     return out
 
 
-E2_DECODE_K = 4
-"""Tokens blended per node by the E2 decoder (PREREG_E2 r9, PI decision of
-29 Sep 2026: continuous Franke-Little blend of the 4 nearest tokens)."""
+E2_DECODE_K = 6
+"""Tokens blended per node by the E2 decoder (PREREG_E2 r10: continuous
+decoding, PI decision of 29 Sep 2026; quadratic compact kernel over the 6
+nearest tokens, the narrowest blend measured at least as smooth across mesh
+edges as a piecewise-linear interpolation of the seeds -- Stage 1.33)."""
 
 
 def e2_config(phase2b: dict, m_tokens: int) -> dict:

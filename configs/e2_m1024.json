@@ -50,7 +50,7 @@
   },
   "kind": "bottleneck",
   "n_tokens": 1024,
-  "decode_k": 4
+  "decode_k": 6
  },
  "sup": {
   "epochs": 200,

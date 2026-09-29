@@ -57,6 +57,8 @@ def probe_r2(x: np.ndarray, y: np.ndarray, ridge: float = 1e-3) -> float:
     y (n, k) -- the LeWorldModel-style 'physical probing' reading: how linearly
     decodable the geometry descriptor is from the pooled latent."""
     n = x.shape[0]
+    if not (np.isfinite(x).all() and np.isfinite(y).all()):
+        return float("nan")                       # diverged latents: no probe (Stage 1.33)
     xc = np.concatenate([x - x.mean(0), np.ones((n, 1))], 1)
     yc = y - y.mean(0)
     preds = np.empty_like(yc)

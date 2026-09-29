@@ -119,7 +119,8 @@ def _sep_file(tmp_path, name, **kw):
     import json
 
     rec = {"state": "", "subset": "val", "S_silhouette": 0.1, "S_valid": True,
-           "n_instances": 256, "smoke": False, "config_sha256": "cfgA", "state_sha256": None}
+           "n_instances": 256, "smoke": False, "config_sha256": "cfgA", "state_sha256": None,
+           "data_manifest_sha256": "corpusA"}
     rec.update(kw)
     f = tmp_path / name
     f.write_text(json.dumps(rec))
@@ -134,7 +135,8 @@ def test_stage131_separation_files_are_tied_to_the_exact_state_config_and_split(
     rpath = run / "report.json"
     states = {f"s{s}": {"sha256": f"st{s}"} for s in range(3)}
     report = {"config": {"split": {"n_val": 256, "seed": 1}},
-              "provenance": {"config_sha256": "cfgA", "seeds": [0, 1, 2]},
+              "provenance": {"config_sha256": "cfgA", "seeds": [0, 1, 2],
+                             "datasets": [{"dir": "runs/data2d", "manifest_sha256": "corpusA"}]},
               "results": {"e8": {"metrics": {"d9_restart": {"ar_states": states}}}}}
 
     def files(over=None):
@@ -153,10 +155,16 @@ def test_stage131_separation_files_are_tied_to_the_exact_state_config_and_split(
            ({0: {"n_instances": 128}}, "measured on 128 instances"),
            ({0: {"S_valid": False, "S_invalid_reason": "bins"}}, "not a valid reading"),
            ({1: {"smoke": True}}, "not a valid reading"),
-           ({1: {"subset": "pool"}}, "PREREG_E1 fixes 'val'")]
+           ({1: {"subset": "pool"}}, "PREREG_E1 fixes 'val'"),
+           ({2: {"data_manifest_sha256": "corpusB"}}, "not one of the report's datasets")]
     for over, msg in bad:
         with pytest.raises(SystemExit, match=msg):
             _separation_by_seed(files(over), str(rpath), report)
+    # Stage 1.33: a non-finite S (diverged latents) is passed through for
+    # adjudicate_e1 to judge; an invalid reading with a finite S is refused
+    got = _separation_by_seed(files({1: {"S_valid": False, "S_silhouette": float("nan")}}),
+                              str(rpath), report)
+    assert got[0] == pytest.approx(0.1) and got[1] != got[1]
 
 
 def test_stage131_separation_script_records_state_and_config_hashes(tmp_path):
@@ -188,4 +196,6 @@ def test_stage131_separation_script_records_state_and_config_hashes(tmp_path):
     rec = json.loads(out.read_text())
     assert rec["state_sha256"] == hashlib.sha256(spath.read_bytes()).hexdigest()
     assert rec["config_sha256"] == config_sha256(cfg) and rec["n_instances"] == 8
+    from fejepa.data.archive import manifest_sha256
+    assert rec["data_manifest_sha256"] == manifest_sha256(d) and rec["data"] == str(d)
     assert rec["subset"] == "val" and rec["smoke"] is False

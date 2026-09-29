@@ -51,7 +51,7 @@ def test_bench_times_the_bottleneck_differentially(tmp_path):
         assert len(p["pairs"]) == 3 and len(p["estimates_ms"]) == 3
         assert p["ms_per_step"] == sorted(p["estimates_ms"])[1]          # the median pair
         assert isinstance(p["valid"], bool) and p["n_tokens"] == 4
-        assert p["decode_k"] == 4                                      # Stage 1.32 decoder
+        assert p["decode_k"] == 6                                      # Stage 1.33 decoder
         assert p["prepare_ms"] > 0 and p["ms_per_step_incl_setup"] > 0
 
 

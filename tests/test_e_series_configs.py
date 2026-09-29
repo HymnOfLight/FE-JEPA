@@ -132,7 +132,7 @@ def test_e2_configs_are_the_baseline_config_but_for_the_architecture(tmp_path):
         arch = ("kind", "n_tokens", "decode_k")
         assert {k: v for k, v in c["model"].items() if k not in arch} == base["model"]
         assert c["model"]["kind"] == "bottleneck" and c["model"]["n_tokens"] == m
-        assert c["model"]["decode_k"] == 4          # Stage 1.32: the continuous decoder
+        assert c["model"]["decode_k"] == 6          # Stage 1.33: the continuous decoder
         e8, b8 = dict(c["experiments"]["e8"]), dict(base["experiments"]["e8"])
         assert e8.pop("ar_only") is True and e8 == b8
         p3, bp3 = dict(c["experiments"]["p3_transfer"]), dict(base["experiments"]["p3_transfer"])
@@ -160,7 +160,12 @@ def _pilot_json(tmp_path, **over):
     import hashlib
 
     p1 = ROOT / "configs" / "phase1_rec8_v2.json"
-    rec = {"selected_lambda": 0.1, "head_width": 20, "smoke": False,
+    rows = {"0.0": {"disp_rel_l2": 0.100}, "0.01": {"disp_rel_l2": 0.101},
+            "0.1": {"disp_rel_l2": 0.104}, "1.0": {"disp_rel_l2": 0.120}}
+    rec = {"selected_lambda": 0.1, "admissible": [0.01, 0.1], "rows": rows,
+           "head_width": 20, "head_width_source": "auto: intrinsic-dimension rule",
+           "rule": "largest lambda with pilot-val disp <= AR * (1 + 0.05)",
+           "epochs": 20, "n_train": 512, "n_val": 128, "smoke": False,
            "pilot_ledger": {"per_stage": {}, "total": 0, "wall_clock_s": 0.0},
            "manifest_sha256_before": "m", "manifest_sha256_after": "m",
            "split": {"n_val": 256, "seed": 1}, "numeric_policy": {"tf32": True},
@@ -188,9 +193,14 @@ def _gen_from_pilot(tmp_path, pilot, prereg=None, extra=()):
 def test_generator_fills_configs_and_prereg_from_the_pilot_json(tmp_path):
     import hashlib
 
+    from scripts.make_e_series_configs import PLACEHOLDER, PREREG_E1_PARAMS
+
     pilot = _pilot_json(tmp_path)
     prereg = tmp_path / "PREREG_E1.md"
-    prereg.write_text((ROOT / "PREREG_E1.md").read_text())
+    # Stage 1.33: start from the placeholders even after the committed file is
+    # filled at stamping (the test must stay green on the stamped head)
+    blank = f"LAMBDA = `{PLACEHOLDER}`; WIDTH = `{PLACEHOLDER}`; pilot record SHA-256 = `{PLACEHOLDER}`"
+    prereg.write_text(PREREG_E1_PARAMS.sub(blank, (ROOT / "PREREG_E1.md").read_text()))
     out, r = _gen_from_pilot(tmp_path, pilot, prereg)
     assert r.returncode == 0, r.stderr
     sh = json.loads((out / "e1_2d_shaped.json").read_text())["pretrain"]["loss_spec"]
@@ -208,7 +218,10 @@ def test_generator_fills_configs_and_prereg_from_the_pilot_json(tmp_path):
     assert r2.returncode == 0 and prereg.read_text() == text
     od = tmp_path / "o"
     od.mkdir()
-    _, r3 = _gen_from_pilot(od, _pilot_json(od, selected_lambda=1.0), prereg)
+    rows1 = {"0.0": {"disp_rel_l2": 0.1}, "0.01": {"disp_rel_l2": 0.1},
+             "0.1": {"disp_rel_l2": 0.1}, "1.0": {"disp_rel_l2": 0.1}}
+    _, r3 = _gen_from_pilot(od, _pilot_json(od, selected_lambda=1.0, rows=rows1,
+                                            admissible=[0.01, 0.1, 1.0]), prereg)
     assert r3.returncode != 0 and "already filled" in r3.stderr
     assert prereg.read_text() == text
 
@@ -220,7 +233,15 @@ def test_generator_refuses_pilots_that_cannot_configure_e1(tmp_path):
              ({"manifest_sha256_after": "changed"}, "manifest changed"),
              ({"split": {"n_val": 128, "seed": 1}}, "not the E1 split"),
              ({"numeric_policy": {"tf32": False}}, "numeric policy"),
-             ({"config_sha256": "0" * 64}, "not this Phase-1 config")]
+             ({"config_sha256": "0" * 64}, "not this Phase-1 config"),
+             # Stage 1.33: the pre-registered protocol and a selection that follows from the rows
+             ({"epochs": 1}, "epochs = 1"),
+             ({"n_train": 256}, "n_train = 256"),
+             ({"rows": {"0.0": {"disp_rel_l2": 0.1}, "0.1": {"disp_rel_l2": 0.1}}}, "grid"),
+             ({"rule": "largest lambda with pilot-val disp <= AR * (1 + 0.1)"}, "5% tolerance"),
+             ({"head_width_source": "fixed by --head-width"}, "intrinsic-dimension rule"),
+             ({"selected_lambda": 1.0}, "do not follow from the rows"),
+             ({"admissible": [0.01]}, "do not follow from the rows")]
     for i, (over, msg) in enumerate(cases):
         d = tmp_path / f"c{i}"
         d.mkdir()

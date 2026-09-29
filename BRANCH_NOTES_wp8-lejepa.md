@@ -447,6 +447,56 @@ pre-registration stamps it.
   1024): preparation unchanged (0.8 s in-band, 2.3 s fine); training step
   +8% in-band (4.7 -> 5.1 s) and +28% fine (8.9 -> 11.4 s); peak RSS 3.5 ->
   3.9 GiB at 41,367 nodes. PREREG_E2 r9 records the decision. Suite 278.
+- Stage 1.33 (29 Sep, second review of 1.31/1.32 by three independent
+  reviewers -- the 1.31 changes run through the real E1/E2 chain at small
+  scale, the 1.32 decoder, the operator instruction -- every claim
+  re-verified): (i) the decoder's continuity is now fixed at the NODE scale.
+  The 1.32 Franke-Little 4-token blend was continuous along a finely sampled
+  path but concentrated on the nearest seed (on average 1.6 tokens per node),
+  so across real mesh edges it still swapped most of its weight: L1 change of
+  the weight vector > 1.5 on 32% of the in-band edges at M = 1024, against
+  9.9% for a piecewise-linear (Delaunay, barycentric) interpolation of the
+  same seeds. Across the kernel family (1 - d/R)^2 (R = distance to the
+  (k+1)-th seed; continuous by the same argument), k = 6 is the narrowest
+  blend that is at least as smooth as the linear interpolation on both bench
+  meshes at both M (edges with L1 > 1.0 / > 1.5: in-band 512 18.9 / 1.1%
+  vs 27.0 / 3.7%; in-band 1024 42.7 / 6.0% vs 52.6 / 9.9%; fine 512 2.2 /
+  0.1% vs 5.1 / 0.8%; fine 1024 9.9 / 0.3% vs 13.6 / 1.8%; FL k = 8 16.2%
+  in-band 1024; k = 5 fails in-band 1024), with 2.7 effective tokens per node
+  (linear 2.5) and no more weight drawn across cavities than the hard
+  assignment (mean 1.3-1.6% vs 1.5-1.7%); decode_k = 6 in the E2
+  configurations, the adjudicator and the bench default; a test pins the
+  smoothness criterion on a random tetrahedral mesh (the 1.32 kernel fails
+  it). (ii) column 0 (the encoder's cell) no longer depends on k: the Gram
+  preselection keeps 4 extra candidates before the exact ordering; the
+  "k = 1 is bitwise the former decoder" claim is restated as "up to
+  floating-point ties" (13-87 of 12,318 nodes are equidistant to two seeds
+  within 1e-16 and may pool differently than the pre-1.32 Gram argmin).
+  (iii) the stamping step would have left the suite red: a generator test
+  filled a copy of the committed PREREG_E1.md, which refuses once stamping
+  has filled it -- the test now starts from the placeholders; the full suite
+  passes on a simulated stamped head (PREREG_E1 filled, five lines stamped).
+  (iv) divergence: a non-finite per-seed metric of the treatment arm
+  (AR+SIGReg, bottleneck) counts as K1 (KILLED; a diverged shaped seed's S is
+  not evaluated), a non-finite baseline value voids the comparison --
+  pre-registered (PREREG_E1 r15, PREREG_E2 r10) instead of refused without a
+  verdict. (v) the generator checks the pilot's protocol (20 epochs,
+  512 / 128, the lambda grid, 5%, head width by the ID rule) and that its
+  selection follows from its rows; the E2 adjudicator requires decode_k = 6
+  in the report and the bench protocol (10 / 110 x 3 pairs, phase2b_v1.json,
+  TF32); separation files record and are checked against the corpus
+  manifest. (vi) re-bench rule pre-registered (an invalid phase -> that M
+  re-benched once; the re-bench supersedes, both kept); runbook fetches
+  with an explicit refspec (a single-branch clone does not advance with
+  `git pull`), checks for local edits, keeps the pytest log. (vii) E1 cost
+  estimate from the measured WP2 AR arm (204,800 steps in 39 min on the box
+  with this corpus and model): ~2-3 h per three-seed arm, the pilot ~0.5 h
+  (was ~9 h and 1-2 h). Cost of k = 6 against the hard decoder at the real
+  dimensions on the bench meshes (CPU, 8 threads, M = 1024): preparation
+  unchanged; training step +24% in-band (4.7 -> 5.9 s), +56% fine (8.7 ->
+  13.6 s); peak RSS +0.6 GiB at 41,367 nodes; decoder pack 152 B per node,
+  ~0.9 GiB GPU-resident for the 1,024 training instances (the energy anchors
+  are CPU-resident and streamed per call). Suite 281.
 
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 

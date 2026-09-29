@@ -65,9 +65,21 @@ def noise_guarded_worse(base_vals, new_vals, band: float = 0.10,
     max(band, k x SE_rel), where SE_rel is the standard error of the
     difference of the two seed means -- sample SDs (n - 1) of both arms,
     sqrt(s_b^2/n_b + s_n^2/n_n) -- divided by the baseline mean. `threshold`
-    is the resolution actually achieved and is reported with the verdict."""
+    is the resolution actually achieved and is reported with the verdict.
+
+    Stage 1.33 (PREREG_E1 r15 / PREREG_E2 r10): a non-finite value in the
+    BASELINE voids the comparison (refused); a non-finite value in the NEW arm
+    is a divergence and counts as the kill firing (`diverged_seeds` lists the
+    seeds; no mean or threshold is computed from them)."""
     b = _finite(base_vals, "the baseline's per-seed values")
-    a = _finite(new_vals, "the new arm's per-seed values")
+    a = [float(v) for v in new_vals]
+    if not a:
+        raise ValueError("adjudication refused: the new arm has no per-seed values")
+    diverged = [i for i, v in enumerate(a) if not math.isfinite(v)]
+    if diverged:
+        return {"base_mean": statistics.fmean(b), "new_mean": None, "rel_change": None,
+                "se_rel": None, "threshold": float(band), "fires": True,
+                "diverged_seeds": diverged}
     mb, ma = statistics.fmean(b), statistics.fmean(a)
     var = ((statistics.variance(b) / len(b)) if len(b) > 1 else 0.0) + \
           ((statistics.variance(a) / len(a)) if len(a) > 1 else 0.0)
@@ -75,7 +87,7 @@ def noise_guarded_worse(base_vals, new_vals, band: float = 0.10,
     tau = max(float(band), float(k) * se_rel)
     change = _rel_change(ma, mb)
     return {"base_mean": mb, "new_mean": ma, "rel_change": change, "se_rel": se_rel,
-            "threshold": tau, "fires": bool(change > tau)}
+            "threshold": tau, "fires": bool(change > tau), "diverged_seeds": []}
 
 
 PHASE2B_CONFIG_SHA256 = "316f5e6e282db9c11509d8d1d2ed54d229ded9d6367c63b3a13abd7709ba4899"
@@ -83,6 +95,15 @@ PHASE2B_CONFIG_SHA256 = "316f5e6e282db9c11509d8d1d2ed54d229ded9d6367c63b3a13abd7
 e3bdd1e8...) must never serve as a baseline: its AR cells are the D14
 instrument defect (prediction = u* x fscale), against which any architecture
 passes parity trivially."""
+
+
+PREREG_E2_DECODE_K = 6
+"""The E2 decoder (PREREG_E2 r10): quadratic compact-kernel blend of the 6
+nearest tokens. A report or bench of any other decoder is refused."""
+
+E2_BENCH_PROTOCOL = {"steps": [10, 110], "pairs": 3, "config": "phase2b_v1.json"}
+"""PREREG_E2 Sec. 3: the differential pairs and the configuration the bench
+times (Stage 1.33: enforced, not only described)."""
 
 
 def _signature(report: dict, model_ignore=("kind", "n_tokens", "decode_k")) -> dict:
@@ -127,12 +148,16 @@ def adjudicate_e1(base: dict, shaped: dict, s_base: list, s_shaped: list,
     Stage 1.31 refusals: reports that are not stamped runs of PREREG_E1.md;
     a base report that carries a loss specification or a shaped report that
     is not the SIGReg(head) arm (swapped inputs flip the sign of every kill);
-    non-finite per-seed metrics."""
-    bad = [v for v in list(s_base) + list(s_shaped) if not math.isfinite(float(v))]
-    if bad:
-        raise ValueError("E1 adjudication refused: a separation statistic is not finite "
-                         f"({len(bad)} value(s)); the measurement is invalid (bins with "
-                         "< 2 instances?) -- fix the measurement, do not adjudicate")
+    non-finite per-seed metrics of the AR arm.
+
+    Stage 1.33 (PREREG_E1 r15): a non-finite per-seed metric of the shaped arm
+    is a divergence -- K1 fires; its separation readings may then be
+    non-finite and S is not evaluated (K2 and GO unevaluated, verdict KILLED).
+    A non-finite S of the AR arm, or of a shaped arm that did not diverge,
+    is an invalid measurement and is refused."""
+    if any(not math.isfinite(float(v)) for v in s_base):
+        raise ValueError("E1 adjudication refused: an AR-arm separation statistic is not "
+                         "finite; the measurement is invalid -- fix it, do not adjudicate")
     require_stamped(base, "E1 base report", "PREREG_E1.md")
     require_stamped(shaped, "E1 shaped report", "PREREG_E1.md")
     base_spec = ((base.get("config") or {}).get("pretrain") or {}).get("loss_spec")
@@ -150,23 +175,35 @@ def adjudicate_e1(base: dict, shaped: dict, s_base: list, s_shaped: list,
     if diff:
         raise ValueError(f"E1 adjudication refused: the two reports differ beyond the loss "
                          f"specification on {diff} -- not the same corpus/split/seeds/schedule")
+
+    def _chg(new, old):
+        return _rel_change(new, old) if math.isfinite(new) and math.isfinite(old) else None
+
     per_seed = []                                  # informational since r13
     for i, (db, ds, eb, es) in enumerate(zip(ar_per_seed(base, "disp_rel_l2"),
                                              ar_per_seed(shaped, "disp_rel_l2"),
                                              ar_per_seed(base, "energy_gap_rel"),
                                              ar_per_seed(shaped, "energy_gap_rel"), strict=True)):
-        per_seed.append({"seed": i, "disp_rel_change": _rel_change(ds, db),
-                         "egap_rel_change": _rel_change(es, eb)})
+        per_seed.append({"seed": i, "disp_rel_change": _chg(ds, db),
+                         "egap_rel_change": _chg(es, eb)})
     k1_detail = {m: noise_guarded_worse(ar_per_seed(base, m), ar_per_seed(shaped, m), band)
                  for m in ("disp_rel_l2", "energy_gap_rel")}
     k1 = any(d["fires"] for d in k1_detail.values())
-    deltas = [b - a for a, b in zip(s_base, s_shaped, strict=True)]
-    k2 = all(d <= 0.0 for d in deltas)
+    diverged = sorted({i for d in k1_detail.values() for i in d["diverged_seeds"]})
+    s_ok = all(math.isfinite(float(v)) for v in s_shaped)
+    if not s_ok and not diverged:
+        raise ValueError("E1 adjudication refused: a shaped-arm separation statistic is not "
+                         "finite although its metrics are; the measurement is invalid")
     # Stage 1.28: the SAMPLE standard deviation (n - 1), pinned in PREREG_E1
     # r12; the population form (n) understated the floor by sqrt(2/3) at 3 seeds
     sd_base = statistics.stdev(s_base) if len(s_base) > 1 else 0.0
     floor = max(float(min_effect_abs), float(min_effect_seed_sd) * sd_base)
-    above_floor = all(d >= floor for d in deltas)
+    if s_ok:
+        deltas = [b - a for a, b in zip(s_base, s_shaped, strict=True)]
+        k2 = all(d <= 0.0 for d in deltas)
+        above_floor = all(d >= floor for d in deltas)
+    else:                                          # diverged: S not evaluated (K1 decides)
+        deltas, k2, above_floor = None, None, False
     rb, rs = transfer_ratio(base), transfer_ratio(shaped)
     if rb is None or rs is None:
         ratio_ok, guard = True, "not evaluated (no P3 transfer block in a run; 2D stage)"
@@ -184,7 +221,7 @@ def adjudicate_e1(base: dict, shaped: dict, s_base: list, s_shaped: list,
             "S_above_floor_all_seeds": above_floor,
             "transfer_ratio_base": rb, "transfer_ratio_shaped": rs,
             "transfer_guard": guard,
-            "K1_parity": k1, "K2_no_effect": k2, "GO": go,
+            "K1_parity": k1, "K2_no_effect": k2, "GO": go, "diverged_seeds": diverged,
             "verdict": "GO" if go else ("KILLED" if (k1 or k2) else "NO-GO")}
 
 
@@ -213,6 +250,15 @@ def bench_fine_step_s(bench: dict, m_tokens: int, decode_k: int | None = None) -
     if int(phase.get("n_tokens", -1)) != int(m_tokens):
         raise ValueError(f"E2 adjudication refused: the {tag} phase records "
                          f"n_tokens={phase.get('n_tokens')}")
+    proto = E2_BENCH_PROTOCOL
+    if phase.get("steps") != proto["steps"] or len(phase.get("pairs") or []) != proto["pairs"]:
+        raise ValueError(f"E2 adjudication refused: the {tag} phase ran steps "
+                         f"{phase.get('steps')} x {len(phase.get('pairs') or [])} pairs, not the "
+                         f"pre-registered {proto['steps']} x {proto['pairs']}")
+    if Path(str(bench.get("config", ""))).name != proto["config"] or \
+            (bench.get("numeric_policy") or {}).get("tf32") is not True:
+        raise ValueError(f"E2 adjudication refused: the bench ran {bench.get('config')!r} under "
+                         f"{bench.get('numeric_policy')}, not {proto['config']} under TF32")
     if decode_k is not None and phase.get("decode_k") != int(decode_k):
         raise ValueError(f"E2 adjudication refused: the {tag} phase timed decode_k="
                          f"{phase.get('decode_k')}, the E2 report's decoder is "
@@ -240,7 +286,12 @@ def adjudicate_e2(base: dict, e2: dict, bench: dict, m_tokens: int, band: float 
     bottleneck<M>_fine phase (formerly read as "no speed case" = KILLED),
     without a valid differential estimate, not measured on CUDA, a smoke
     bench, or a phase of another M; a non-finite or non-positive step time;
-    non-finite per-seed metrics."""
+    non-finite per-seed metrics of the baseline.
+
+    Stage 1.33 (PREREG_E2 r10): the E2 report must carry decode_k = 6 and the
+    bench must have timed that decoder with the pre-registered protocol
+    (pairs of 10 / 110 steps, three pairs, phase2b_v1.json, TF32); a
+    non-finite per-seed value of the bottleneck is a divergence and K1 fires."""
     got = (base.get("provenance") or {}).get("config_sha256")
     if expect_base_config_sha and got != expect_base_config_sha:
         raise ValueError(f"E2 adjudication refused: the baseline report's config SHA-256 is "
@@ -249,9 +300,10 @@ def adjudicate_e2(base: dict, e2: dict, bench: dict, m_tokens: int, band: float 
     require_stamped(base, "E2 baseline report")
     require_stamped(e2, "E2 report", "PREREG_E2.md")
     mk = (e2.get("config") or {}).get("model") or {}
-    from ..models.bottleneck import BottleneckConfig
-
-    e2_k = int(mk.get("decode_k", BottleneckConfig.decode_k))
+    e2_k = mk.get("decode_k")
+    if not isinstance(e2_k, int) or isinstance(e2_k, bool) or e2_k != PREREG_E2_DECODE_K:
+        raise ValueError(f"E2 adjudication refused: the E2 report's decoder is decode_k="
+                         f"{e2_k!r}; PREREG_E2 r10 fixes {PREREG_E2_DECODE_K} (Stage >= 1.33)")
     step_s, bench_phase = bench_fine_step_s(bench, m_tokens, decode_k=e2_k)
     if mk.get("kind") != "bottleneck" or int(mk.get("n_tokens", -1)) != int(m_tokens):
         raise ValueError(f"E2 adjudication refused: the E2 report is kind={mk.get('kind')!r} "
@@ -268,8 +320,10 @@ def adjudicate_e2(base: dict, e2: dict, bench: dict, m_tokens: int, band: float 
     eg = noise_guarded_worse(ar_per_seed(base, "energy_gap_rel"),
                              ar_per_seed(e2, "energy_gap_rel"), band)
     fd = noise_guarded_worse(fine_per_seed(base), fine_per_seed(e2), band)
+    e2_egap = ar_per_seed(e2, "energy_gap_rel")
     spread = {"egap_seed_sd_base": float(statistics.stdev(ar_per_seed(base, "energy_gap_rel"))),
-              "egap_seed_sd_e2": float(statistics.stdev(ar_per_seed(e2, "energy_gap_rel")))}
+              "egap_seed_sd_e2": (float(statistics.stdev(e2_egap))
+                                  if all(math.isfinite(v) for v in e2_egap) else None)}
     k1 = eg["fires"] or fd["fires"]
     k2 = step_s >= kill_s
     go = (not k1) and step_s < go_s
@@ -290,4 +344,5 @@ def adjudicate_e2(base: dict, e2: dict, bench: dict, m_tokens: int, band: float 
             "resolution": {"egap": eg["threshold"], "fine_disp": fd["threshold"]},
             "base_config_sha256": got, "comparability": "identical beyond the architecture",
             "K1_accuracy": k1, "K2_speed": k2, "GO": go,
+            "diverged_seeds": sorted(set(eg["diverged_seeds"]) | set(fd["diverged_seeds"])),
             "verdict": "GO" if go else ("KILLED" if (k1 or k2) else "NO-GO")}

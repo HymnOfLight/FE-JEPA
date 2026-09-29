@@ -1,6 +1,6 @@
 # RUNBOOK -- E-series (wp8-lejepa), commands in execution order
 
-Stage 1.28-1.32 (29 Sep 2026). Every block below was executed end to end at small
+Stage 1.28-1.33 (29 Sep 2026). Every block below was executed end to end at small
 scale in the sandbox with the guards ON (scaled copies of the configurations,
 labelled PREREG files stamped through the CLI). The lambda pilot (1b) and the
 bench (2a) run BEFORE stamping, by design: they produce the numbers the stamp
@@ -14,9 +14,14 @@ generation, stamping, commit and tag (from the pilot's returned JSON).
 
 ## 0. Preconditions (box, once)
 ```bash
-cd ~/autodl-tmp/FE-JEPA && git fetch --tags && git checkout wp8-lejepa && git pull
-python -m pytest -q                     # 278 passed (BRANCH_NOTES carries the current count)
+cd ~/autodl-tmp/FE-JEPA
+# Stage 1.33: an explicit refspec -- `git pull` does not advance a single-branch clone
+git fetch origin +refs/heads/wp8-lejepa:refs/remotes/origin/wp8-lejepa --tags
+git checkout -B wp8-lejepa origin/wp8-lejepa
+git rev-parse HEAD^{tree}               # the tree the operator instruction names
+git status --porcelain --untracked-files=no   # must print nothing (no local edits carried over)
 mkdir -p runs/wp8                       # tee opens its log before any script creates the directory
+python -m pytest -q 2>&1 | tee runs/wp8/pytest.log   # 281 passed (BRANCH_NOTES carries the count)
 ```
 
 ## 1. E1 -- 2D latent shaping
@@ -62,9 +67,11 @@ for arm in base shaped raw_s0; do python -m fejepa.cli run-config configs/e1_2d_
 The guard refuses every arm until all three lines are stamped: no arm can be
 tuned after another arm's result is seen.
 
-### 1d. Runs (box; tmux; ~9 h per three-seed arm, ~3 h for raw_s0)
+### 1d. Runs (box; tmux; ~2-3 h per three-seed arm, < 1 h for raw_s0)
 ```bash
-git pull --tags && git describe --tags          # must print prereg-e1
+git fetch origin +refs/heads/wp8-lejepa:refs/remotes/origin/wp8-lejepa --tags
+git checkout -B wp8-lejepa origin/wp8-lejepa
+git describe --tags                             # must print prereg-e1
 for arm in base shaped raw_s0; do
   mkdir -p runs/e1_2d_$arm
   python -m fejepa.cli run-config configs/e1_2d_$arm.json 2>&1 | tee runs/e1_2d_$arm/run.log
@@ -99,7 +106,9 @@ refuses unstamped reports, swapped arms (the base must carry no loss_spec, the
 shaped arm must be sigreg_ep_head with a filled lambda and width), non-finite
 per-seed metrics, and separation files that are invalid, not on all 256
 validation instances, measured with another configuration, or on a state
-whose SHA-256 is not the one the report trained.
+whose SHA-256 is not the one the report trained. Stage 1.33: and files measured
+on another corpus (data manifest SHA-256); a diverged (non-finite) shaped-arm
+seed counts as K1 (KILLED, S not evaluated), a non-finite AR-arm value is refused.
 
 ## 2. E2 -- token bottleneck (3D; baseline = the Phase-2b AR cells)
 
@@ -115,9 +124,16 @@ bottleneck phases. `ms_per_step` of the bottleneck phases is set-up-free: the me
 of three differential pairs of n1 = 10 / n2 = 110 steps (`estimates_ms`, `pairs`;
 `"valid"` = every pair positive) -- the number E2's K2/GO lines use; `prepare_ms` is
 one instance preparation (features, seeds, token assignment) for the cost frontier.
-Each bottleneck phase records the decoder it timed (`"decode_k": 4`, the continuous
-decoder of PREREG_E2 r9 and the E2 configurations); the adjudicator refuses a bench
-of another decoder. Run it on an otherwise idle GPU (no other process in `nvidia-smi`).
+Each bottleneck phase records the decoder it timed (`"decode_k": 6`, the continuous
+decoder of PREREG_E2 r10 and the E2 configurations); the adjudicator refuses a bench
+of another decoder or protocol. Run it on an otherwise idle GPU (no other process in
+`nvidia-smi`). If a bottleneck phase is invalid, re-bench that M once (PREREG_E2 Sec. 3:
+the re-bench supersedes the first file; keep both):
+```bash
+M=1024      # the M to re-bench
+python scripts/bench_phase2_preconditions.py configs/phase2b_v1.json --bottleneck-tokens ${M} \
+    --out runs/wp8/bench_e2_m${M}_rerun.json 2>&1 | tee runs/wp8/bench_e2_m${M}_rerun.log
+```
 
 ### 2b. Stamp and tag (repo)
 PREREG_E2.md (in the repo since Stage 1.30) records the baseline file's SHA-256
@@ -129,7 +145,9 @@ Dry-run both (refuse), stamp both with `fejepa prereg configs/e2_m<M>.json --sta
 
 ### 2c. Runs (box; tmux)
 ```bash
-git pull --tags && git describe --tags          # must print prereg-e2 (or prereg-e2-N-g... after
+git fetch origin +refs/heads/wp8-lejepa:refs/remotes/origin/wp8-lejepa --tags
+git checkout -B wp8-lejepa origin/wp8-lejepa
+git describe --tags                             # must print prereg-e2 (or prereg-e2-N-g... after
                                                 # engineering-only commits, ledgered)
 for M in 512 1024; do
   mkdir -p runs/e2_m$M
@@ -143,8 +161,10 @@ write only under `runs/e2_m<M>/`.
 ### 2d. Verdicts (anywhere)
 ```bash
 for M in 512 1024; do
+  B=runs/wp8/bench_e2_m$M.json                      # a re-bench supersedes (PREREG_E2 Sec. 3)
+  [ -e runs/wp8/bench_e2_m${M}_rerun.json ] && B=runs/wp8/bench_e2_m${M}_rerun.json
   python scripts/adjudicate_e2.py --base-report runs/phase2/report_phase2b.json \
-      --e2-report runs/e2_m$M/report.json --bench runs/wp8/bench_e2_m$M.json --tokens $M \
+      --e2-report runs/e2_m$M/report.json --bench $B --tokens $M \
       --out runs/wp8/e2_verdict_M$M.json
 done
 ```
@@ -155,7 +175,10 @@ architecture passes parity), a report of the wrong M, reports that differ
 beyond the architecture, and a bench without set-up-free timing. Stage 1.31:
 also an unstamped E2 report, non-finite per-seed values, and a bench whose
 bottleneck<M>_fine phase is missing (formerly read as KILLED), invalid, not
-from CUDA, from a smoke run, or of another M.
+from CUDA, from a smoke run, or of another M. Stage 1.33: also an E2 report
+whose decoder is not decode_k = 6 and a bench of another decoder or protocol;
+a diverged (non-finite) bottleneck seed counts as K1 (KILLED), a non-finite
+baseline value is refused.
 
 ## 3. Interruptions
 Same command with `--reuse-states`, in a new tmux session and with a new log

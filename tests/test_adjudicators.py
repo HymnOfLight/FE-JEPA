@@ -16,10 +16,12 @@ PHASE2_D14 = "e3bdd1e8778d063ff024b30354e1cd95b492953b2baf8dd25bc0aac863ce04da"
 def _rep(disp, egap, fine_ratio=1.2, seeds=3, kind=None, n_tokens=None,
          config_sha=PHASE2B_CONFIG_SHA256, loss_spec=None, manifest="m-inband",
          fine_per_seed=None, ar_epochs=200, disp_per_seed=None, egap_per_seed=None,
-         prereg_file="PREREG_E1.md", stamped=True):
+         prereg_file="PREREG_E1.md", stamped=True, decode_k=6):
     model = {"dim": 256, "depth": 8, "heads": 8, "scale_decode": True}
     if kind:
-        model.update(kind=kind, n_tokens=n_tokens)
+        model.update(kind=kind, n_tokens=n_tokens, decode_k=decode_k)
+        if decode_k is ...:
+            model.pop("decode_k")
     pre = {"epochs": 200, "lr": 1e-3}
     if loss_spec:
         pre["loss_spec"] = loss_spec
@@ -45,12 +47,15 @@ def _e2(disp, egap, m=512, **kw):
 
 
 def _bench(ms, m=512, timing="differential", valid=True, device="cuda", smoke=False,
-           n_tokens=None, decode_k=4):
-    return {"device": device, "smoke": smoke, "git": "abc",
+           n_tokens=None, decode_k=6, steps=(10, 110), pairs=3,
+           config="configs/phase2b_v1.json", tf32=True):
+    return {"device": device, "smoke": smoke, "git": "abc", "config": config,
+            "numeric_policy": {"tf32": tf32, "device": device},
             "phases": {f"bottleneck{m}_fine": {
                 "ms_per_step": ms, "timing": timing, "valid": valid, "n_nodes": 41367,
                 "n_tokens": m if n_tokens is None else n_tokens, "decode_k": decode_k,
-                "estimates_ms": [ms, ms, ms], "steps": [10, 110]}}}
+                "estimates_ms": [ms] * pairs, "steps": list(steps),
+                "pairs": [[1.0, 1.0 + 100 * ms / 1000]] * pairs}}}
 
 
 SHAPED = {"reg_mode": "sigreg_ep_head", "lambda_reg": 0.1, "sigreg_n_proj": 256,
@@ -171,9 +176,9 @@ def test_stage131_e1_refuses_unstamped_swapped_and_nonfinite_inputs():
                 {**SHAPED, "reg_mode": "sigreg_ep"}):                       # raw arm or unfilled
         with pytest.raises(ValueError, match="not the AR\\+SIGReg"):
             adjudicate_e1(base, _rep(0.20, 0.30, loss_spec=bad), s_b, s_s)
-    nan = _rep(0.20, 0.30, loss_spec=SHAPED, disp_per_seed=[0.2, float("nan"), 0.2])
-    with pytest.raises(ValueError, match="non-finite"):
-        adjudicate_e1(base, nan, s_b, s_s)
+    nan_base = _rep(0.20, 0.30, disp_per_seed=[0.2, float("nan"), 0.2])
+    with pytest.raises(ValueError, match="non-finite"):                  # AR arm: void
+        adjudicate_e1(nan_base, shaped, s_b, s_s)
 
 
 def test_stage131_e2_refuses_bad_bench_phases_and_nonfinite_seeds():
@@ -197,12 +202,15 @@ def test_stage131_e2_refuses_bad_bench_phases_and_nonfinite_seeds():
     with pytest.raises(ValueError, match="not PREREG_E2.md"):
         adjudicate_e2(base, _e2(0.21, 0.31, prereg_file="PREREG_E1.md"), _bench(800.0), 512)
     nan = _e2(0.21, 0.31, fine_per_seed=[0.25, 0.26, float("nan")])     # was GO
-    with pytest.raises(ValueError, match="non-finite"):
-        adjudicate_e2(base, nan, _bench(800.0), 512)
-    # a NaN survives a JSON round trip (the report writer emits NaN) and is still refused
-    rt = json.loads(json.dumps(nan))
-    with pytest.raises(ValueError, match="non-finite"):
-        adjudicate_e2(base, rt, _bench(800.0), 512)
+    # Stage 1.33 (PREREG_E2 r10): a diverged bottleneck seed fires K1 -- KILLED,
+    # also after the JSON round trip the report writer and reader apply
+    for rep_ in (nan, json.loads(json.dumps(nan))):
+        r = adjudicate_e2(base, rep_, _bench(800.0), 512)
+        assert r["K1_accuracy"] and r["verdict"] == "KILLED" and r["diverged_seeds"] == [2]
+        json.dumps(r, allow_nan=False)                         # the verdict itself is clean JSON
+    nan_base = _rep(0.20, 0.30, egap_per_seed=[0.3, float("nan"), 0.3])
+    with pytest.raises(ValueError, match="non-finite"):               # baseline: void
+        adjudicate_e2(nan_base, e2, _bench(800.0), 512)
 
 
 def test_stage131_comparability_includes_the_e8_learning_rate():
@@ -211,3 +219,37 @@ def test_stage131_comparability_includes_the_e8_learning_rate():
     other["config"]["experiments"]["e8"]["ar_lr"] = 5e-4
     with pytest.raises(ValueError, match="differ beyond the loss"):
         adjudicate_e1(base, other, [0.1] * 3, [0.2] * 3)
+
+
+def test_stage133_e1_divergence_of_the_shaped_arm_fires_k1():
+    """PREREG_E1 r15: a non-finite per-seed metric of the AR+SIGReg arm is a
+    divergence -- K1 fires (KILLED); its separation may then be non-finite
+    and is not evaluated. A non-finite S without a divergence stays refused."""
+    base = _rep(0.20, 0.30)
+    div = _rep(0.20, 0.30, loss_spec=SHAPED, disp_per_seed=[0.2, float("nan"), 0.2])
+    r = adjudicate_e1(base, div, [0.1] * 3, [0.2, float("nan"), 0.2])
+    assert r["K1_parity"] and r["verdict"] == "KILLED" and r["diverged_seeds"] == [1]
+    assert r["S_delta"] is None and r["K2_no_effect"] is None and not r["GO"]
+    assert r["per_seed"][1]["disp_rel_change"] is None
+    with pytest.raises(ValueError, match="not finite although its metrics are"):
+        adjudicate_e1(base, _rep(0.20, 0.30, loss_spec=SHAPED), [0.1] * 3,
+                      [0.2, float("nan"), 0.2])
+    with pytest.raises(ValueError, match="AR-arm separation"):
+        adjudicate_e1(base, div, [0.1, float("nan"), 0.1], [0.2] * 3)
+
+
+def test_stage133_e2_decoder_and_bench_protocol_are_enforced():
+    base = _rep(0.20, 0.30)
+    assert adjudicate_e2(base, _e2(0.21, 0.31), _bench(800.0), 512)["decode_k"] == 6
+    for k in (None, 4, 1, True):                                     # missing / other decoder
+        with pytest.raises(ValueError, match="decode_k="):
+            adjudicate_e2(base, _e2(0.21, 0.31, decode_k=k), _bench(800.0, decode_k=k), 512)
+    with pytest.raises(ValueError, match="decode_k="):
+        adjudicate_e2(base, _e2(0.21, 0.31, decode_k=...), _bench(800.0), 512)   # key absent
+    cases = [(_bench(800.0, steps=(2, 22)), "steps"),
+             (_bench(800.0, pairs=1), "pairs"),
+             (_bench(800.0, config="configs/phase2_v1.json"), "phase2b_v1.json"),
+             (_bench(800.0, tf32=False), "TF32")]
+    for bench, msg in cases:
+        with pytest.raises(ValueError, match=msg):
+            adjudicate_e2(base, _e2(0.21, 0.31), bench, 512)

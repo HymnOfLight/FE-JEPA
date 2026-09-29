@@ -12,11 +12,17 @@ the full validation split (n = the config's n_val), not a smoke run, measured
 with the arm's own configuration (canonical config SHA-256 = the report's)
 and on the exact state the report trained (state SHA-256 = the report's
 d9_restart record for that seed) -- a state overwritten by a later rerun, or
-a reading on fewer instances, is refused."""
+a reading on fewer instances, is refused.
+
+Stage 1.33: the reading must also be on the report's corpus (the data
+manifest SHA-256 the file records must be one of the report's datasets). A reading whose S is not
+finite (diverged latents) is passed through: adjudicate_e1 accepts it only
+for a shaped arm whose metrics diverged (K1 fires), and refuses it otherwise."""
 from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import sys
 from pathlib import Path
@@ -30,6 +36,8 @@ def _separation_by_seed(paths: list, report_path: str, report: dict) -> list:
     cfg_sha = (report.get("provenance") or {}).get("config_sha256")
     states = (((report.get("results") or {}).get("e8") or {}).get("metrics") or {}) \
         .get("d9_restart", {}).get("ar_states", {})
+    manifests = {d.get("manifest_sha256") for d in
+                 (report.get("provenance") or {}).get("datasets", [])} - {None}
     rows = {}
     for p in paths:
         d = json.loads(Path(p).read_text())
@@ -42,9 +50,13 @@ def _separation_by_seed(paths: list, report_path: str, report: dict) -> list:
         if d.get("subset") != "val":
             raise SystemExit(f"{p}: measured on subset {d.get('subset')!r}; PREREG_E1 fixes 'val'")
         s = int(m.group(1))
-        if d.get("smoke") or d.get("S_valid") is not True:
+        s_val = float(d.get("S_silhouette", float("nan")))
+        if d.get("smoke") or (d.get("S_valid") is not True and math.isfinite(s_val)):
             raise SystemExit(f"{p}: not a valid reading (smoke={d.get('smoke')}, "
                              f"S_valid={d.get('S_valid')}: {d.get('S_invalid_reason')})")
+        if d.get("data_manifest_sha256") not in manifests:
+            raise SystemExit(f"{p}: measured on corpus {str(d.get('data_manifest_sha256'))[:12]}, "
+                             "not one of the report's datasets")
         if int(d.get("n_instances", -1)) != n_val:
             raise SystemExit(f"{p}: measured on {d.get('n_instances')} instances; the run's "
                              f"validation split has {n_val}")

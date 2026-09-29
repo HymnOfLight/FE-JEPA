@@ -110,7 +110,7 @@ def main() -> None:
     ap.add_argument("--bottleneck-decode-k", type=int, default=None,
                     help="Stage 1.32: tokens blended per node by the decoder (default: the "
                          "config's model.decode_k, else the BottleneckConfig default = the "
-                         "E2 configs' 4); recorded in each bottleneck phase")
+                         "E2 configs' 6); recorded in each bottleneck phase")
     ap.add_argument("--out", default="runs/phase2/bench_preconditions.json")
     a = ap.parse_args()
     cfg_path = a.config or a.config_pos

@@ -14,11 +14,18 @@ Stage 1.32 (PI decision, 29 Sep 2026, before the E2 bench): the decoder read
 each node's single nearest token (hard Voronoi assignment); on the bench
 meshes 32-59% of the mesh edges joined nodes decoded from different tokens,
 so the decoded field was conditioned discontinuously while the energy
-penalises every mismatch. Nodes now blend their k = `decode_k` (default 4)
-nearest tokens with Franke-Little weights (`blend_weights`), which vanish
-exactly where a token leaves a node's k nearest: the conditioning is a
-continuous function of position. k = 1 is the former hard decoder. The
-encoder's pooling (scatter-mean over the nearest-seed cells) is unchanged.
+penalises every mismatch. Nodes now blend their k = `decode_k` nearest
+tokens with weights that vanish exactly where a token leaves a node's k
+nearest (`blend_weights`): the conditioning is a continuous function of
+position. Stage 1.33 fixed the kernel and k at the node scale: the 1.32
+Franke-Little weights (k = 4) were continuous but concentrated on the
+nearest seed, and adjacent nodes still swapped most of their blend across
+up to a third of the mesh edges; the quadratic compact kernel with k = 6 is
+the narrowest blend measured that is at least as smooth across mesh edges
+as a piecewise-linear (Delaunay) interpolation of the same seeds (BRANCH_NOTES
+Stage 1.33). k = 1 is the former hard decoder, and the encoder pools into
+the nearest-seed cells as before -- both up to floating-point ties (nodes
+equidistant to two seeds within ~1e-16 in unit-box coordinates).
 
 Interface: `needs_pack = True` -- encode/decode take the instance pack
 (token assignment lives there); `compute_loss` and the instruments pass it
@@ -41,7 +48,7 @@ class BottleneckConfig:
     heads: int = 4
     n_tokens: int = 512
     scale_decode: bool = True
-    decode_k: int = 4                      # Stage 1.32: tokens blended per node (1 = hard)
+    decode_k: int = 6                      # tokens blended per node (1 = hard; Stage 1.33: 6)
     features: FeatureSpec = field(default_factory=FeatureSpec)
 
     @classmethod
@@ -96,28 +103,37 @@ def nearest_seed(x: np.ndarray, seeds_xyz: np.ndarray, chunk: int = 8192) -> np.
     return out
 
 
+BLEND_MARGIN = 4
+"""Extra candidates taken from the Gram-distance preselection beyond the k + 1
+needed, before the exact-distance ordering (Stage 1.33): ties within float
+round-off can no longer push the exact nearest seed out of the candidate set,
+so column 0 does not depend on k."""
+
+
 def blend_weights(x: np.ndarray, seeds_xyz: np.ndarray, k: int, chunk: int = 8192) -> tuple:
-    """Continuous token blending for the decoder (Stage 1.32).
+    """Continuous token blending for the decoder (Stage 1.32; kernel Stage 1.33).
 
     For every point x_i: its k nearest seeds by exact distance (ties broken by
     seed index; seeds arrive in canonical coordinate order, so the rule is
-    independent of the mesh's node numbering) and the Franke-Little (modified
-    Shepard) weights
-        w_ij  proportional to  ((R_i - d_ij)_+ / (R_i d_ij))^2,
+    independent of the mesh's node numbering) and the compactly supported
+    quadratic weights
+        w_ij  proportional to  (1 - d_ij / R_i)_+ ^ 2,
     with R_i the distance to the (k+1)-th nearest seed, normalised to sum 1.
-    A seed's weight is exactly 0 where it leaves (or enters) the point's k
-    nearest, and R_i is itself continuous, so the weights -- and every blend
-    built from them -- are continuous functions of position; k = 1 gives
-    weight 1 on the nearest seed (the hard assignment). With no (k+1)-th
-    seed (M <= k) the weights are plain inverse-square Shepard weights over
-    all seeds. A point on a seed gets weight ~1 on it (distances floored at
-    1e-12); k+1 seeds exactly equidistant (measure zero) get equal weights.
+    Every seed outside the k nearest has d >= R_i, so over ALL seeds the
+    weight vector is (1 - d_is / R_i)_+^2 / (its sum): R_i (an order statistic
+    of distances) is 1-Lipschitz and a seed's weight is exactly 0 where it
+    leaves or enters the k nearest, so the weights -- and every blend built
+    from them -- are continuous functions of position. The normalisation is
+    0/0 only where the k + 1 nearest seeds are all equidistant (measure zero;
+    equal weights). k = 1 gives weight 1 on the nearest seed (the hard
+    assignment). With no (k+1)-th seed (M <= k) every seed gets equal weight.
 
     Returns (idx (N, kk) int64, w (N, kk) float64, rel (N, kk, sd) float64),
     kk = min(k, M), neighbours sorted nearest first; rel = x_i - seed_j."""
     n, m, sd = x.shape[0], seeds_xyz.shape[0], x.shape[1]
     kk = min(int(k), m)
     kq = min(int(k) + 1, m)
+    ksel = min(int(k) + 1 + BLEND_MARGIN, m)
     s2 = (seeds_xyz ** 2).sum(1)
     idx = np.empty((n, kk), dtype=np.int64)
     w = np.empty((n, kk))
@@ -125,9 +141,9 @@ def blend_weights(x: np.ndarray, seeds_xyz: np.ndarray, k: int, chunk: int = 819
     for a in range(0, n, chunk):
         blk = x[a:a + chunk]
         b = blk.shape[0]
-        if kq < m:                         # candidates: the kq smallest (Gram distances)
+        if ksel < m:                       # candidates: the ksel smallest (Gram distances)
             d2 = (blk ** 2).sum(1)[:, None] + s2[None, :] - 2.0 * blk @ seeds_xyz.T
-            cand = np.argpartition(d2, kq - 1, axis=1)[:, :kq]
+            cand = np.argpartition(d2, ksel - 1, axis=1)[:, :ksel]
         else:
             cand = np.broadcast_to(np.arange(m), (b, m)).copy()
         cand.sort(axis=1)                  # seed index ascending: the tie-break
@@ -137,12 +153,11 @@ def blend_weights(x: np.ndarray, seeds_xyz: np.ndarray, k: int, chunk: int = 819
         cand = np.take_along_axis(cand, o, 1)
         dist = np.take_along_axis(dist, o, 1)
         diff = np.take_along_axis(diff, o[..., None], 1)
-        dk = np.maximum(dist[:, :kk], 1e-12)
-        if kq > kk:                        # a (k+1)-th seed exists: Franke-Little
+        if kq > kk:                        # a (k+1)-th seed exists: compact kernel
             R = dist[:, kk:kk + 1]
-            wh = (np.clip(R - dist[:, :kk], 0.0, None) / (R * dk)) ** 2
-        else:                              # M <= k: all seeds, inverse-square Shepard
-            wh = 1.0 / dk ** 2
+            wh = np.clip(1.0 - dist[:, :kk] / np.maximum(R, 1e-300), 0.0, None) ** 2
+        else:                              # M <= k: all seeds, equal weights
+            wh = np.ones((b, kk))
         tot = wh.sum(1, keepdims=True)
         deg = ~(np.isfinite(tot[:, 0]) & (tot[:, 0] > 0.0))
         if deg.any():                      # k+1 equidistant seeds: equal weights
