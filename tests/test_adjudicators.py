@@ -45,11 +45,11 @@ def _e2(disp, egap, m=512, **kw):
 
 
 def _bench(ms, m=512, timing="differential", valid=True, device="cuda", smoke=False,
-           n_tokens=None):
+           n_tokens=None, decode_k=4):
     return {"device": device, "smoke": smoke, "git": "abc",
             "phases": {f"bottleneck{m}_fine": {
                 "ms_per_step": ms, "timing": timing, "valid": valid, "n_nodes": 41367,
-                "n_tokens": m if n_tokens is None else n_tokens,
+                "n_tokens": m if n_tokens is None else n_tokens, "decode_k": decode_k,
                 "estimates_ms": [ms, ms, ms], "steps": [10, 110]}}}
 
 
@@ -186,6 +186,8 @@ def test_stage131_e2_refuses_bad_bench_phases_and_nonfinite_seeds():
              (_bench(800.0, smoke=True), "smoke"),
              (_bench(800.0, n_tokens=1024), "n_tokens=1024"),
              (_bench(-40.0), "positive finite"),
+             (_bench(800.0, decode_k=1), "decode_k=1"),              # Stage 1.32: other decoder
+             (_bench(800.0, decode_k=None), "decode_k=None"),          # pre-1.32 bench
              (_bench(float("nan")), "positive finite")]
     for bench, msg in cases:
         with pytest.raises(ValueError, match=msg):

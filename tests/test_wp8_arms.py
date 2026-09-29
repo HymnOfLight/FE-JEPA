@@ -73,6 +73,82 @@ def test_fps_and_assignment_are_deterministic_and_cover():
     assert farthest_point_sampling(x[:5], 32).shape == (5,)   # n < M handled
 
 
+def test_blend_weights_are_continuous_and_reduce_to_the_hard_assignment():
+    """Stage 1.32 (PI decision): the decoder blends a node's k nearest tokens
+    with Franke-Little weights. They are a partition of unity, sorted nearest
+    first, give weight 1 to a point sitting on a seed, and vary continuously
+    along any path -- where the hard (k = 1) assignment jumps by a whole token
+    at every cell boundary. M <= k falls back to Shepard weights over all seeds."""
+    import numpy as np
+
+    from fejepa.models.bottleneck import blend_weights
+
+    rng = np.random.default_rng(0)
+    x = rng.random((3000, 3))
+    seeds = x[farthest_point_sampling(x, 48)]
+    idx, w, rel = blend_weights(x, seeds, 4)
+    assert idx.shape == w.shape == (3000, 4) and rel.shape == (3000, 4, 3)
+    assert np.allclose(w.sum(1), 1.0) and w.min() >= 0.0
+    d = np.linalg.norm(rel, axis=2)
+    assert np.all(np.diff(d, axis=1) >= 0.0)                       # nearest first
+    assert np.allclose(rel, x[:, None, :] - seeds[idx])
+    assert np.array_equal(idx[:, 0], nearest_seed(x, seeds))      # encoder cell = column 0
+    on_i, on_w, _ = blend_weights(seeds, seeds, 4)
+    assert np.array_equal(on_i[:, 0], np.arange(48)) and np.allclose(on_w[:, 0], 1.0)
+    t = np.linspace(0.0, 1.0, 40001)[:, None]
+    path = np.hstack([0.05 + 0.9 * t, 0.5 + 0.35 * np.sin(4 * t), 0.2 + 0.6 * t ** 2])
+
+    def dense(kk):
+        pi, pw, _ = blend_weights(path, seeds, kk)
+        full = np.zeros((path.shape[0], 48))
+        np.put_along_axis(full, pi, pw, 1)
+        return np.abs(np.diff(full, axis=0)).sum(1)                # L1 change per step
+
+    soft, hard = dense(4), dense(1)
+    assert hard.max() == 2.0 and (hard > 0.5).sum() >= 5           # hard: whole-token jumps
+    assert soft.max() < 0.02                                       # continuous: no jump
+    few_i, few_w, _ = blend_weights(x[:10], seeds[:3], 4)
+    assert few_i.shape == (10, 3) and np.allclose(few_w.sum(1), 1.0)
+
+
+def test_blend_weights_do_not_depend_on_node_numbering():
+    import numpy as np
+
+    from fejepa.models.bottleneck import blend_weights
+
+    rng = np.random.default_rng(3)
+    x = rng.random((800, 3))
+    perm = rng.permutation(800)
+    s_a = x[farthest_point_sampling(x, 32)]
+    s_b = x[perm][farthest_point_sampling(x[perm], 32)]
+    assert np.array_equal(s_a, s_b)                                 # canonical seed order
+    ia, wa, _ = blend_weights(x, s_a, 4)
+    ib, wb, _ = blend_weights(x[perm], s_b, 4)
+    assert np.array_equal(ia[perm], ib) and np.allclose(wa[perm], wb, rtol=0, atol=1e-15)
+
+
+def test_decode_k1_is_the_former_hard_nearest_token_decoder(tiny_corpus):
+    """k = 1 reproduces the pre-1.32 decoder exactly: every node reads its own
+    nearest token's latent and the offset to that token's seed."""
+    sp = tiny_corpus(seed=33)
+    arch = load_instance(sp.val_files[0])
+    m = _build_model({"kind": "bottleneck", "model": dict(BOTTLE, decode_k=1), "seed": 0})
+    m.eval()
+    pack = m.prepare_instance(arch, "cpu")
+    assert pack["nbr_idx"].shape[1] == 1 and torch.all(pack["nbr_w"] == 1.0)
+    with torch.no_grad():
+        z = m.encode(pack["feats"], pack)
+        u = m.decode(z, pack)
+        h = m.node_embed(pack["feats"])
+        zt = z[:, pack["tok_idx"], :]
+        r = m.rel_pos(pack["nbr_rel"][:, 0, :]).unsqueeze(0).expand_as(h)
+        legacy = m.dec(torch.cat([h, zt, r], dim=-1)).reshape(u.shape[0], -1) * pack["free"]
+        legacy = legacy * pack["fscale"]
+    assert torch.equal(u, legacy)                                  # bitwise (CPU)
+    m4 = _build_model({"kind": "bottleneck", "model": BOTTLE, "seed": 0})
+    assert m4.cfg.decode_k == 4 and m4.prepare_instance(arch, "cpu")["nbr_idx"].shape[1] == 4
+
+
 def test_bottleneck_matches_pack_contract_and_feeds_the_anchor(tmp_path, tiny_corpus):
     sp = tiny_corpus(seed=31)
     arch = load_instance(sp.pool_files[0])
@@ -131,7 +207,8 @@ def test_bottleneck_runs_on_a_real_3d_gmsh_instance(tmp_path, tiny_corpus):
     tr = [load_instance(f) for f in sp.pool_files[:2]]
     val = [load_instance(f) for f in sp.val_files]
     pack = m.prepare_instance(tr[0], "cpu")
-    assert pack["rel"].shape[1] == 3 and pack["seed_xyz"].shape[1] == 3
+    assert pack["nbr_rel"].shape[1:] == (4, 3) and pack["seed_xyz"].shape[1] == 3
+    assert pack["nbr_idx"].shape == pack["nbr_w"].shape == (tr[0].nodes.shape[0], 4)
     u = m.forward_instance(pack)
     assert u.shape[1] == 3 * tr[0].nodes.shape[0] == pack["free"].numel()
     e = AnchorCache(device="cpu").get(tr[0]).energies(u)

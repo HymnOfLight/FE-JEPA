@@ -1,6 +1,6 @@
 # RUNBOOK -- E-series (wp8-lejepa), commands in execution order
 
-Stage 1.28-1.31 (29 Sep 2026). Every block below was executed end to end at small
+Stage 1.28-1.32 (29 Sep 2026). Every block below was executed end to end at small
 scale in the sandbox with the guards ON (scaled copies of the configurations,
 labelled PREREG files stamped through the CLI). The lambda pilot (1b) and the
 bench (2a) run BEFORE stamping, by design: they produce the numbers the stamp
@@ -15,7 +15,7 @@ generation, stamping, commit and tag (from the pilot's returned JSON).
 ## 0. Preconditions (box, once)
 ```bash
 cd ~/autodl-tmp/FE-JEPA && git fetch --tags && git checkout wp8-lejepa && git pull
-python -m pytest -q                     # 275 passed (BRANCH_NOTES carries the current count)
+python -m pytest -q                     # 278 passed (BRANCH_NOTES carries the current count)
 mkdir -p runs/wp8                       # tee opens its log before any script creates the directory
 ```
 
@@ -115,7 +115,9 @@ bottleneck phases. `ms_per_step` of the bottleneck phases is set-up-free: the me
 of three differential pairs of n1 = 10 / n2 = 110 steps (`estimates_ms`, `pairs`;
 `"valid"` = every pair positive) -- the number E2's K2/GO lines use; `prepare_ms` is
 one instance preparation (features, seeds, token assignment) for the cost frontier.
-Run it on an otherwise idle GPU (no other process in `nvidia-smi`).
+Each bottleneck phase records the decoder it timed (`"decode_k": 4`, the continuous
+decoder of PREREG_E2 r9 and the E2 configurations); the adjudicator refuses a bench
+of another decoder. Run it on an otherwise idle GPU (no other process in `nvidia-smi`).
 
 ### 2b. Stamp and tag (repo)
 PREREG_E2.md (in the repo since Stage 1.30) records the baseline file's SHA-256

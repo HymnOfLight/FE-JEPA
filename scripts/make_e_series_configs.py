@@ -4,7 +4,8 @@ configurations (wp8-lejepa, PREREG_E1 / PREREG_E2 mechanics).
 
 Every E-series run is a `run-config` on a derived configuration:
   * E2 (M = 512 and 1024): the Phase-2b configuration (whose AR cells are
-    E2's baseline) with model.kind = bottleneck, model.n_tokens = M, E8 as AR
+    E2's baseline) with model.kind = bottleneck, model.n_tokens = M,
+    model.decode_k = 4 (the continuous decoder, Stage 1.32), E8 as AR
     pretraining only, P3 in zero-shot-only form, and the FE-JEPA-only probes
     (e6, wp6, e1) disabled. Everything else -- corpus, split, seeds, pool,
     epochs, learning rate, numeric policy -- is the baseline's, byte for byte
@@ -102,9 +103,15 @@ def _disable_all_but_e8(exps: dict) -> dict:
     return out
 
 
+E2_DECODE_K = 4
+"""Tokens blended per node by the E2 decoder (PREREG_E2 r9, PI decision of
+29 Sep 2026: continuous Franke-Little blend of the 4 nearest tokens)."""
+
+
 def e2_config(phase2b: dict, m_tokens: int) -> dict:
     cfg = json.loads(json.dumps(phase2b))
-    cfg["model"] = dict(cfg["model"], kind="bottleneck", n_tokens=int(m_tokens))
+    cfg["model"] = dict(cfg["model"], kind="bottleneck", n_tokens=int(m_tokens),
+                        decode_k=E2_DECODE_K)
     cfg["experiments"] = _disable_all_but_e8(cfg["experiments"])
     cfg["out"] = f"runs/e2_m{m_tokens}/report.json"
     cfg["prereg_file"], cfg["prereg_guard"] = "PREREG_E2.md", True

@@ -85,7 +85,7 @@ instrument defect (prediction = u* x fscale), against which any architecture
 passes parity trivially."""
 
 
-def _signature(report: dict, model_ignore=("kind", "n_tokens")) -> dict:
+def _signature(report: dict, model_ignore=("kind", "n_tokens", "decode_k")) -> dict:
     """Everything that shapes an AR cell except the architecture kind and the
     loss specification: corpus identity (manifest SHA-256s), split, seeds,
     labels, schedule, numeric policy, model dims and features."""
@@ -188,12 +188,13 @@ def adjudicate_e1(base: dict, shaped: dict, s_base: list, s_shaped: list,
             "verdict": "GO" if go else ("KILLED" if (k1 or k2) else "NO-GO")}
 
 
-def bench_fine_step_s(bench: dict, m_tokens: int) -> tuple:
+def bench_fine_step_s(bench: dict, m_tokens: int, decode_k: int | None = None) -> tuple:
     """The set-up-free fine-scale step time (s) of the bottleneck at M tokens,
     with every precondition PREREG_E2 Sec. 4 puts on the bench (Stage 1.31):
     the phase exists, is differential and valid (every repeated estimate
-    positive), was measured on CUDA outside smoke mode at this M, and the
-    step time is a finite positive number. Returns (seconds, phase)."""
+    positive), was measured on CUDA outside smoke mode at this M (and, when
+    given, with this decoder, Stage 1.32), and the step time is a finite
+    positive number. Returns (seconds, phase)."""
     tag = f"bottleneck{int(m_tokens)}_fine"
     phase = (bench.get("phases") or {}).get(tag)
     if phase is None:
@@ -212,6 +213,10 @@ def bench_fine_step_s(bench: dict, m_tokens: int) -> tuple:
     if int(phase.get("n_tokens", -1)) != int(m_tokens):
         raise ValueError(f"E2 adjudication refused: the {tag} phase records "
                          f"n_tokens={phase.get('n_tokens')}")
+    if decode_k is not None and phase.get("decode_k") != int(decode_k):
+        raise ValueError(f"E2 adjudication refused: the {tag} phase timed decode_k="
+                         f"{phase.get('decode_k')}, the E2 report's decoder is "
+                         f"decode_k={decode_k} (Stage >= 1.32 bench of the same decoder)")
     ms = float(phase.get("ms_per_step", float("nan")))
     if not math.isfinite(ms) or ms <= 0.0:
         raise ValueError(f"E2 adjudication refused: fine step time {ms} ms is not a positive "
@@ -243,8 +248,11 @@ def adjudicate_e2(base: dict, e2: dict, bench: dict, m_tokens: int, band: float 
                          "(the Phase-2b report; the Phase-2 AR cells are D14-invalid)")
     require_stamped(base, "E2 baseline report")
     require_stamped(e2, "E2 report", "PREREG_E2.md")
-    step_s, bench_phase = bench_fine_step_s(bench, m_tokens)
     mk = (e2.get("config") or {}).get("model") or {}
+    from ..models.bottleneck import BottleneckConfig
+
+    e2_k = int(mk.get("decode_k", BottleneckConfig.decode_k))
+    step_s, bench_phase = bench_fine_step_s(bench, m_tokens, decode_k=e2_k)
     if mk.get("kind") != "bottleneck" or int(mk.get("n_tokens", -1)) != int(m_tokens):
         raise ValueError(f"E2 adjudication refused: the E2 report is kind={mk.get('kind')!r} "
                          f"n_tokens={mk.get('n_tokens')}, expected bottleneck M={m_tokens}")
@@ -266,8 +274,9 @@ def adjudicate_e2(base: dict, e2: dict, bench: dict, m_tokens: int, band: float 
     k2 = step_s >= kill_s
     go = (not k1) and step_s < go_s
     return {"M": m_tokens, "band": band, "kill_s": kill_s, "go_s": go_s,
+            "decode_k": e2_k,
             "bench_fine_phase": {k: bench_phase.get(k) for k in
-                                 ("n_nodes", "n_tokens", "ms_per_step", "estimates_ms",
+                                 ("n_nodes", "n_tokens", "decode_k", "ms_per_step", "estimates_ms",
                                   "steps", "pairs", "prepare_ms", "peak_gib")},
             "bench_git": bench.get("git"),
             "egap_mean_base": eg["base_mean"], "egap_mean_e2": eg["new_mean"],

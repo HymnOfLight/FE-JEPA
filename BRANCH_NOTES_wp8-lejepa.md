@@ -427,6 +427,26 @@ pre-registration stamps it.
   E1 chain re-run at small scale with the guards on (pilot -> generator from
   the pilot JSON -> stamp -> three arms, ledger 0 -> separation -> verdict;
   swapped arms and cross-arm files refused). Suite 275.
+- Stage 1.32 (29 Sep, PI decision before the E2 bench): the bottleneck decoder
+  is continuous. Each node blends its k = `model.decode_k` = 4 nearest tokens
+  -- their latents and the relative-position embeddings of its offsets to
+  their seeds -- with Franke-Little weights ((R - d_j)_+ / (R d_j))^2, R the
+  distance to the 5th nearest seed, normalised (`bottleneck.blend_weights`);
+  a token's weight is exactly 0 where it leaves a node's four nearest, so the
+  conditioning is continuous in position (on a 40,001-step test path through
+  48 seeds the hard assignment's weights jumped by 2.0 in L1 -- a whole token
+  -- at 6 cell boundaries; the blend's largest step was 0.0008). k = 1
+  reproduces the former hard decoder bitwise
+  (test). One neighbour search per instance serves both sides: the encoder
+  pools into column 0 (the nearest seed; exact distances, seed-index
+  tie-break, numbering-independent -- test), the decoder blends all four. The
+  E2 configurations carry `decode_k = 4`; `decode_k` is an architecture key of
+  the comparability signature; the bench records the decoder each bottleneck
+  phase timed and the E2 adjudicator refuses a bench of another decoder.
+  Measured at the real dimensions on the bench meshes (CPU, 8 threads, M =
+  1024): preparation unchanged (0.8 s in-band, 2.3 s fine); training step
+  +8% in-band (4.7 -> 5.1 s) and +28% fine (8.9 -> 11.4 s); peak RSS 3.5 ->
+  3.9 GiB at 41,367 nodes. PREREG_E2 r9 records the decision. Suite 278.
 
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 

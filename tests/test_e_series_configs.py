@@ -129,8 +129,10 @@ def test_e2_configs_are_the_baseline_config_but_for_the_architecture(tmp_path):
         assert set(c) == set(base)
         for k in set(c) - allowed:
             assert c[k] == base[k], k
-        assert {k: v for k, v in c["model"].items() if k not in ("kind", "n_tokens")} == base["model"]
+        arch = ("kind", "n_tokens", "decode_k")
+        assert {k: v for k, v in c["model"].items() if k not in arch} == base["model"]
         assert c["model"]["kind"] == "bottleneck" and c["model"]["n_tokens"] == m
+        assert c["model"]["decode_k"] == 4          # Stage 1.32: the continuous decoder
         e8, b8 = dict(c["experiments"]["e8"]), dict(base["experiments"]["e8"])
         assert e8.pop("ar_only") is True and e8 == b8
         p3, bp3 = dict(c["experiments"]["p3_transfer"]), dict(base["experiments"]["p3_transfer"])

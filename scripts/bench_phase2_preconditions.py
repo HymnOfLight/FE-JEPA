@@ -107,6 +107,10 @@ def main() -> None:
                          "phases (independent of --repeats, which sizes the FE-JEPA phases)")
     ap.add_argument("--bottleneck-pairs", type=int, default=3,
                     help="Stage 1.31: repeated (n1, n2) pairs; the median estimate is used")
+    ap.add_argument("--bottleneck-decode-k", type=int, default=None,
+                    help="Stage 1.32: tokens blended per node by the decoder (default: the "
+                         "config's model.decode_k, else the BottleneckConfig default = the "
+                         "E2 configs' 4); recorded in each bottleneck phase")
     ap.add_argument("--out", default="runs/phase2/bench_preconditions.json")
     a = ap.parse_args()
     cfg_path = a.config or a.config_pos
@@ -225,6 +229,8 @@ def main() -> None:
         import statistics
 
         bcfg = dict(mcfg, n_tokens=int(a.bottleneck_tokens))
+        if a.bottleneck_decode_k is not None:
+            bcfg["decode_k"] = int(a.bottleneck_decode_k)
         bmodel = _build_model({"kind": "bottleneck", "model": bcfg, "seed": 0})
         e8c = (cfg.get("experiments") or {}).get("e8") or {}
         blr = float(e8c.get("ar_lr", 1e-3))                  # the E8 AR units' lr
@@ -265,6 +271,7 @@ def main() -> None:
             res["phases"][f"bottleneck{a.bottleneck_tokens}_{tag}"] = {
                 "n_nodes": int(sizes[tag].nodes.shape[0]),
                 "n_tokens": int(a.bottleneck_tokens),
+                "decode_k": int(bmodel.cfg.decode_k),
                 "ms_per_step": round(d["step_s"] * 1000, 2),
                 "estimates_ms": [round(e * 1000, 2) for e in d["estimates_s"]],
                 "valid": d["valid"],

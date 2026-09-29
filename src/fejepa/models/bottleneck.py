@@ -3,11 +3,22 @@
 Per-node transformers cost O(N^2) in attention; on 41k-node fine instances a
 step takes ~12 s (Phase-2 bench). AeroJEPA-style bottleneck: aggregate the
 mesh into M tokens seeded by farthest-point sampling, run attention over the
-M tokens (O(M^2)), then decode every node from its token's latent, its own
-embedding and its relative position -- O(N) decoding, resolution-independent
-by construction. The output tail (mask by free dofs, scale by the battery
-scale) is identical to FE-JEPA's, so the decoded u feeds the SAME exact
-energy anchor: nothing about the label-free objective changes.
+M tokens (O(M^2)), then decode every node from a CONTINUOUS blend of its
+k nearest tokens (their latents and relative-position embeddings), and its
+own embedding -- O(N k) decoding, resolution-independent by construction.
+The output tail (mask by free dofs, scale by the battery scale) is identical
+to FE-JEPA's, so the decoded u feeds the SAME exact energy anchor: nothing
+about the label-free objective changes.
+
+Stage 1.32 (PI decision, 29 Sep 2026, before the E2 bench): the decoder read
+each node's single nearest token (hard Voronoi assignment); on the bench
+meshes 32-59% of the mesh edges joined nodes decoded from different tokens,
+so the decoded field was conditioned discontinuously while the energy
+penalises every mismatch. Nodes now blend their k = `decode_k` (default 4)
+nearest tokens with Franke-Little weights (`blend_weights`), which vanish
+exactly where a token leaves a node's k nearest: the conditioning is a
+continuous function of position. k = 1 is the former hard decoder. The
+encoder's pooling (scatter-mean over the nearest-seed cells) is unchanged.
 
 Interface: `needs_pack = True` -- encode/decode take the instance pack
 (token assignment lives there); `compute_loss` and the instruments pass it
@@ -30,6 +41,7 @@ class BottleneckConfig:
     heads: int = 4
     n_tokens: int = 512
     scale_decode: bool = True
+    decode_k: int = 4                      # Stage 1.32: tokens blended per node (1 = hard)
     features: FeatureSpec = field(default_factory=FeatureSpec)
 
     @classmethod
@@ -37,8 +49,8 @@ class BottleneckConfig:
         d = dict(d)
         feats = d.pop("features", None)
         spec = FeatureSpec(**feats) if isinstance(feats, dict) else (feats or FeatureSpec())
-        keep = {k: d[k] for k in ("dim", "depth", "heads", "n_tokens", "scale_decode")
-                if k in d}
+        keep = {k: d[k] for k in ("dim", "depth", "heads", "n_tokens", "scale_decode",
+                                  "decode_k") if k in d}
         return cls(features=spec, **keep)
 
 
@@ -82,6 +94,63 @@ def nearest_seed(x: np.ndarray, seeds_xyz: np.ndarray, chunk: int = 8192) -> np.
         d = (blk ** 2).sum(1)[:, None] + s2[None, :] - 2.0 * blk @ seeds_xyz.T
         out[a:a + chunk] = np.argmin(d, axis=1)
     return out
+
+
+def blend_weights(x: np.ndarray, seeds_xyz: np.ndarray, k: int, chunk: int = 8192) -> tuple:
+    """Continuous token blending for the decoder (Stage 1.32).
+
+    For every point x_i: its k nearest seeds by exact distance (ties broken by
+    seed index; seeds arrive in canonical coordinate order, so the rule is
+    independent of the mesh's node numbering) and the Franke-Little (modified
+    Shepard) weights
+        w_ij  proportional to  ((R_i - d_ij)_+ / (R_i d_ij))^2,
+    with R_i the distance to the (k+1)-th nearest seed, normalised to sum 1.
+    A seed's weight is exactly 0 where it leaves (or enters) the point's k
+    nearest, and R_i is itself continuous, so the weights -- and every blend
+    built from them -- are continuous functions of position; k = 1 gives
+    weight 1 on the nearest seed (the hard assignment). With no (k+1)-th
+    seed (M <= k) the weights are plain inverse-square Shepard weights over
+    all seeds. A point on a seed gets weight ~1 on it (distances floored at
+    1e-12); k+1 seeds exactly equidistant (measure zero) get equal weights.
+
+    Returns (idx (N, kk) int64, w (N, kk) float64, rel (N, kk, sd) float64),
+    kk = min(k, M), neighbours sorted nearest first; rel = x_i - seed_j."""
+    n, m, sd = x.shape[0], seeds_xyz.shape[0], x.shape[1]
+    kk = min(int(k), m)
+    kq = min(int(k) + 1, m)
+    s2 = (seeds_xyz ** 2).sum(1)
+    idx = np.empty((n, kk), dtype=np.int64)
+    w = np.empty((n, kk))
+    rel = np.empty((n, kk, sd))
+    for a in range(0, n, chunk):
+        blk = x[a:a + chunk]
+        b = blk.shape[0]
+        if kq < m:                         # candidates: the kq smallest (Gram distances)
+            d2 = (blk ** 2).sum(1)[:, None] + s2[None, :] - 2.0 * blk @ seeds_xyz.T
+            cand = np.argpartition(d2, kq - 1, axis=1)[:, :kq]
+        else:
+            cand = np.broadcast_to(np.arange(m), (b, m)).copy()
+        cand.sort(axis=1)                  # seed index ascending: the tie-break
+        diff = blk[:, None, :] - seeds_xyz[cand]                   # exact offsets
+        dist = np.sqrt((diff ** 2).sum(-1))
+        o = np.argsort(dist, axis=1, kind="stable")
+        cand = np.take_along_axis(cand, o, 1)
+        dist = np.take_along_axis(dist, o, 1)
+        diff = np.take_along_axis(diff, o[..., None], 1)
+        dk = np.maximum(dist[:, :kk], 1e-12)
+        if kq > kk:                        # a (k+1)-th seed exists: Franke-Little
+            R = dist[:, kk:kk + 1]
+            wh = (np.clip(R - dist[:, :kk], 0.0, None) / (R * dk)) ** 2
+        else:                              # M <= k: all seeds, inverse-square Shepard
+            wh = 1.0 / dk ** 2
+        tot = wh.sum(1, keepdims=True)
+        deg = ~(np.isfinite(tot[:, 0]) & (tot[:, 0] > 0.0))
+        if deg.any():                      # k+1 equidistant seeds: equal weights
+            wh[deg], tot[deg] = 1.0, float(kk)
+        idx[a:a + b] = cand[:, :kk]
+        w[a:a + b] = wh / tot
+        rel[a:a + b] = diff[:, :kk]
+    return idx, w, rel
 
 
 def build_bottleneck(cfg: BottleneckConfig):
@@ -133,12 +202,16 @@ def build_bottleneck(cfg: BottleneckConfig):
             lo, hi = xyz.min(0), xyz.max(0)
             xyz = (xyz - lo) / max(float((hi - lo).max()), 1e-12)   # unit bbox
             seeds = farthest_point_sampling(xyz, cfg.n_tokens)
-            assign = nearest_seed(xyz, xyz[seeds])
-            rel = xyz - xyz[seeds][assign]
+            # Stage 1.32: one neighbour search serves both sides -- the encoder
+            # pools each node into its nearest seed's cell (column 0), the
+            # decoder blends the k nearest with continuous weights
+            nbr, wts, rel = blend_weights(xyz, xyz[seeds], cfg.decode_k)
             f32 = feats.dtype
             return {"feats": feats, "free": free, "fscale": fscale, "arch": arch,
-                    "tok_idx": torch.as_tensor(assign, device=device),
-                    "rel": torch.as_tensor(rel, dtype=f32, device=device),
+                    "tok_idx": torch.as_tensor(np.ascontiguousarray(nbr[:, 0]), device=device),
+                    "nbr_idx": torch.as_tensor(nbr, device=device),
+                    "nbr_w": torch.as_tensor(wts, dtype=f32, device=device),
+                    "nbr_rel": torch.as_tensor(rel, dtype=f32, device=device),
                     "seed_xyz": torch.as_tensor(xyz[seeds], dtype=f32, device=device),
                     "n_tok": int(seeds.shape[0])}
 
@@ -155,10 +228,18 @@ def build_bottleneck(cfg: BottleneckConfig):
             return self.tok_norm(self.tok_enc(tok))                 # (L, M, dim)
 
         def decode(self, z, pack):
-            """token latents (L, M, dim) -> (L, ndof) masked, scaled displacement."""
+            """token latents (L, M, dim) -> (L, ndof) masked, scaled displacement.
+            Each node reads the blend sum_j w_ij (z_tok(j), rel_pos(x_i - s_j))
+            over its k nearest tokens (continuous in position; k = 1 is the
+            former hard nearest-token decoder)."""
             h = self.node_embed(pack["feats"])                      # (L, N, dim)
-            zt = z[:, pack["tok_idx"], :]                           # (L, N, dim)
-            r = self.rel_pos(pack["rel"]).unsqueeze(0).expand_as(h)
+            idx, w = pack["nbr_idx"], pack["nbr_w"]                 # (N, k), (N, k)
+            zt = None
+            for j in range(idx.shape[1]):                           # no (L, N, k, dim) gather
+                term = z[:, idx[:, j], :] * w[:, j].view(1, -1, 1)
+                zt = term if zt is None else zt + term              # (L, N, dim)
+            r = (self.rel_pos(pack["nbr_rel"]) * w.unsqueeze(-1)).sum(1)   # (N, dim)
+            r = r.unsqueeze(0).expand_as(h)
             u = self.dec(torch.cat([h, zt, r], dim=-1))             # (L, N, sd)
             u = u.reshape(u.shape[0], -1) * pack["free"]
             if cfg.scale_decode:
