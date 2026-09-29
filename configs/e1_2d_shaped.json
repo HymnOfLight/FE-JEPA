@@ -32,9 +32,9 @@
   "lr": 0.001,
   "loss_spec": {
    "reg_mode": "sigreg_ep_head",
-   "lambda_reg": null,
+   "lambda_reg": 1.0,
    "sigreg_n_proj": 256,
-   "sigreg_head_width": null
+   "sigreg_head_width": 6
   }
  },
  "experiments": {

@@ -1,0 +1,151 @@
+{
+ "device": "cuda",
+ "torch": "2.12.1+cu130",
+ "smoke": false,
+ "git": "prereg-phase2-43-gcc9a168",
+ "config": "configs/phase2b_v1.json",
+ "numeric_policy": {
+  "tf32": true,
+  "device": "cuda",
+  "torch": "2.12.1+cu130",
+  "gpu": "NVIDIA GeForce RTX 5090"
+ },
+ "phases": {
+  "inband_0": {
+   "n_nodes": 12318,
+   "ms_per_step": 1407.61,
+   "peak_gib": 1.511,
+   "dynamo_counters_after": {},
+   "dynamo_counters_delta_note": "compare with previous phase; growth per new size = recompile"
+  },
+  "inband_1": {
+   "n_nodes": 6114,
+   "ms_per_step": 366.44,
+   "peak_gib": 0.822,
+   "dynamo_counters_after": {},
+   "dynamo_counters_delta_note": "compare with previous phase; growth per new size = recompile"
+  },
+  "inband_2": {
+   "n_nodes": 3774,
+   "ms_per_step": 151.67,
+   "peak_gib": 0.563,
+   "dynamo_counters_after": {},
+   "dynamo_counters_delta_note": "compare with previous phase; growth per new size = recompile"
+  },
+  "fine": {
+   "n_nodes": 41367,
+   "ms_per_step": 14792.57,
+   "peak_gib": 4.74,
+   "dynamo_counters_after": {},
+   "dynamo_counters_delta_note": "compare with previous phase; growth per new size = recompile"
+  },
+  "bottleneck512_inband_0": {
+   "n_nodes": 12318,
+   "n_tokens": 512,
+   "decode_k": 6,
+   "ms_per_step": 27.77,
+   "estimates_ms": [
+    38.83,
+    26.29,
+    27.77
+   ],
+   "valid": true,
+   "spread_rel": 0.452,
+   "ms_per_step_incl_setup": 31.19,
+   "setup_ms": 321.0,
+   "prepare_ms": 226.0,
+   "pairs": [
+    [
+     0.5184,
+     4.4018
+    ],
+    [
+     0.5987,
+     3.2277
+    ],
+    [
+     0.6541,
+     3.4308
+    ]
+   ],
+   "timing": "differential",
+   "steps": [
+    10,
+    110
+   ],
+   "estimator": "median over pairs of (T(n2) - T(n1)) / (n2 - n1)",
+   "peak_gib": 1.265,
+   "note": "wp8 E2 token bottleneck, same AR step as the FE-JEPA phases; ms_per_step excludes per-call set-up (E2's K2/GO number); prepare_ms = one instance preparation (features, seeds, token assignment), paid once per instance per unit"
+  },
+  "bottleneck512_fine": {
+   "n_nodes": 41367,
+   "n_tokens": 512,
+   "decode_k": 6,
+   "ms_per_step": 49.2,
+   "estimates_ms": [
+    47.86,
+    49.69,
+    49.2
+   ],
+   "valid": true,
+   "spread_rel": 0.037,
+   "ms_per_step_incl_setup": 58.97,
+   "setup_ms": 1120.2,
+   "prepare_ms": 882.2,
+   "pairs": [
+    [
+     1.6122,
+     6.3986
+    ],
+    [
+     1.6404,
+     6.609
+    ],
+    [
+     1.5667,
+     6.4871
+    ]
+   ],
+   "timing": "differential",
+   "steps": [
+    10,
+    110
+   ],
+   "estimator": "median over pairs of (T(n2) - T(n1)) / (n2 - n1)",
+   "peak_gib": 3.076,
+   "note": "wp8 E2 token bottleneck, same AR step as the FE-JEPA phases; ms_per_step excludes per-call set-up (E2's K2/GO number); prepare_ms = one instance preparation (features, seeds, token assignment), paid once per instance per unit"
+  },
+  "mgn_inband_0": {
+   "n_nodes": 12318,
+   "ms_per_step": 348.7,
+   "peak_gib": 8.701,
+   "note": "MGN train step, D9 per-layer checkpointing active, dummy loss"
+  }
+ },
+ "compile": {
+  "enabled": false,
+  "first_counters": {}
+ },
+ "projection": {
+  "per_arm": {
+   "inband_steps": {
+    "ar (pretrain, shared with P3)": 1046400,
+    "labels (P1)": 816000,
+    "labels_anchor policy (P1; KP3 source)": 816000,
+    "mgn (subset [64, 1024])": 652800
+   },
+   "fine_steps": {
+    "P3 few-shot fine-tune": 12000,
+    "P3 scratch-at-fine": 12000
+   },
+   "inband_total": 3331200,
+   "fine_total": 24000,
+   "note": "zero-shot/naive evaluations add forward-only cost, reported separately by the run itself"
+  },
+  "ms_in_band_mid": 366.44,
+  "ms_fine": 14792.57,
+  "precision": "fp32",
+  "hours_at_measured_precision": 437.7,
+  "note": "per-arm honest projection (r10); if the bf16 pilot passes, divide by its measured speedup for the stamped provenance number (D8: measured, not manual)"
+ }
+}

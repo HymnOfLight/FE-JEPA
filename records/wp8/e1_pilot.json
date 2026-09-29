@@ -1,0 +1,90 @@
+{
+ "rule": "largest lambda with pilot-val disp <= AR * (1 + 0.05)",
+ "epochs": 20,
+ "n_train": 512,
+ "n_val": 128,
+ "seed": 0,
+ "lr": 0.001,
+ "lr_source": "experiments.e8.ar_lr (default 1e-3), as the E8 AR units",
+ "split": {
+  "n_val": 256,
+  "seed": 1
+ },
+ "pilot_val": "pool[512:640] of the E1 split (disjoint from E1's validation set)",
+ "train_files_sha256": "10b9896bfbab59340c9c764852988fdd77fd96c50ee65b1ef638515d2ea3000c",
+ "pilot_val_files_sha256": "6e51e5e5ebe5133da539962a35d441ff1810268ac1401d19e0f14f0317172c5d",
+ "head_width": 6,
+ "head_width_source": "auto: intrinsic-dimension rule on the lambda=0 pilot model (pilot-val)",
+ "intrinsic_dimension": {
+  "n_rows": 20000,
+  "latent_dim": 256,
+  "twonn_id": 3.147604349124101,
+  "pca_90": 4,
+  "pca_95": 5,
+  "pca_99": 7,
+  "sigreg_monitor_raw": 0.249289870262146,
+  "encoder_ends_with_layernorm": true,
+  "last_executed_module": "LayerNorm",
+  "suggested_head_width": 6,
+  "b1_reading": "intrinsic dimension << latent dim: shape the latent on a projector head sized near the intrinsic dimension (LeWM Two-Room caveat)"
+ },
+ "rows": {
+  "0.0": {
+   "disp_rel_l2": 0.2722589581335153,
+   "energy_gap_rel": 0.1258718715283661
+  },
+  "0.01": {
+   "disp_rel_l2": 0.1745095768746735,
+   "energy_gap_rel": 0.06846155556845208
+  },
+  "0.1": {
+   "disp_rel_l2": 0.2650270653966119,
+   "energy_gap_rel": 0.10525807189037875
+  },
+  "1.0": {
+   "disp_rel_l2": 0.24658991238630515,
+   "energy_gap_rel": 0.10465694251190572
+  }
+ },
+ "admissible": [
+  0.01,
+  0.1,
+  1.0
+ ],
+ "selected_lambda": 1.0,
+ "pilot_ledger": {
+  "per_stage": {},
+  "total": 0,
+  "wall_clock_s": 0.0
+ },
+ "config_sha256": "7e6c0ef7ec7150c7393e8d70e9ae8827755fa1aeef1383d389184e934a8e5adf",
+ "numeric_policy": {
+  "tf32": true,
+  "device": "cuda",
+  "torch": "2.12.1+cu130",
+  "gpu": "NVIDIA GeForce RTX 5090"
+ },
+ "git": "prereg-phase2-43-gcc9a168",
+ "prereg": {
+  "file": "PREREG_E1.md",
+  "sha256": "82e95b59844acc9e97727ff6e1ad0c15bc28b5f990868b03a19c1f3e7720a439",
+  "lines": [
+   [
+    "e1_2d_base",
+    "<fill before tagging>"
+   ],
+   [
+    "e1_2d_shaped",
+    "<fill before tagging>"
+   ],
+   [
+    "e1_2d_raw_s0",
+    "<fill before tagging>"
+   ]
+  ]
+ },
+ "manifest_sha256_before": "3553396d183115b843512a35cba1a1e8448b9e83e10c1d1a5b02b235a7c79d26",
+ "manifest_sha256_after": "3553396d183115b843512a35cba1a1e8448b9e83e10c1d1a5b02b235a7c79d26",
+ "device": "cuda",
+ "smoke": false
+}

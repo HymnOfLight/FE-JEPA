@@ -497,6 +497,29 @@ pre-registration stamps it.
   13.6 s); peak RSS +0.6 GiB at 41,367 nodes; decoder pack 152 B per node,
   ~0.9 GiB GPU-resident for the 1,024 training instances (the energy anchors
   are CPU-resident and streamed per call). Suite 281.
+- Stage 1.34 (29 Sep, stamp): the lambda pilot and the E2 bench returned
+  from the box (`wp8_pilot_bench_return_20260930.tgz`, SHA-256 `8ff37828…`;
+  code `cc9a168`, 281 passed there; the Phase-1 2D corpus restored from the
+  data disk's archive, manifest `3553396d…` unchanged, 1,280 labels present).
+  Pilot: pilot-validation displacement 0.272 at lambda = 0, 0.175 / 0.265 /
+  0.247 at 0.01 / 0.1 / 1.0 -- all admissible, lambda = 1.0; TwoNN ID 3.15 ->
+  head width 6; ledger 0. Bench (all four bottleneck phases valid, decode_k =
+  6): fine step 49.2 / 47.5 ms at M = 512 / 1024 (transformer 14.8 s),
+  in-band 27.8 / 36.9 ms (1.4 s), fine peak 3.1 / 3.3 GiB. The generator
+  filled the shaped / raw configurations and PREREG_E1's parameter line from
+  the pilot JSON; PREREG_E2 records the bench files' SHA-256 and the cost
+  projection (~12-15 h for both M); all five CONFIG_SHA256 lines stamped (E1
+  base / shaped / raw `4dfdea42` / `9433e7cb` / `aa1d44d2`, E2 M = 512 / 1024
+  `82118d7d` / `526a5688`), both files marked STAMPED, rules unchanged. E2 is
+  stamped now, before any E1 result exists. The footer self-hash is the
+  file's SHA-256 with that line reading `<record after commit>`, recorded in
+  the stamp commit itself (stated in each file; the runbook's second commit
+  is not needed). The records are committed in `records/wp8/`, and
+  `tests/test_e_series_records.py` ties them to the stamp lines, the
+  configurations and the footers (any post-stamp edit of either
+  pre-registration turns the suite red). Runbook: both tags point at the
+  stamp commit, so the tag checks use `git describe --tags --match`; the E2
+  verdicts read the committed bench. Suite 286.
 
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 

@@ -1,6 +1,8 @@
 # RUNBOOK -- E-series (wp8-lejepa), commands in execution order
 
-Stage 1.28-1.33 (29 Sep 2026). Every block below was executed end to end at small
+Stage 1.28-1.34 (29 Sep 2026). Stage 1.34: 1b, 1c, 2a and 2b are DONE -- the pilot and
+the bench returned (`records/wp8/`), PREREG_E1 and PREREG_E2 are stamped in one commit,
+and the tags `prereg-e1` and `prereg-e2` both point at it. Every block below was executed end to end at small
 scale in the sandbox with the guards ON (scaled copies of the configurations,
 labelled PREREG files stamped through the CLI). The lambda pilot (1b) and the
 bench (2a) run BEFORE stamping, by design: they produce the numbers the stamp
@@ -21,7 +23,7 @@ git checkout -B wp8-lejepa origin/wp8-lejepa
 git rev-parse HEAD^{tree}               # the tree the operator instruction names
 git status --porcelain --untracked-files=no   # must print nothing (no local edits carried over)
 mkdir -p runs/wp8                       # tee opens its log before any script creates the directory
-python -m pytest -q 2>&1 | tee runs/wp8/pytest.log   # 281 passed (BRANCH_NOTES carries the count)
+python -m pytest -q 2>&1 | tee runs/wp8/pytest.log   # 286 passed (BRANCH_NOTES carries the count)
 ```
 
 ## 1. E1 -- 2D latent shaping
@@ -33,7 +35,7 @@ python -m fejepa.cli info runs/data2d
 # (the Phase-1 corpus: val 256 + pool prefix 1024 labelled). Any other hash: STOP and report.
 ```
 
-### 1b. lambda pilot (box; ~1-2 h; buys no labels; runs under the E1 runs' TF32 policy)
+### 1b. lambda pilot (box; ~0.5 h; buys no labels; runs under the E1 runs' TF32 policy) -- DONE 29 Sep, `records/wp8/e1_pilot.json`
 ```bash
 python scripts/e1_lambda_pilot.py --config configs/phase1_rec8_v2.json --data runs/data2d \
     --n-train 512 --n-val 128 --epochs 20 --head-width auto --out runs/wp8/e1_pilot.json \
@@ -45,9 +47,9 @@ arms' `e8.ar_lr` (1e-3), `prereg.sha256` is the SHA-256 of the committed `PREREG
 (the rule the pilot executes), `git` names the head. Return `e1_pilot.json` + log.
 `selected_lambda: null` = NO-GO-AT-PILOT: E1 ends here and the JSON is the record.
 
-### 1c. Fill, stamp, tag (repo)
+### 1c. Fill, stamp, tag (repo) -- DONE in Stage 1.34 (from `records/wp8/e1_pilot.json`)
 ```bash
-python scripts/make_e_series_configs.py --e1-from-pilot runs/wp8/e1_pilot.json --fill-prereg PREREG_E1.md
+python scripts/make_e_series_configs.py --e1-from-pilot records/wp8/e1_pilot.json --fill-prereg PREREG_E1.md
 #   reads lambda and head width FROM the pilot JSON (refuses smoke, null lambda, ledger > 0,
 #   a changed manifest, another split/config/TF32 policy) and writes them, with the pilot
 #   JSON's SHA-256, into PREREG_E1.md's parameter line and the shaped/raw configs
@@ -61,7 +63,9 @@ for arm in base shaped raw_s0; do python -m fejepa.cli run-config configs/e1_2d_
 for arm in base shaped raw_s0; do python -m fejepa.cli prereg configs/e1_2d_$arm.json --stamp --prereg-file PREREG_E1.md; done
 for arm in base shaped raw_s0; do python -m fejepa.cli run-config configs/e1_2d_$arm.json --dry-run; done
 #   -> "prereg_status": "verified" for all three
-# commit; record PREREG_E1.md's blob SHA-256 in the file (second commit); tag prereg-e1; push the tag;
+# footer: PREREG_E1_SHA256 = SHA-256 of the file with that line reading <record after commit>
+#   (recorded in the stamp commit itself; tests/test_e_series_records.py checks it)
+# commit; tag prereg-e1; push the tag;
 # verify: git ls-remote --tags origin prereg-e1  (and HTTP 200 on the tag ref) BEFORE any GPU time
 ```
 The guard refuses every arm until all three lines are stamped: no arm can be
@@ -71,7 +75,8 @@ tuned after another arm's result is seen.
 ```bash
 git fetch origin +refs/heads/wp8-lejepa:refs/remotes/origin/wp8-lejepa --tags
 git checkout -B wp8-lejepa origin/wp8-lejepa
-git describe --tags                             # must print prereg-e1
+git describe --tags --match prereg-e1           # must print prereg-e1 (prereg-e2 is on the same
+                                                # commit; plain `git describe` may name either)
 for arm in base shaped raw_s0; do
   mkdir -p runs/e1_2d_$arm
   python -m fejepa.cli run-config configs/e1_2d_$arm.json 2>&1 | tee runs/e1_2d_$arm/run.log
@@ -112,7 +117,7 @@ seed counts as K1 (KILLED, S not evaluated), a non-finite AR-arm value is refuse
 
 ## 2. E2 -- token bottleneck (3D; baseline = the Phase-2b AR cells)
 
-### 2a. Bench (box; ~30 min for both M)
+### 2a. Bench (box; ~30 min for both M) -- DONE 29 Sep, `records/wp8/bench_e2_m{512,1024}.json` (all valid, no re-bench)
 ```bash
 for M in 512 1024; do
   python scripts/bench_phase2_preconditions.py configs/phase2b_v1.json --bottleneck-tokens $M \
@@ -135,19 +140,20 @@ python scripts/bench_phase2_preconditions.py configs/phase2b_v1.json --bottlenec
     --out runs/wp8/bench_e2_m${M}_rerun.json 2>&1 | tee runs/wp8/bench_e2_m${M}_rerun.log
 ```
 
-### 2b. Stamp and tag (repo)
+### 2b. Stamp and tag (repo) -- DONE in Stage 1.34 (same commit as E1)
 PREREG_E2.md (in the repo since Stage 1.30) records the baseline file's SHA-256
 (`report_phase2b.json` = 320b6db5060ecae9f4747327228c7705d30877bece67d09af2f68d6c466f2794)
 and carries two labelled lines, `CONFIG_SHA256[e2_m512]` and `CONFIG_SHA256[e2_m1024]`.
 Dry-run both (refuse), stamp both with `fejepa prereg configs/e2_m<M>.json --stamp
---prereg-file PREREG_E2.md`, dry-run both (verified), commit, blob SHA, tag
+--prereg-file PREREG_E2.md`, dry-run both (verified), record the bench and the cost
+projection (Sec. 3, 6), fill the footer PREREG_E2_SHA256 as for E1, commit, tag
 `prereg-e2`, push, verify the remote tag.
 
 ### 2c. Runs (box; tmux)
 ```bash
 git fetch origin +refs/heads/wp8-lejepa:refs/remotes/origin/wp8-lejepa --tags
 git checkout -B wp8-lejepa origin/wp8-lejepa
-git describe --tags                             # must print prereg-e2 (or prereg-e2-N-g... after
+git describe --tags --match prereg-e2           # must print prereg-e2 (or prereg-e2-N-g... after
                                                 # engineering-only commits, ledgered)
 for M in 512 1024; do
   mkdir -p runs/e2_m$M
@@ -160,11 +166,9 @@ write only under `runs/e2_m<M>/`.
 
 ### 2d. Verdicts (anywhere)
 ```bash
-for M in 512 1024; do
-  B=runs/wp8/bench_e2_m$M.json                      # a re-bench supersedes (PREREG_E2 Sec. 3)
-  [ -e runs/wp8/bench_e2_m${M}_rerun.json ] && B=runs/wp8/bench_e2_m${M}_rerun.json
+for M in 512 1024; do          # the bench PREREG_E2 Sec. 3 records (no re-bench was needed)
   python scripts/adjudicate_e2.py --base-report runs/phase2/report_phase2b.json \
-      --e2-report runs/e2_m$M/report.json --bench $B --tokens $M \
+      --e2-report runs/e2_m$M/report.json --bench records/wp8/bench_e2_m$M.json --tokens $M \
       --out runs/wp8/e2_verdict_M$M.json
 done
 ```
