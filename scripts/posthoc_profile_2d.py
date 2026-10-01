@@ -4,8 +4,8 @@ is a 2D training step ~5x slower now?
 
 On the current box E1's AR steps ran at ~52 ms per step per unit (base arm:
 three units at once, each in a spawned worker) and ~58 ms (the raw-ablation
-seed alone in a worker, AR + SIGReg on the raw tokens); the August WP2 AR arm
-(code v2.1.5, plain AR, IN-PROCESS, the earlier container, same model
+seed alone in a worker, AR + SIGReg on the raw tokens); the WP2 AR arm of 31 July
+2026 (code v2.1.5, plain AR, IN-PROCESS, the earlier container, same model
 configuration and corpus) took 39 min for 204,800 steps (~11 ms). This script
 times the step on the same box, set-up-free (differential: median over pairs
 of runs of e1 and e2 epochs on n instances), for the code it is imported from
@@ -16,7 +16,7 @@ regression would be booked as "machine"; the environment is recorded) --
 under variants:
 
   default        plain AR, fresh model, run's TF32 policy, in-process (as the
-                 August reference ran)
+                 WP2 reference ran)
   threads_w3     in-process, torch threads = usable CPUs // 3 (affinity and
                  cgroup quota)
   threads_e1     in-process, torch threads = os.cpu_count() // 3 -- the
@@ -33,6 +33,10 @@ under variants:
   resident       in-process, energy anchors resident on the GPU (R11 / D10)
   raw_sigreg     in-process, AR + SIGReg on the raw tokens (lambda 1, 256
                  projections), the raw ablation's loss
+  threads_w3_no_ckpt  as threads_w3 with checkpointing off (wp9 Stage 0a)
+  worker3_no_ckpt     as worker3 with `model.activation_checkpointing = false`
+                 in the units' configuration (wp9 Stage 0a; the session-1 rule
+                 compares it with worker3)
 
 plus a torch.profiler table of the default AR step. Supervised (labels-only)
 steps are timed for default / threads_w3 / no_ckpt: they share the encoder
@@ -42,6 +46,17 @@ variant. Reported only.
     python scripts/posthoc_profile_2d.py --out runs/wp8/posthoc/profile_2d_head.json
     python scripts/posthoc_profile_2d.py --src ../FE-JEPA-v215/src \
         --variants default threads_w3 threads_e1 worker3 --out runs/wp8/posthoc/profile_2d_v215.json
+
+wp9 session 1 runs it with the checkpointing variants, and (optionally) runs
+the v2.1.5 code under the box's torch and under WP2's torch (2.11.0+cu128, in
+a virtual environment: the interpreter decides the torch stack) to separate
+the torch stack from the host:
+
+    python scripts/posthoc_profile_2d.py --variants worker3 worker3_no_ckpt threads_w3 \
+        threads_w3_no_ckpt --no-sup --no-profile --out runs/w9/session1/profile_2d_w9.json
+    ~/autodl-tmp/venv-t211/bin/python scripts/posthoc_profile_2d.py --src ../FE-JEPA-v215/src \
+        --variants default threads_w3 --no-sup --no-profile \
+        --out runs/w9/session1/profile_2d_v215_t211.json
 """
 from __future__ import annotations
 
@@ -55,9 +70,11 @@ import time
 from pathlib import Path
 
 VARIANTS = ("default", "threads_w3", "threads_e1", "worker", "worker3", "worker3_quota",
-            "no_ckpt", "resident", "raw_sigreg")
-WORKER_VARIANTS = {"worker": (1, False), "worker3": (3, False), "worker3_quota": (3, True)}
-SUP_VARIANTS = ("default", "threads_w3", "no_ckpt")
+            "no_ckpt", "resident", "raw_sigreg", "threads_w3_no_ckpt", "worker3_no_ckpt")
+# units, quota-based threads, activation checkpointing
+WORKER_VARIANTS = {"worker": (1, False, True), "worker3": (3, False, True),
+                   "worker3_quota": (3, True, True), "worker3_no_ckpt": (3, False, False)}
+SUP_VARIANTS = ("default", "threads_w3", "no_ckpt", "threads_w3_no_ckpt")
 
 
 def _setup_path(src: str | None) -> str:
@@ -118,6 +135,16 @@ def _driver() -> str:
                               capture_output=True, text=True, timeout=20).stdout.strip()
     except Exception:                                     # noqa: BLE001
         return "unavailable"
+
+
+def _has_ckpt_switch() -> bool:
+    """Whether the imported fejepa exposes `model.activation_checkpointing`
+    (wp9 Stage 0a; v2.1.5 and wp8 do not)."""
+    import dataclasses
+
+    from fejepa.models.fejepa import FEJEPAConfig
+
+    return "activation_checkpointing" in {f.name for f in dataclasses.fields(FEJEPAConfig)}
 
 
 def _write(path: str, res: dict) -> None:
@@ -185,7 +212,7 @@ def main() -> None:
 
     def fresh(variant):
         m = _build_model({"kind": kind, "model": cfg["model"], "seed": 0})
-        if variant == "no_ckpt":
+        if variant.endswith("no_ckpt"):
             import inspect
             enc = getattr(m, "encoder", None)
             if enc is None or "use_checkpoint" not in inspect.getsource(type(enc).forward):
@@ -226,13 +253,15 @@ def main() -> None:
 
     counter = {"n": 0}
 
-    def run_workers(units, epochs, quota):
+    def run_workers(units, epochs, quota, ckpt=True):
         """Wall time of `units` AR units run at once through map_units(workers=3),
         each on the same instances (E1's unit code path and worker set-up)."""
         payloads = []
+        model_cfg = (cfg["model"] if ckpt
+                     else {**cfg["model"], "activation_checkpointing": False})
         for k in range(units):
             counter["n"] += 1
-            payloads.append({"kind": kind, "model": cfg["model"], "seed": k, "tf32": tf32,
+            payloads.append({"kind": kind, "model": model_cfg, "seed": k, "tf32": tf32,
                              "files": [str(f) for f in files], "loss": "ar",
                              "pre": {"epochs": epochs, "lr": lr, "device": a.device,
                                      "desc": f"profile worker {k}"},
@@ -256,11 +285,11 @@ def main() -> None:
                 sp_.unlink(missing_ok=True)
                 sp_.with_suffix(".ckpt").unlink(missing_ok=True)
 
-    def differential_workers(units, quota):
+    def differential_workers(units, quota, ckpt=True):
         est = []
         for _ in range(a.pairs):
-            t1 = run_workers(units, a.worker_e1, quota)
-            t2 = run_workers(units, a.worker_e2, quota)
+            t1 = run_workers(units, a.worker_e1, quota, ckpt)
+            t2 = run_workers(units, a.worker_e2, quota, ckpt)
             est.append((t2 - t1) / ((a.worker_e2 - a.worker_e1) * len(archs)) * 1000.0)
         return {"ms_per_step_per_unit": round(statistics.median(est), 3),
                 "estimates_ms": [round(x, 3) for x in est], "valid": all(x > 0 for x in est),
@@ -284,12 +313,18 @@ def main() -> None:
     for v in a.variants:
         try:
             if v in WORKER_VARIANTS:
-                units, quota = WORKER_VARIANTS[v]
-                res["variants"][v] = {"ar": differential_workers(units, quota)}
+                units, quota, ckpt = WORKER_VARIANTS[v]
+                if not ckpt and not _has_ckpt_switch():
+                    res["variants"][v] = ("not applicable (this code has no "
+                                          "activation_checkpointing switch)")
+                    _write(a.out, res)
+                    continue
+                res["variants"][v] = {"ar": differential_workers(units, quota, ckpt)}
                 print(json.dumps({v: res["variants"][v]}), flush=True)
                 _write(a.out, res)
                 continue
             threads = {"threads_w3": max(1, cpus["usable"] // 3),
+                       "threads_w3_no_ckpt": max(1, cpus["usable"] // 3),
                        "threads_e1": cpus["e1_worker_threads"]}.get(v, base_threads)
             torch.set_num_threads(threads)
             loss_of["current"] = AR_CONFIG

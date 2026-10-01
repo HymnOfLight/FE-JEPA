@@ -87,6 +87,12 @@ class FEJEPAConfig:
     mask_frac: float = 0.4
     predictor_stop_grad: bool = True
     scale_decode: bool = True   # WP7 3D-P0.5: multiply battery fscale back in decode
+    # wp9 Stage 0a: D13's per-block activation checkpointing as a configuration
+    # switch. Memory-only and exact (the backward pass recomputes the same ops on
+    # the same inputs); the default keeps D13 on, so every existing configuration
+    # trains exactly as before. Small 2D meshes need no memory relief and pay
+    # the recomputation in host time (wp8 post-hoc 4b).
+    activation_checkpointing: bool = True
     features: FeatureSpec = field(default_factory=FeatureSpec)
 
     def to_dict(self) -> dict:
@@ -94,6 +100,7 @@ class FEJEPAConfig:
                 "mask_frac": self.mask_frac,
                 "predictor_stop_grad": self.predictor_stop_grad,
                 "scale_decode": self.scale_decode,
+                "activation_checkpointing": self.activation_checkpointing,
                 "features": self.features.to_dict()}
 
     @classmethod
@@ -206,6 +213,8 @@ def build_fejepa(cfg: FEJEPAConfig):
             super().__init__()
             self.cfg = cfg
             self.encoder = build_encoder(in_dim, cfg.dim, cfg.depth, cfg.heads)
+            # a plain attribute (not a parameter or buffer): state dicts are unchanged
+            self.encoder.use_checkpoint = bool(cfg.activation_checkpointing)
             self.decoder = FieldDecoder()
             self.predictor = CrossAttentionPredictor()
             self.proj = nn.Sequential(nn.Linear(cfg.dim, cfg.dim), nn.GELU(),
