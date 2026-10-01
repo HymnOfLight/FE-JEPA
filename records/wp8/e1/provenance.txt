@@ -1,0 +1,25 @@
+HEAD cdac7316256b4533732dc33c411fb2d585072465
+tree b992f4421bc8d5aaae06b813bbf84ec61aa0b42a
+tags prereg-e1 prereg-e2 
+--- git status --porcelain ---
+?? .ipynb_checkpoints/DEVIATIONS_PHASE2-checkpoint.md
+?? .ipynb_checkpoints/PREREG_PHASE2-checkpoint.md
+?? .ipynb_checkpoints/PREREG_PHASE2B-checkpoint.md
+?? ".ipynb_checkpoints/\345\256\213\345\215\232\345\243\253\346\223\215\344\275\234\346\211\213\345\206\214_v6_D10\351\207\215\345\220\257\350\265\267\346\255\245_2026-09-03-checkpoint.md"
+?? "\345\256\213\345\215\232\345\243\253\346\223\215\344\275\234\346\211\213\345\206\214_v6_D10\351\207\215\345\220\257\350\265\267\346\255\245_2026-09-03.md"
+--- states ---
+6edff88987ba58dd246118aa8417ba09a0bd53aef4775ddba9a6ad862b6f7906  runs/e1_2d_base/e8_states/ar_p1024_s0.pt
+13afdc95600d5e3edea7f7369e24f43ced0b9c0e889a627063b44db19d84bb46  runs/e1_2d_base/e8_states/ar_p1024_s1.pt
+97caedfd53d80edb9ee335b1a035952cc82d0d498ff6859c0f8910e8493dfeab  runs/e1_2d_base/e8_states/ar_p1024_s2.pt
+a86ee0dd61ae11e81ade7e8545e4952b089ac304ed8629c77b65a954ff2338de  runs/e1_2d_raw_s0/e8_states/ar_p1024_s0.pt
+cee61661f9d972f113ae004aca040b6cb1079cf9db3087ea923cb7a56f0cddda  runs/e1_2d_shaped/e8_states/ar_p1024_s0.pt
+789f7bbd1efdbcc7be8e6a1e96d5a8bf92dc8fba23163cbb1d0de095601fee3e  runs/e1_2d_shaped/e8_states/ar_p1024_s1.pt
+7ee456834718fc17029a3c45a3faa6d51a7ec9eaf7eee0da0319a3a01166bb26  runs/e1_2d_shaped/e8_states/ar_p1024_s2.pt
+NVIDIA GeForce RTX 5090, 595.71.05, 32607 MiB
+hostname autodl-container-857b4c9493-2d948778
+--- memory.events ---
+low 0
+high 0
+max 0
+oom 0
+oom_kill 0

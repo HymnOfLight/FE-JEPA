@@ -1,0 +1,40 @@
+{
+ "n_instances": 256,
+ "latent_dim": 256,
+ "bins": [
+  64,
+  64,
+  64,
+  64
+ ],
+ "S_valid": true,
+ "S_invalid_reason": null,
+ "S_silhouette": -0.04866096713869235,
+ "S_bootstrap_ci95": [
+  -0.06202703395070519,
+  -0.03367707043713596
+ ],
+ "S_ci95_method": "stratified half-sampling without replacement, centred on S",
+ "pc1_loadings": [
+  -0.009,
+  -0.022,
+  -0.005,
+  1.0,
+  0.062,
+  0.099
+ ],
+ "pc1_variance_share": 0.7647460543257888,
+ "probe_r2_geometry": 0.9393432277816625,
+ "loo_1nn_bin_accuracy": 0.375,
+ "sigreg_monitor_pooled": 0.16301441192626953,
+ "sigreg_monitor_tokens": 0.0020695000421255827,
+ "subset": "val",
+ "state": "runs/e1_2d_raw_s0/e8_states/ar_p1024_s0.pt",
+ "state_sha256": "a86ee0dd61ae11e81ade7e8545e4952b089ac304ed8629c77b65a954ff2338de",
+ "config": "configs/e1_2d_raw_s0.json",
+ "config_sha256": "aa1d44d28563e7c6e100f2db67c16d21f351b72c9eec046ccc87d764ee02c07d",
+ "data": "runs/data2d",
+ "data_manifest_sha256": "3553396d183115b843512a35cba1a1e8448b9e83e10c1d1a5b02b235a7c79d26",
+ "kind": "fejepa",
+ "smoke": false
+}

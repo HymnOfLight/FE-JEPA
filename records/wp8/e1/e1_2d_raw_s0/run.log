@@ -1,0 +1,33 @@
+[prereg] verified against PREREG_E1.md: aa1d44d28563...
+
+=== fejepa v2 run: configs/e1_2d_raw_s0.json | device=cuda | workers=3 | tf32=True ===
+[plan] steps by experiment: {'e8': 204800, 'total': 204800}
+
+=== dataset ===
+[dataset] runs/data2d | n_val=256 pool=29744
+
+=== labelling (WP5 economy) ===
+[labelling] policy=asis label_need(pool prefix)=0 label_workers=8
+[labelling] asis: verified labels on val 256 + pool prefix 0
+
+=== loading archives (in-memory prefix 0 + val 256; E1'/E8 stream paths) ===
+
+=== E8 ===
+[E8 (AR pretrain)] starting: 1 units
+/root/autodl-tmp/FE-JEPA/src/fejepa/anchor/energy.py:70: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape).coalesce()   # CPU
+/root/autodl-tmp/FE-JEPA/src/fejepa/anchor/energy.py:74: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  self.K_t = K_t.to_sparse_csr() if cuda_target else K_t
+/root/autodl-tmp/FE-JEPA/src/fejepa/train/pretrain.py:126: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:838.)
+  f"loss={float(loss):.4e}", flush=True)
+[pretrain E8 AR pool1024 s0] step 204800/204800 (100%) loss=-2.5223e-02
+[E8 (AR pretrain)] 1/1 (100%) elapsed 03:17:21 eta 00:00:00 | AR pool1024 s0
+[E8 (AR pretrain)] done in 03:17:21
+
+=== gate G1' ===
+[fejepa] report -> runs/e1_2d_raw_s0/report.json
+[fejepa] RESULTS.md -> runs/e1_2d_raw_s0/RESULTS.md
+[fejepa] figure -> runs/e1_2d_raw_s0/figure1_energy_gap.png
+[fejepa] gate G1' passed=False conditions={'a': False, 'b': False, 'c': False}
+[fejepa] solve ledger: {'per_stage': {'asis-preexisting-corpus': 0}, 'total': 0, 'wall_clock_s': 0.0}

@@ -1,0 +1,74 @@
+/root/autodl-tmp/.Trash-0/files/:
+total 10624
+drwx------  3 root root       54 Aug 27 15:48 .
+drwx------  4 root root       43 Aug 14 00:27 ..
+-rw-r--r--  1 root root 10873879 Aug 13 11:40 EPR-1-R06.zip
+drwxr-xr-x 10 root root     4096 Aug 21 21:52 FE-JEPA
+
+/root/autodl-tmp/.Trash-0/files/FE-JEPA/:
+total 3462312
+drwxr-xr-x 10 root root       4096 Aug 21 21:52 .
+drwx------  3 root root         54 Aug 27 15:48 ..
+drwxr-xr-x  8 root root       4096 Aug 21 21:49 .git
+-rw-r--r--  1 root root         76 Aug 19 18:19 .gitignore
+drwxr-xr-x  2 root root       4096 Aug 21 21:47 .ipynb_checkpoints
+drwxr-xr-x  3 root root         90 Aug 19 18:22 .pytest_cache
+-rw-r--r--  1 root root      12218 Aug 21 21:48 BRANCH_NOTES_wp7-3d.md
+-rw-r--r--  1 root root      12796 Aug 19 18:19 FIX_NOTES_v2_1_5.md
+-rw-r--r--  1 root root      13594 Aug 19 18:19 PLAN_MAP.md
+-rw-r--r--  1 root root       2710 Aug 19 18:19 PREREG.md
+-rw-r--r--  1 root root       2000 Aug 19 18:19 PREREG_WP2.md
+-rw-r--r--  1 root root      21376 Aug 21 21:47 PROJECT_STATUS_2026-08-21_plan_vs_execution_ZH.md
+-rw-r--r--  1 root root       6218 Aug 19 18:19 PROVENANCE_NOTE.md
+-rw-r--r--  1 root root       4982 Aug 19 18:19 README.md
+-rw-r--r--  1 root root     450638 Aug 19 22:37 a1_econ_result.tar.gz
+-rw-r--r--  1 root root       9535 Aug 19 22:40 a1_log.txt
+-rw-r--r--  1 root root      10853 Aug 20 20:07 a3_result.tar.gz
+-rw-r--r--  1 root root       9979 Aug 20 16:55 a3_s0_console.txt
+-rw-r--r--  1 root root       9988 Aug 20 18:16 a3_s1_console.txt
+-rw-r--r--  1 root root       9979 Aug 20 19:38 a3_s2_console.txt
+-rw-r--r--  1 root root        711 Aug 21 21:52 amp_check_console.txt
+-rw-r--r--  1 root root 3544655706 Aug 20 01:40 archive_data2d_full.tar.gz
+-rw-r--r--  1 root root        900 Aug 21 12:18 bench3d_a_console.txt
+-rw-r--r--  1 root root       1167 Aug 21 13:14 bench3d_b_console.txt
+drwxr-xr-x  2 root root       4096 Aug 21 21:48 configs
+-rw-r--r--  1 root root       1104 Aug 21 21:50 g1_cal_console.txt
+-rw-r--r--  1 root root        576 Aug 19 18:19 pyproject.toml
+drwxr-xr-x 14 root root       4096 Aug 21 21:52 runs
+drwxr-xr-x  3 root root        182 Aug 21 21:49 scripts
+drwxr-xr-x  4 root root         55 Aug 19 18:21 src
+drwxr-xr-x  3 root root       4096 Aug 21 21:48 tests
+-rw-r--r--  1 root root      22630 Aug 19 18:19 wp2_e2_console.txt
+-rw-r--r--  1 root root       2887 Aug 21 21:47 wp7-3d标定运行指引_宋_2026-08-21.md
+-rw-r--r--  1 root root       2155 Aug 21 21:52 wp7_cal_result.tar.gz
+-rw-r--r--  1 root root      23391 Aug 21 13:27 wp7_round1_result.tar.gz
+-rw-r--r--  1 root root      11554 Aug 21 12:17 wp7_s1_scaleoff_console.txt
+-rw-r--r--  1 root root      11569 Aug 21 12:17 wp7_s1_smoke_console.txt
+-rw-r--r--  1 root root       1891 Aug 21 12:16 wp7_suite_console.txt
+[Trash Info]
+Path=EPR-1-R06.zip
+DeletionDate=2026-08-14T00:27:31
+[Trash Info]
+Path=FE-JEPA
+DeletionDate=2026-08-27T15:48:51
+-rw-r--r-- 1 root root 3544655706 Aug 20 01:40 /root/autodl-tmp/archive_data2d_full.tar.gz
+5080d9d7ca50573507458cce65e46253379bcb622fb9184720182084b710a78b  /root/autodl-tmp/archive_data2d_full.tar.gz
+runs/data2d/
+runs/data2d/instance_00049.npz
+runs/data2d/instance_00000.npz
+30002 entries, 3.3 GiB
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/md0        100G   60G   41G  60% /root/autodl-tmp
+/root/autodl-tmp/restore_data2d/runs/data2d/manifest.json
+/root/autodl-tmp/restore_data2d/runs/data2d
+30001
+30001
+{
+ "backend": "gmsh",
+ "n_instances": 30000,
+ "n_labelled": 1280,
+ "labelled_policy": "none",
+ "coarsen": null,
+ "manifest_sha256": "3553396d183115b843512a35cba1a1e8448b9e83e10c1d1a5b02b235a7c79d26"
+}
+1280 needed; 0 missing labels

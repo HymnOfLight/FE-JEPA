@@ -1,0 +1,16 @@
+HEAD cdac7316256b4533732dc33c411fb2d585072465
+tree b992f4421bc8d5aaae06b813bbf84ec61aa0b42a
+--- states ---
+a0a9d35b16625aac5eaeebaac5b363d145981b0606d782bd624e7ad126ab3a90  runs/e2_m1024/e8_states/ar_p1024_s0.pt
+bf41d921e4eb27f87fc12bdb6700e7833e39491890abeba3abfbf7ccef731ab3  runs/e2_m1024/e8_states/ar_p1024_s1.pt
+e7a3eb9fb05aed89d78898302896eba5e86bcf12a1705be018dda5781161ecbb  runs/e2_m1024/e8_states/ar_p1024_s2.pt
+5a3ca05aa4e869a72b93f5cda902d8f8a9330551c00d55fbc8cb79a92596b4af  runs/e2_m512/e8_states/ar_p1024_s0.pt
+916a5557fbab2aaeb41cf87fef74ef2f669c930e69da02ddcff2cb2a0a2f012a  runs/e2_m512/e8_states/ar_p1024_s1.pt
+b7675888bc65977a2ded5e9b633c3e434688602970ec72dd5a8dd0a8b17cbb12  runs/e2_m512/e8_states/ar_p1024_s2.pt
+hostname autodl-container-857b4c9493-2d948778
+--- memory.events ---
+low 0
+high 0
+max 0
+oom 0
+oom_kill 0

@@ -1,0 +1,68 @@
+{
+ "M": 512,
+ "band": 0.1,
+ "kill_s": 2.0,
+ "go_s": 1.0,
+ "decode_k": 6,
+ "bench_fine_phase": {
+  "n_nodes": 41367,
+  "n_tokens": 512,
+  "decode_k": 6,
+  "ms_per_step": 49.2,
+  "estimates_ms": [
+   47.86,
+   49.69,
+   49.2
+  ],
+  "steps": [
+   10,
+   110
+  ],
+  "pairs": [
+   [
+    1.6122,
+    6.3986
+   ],
+   [
+    1.6404,
+    6.609
+   ],
+   [
+    1.5667,
+    6.4871
+   ]
+  ],
+  "prepare_ms": 882.2,
+  "peak_gib": 3.076
+ },
+ "bench_git": "prereg-phase2-43-gcc9a168",
+ "egap_mean_base": 0.009124278536827811,
+ "egap_mean_e2": 0.03475496891445808,
+ "egap_rel_change": 2.8090648783000827,
+ "egap_threshold": 2.872103078503414,
+ "fine_disp_base": 0.25836569115239527,
+ "fine_disp_e2": 0.46267756981628444,
+ "fine_disp_rel_change": 0.7907856408975646,
+ "fine_disp_threshold": 0.41859895176420087,
+ "fine_step_s": 0.0492,
+ "egap_seed_sd_base": 0.002277267059429576,
+ "egap_seed_sd_e2": 0.022580405479680675,
+ "aggregation": "seed means with noise guard (both K1 quantities)",
+ "K1_rule": "kill iff relative change of seed means > max(0.1, 2.0 x SE_rel of the difference) (PREREG_E2 r7)",
+ "resolution": {
+  "egap": 2.872103078503414,
+  "fine_disp": 0.41859895176420087
+ },
+ "base_config_sha256": "316f5e6e282db9c11509d8d1d2ed54d229ded9d6367c63b3a13abd7709ba4899",
+ "comparability": "identical beyond the architecture",
+ "K1_accuracy": true,
+ "K2_speed": false,
+ "GO": false,
+ "diverged_seeds": [],
+ "verdict": "KILLED",
+ "inputs_sha256": {
+  "runs/phase2/report_phase2b.json": "320b6db5060ecae9f4747327228c7705d30877bece67d09af2f68d6c466f2794",
+  "runs/e2_m512/report.json": "02db3bb6715d78861a0447c69a255d01747965ee9e7bd1f2ccbfc48f5a328ad1",
+  "records/wp8/bench_e2_m512.json": "051eac48996ccbd7952a5c507fae9bad0971ae3e48b5ef5478f2a60358fb7c3c"
+ }
+}

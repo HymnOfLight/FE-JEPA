@@ -1,0 +1,51 @@
+[prereg] verified against PREREG_E1.md: 4dfdea42e22c...
+
+=== fejepa v2 run: configs/e1_2d_base.json | device=cuda | workers=3 | tf32=True ===
+[plan] steps by experiment: {'e8': 614400, 'total': 614400}
+
+=== dataset ===
+[dataset] runs/data2d | n_val=256 pool=29744
+
+=== labelling (WP5 economy) ===
+[labelling] policy=asis label_need(pool prefix)=0 label_workers=8
+[labelling] asis: verified labels on val 256 + pool prefix 0
+
+=== loading archives (in-memory prefix 0 + val 256; E1'/E8 stream paths) ===
+
+=== E8 ===
+[E8 (AR pretrain)] starting: 3 units
+/root/autodl-tmp/FE-JEPA/src/fejepa/anchor/energy.py:70: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape).coalesce()   # CPU
+/root/autodl-tmp/FE-JEPA/src/fejepa/anchor/energy.py:74: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  self.K_t = K_t.to_sparse_csr() if cuda_target else K_t
+/root/autodl-tmp/FE-JEPA/src/fejepa/anchor/energy.py:70: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape).coalesce()   # CPU
+/root/autodl-tmp/FE-JEPA/src/fejepa/anchor/energy.py:74: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  self.K_t = K_t.to_sparse_csr() if cuda_target else K_t
+/root/autodl-tmp/FE-JEPA/src/fejepa/anchor/energy.py:70: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape).coalesce()   # CPU
+/root/autodl-tmp/FE-JEPA/src/fejepa/anchor/energy.py:74: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  self.K_t = K_t.to_sparse_csr() if cuda_target else K_t
+/root/autodl-tmp/FE-JEPA/src/fejepa/train/pretrain.py:126: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:838.)
+  f"loss={float(loss):.4e}", flush=True)
+[pretrain E8 AR pool1024 s2] step 204800/204800 (100%) loss=-5.2783e-02
+[E8 (AR pretrain)] 1/3 (33%) elapsed 02:57:40 eta 05:55:20 | AR pool1024 s2
+/root/autodl-tmp/FE-JEPA/src/fejepa/train/pretrain.py:126: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:838.)
+  f"loss={float(loss):.4e}", flush=True)
+[pretrain E8 AR pool1024 s0] step 204800/204800 (100%) loss=-2.6901e-02
+[E8 (AR pretrain)] 2/3 (67%) elapsed 02:57:45 eta 01:28:52 | AR pool1024 s0
+/root/autodl-tmp/FE-JEPA/src/fejepa/train/pretrain.py:126: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:838.)
+  f"loss={float(loss):.4e}", flush=True)
+[pretrain E8 AR pool1024 s1] step 204800/204800 (100%) loss=-1.0673e-01
+[E8 (AR pretrain)] 3/3 (100%) elapsed 02:57:51 eta 00:00:00 | AR pool1024 s1
+[E8 (AR pretrain)] done in 02:57:51
+
+=== gate G1' ===
+[fejepa] report -> runs/e1_2d_base/report.json
+[fejepa] RESULTS.md -> runs/e1_2d_base/RESULTS.md
+[fejepa] figure -> runs/e1_2d_base/figure1_energy_gap.png
+[fejepa] gate G1' passed=False conditions={'a': False, 'b': False, 'c': False}
+[fejepa] solve ledger: {'per_stage': {'asis-preexisting-corpus': 0}, 'total': 0, 'wall_clock_s': 0.0}

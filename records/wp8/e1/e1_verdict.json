@@ -1,0 +1,85 @@
+{
+ "band": 0.1,
+ "per_seed": [
+  {
+   "seed": 0,
+   "disp_rel_change": -0.03594306020698246,
+   "egap_rel_change": -0.006197769286969801
+  },
+  {
+   "seed": 1,
+   "disp_rel_change": -0.06601734273902982,
+   "egap_rel_change": -0.09060084543787561
+  },
+  {
+   "seed": 2,
+   "disp_rel_change": -0.03793772990906019,
+   "egap_rel_change": -0.03894536698219753
+  }
+ ],
+ "shaped_loss_spec": {
+  "reg_mode": "sigreg_ep_head",
+  "lambda_reg": 1.0,
+  "sigreg_n_proj": 256,
+  "sigreg_head_width": 6
+ },
+ "K1_rule": "seed means; kill iff relative change > max(0.1, 2.0 x SE_rel of the difference) (PREREG_E1 r13)",
+ "K1_detail": {
+  "disp_rel_l2": {
+   "base_mean": 0.06340732069219253,
+   "new_mean": 0.06041687730171427,
+   "rel_change": -0.04716243105421858,
+   "se_rel": 0.032567970486655655,
+   "threshold": 0.1,
+   "fires": false,
+   "diverged_seeds": []
+  },
+  "energy_gap_rel": {
+   "base_mean": 0.03830781244610432,
+   "new_mean": 0.03652713756682847,
+   "rel_change": -0.0464833350059104,
+   "se_rel": 0.030347598912986086,
+   "threshold": 0.1,
+   "fires": false,
+   "diverged_seeds": []
+  }
+ },
+ "S_base": [
+  -0.04174326284261522,
+  -0.04098446858778548,
+  -0.03569506417163742
+ ],
+ "S_shaped": [
+  -0.03255149597339796,
+  -0.027045369782909254,
+  -0.03390498975776916
+ ],
+ "S_delta": [
+  0.009191766869217258,
+  0.013939098804876229,
+  0.0017900744138682548
+ ],
+ "S_effect_floor": 0.02,
+ "S_base_seed_sd": 0.003294800827625925,
+ "S_base_seed_sd_ddof": 1,
+ "comparability": "identical beyond loss_spec",
+ "S_above_floor_all_seeds": false,
+ "transfer_ratio_base": null,
+ "transfer_ratio_shaped": null,
+ "transfer_guard": "not evaluated (no P3 transfer block in a run; 2D stage)",
+ "K1_parity": false,
+ "K2_no_effect": false,
+ "GO": false,
+ "diverged_seeds": [],
+ "verdict": "NO-GO",
+ "inputs_sha256": {
+  "runs/e1_2d_base/report.json": "0ebd53c3be1dcaf823bb76753692f41aced19734a1e4af972f0a064111cf36fe",
+  "runs/e1_2d_shaped/report.json": "a644f899502a0180b957752ec0e7e0262be0a811f511cd101bde3059f743a411",
+  "runs/wp8/sep_base_s0.json": "879aea6a8e1911ea2c1060b56f92c6c4f7f065f977ea44101664967dfa828c57",
+  "runs/wp8/sep_base_s1.json": "df6beadd9e7106858eed1f248fa91bfa0a61e820dbb21daddf4ca1d23e2c9e1b",
+  "runs/wp8/sep_base_s2.json": "00c1bf82dacda988ce92bd19b4614108025fc6591ba1c7ca251ceb371f5f1dc5",
+  "runs/wp8/sep_shaped_s0.json": "414bf6d3851f078849218194720a571bebffe1c07e192523001f8a7a1685d69c",
+  "runs/wp8/sep_shaped_s1.json": "ebecebf0900dba5e389b43803818e21db65bcde7dc173903afd1fd188ff4cc74",
+  "runs/wp8/sep_shaped_s2.json": "7e0a8291a24f030db6653a2c1dc148dff2ae9b6b4c462fddcd3b0c69bed48c34"
+ }
+}

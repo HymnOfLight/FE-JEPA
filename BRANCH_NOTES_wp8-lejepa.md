@@ -520,6 +520,32 @@ pre-registration stamps it.
   pre-registration turns the suite red). Runbook: both tags point at the
   stamp commit, so the tag checks use `git describe --tags --match`; the E2
   verdicts read the committed bench. Suite 286.
+- Stage 1.35 (1 Oct, results recorded): both pre-registered experiments ran
+  on the stamped commit `cdac731` (286 passed on the box), one attempt each,
+  no resumption, solve ledger 0. E1 (2D; 2 h 58 min / 3 h 23 min per
+  three-seed arm, seeds in parallel; 3 h 17 min for the raw ablation seed):
+  NO-GO. K1 not fired (shaped vs AR seed means: displacement -4.7%, energy
+  gap -4.6%; threshold 10%), K2 not fired (S up at every seed: +0.009 /
+  +0.014 / +0.002), GO not reached (floor 0.02). S is negative in every arm
+  while the linear geometry probe reads R^2 0.95-0.98: the bins follow the
+  hole count (the descriptor is centred, not standardised). Head-SIGReg left
+  the encoder's token monitor unchanged (0.18-0.20 vs 0.16-0.19); raw-token
+  SIGReg cut it to 0.002 but lowered S and R^2. E2 (3D; 7 h 33 min / 7 h 24
+  min): KILLED at both M by K1 -- in-band energy gap +281% (threshold 287%,
+  widened by M = 512's own seed spread) / +183% (70%), fine zero-shot
+  displacement +79% (42%) / +122% (33%); K2 not fired (bench fine step 0.049
+  / 0.047 s). Frontier: ~11x cheaper training per seed (27.3 h -> ~2.5 h) at
+  3.0-3.6x the in-band displacement error; more tokens helped in-band but
+  hurt zero-shot transfer (0.463 -> 0.574). By the pre-registered criteria,
+  Stage 2's two answers are no (the bottleneck does not become the Phase-3
+  line; SIGReg does not enter the default AR loss), for the PI to confirm.
+  Records in `records/wp8/e1/` and `records/wp8/e2/` (with a copy of the
+  Phase-2b baseline report, SHA-256 `320b6db5…`);
+  `tests/test_e_series_verdicts.py` re-derives the three verdicts from them
+  with the committed adjudicators and checks the input SHA-256 and the stamp
+  lines. Cost note: a 2D seed alone ran at ~58 ms/step (the August WP2
+  reference, on another container, ~11 ms/step); cause not investigated, no
+  verdict affected. Suite 289.
 
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
