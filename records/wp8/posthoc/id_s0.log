@@ -1,0 +1,16 @@
+{
+ "n_rows": 20000,
+ "latent_dim": 256,
+ "twonn_id": 2.83995252742217,
+ "pca_90": 5,
+ "pca_95": 7,
+ "pca_99": 12,
+ "sigreg_monitor_raw": 0.19076871871948242,
+ "encoder_ends_with_layernorm": true,
+ "last_executed_module": "LayerNorm",
+ "suggested_head_width": 6,
+ "b1_reading": "intrinsic dimension << latent dim: shape the latent on a projector head sized near the intrinsic dimension (LeWM Two-Room caveat)",
+ "subset": "val",
+ "state": "runs/phase2/e8_states/ar_p1024_s0.pt",
+ "smoke": false
+}

@@ -18,6 +18,10 @@
   "records/wp8/e2/e2_m1024/report.json": "3bcd56f14c74ac2a27dfa37e34992b552249da7f6b5e4d4d9d6c6a945f6d3e4e",
   "records/wp8/e2/e2_m512/report.json": "02db3bb6715d78861a0447c69a255d01747965ee9e7bd1f2ccbfc48f5a328ad1",
   "records/wp8/e2/e2_verdict_M1024.json": "f7a5e13c17d7219f71a9f4438ae6de3e37d42bf9d96113952163c253016ac5ce",
-  "records/wp8/e2/e2_verdict_M512.json": "00b363d2c398eecbf5d8ace9639b78f05d051c4376d94a59103ca673beacdc35"
+  "records/wp8/e2/e2_verdict_M512.json": "00b363d2c398eecbf5d8ace9639b78f05d051c4376d94a59103ca673beacdc35",
+  "records/wp8/posthoc/amp_e2_m1024.json": "15610965586d24d7e95cb50e6c9ae5570f331c61798bc15b58f73ac9cd0e82d7",
+  "records/wp8/posthoc/amp_e2_m512.json": "5b998badf952aa2fc33c9ba7d3c72ba30cf54a9782c672e8bfae0678b43f451b",
+  "records/wp8/posthoc/amp_phase2b.json": "4d4e0d4a9956c166b6decd4ace6fca029e6fec74926277e5e11ff3223f301566",
+  "records/wp8/posthoc/probe_random_init.json": "0137974647a9961d8754f0ff6f809df0b189c2bdf8088b9f21b3ba75817a6609"
  }
 }

@@ -82,26 +82,4 @@ No further defects were found in this pass.
 
 ---
 
-# FE-JEPA v2.1.5 — 修复说明（中文摘要）
-
-**背景。** 正式判定运行（`phase1_rec8_v2.json`，`labelled_policy="asis"`）在云端新机器上崩溃：`runs/data2d` 不存在，`_ensure_dataset` 按 WP5 设计重新生成了 30,000 个**无标签**实例（manifest 逐条核实 30,000/30,000 均为 `labelled: false`），随后 `asis` 检查必然拒绝——先烧数小时生成、再必然崩溃。旧检查只抽查一个 val 文件，部分标注的语料还会先通过、再在实验中期崩溃。
-
-**修复（三处源码改动 + 一个新测试文件，其余文件与 v2.1.4 逐字节一致）。**
-F1 快速失败：`asis` + manifest 缺失时在任何生成之前抛错，错误信息含完整修复命令（`protocol.py::require_asis_corpus`，由 `runner.py::_ensure_dataset` 调用）。
-F2 全量校验：`asis` 分支改为校验运行实际消耗的全部标注集合——全部 val + 深度为 `label_need` 的 pool 前缀（E1′/E8 消耗确定性前缀，已核实行号）；manifest 标志 O(1) 应答，未标记文件回退到逐档案 `U_star` 检查，兼容无标志的 Phase-1 式 manifest；报错信息回显带本次运行参数的 `fejepa label` 命令。
-F3 版本号：`__version__` 由过期的 `"2.0.0"` 更正为 `"2.1.5"`（provenance 不消费此字段，属一致性修正）。
-打包卫生：移除空的花括号残留目录、`__pycache__`、外层重复的 `PLAN_MAP.md`。
-
-**验证。** 全套测试 82 通过 / 5 跳过（基线 76/5，新增 6，无回归）[执行验证]；pyflakes 与 compileall 全绿 [执行验证]；runner 两处调用点因沙盒无 torch 为分析验证（编译 + 审查，GPU 机上由 smoke 测试覆盖）；`config_sha256` 前后均为 `62b26ad8…`——代码改动不进入配置哈希，prereg 冻结不受影响 [执行验证]。
-
-**方案 A 操作步骤（AutoDL 机，30k 语料勿删）：**
-```bash
-fejepa label runs/data2d --n-val 256 --split-seed 1 --pool-prefix 1024 --workers 8
-fejepa bench --config configs/phase1_rec8_v2.json --device cuda   # 建议先投影时长
-fejepa run-config configs/phase1_rec8_v2.json
-```
-标注步骤幂等；若遗漏，修复后的代码会在数秒内报错并打印上述确切命令。
-
-**Prereg 与 git。** 配置未动，机器上已 stamp 的 `PREREG.md`（记录 `62b26ad8…`）继续通过校验；**切勿用本包内的 PREREG.md 覆盖机器上的副本**（包内是未 stamp 的模板，与 v2.1.4 逐字节一致）。代码在 tag 之后有改动：属结果产生前的基础设施修订（无任何判据/阈值/种子/配置字段变化，失败运行未产生任何结果），建议提交并打 `v2.1.5` tag，并在运行日志中记录"以 v2.1.5 代码执行未变的 prereg-v2.0 配置"。诚实性注记：`asis` 下报告的 economy 表记 `asis-preexisting-corpus n=0`，5,120 次预标注求解发生在账本之外——与配置 `_comment` 自述一致，但运行日志应写明语料为"云端重新生成 + 离线标注"，非原始 Phase-1 文件。
-
-**审计其余结论。** 前缀消耗契约、E4 种子契约、Gate 的 fail-closed 与 str/int 键容错、"先写报告后渲染"的崩溃保护、全 spawn 多进程、`torch.load(weights_only=True)`、静态危险模式扫描——均核查通过；另确认 E2 已实现并在 2026-07-14 的 smoke 中实际执行（更新此前"E2 未实现"的状态记录）。本轮未发现其他缺陷。
+*Repository note (wp8-lejepa Stage 1.38): the v2.1.5 package also carried a Chinese summary of Sections 1-6; it repeated their content and was removed when the repository was made English-only. The tag `v2.1.5` keeps the original file.*

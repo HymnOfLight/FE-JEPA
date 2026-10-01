@@ -1,12 +1,13 @@
 # RUNBOOK -- E-series (wp8-lejepa), commands in execution order
 
-Stage 1.28-1.37 (29 Sep - 1 Oct 2026). Stage 1.34: 1b, 1c, 2a and 2b are DONE -- the pilot and
+Stage 1.28-1.38 (29 Sep - 1 Oct 2026). Stage 1.34: 1b, 1c, 2a and 2b are DONE -- the pilot and
 the bench returned (`records/wp8/`), PREREG_E1 and PREREG_E2 are stamped in one commit,
 and the tags `prereg-e1` and `prereg-e2` both point at it. Stage 1.35: 1d-1f and 2c-2d are
 DONE (1 Oct) -- E1 NO-GO, E2 KILLED at both M; the returned records are in
 `records/wp8/e1/` and `records/wp8/e2/`. Stage 1.36-1.37: Sec. 4, post-hoc readings (no
-training, nothing adjudicated). Every block below was executed end to end at small
-scale in the sandbox with the guards ON (scaled copies of the configurations,
+training, nothing adjudicated); Stage 1.38: Sec. 4 is DONE (1 Oct), the returned records
+are in `records/wp8/posthoc/`, and wp8 is read-only. Every block below was executed end
+to end at small scale in the sandbox with the guards ON (scaled copies of the configurations,
 labelled PREREG files stamped through the CLI). The lambda pilot (1b) and the
 bench (2a) run BEFORE stamping, by design: they produce the numbers the stamp
 records, under rules already committed in PREREG_E1.md / PREREG_E2.md. Every
@@ -26,7 +27,7 @@ git checkout -B wp8-lejepa origin/wp8-lejepa
 git rev-parse HEAD^{tree}               # the tree the operator instruction names
 git status --porcelain --untracked-files=no   # must print nothing (no local edits carried over)
 mkdir -p runs/wp8                       # tee opens its log before any script creates the directory
-python -m pytest -q 2>&1 | tee runs/wp8/pytest.log   # 318 passed (BRANCH_NOTES carries the count)
+python -m pytest -q 2>&1 | tee runs/wp8/pytest.log   # 328 passed (BRANCH_NOTES carries the count)
 ```
 
 ## 1. E1 -- 2D latent shaping
@@ -196,7 +197,7 @@ in the attention backward and the bottleneck's scatter-mean); the report's
 `d9_restart` block records every resumption -- state it, do not hide it. The
 bitwise-resume tests pin the CPU.
 
-## 4. Post-hoc readings (Stage 1.36, revised at Stage 1.37 after the pre-run review; box; inference and timing only, no training)
+## 4. Post-hoc readings (Stage 1.36, revised at Stage 1.37 after the pre-run review; box; inference and timing only, no training) -- DONE 1 Oct, `records/wp8/posthoc/` (Stage 1.38)
 Reported only: none of these feeds a verdict. 4d and 4e refuse a state whose SHA-256 is
 not the one its run's report records and a corpus whose manifest is not the report's,
 and read model, split and evaluation sets from the report's embedded configuration;

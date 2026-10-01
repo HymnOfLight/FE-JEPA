@@ -41,3 +41,35 @@ Both experiments ran on the stamped commit `cdac731` (tags `prereg-e1`, `prereg-
 `tests/test_e_series_verdicts.py` re-derives every verdict from these files with the
 committed adjudicators, checks that each verdict was computed from exactly these files
 (input SHA-256), and ties each report to its stamp line.
+
+## Post-hoc records (Stage 1.38)
+
+The post-hoc session (RUNBOOK_E_SERIES Sec. 4: inference and timing only, nothing
+adjudicated) ran on 1 October 2026 (UTC) on the Stage 1.37 commit `0b3cd10` (tree
+`9ae35919b1d22f5bd8c2398d000ad365be11fb65`; 318 tests passed there); all 12 steps exited 0.
+Returned in `wp8_posthoc_return_20261002.tgz` (SHA-256
+`b305be6a81956ab379f5585bb212c76e09868fb861adaaa51a6264ec6157c3c5`); `posthoc/` holds its
+28 files:
+
+- `probe_random_init.json` (4a): separation readings of untrained models on E1's
+  validation split, three arms (descriptor input; its input weights zeroed; no descriptor
+  input) x seeds 0-2.
+- `profile_2d_head.json`, `profile_2d_v215.json` (4b): 2D step timing of this code (nine
+  variants and a profiler table) and of the v2.1.5 code (four variants and a profiler
+  table; a worktree at the tag, commit `a548825`).
+- `id_phase2b_s{0,1,2}.json` (4c): intrinsic dimension of the Phase-2b AR states.
+- `anat_{phase2b,e2_m512,e2_m1024}.json` (4d): error anatomy on 128 in-band and 32 fine
+  instances.
+- `amp_{phase2b,e2_m512,e2_m1024}.json` (4e): the energy-optimal amplitude on 256 in-band
+  and 256 fine instances, and the remesh pass (16 geometries, each meshed at four lc).
+- the step logs, `status.txt` (the 12 exit codes), `pytest.log`, `worktree.log` and
+  `provenance.txt` (head, tree, the nine states' SHA-256, GPU, CPU count, cgroup memory
+  events).
+
+`tests/test_posthoc_records.py` checks the exit codes and the commit, ties every measured
+state and report to the committed run records, and checks that the uncorrected amplitude
+numbers reproduce the reports (the transformer's bitwise; the bottleneck's with per-seed
+median deviations of the size its own run's two evaluations of the same states show, the
+largest deviation 3.7x the run's own largest). The readings are summarised in
+BRANCH_NOTES (Stage 1.38); the amplitude tables in `paper/wp8/` are generated from these
+files.

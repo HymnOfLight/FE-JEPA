@@ -680,6 +680,95 @@ pre-registration stamps it.
   Main line, decided by the PI on 1 October 2026: option A of the harvest
   plan -- later work starts from this branch's final head; wp7-3d is frozen
   as the Phase-2b record. Suite 318.
+- Stage 1.38 (1 Oct, post-hoc readings recorded; English-only repository):
+  (i) Records. The post-hoc session (runbook Sec. 4; inference and timing
+  only) ran on the box on the Stage 1.37 commit `0b3cd10` (318 passed
+  there); all 12 steps exited 0. The return
+  (`wp8_posthoc_return_20261002.tgz`, SHA-256 `b305be6a…`) is in
+  `records/wp8/posthoc/` byte for byte. The nine measured states are the
+  ones the three runs' reports record. The uncorrected amplitude numbers
+  reproduce the reports (`tests/test_posthoc_records.py`): the transformer's
+  bitwise, as its own run's two evaluations (E8 and P3) are; the
+  bottleneck's with per-seed median deviations of the size its own run's two
+  evaluations of the same states show (in-band), the largest single
+  deviation 1.1e-2 on a fine instance with an energy gap of 1.36 -- 3.7x the
+  run's own largest (3.0e-3) and above the "few 1e-3" expected before the
+  run. Consistent with the bottleneck's atomic CUDA scatter-mean (an
+  inference). Reported only; no verdict is revisited. (ii) 4a, untrained
+  probe. On E1's 256 validation instances, untrained models with the
+  descriptor input read S +0.336 +/- 0.024, probe R^2 1.000 and 1-NN 0.97
+  (chance 0.25); the same initialisations with the descriptor's input
+  weights zeroed read S -0.031, R^2 0.198, 1-NN 0.28, and models built
+  without the descriptor S -0.032, R^2 0.210, 1-NN 0.26. The trained AR
+  states read S -0.039, R^2 0.957, 1-NN 0.40. These replace the sandbox
+  numbers of Stage 1.36 (i) and confirm its reading: E1's separation
+  instruments mostly read the input back, and AR training dilutes it while
+  keeping more geometry than either control (R^2 0.96 against 0.198 and
+  0.210). The E1 table carries the three untrained rows. (iii) 4b, 2D step
+  timing. E1's ~52 ms per step reproduces in E1's own set-up (three spawned
+  workers: 53.5 ms per unit; one worker 52.0; in-process at 8 threads 52.8);
+  the thread formula is not the cause (8 threads per worker: 51.2). On the
+  same box and torch the v2.1.5 code takes 32-34 ms (three workers 33.8;
+  in-process at 8 threads 32.1): the code accounts for x1.6, the machine
+  (with its torch stack) for at least x2.8-3.0 against the WP2 AR arm's 11.4
+  ms (v2.1.5, the run of 31 July 2026 UTC; the unit's wall clock, set-up
+  included; that run's report, outside this repository, records its GPU and
+  torch version, not its CPU). The likely code cost is per-block activation
+  checkpointing (D13, on by default since the Phase-2 OOM, memory-only): the
+  profiler shows the blocks' attention forward and layer norms executed
+  twice per step (1,536 / 768 and 3,168 / 1,632 calls in 96 steps; the final
+  layer norm is outside the blocks), and the supervised step takes 52.1 ms
+  with it and 18.7 ms without -- faster than v2.1.5's 32.4 ms (8 threads),
+  so other changes act as well (not investigated). The AR step without
+  checkpointing is not resolved: its three in-process estimates are 44.2 /
+  34.0 / 21.6 ms. The in-process AR groups default, threads_e1, no_ckpt and
+  resident (25 or 69 threads) scatter up to 2.6x between pairs (their
+  differential spans 128 steps, the worker variants' 640) and are not used.
+  The step is host-bound: GPU kernels take ~8 ms of it. (iv) 4c. Phase-2b AR
+  states: TwoNN 2.79-2.84 of 256 dimensions, 5 principal components for 90%
+  of the variance (2D pilot: 3.15 and 4). The script's printed head-width
+  advice is moot since Stage 2. (v) 4d, error anatomy. The transformer's
+  in-band error concentrates near the cavities (within one cavity radius:
+  14-20% of the error energy against 2.3% of the solution's); on the fine
+  mesh its error is smooth and solution-shaped (a quadratic field carries
+  99% of its squared L2 norm; relative energy error over relative L2 error
+  1.2-1.4, against 4.3-4.8 in-band; cavity enrichment 1.3-1.7, against
+  5.5-8.0). The bottleneck's error is not concentrated at the token-cell
+  boundaries: the band of a third of the volume around them carries the
+  solution's share of the error (enrichment 0.99-1.01, in-band and fine);
+  the elements cut by a hard boundary are 88-97% of the volume in-band, too
+  many to discriminate. (vi) 4e, amplitude. In-band the amplitude is right
+  (median c* 1.00), yet scaling each load case by its c* halves the
+  transformer's mean displacement error (0.0300 -> 0.0142) and lowers its
+  mean energy gap (0.0091 -> 0.0074). On the fine mesh median c* is 1.23
+  (above 1 for 85-96% of the load cases per seed) and the mean displacement
+  error falls from 0.258 to 0.083 (66-69% per seed; median energy gap 0.091
+  -> 0.042), against 0.053 with 16 fine labels (P3 few-shot); with c* on
+  both sets the fine/in-band ratio is 5.9 (8.6 without; KP4's kill ratio
+  1.5). On 16 fixed geometries meshed at the four lc (only the mesh
+  changes), the transformer's c_b is 0.98-1.01 across the training range and
+  1.27 at the fine lc, where its predicted energy norm drops to 0.75 of the
+  coarsest mesh's; fscale shrinks 0.705 / 0.430 / 0.186 against
+  (lc/0.0906)^2 = 0.671 / 0.408 / 0.170. The bottleneck needs c* 1.73 / 1.77
+  on the fine mesh (displacement 0.463 -> 0.124, 0.574 -> 0.126) and drifts
+  within the training range already (c_b 0.91-0.94 at lc 0.0906, 1.14 at
+  0.0579). c* never raised the energy gap (0 of 4,608 instance-seed rows).
+  By the harvest plan's rule (c* systematically above 1 and a clear fall of
+  the fine error), a mesh-independent output scale becomes a main-line
+  candidate, for the PI to decide. Paper material: `table_amplitude` and
+  `table_remesh` (LaTeX, Markdown), generated from these records like the
+  E-series tables. (vii) English-only repository (PI rule): the repository
+  and the papers are English-only. A scan of every tracked text file found
+  Chinese in three places: the Chinese summary appended to
+  FIX_NOTES_v2_1_5.md (it repeated Sections 1-6; removed, the tag `v2.1.5`
+  keeps the original), two of six Jupyter checkpoint copies committed by
+  accident in `.ipynb_checkpoints/` (all six removed; the directory is now
+  ignored), and one line of `records/wp8/restore_data2d.log` that lists a
+  file name on the box -- kept, because records are the box's files byte for
+  byte. `tests/test_english_only.py` fails on any CJK, kana or Hangul
+  character in a tracked UTF-8 text file outside `records/`. With this stage
+  wp8 is read-only; later work, wp9-pool included, starts from this head
+  (main line A). Suite 328.
 
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 

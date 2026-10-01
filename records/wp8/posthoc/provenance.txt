@@ -1,0 +1,29 @@
+HEAD 0b3cd101961514548c5c2e5d21dabc42d89b7464
+tree 9ae35919b1d22f5bd8c2398d000ad365be11fb65
+--- git status --porcelain ---
+?? .ipynb_checkpoints/DEVIATIONS_PHASE2-checkpoint.md
+?? .ipynb_checkpoints/PREREG_PHASE2-checkpoint.md
+?? .ipynb_checkpoints/PREREG_PHASE2B-checkpoint.md
+?? ".ipynb_checkpoints/\345\256\213\345\215\232\345\243\253\346\223\215\344\275\234\346\211\213\345\206\214_v6_D10\351\207\215\345\220\257\350\265\267\346\255\245_2026-09-03-checkpoint.md"
+?? "\345\256\213\345\215\232\345\243\253\346\223\215\344\275\234\346\211\213\345\206\214_v6_D10\351\207\215\345\220\257\350\265\267\346\255\245_2026-09-03.md"
+--- states ---
+a7b5c71c6144afbc52dc56e372d106e6c13996e06cd86b8a216d8a59c44fb611  runs/phase2/e8_states/ar_p1024_s0.pt
+e9c0c400004d07fbebf6d534f436b100aba718dc132da6587c93374ee61ba04f  runs/phase2/e8_states/ar_p1024_s1.pt
+e0f2210bc85f0f0a4613770410db887bef06643fd6a4f60eca6cee2bef676140  runs/phase2/e8_states/ar_p1024_s2.pt
+a0a9d35b16625aac5eaeebaac5b363d145981b0606d782bd624e7ad126ab3a90  runs/e2_m1024/e8_states/ar_p1024_s0.pt
+bf41d921e4eb27f87fc12bdb6700e7833e39491890abeba3abfbf7ccef731ab3  runs/e2_m1024/e8_states/ar_p1024_s1.pt
+e7a3eb9fb05aed89d78898302896eba5e86bcf12a1705be018dda5781161ecbb  runs/e2_m1024/e8_states/ar_p1024_s2.pt
+5a3ca05aa4e869a72b93f5cda902d8f8a9330551c00d55fbc8cb79a92596b4af  runs/e2_m512/e8_states/ar_p1024_s0.pt
+916a5557fbab2aaeb41cf87fef74ef2f669c930e69da02ddcff2cb2a0a2f012a  runs/e2_m512/e8_states/ar_p1024_s1.pt
+b7675888bc65977a2ded5e9b633c3e434688602970ec72dd5a8dd0a8b17cbb12  runs/e2_m512/e8_states/ar_p1024_s2.pt
+--- v215 worktree ---
+a548825da6d02c91c7ccc4b6fcd6814116b2117e
+NVIDIA GeForce RTX 5090, 595.71.05, 32607 MiB
+hostname autodl-container-857b4c9493-2d948778
+nproc 25
+--- memory.events ---
+low 0
+high 0
+max 0
+oom 0
+oom_kill 0

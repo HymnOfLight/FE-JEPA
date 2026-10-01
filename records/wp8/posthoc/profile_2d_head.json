@@ -1,0 +1,183 @@
+{
+ "what": "2D step timing (wp8 wrap-up item 5); reported only",
+ "src": "/root/autodl-tmp/FE-JEPA/src",
+ "fejepa_file": "/root/autodl-tmp/FE-JEPA/src/fejepa/__init__.py",
+ "src_git": "prereg-e1-3-g0b3cd10",
+ "src_head": "0b3cd101961514548c5c2e5d21dabc42d89b7464",
+ "torch": "2.12.1+cu130",
+ "cuda": "13.0",
+ "driver": "595.71.05",
+ "numeric_policy": {
+  "tf32": true,
+  "device": "cuda",
+  "torch": "2.12.1+cu130",
+  "gpu": "NVIDIA GeForce RTX 5090"
+ },
+ "cpu": "Intel(R) Xeon(R) Platinum 8470Q",
+ "cpus": {
+  "os_cpu_count": 208,
+  "affinity": 208,
+  "cgroup_cpu_max": 25.0,
+  "usable": 25,
+  "e1_worker_threads": 69,
+  "env_OMP_NUM_THREADS": "25"
+ },
+ "threads_default": 25,
+ "gpu": "NVIDIA GeForce RTX 5090",
+ "n_inst": 32,
+ "median_nodes": 439,
+ "epochs": [
+  2,
+  6
+ ],
+ "worker_epochs": [
+  2,
+  22
+ ],
+ "pairs": 3,
+ "variants": {
+  "default": {
+   "ar": {
+    "ms_per_step": 32.119,
+    "estimates_ms": [
+     47.76,
+     18.12,
+     32.119
+    ],
+    "valid": true
+   },
+   "torch_threads": 25,
+   "sup": {
+    "ms_per_step": 52.088,
+    "estimates_ms": [
+     51.293,
+     52.102,
+     52.088
+    ],
+    "valid": true
+   }
+  },
+  "threads_w3": {
+   "ar": {
+    "ms_per_step": 52.818,
+    "estimates_ms": [
+     52.865,
+     52.291,
+     52.818
+    ],
+    "valid": true
+   },
+   "torch_threads": 8,
+   "sup": {
+    "ms_per_step": 51.202,
+    "estimates_ms": [
+     51.202,
+     51.03,
+     51.464
+    ],
+    "valid": true
+   }
+  },
+  "threads_e1": {
+   "ar": {
+    "ms_per_step": 25.464,
+    "estimates_ms": [
+     47.439,
+     24.064,
+     25.464
+    ],
+    "valid": true
+   },
+   "torch_threads": 69,
+   "sup": "not timed (the supervised loss uses neither anchors nor SIGReg)"
+  },
+  "worker": {
+   "ar": {
+    "ms_per_step_per_unit": 52.042,
+    "estimates_ms": [
+     51.634,
+     52.042,
+     52.881
+    ],
+    "valid": true,
+    "units": 1,
+    "threads_per_worker": 69
+   }
+  },
+  "worker3": {
+   "ar": {
+    "ms_per_step_per_unit": 53.541,
+    "estimates_ms": [
+     53.541,
+     55.5,
+     52.347
+    ],
+    "valid": true,
+    "units": 3,
+    "threads_per_worker": 69
+   }
+  },
+  "worker3_quota": {
+   "ar": {
+    "ms_per_step_per_unit": 51.215,
+    "estimates_ms": [
+     53.377,
+     51.215,
+     50.559
+    ],
+    "valid": true,
+    "units": 3,
+    "threads_per_worker": 8
+   }
+  },
+  "no_ckpt": {
+   "ar": {
+    "ms_per_step": 34.014,
+    "estimates_ms": [
+     44.174,
+     34.014,
+     21.586
+    ],
+    "valid": true
+   },
+   "torch_threads": 25,
+   "sup": {
+    "ms_per_step": 18.709,
+    "estimates_ms": [
+     20.328,
+     17.353,
+     18.709
+    ],
+    "valid": true
+   }
+  },
+  "resident": {
+   "ar": {
+    "ms_per_step": 27.44,
+    "estimates_ms": [
+     26.093,
+     27.44,
+     53.019
+    ],
+    "valid": true
+   },
+   "torch_threads": 25,
+   "sup": "not timed (the supervised loss uses neither anchors nor SIGReg)"
+  },
+  "raw_sigreg": {
+   "ar": {
+    "ms_per_step": 56.798,
+    "estimates_ms": [
+     56.798,
+     56.288,
+     59.028
+    ],
+    "valid": true
+   },
+   "torch_threads": 25,
+   "sup": "not timed (the supervised loss uses neither anchors nor SIGReg)"
+  }
+ },
+ "profile_self_cpu": "-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \n                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  \n-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \n                                         AddmmBackward0        10.50%     567.242ms        29.56%        1.597s     593.981us       0.000us         0.00%     196.831ms      73.226us          2688  \n                                       cudaLaunchKernel         7.50%     405.024ms         7.50%     405.024ms       9.141us       0.000us         0.00%       0.000us       0.000us         44308  \n                                            aten::addmm         6.15%     332.350ms         7.57%     408.838ms      78.865us      55.590ms         7.41%      56.295ms      10.859us          5184  \n                                               aten::mm         5.68%     306.869ms         7.71%     416.702ms      49.326us     112.074ms        14.93%     112.836ms      13.357us          8448  \n                                            aten::empty         4.93%     266.340ms         4.93%     266.340ms       6.584us       0.000us         0.00%       0.000us       0.000us         40454  \n                                aten::native_layer_norm         4.80%     259.023ms         7.20%     388.919ms     122.765us      12.664ms         1.69%      12.664ms       3.997us          3168  \n                              Optimizer.step#AdamW.step         3.92%     211.586ms         8.81%     475.844ms       4.957ms       0.000us         0.00%      19.376ms     201.833us            96  \n                                            aten::copy_         2.91%     157.236ms         5.93%     320.497ms      19.452us      36.480ms         4.86%      36.480ms       2.214us         16476  \n          aten::_scaled_dot_product_efficient_attention         2.64%     142.691ms         4.76%     257.017ms     167.329us       0.000us         0.00%     154.474ms     100.569us          1536  \n                                        aten::transpose         2.47%     133.264ms         3.14%     169.411ms       3.580us       0.000us         0.00%       0.000us       0.000us         47328  \n                                              aten::sum         1.91%     103.075ms         3.05%     164.866ms      36.540us      24.255ms         3.23%      24.255ms       5.376us          4512  \n                                             aten::view         1.84%      99.345ms         1.84%      99.345ms       2.774us       0.000us         0.00%       0.000us       0.000us         35808  \n                                    aten::empty_strided         1.83%      99.039ms         1.83%      99.039ms       8.731us       0.000us         0.00%       0.000us       0.000us         11344  \n                                         cuLaunchKernel         1.68%      90.921ms         1.77%      95.531ms       7.596us       0.000us         0.00%      15.679us       0.001us         12576  \n                                             aten::add_         1.41%      75.933ms         2.07%     111.633ms       7.551us      15.647ms         2.09%      15.647ms       1.058us         14784  \n                                         aten::uniform_         1.35%      73.161ms         1.35%      73.161ms     926.086us       0.000us         0.00%       0.000us       0.000us            79  \n                                           aten::linear         1.35%      72.843ms        15.57%     841.140ms     128.851us       0.000us         0.00%      87.057ms      13.336us          6528  \n                                            aten::clone         1.31%      70.924ms         7.94%     429.085ms      32.389us       0.000us         0.00%      31.911ms       2.409us         13248  \n                                                aten::t         1.25%      67.783ms         2.30%     124.084ms       6.068us       0.000us         0.00%       0.000us       0.000us         20448  \n     autograd::engine::evaluate_function: ViewBackward0         1.19%      64.088ms         5.40%     291.880ms      27.147us       0.000us         0.00%      14.646ms       1.362us         10752  \n-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \nSelf CPU time total: 5.402s\nSelf CUDA time total: 750.440ms\n",
+ "profile_self_cuda": "-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \n                                                   Name    Self CPU %      Self CPU   CPU total %     CPU total  CPU time avg     Self CUDA   Self CUDA %    CUDA total  CUDA time avg    # of Calls  \n-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \n                              Optimizer.step#AdamW.step         0.00%       0.000us         0.00%       0.000us       0.000us     323.944ms        43.17%     323.944ms       3.374ms            96  \n                    aten::_efficient_attention_backward         0.61%      33.179ms         3.03%     163.691ms     213.139us     263.120ms        35.06%     271.235ms     353.171us           768  \nfmha_cutlassB_f32_aligned_64x64_k32_sm80(PyTorchMemE...         0.00%       0.000us         0.00%       0.000us       0.000us     263.120ms        35.06%     263.120ms     342.604us           768  \n                     aten::_efficient_attention_forward         0.68%      36.607ms         1.65%      89.131ms      58.028us     154.474ms        20.58%     154.474ms     100.569us          1536  \nfmha_cutlassF_f32_aligned_64x64_rf_sm80(PyTorchMemEf...         0.00%       0.000us         0.00%       0.000us       0.000us     154.474ms        20.58%     154.474ms     100.569us          1536  \n                                               aten::mm         5.68%     306.869ms         7.71%     416.702ms      49.326us     112.074ms        14.93%     112.836ms      13.357us          8448  \n                                            aten::addmm         6.15%     332.350ms         7.57%     408.838ms      78.865us      55.590ms         7.41%      56.295ms      10.859us          5184  \n                                            aten::copy_         2.91%     157.236ms         5.93%     320.497ms      19.452us      36.480ms         4.86%      36.480ms       2.214us         16476  \nvoid at::native::elementwise_kernel<128, 2, at::nati...         0.00%       0.000us         0.00%       0.000us       0.000us      31.911ms         4.25%      31.911ms       2.409us         13248  \nvoid cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us      29.744ms         3.96%      29.744ms      13.167us          2259  \n                       aten::native_layer_norm_backward         0.60%      32.256ms         2.10%     113.218ms      69.374us      25.815ms         3.44%      27.429ms      16.807us          1632  \n                                              aten::sum         1.91%     103.075ms         3.05%     164.866ms      36.540us      24.255ms         3.23%      24.255ms       5.376us          4512  \nvoid cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us      21.608ms         2.88%      21.608ms      11.712us          1845  \nvoid at::native::(anonymous namespace)::GammaBetaBac...         0.00%       0.000us         0.00%       0.000us       0.000us      20.880ms         2.78%      20.880ms      12.794us          1632  \nvoid cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us      20.797ms         2.77%      20.797ms      17.595us          1182  \nvoid at::native::reduce_kernel<128, 4, at::native::R...         0.00%       0.000us         0.00%       0.000us       0.000us      20.211ms         2.69%      20.211ms       5.690us          3552  \n                                             aten::add_         1.41%      75.933ms         2.07%     111.633ms       7.551us      15.647ms         2.09%      15.647ms       1.058us         14784  \nvoid cutlass::Kernel2<cutlass_80_tensorop_s1688gemm_...         0.00%       0.000us         0.00%       0.000us       0.000us      14.733ms         1.96%      14.733ms      17.415us           846  \n                                aten::native_layer_norm         4.80%     259.023ms         7.20%     388.919ms     122.765us      12.664ms         1.69%      12.664ms       3.997us          3168  \nvoid at::native::(anonymous namespace)::vectorized_l...         0.00%       0.000us         0.00%       0.000us       0.000us      12.664ms         1.69%      12.664ms       3.997us          3168  \n-------------------------------------------------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  ------------  \nSelf CPU time total: 5.402s\nSelf CUDA time total: 750.440ms\n"
+}

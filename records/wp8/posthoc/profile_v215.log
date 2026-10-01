@@ -1,0 +1,237 @@
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:61: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape,
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:65: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  self.K_t = K_t.to_sparse_csr() if str(device).startswith("cuda") else K_t
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/train/pretrain.py:88: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:838.)
+  f"loss={float(loss):.4e}", flush=True)
+[pretrain] step 32/32 (100%) loss=2.8715e-04
+[pretrain] step 64/64 (100%) loss=2.3001e-04
+[pretrain] step 192/192 (100%) loss=-1.6659e-03
+[pretrain] step 32/32 (100%) loss=2.8715e-04
+[pretrain] step 64/64 (100%) loss=2.2999e-04
+[pretrain] step 192/192 (100%) loss=-1.6662e-03
+[pretrain] step 32/32 (100%) loss=2.8715e-04
+[pretrain] step 64/64 (100%) loss=2.3098e-04
+[pretrain] step 192/192 (100%) loss=-1.6620e-03
+[sup:none] step 32/32 (100%) disp=0.8807
+[sup:none] step 64/64 (100%) disp=0.8824
+[sup:none] step 192/192 (100%) disp=0.7906
+[sup:none] step 32/32 (100%) disp=0.8807
+[sup:none] step 64/64 (100%) disp=0.8824
+[sup:none] step 192/192 (100%) disp=0.7906
+[sup:none] step 32/32 (100%) disp=0.8807
+[sup:none] step 64/64 (100%) disp=0.8824
+[sup:none] step 192/192 (100%) disp=0.7906
+{"default": {"ar": {"ms_per_step": 31.785, "estimates_ms": [33.8, 31.785, 26.712], "valid": true}, "torch_threads": 25, "sup": {"ms_per_step": 28.721, "estimates_ms": [29.835, 15.563, 28.721], "valid": true}}}
+[pretrain] step 32/32 (100%) loss=2.8715e-04
+[pretrain] step 64/64 (100%) loss=2.3001e-04
+[pretrain] step 192/192 (100%) loss=-1.6655e-03
+[pretrain] step 32/32 (100%) loss=2.8715e-04
+[pretrain] step 64/64 (100%) loss=2.3001e-04
+[pretrain] step 192/192 (100%) loss=-1.6627e-03
+[pretrain] step 32/32 (100%) loss=2.8715e-04
+[pretrain] step 64/64 (100%) loss=2.2995e-04
+[pretrain] step 192/192 (100%) loss=-1.6639e-03
+[sup:none] step 32/32 (100%) disp=0.8807
+[sup:none] step 64/64 (100%) disp=0.8824
+[sup:none] step 192/192 (100%) disp=0.8018
+[sup:none] step 32/32 (100%) disp=0.8807
+[sup:none] step 64/64 (100%) disp=0.8824
+[sup:none] step 192/192 (100%) disp=0.7906
+[sup:none] step 32/32 (100%) disp=0.8807
+[sup:none] step 64/64 (100%) disp=0.8810
+[sup:none] step 192/192 (100%) disp=0.7906
+{"threads_w3": {"ar": {"ms_per_step": 32.116, "estimates_ms": [32.333, 27.639, 32.116], "valid": true}, "torch_threads": 8, "sup": {"ms_per_step": 32.377, "estimates_ms": [32.377, 31.55, 34.06], "valid": true}}}
+[pretrain] step 32/32 (100%) loss=2.8715e-04
+[pretrain] step 64/64 (100%) loss=2.3001e-04
+[pretrain] step 192/192 (100%) loss=-1.6638e-03
+[pretrain] step 32/32 (100%) loss=2.8715e-04
+[pretrain] step 64/64 (100%) loss=2.3001e-04
+[pretrain] step 192/192 (100%) loss=-1.6641e-03
+[pretrain] step 32/32 (100%) loss=2.8715e-04
+[pretrain] step 64/64 (100%) loss=2.3001e-04
+[pretrain] step 192/192 (100%) loss=-1.6671e-03
+{"threads_e1": {"ar": {"ms_per_step": 18.767, "estimates_ms": [15.835, 18.767, 33.456], "valid": true}, "torch_threads": 69, "sup": "not timed (the supervised loss uses neither anchors nor SIGReg)"}}
+[profile workers] starting: 3 units
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:61: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape,
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:61: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape,
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:61: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape,
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:65: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  self.K_t = K_t.to_sparse_csr() if str(device).startswith("cuda") else K_t
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:65: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  self.K_t = K_t.to_sparse_csr() if str(device).startswith("cuda") else K_t
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:65: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  self.K_t = K_t.to_sparse_csr() if str(device).startswith("cuda") else K_t
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/train/pretrain.py:88: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:838.)
+  f"loss={float(loss):.4e}", flush=True)
+[pretrain profile worker 2] step 64/64 (100%) loss=-1.3587e-04
+[profile workers] 1/3 (33%) elapsed 00:00:05 eta 00:00:10 | profile 2
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/train/pretrain.py:88: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:838.)
+  f"loss={float(loss):.4e}", flush=True)
+[pretrain profile worker 1] step 64/64 (100%) loss=-4.4736e-05
+[profile workers] 2/3 (67%) elapsed 00:00:05 eta 00:00:02 | profile 1
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/train/pretrain.py:88: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:838.)
+  f"loss={float(loss):.4e}", flush=True)
+[pretrain profile worker 0] step 64/64 (100%) loss=2.3066e-04
+[profile workers] 3/3 (100%) elapsed 00:00:05 eta 00:00:00 | profile 0
+[profile workers] done in 00:00:06
+[profile workers] starting: 3 units
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:61: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape,
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:61: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape,
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:65: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  self.K_t = K_t.to_sparse_csr() if str(device).startswith("cuda") else K_t
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:61: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape,
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:65: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  self.K_t = K_t.to_sparse_csr() if str(device).startswith("cuda") else K_t
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:65: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  self.K_t = K_t.to_sparse_csr() if str(device).startswith("cuda") else K_t
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/train/pretrain.py:88: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:838.)
+  f"loss={float(loss):.4e}", flush=True)
+[pretrain profile worker 1] step 704/704 (100%) loss=-2.6080e-02
+[profile workers] 1/3 (33%) elapsed 00:00:26 eta 00:00:52 | profile 1
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/train/pretrain.py:88: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:838.)
+  f"loss={float(loss):.4e}", flush=True)
+[pretrain profile worker 0] step 704/704 (100%) loss=-1.9756e-02
+[profile workers] 2/3 (67%) elapsed 00:00:27 eta 00:00:13 | profile 0
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/train/pretrain.py:88: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:838.)
+  f"loss={float(loss):.4e}", flush=True)
+[pretrain profile worker 2] step 704/704 (100%) loss=-1.5806e-02
+[profile workers] 3/3 (100%) elapsed 00:00:27 eta 00:00:00 | profile 2
+[profile workers] done in 00:00:27
+[profile workers] starting: 3 units
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:61: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape,
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:61: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape,
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:61: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape,
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:65: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  self.K_t = K_t.to_sparse_csr() if str(device).startswith("cuda") else K_t
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:65: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  self.K_t = K_t.to_sparse_csr() if str(device).startswith("cuda") else K_t
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:65: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  self.K_t = K_t.to_sparse_csr() if str(device).startswith("cuda") else K_t
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/train/pretrain.py:88: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:838.)
+  f"loss={float(loss):.4e}", flush=True)
+[pretrain profile worker 2] step 64/64 (100%) loss=-1.3602e-04
+[profile workers] 1/3 (33%) elapsed 00:00:05 eta 00:00:11 | profile 2
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/train/pretrain.py:88: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:838.)
+  f"loss={float(loss):.4e}", flush=True)
+[pretrain profile worker 0] step 64/64 (100%) loss=2.3090e-04
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/train/pretrain.py:88: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:838.)
+  f"loss={float(loss):.4e}", flush=True)
+[pretrain profile worker 1] step 64/64 (100%) loss=-4.4786e-05
+[profile workers] 2/3 (67%) elapsed 00:00:05 eta 00:00:02 | profile 0
+[profile workers] 3/3 (100%) elapsed 00:00:06 eta 00:00:00 | profile 1
+[profile workers] done in 00:00:06
+[profile workers] starting: 3 units
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:61: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape,
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:61: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape,
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:61: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape,
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:65: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  self.K_t = K_t.to_sparse_csr() if str(device).startswith("cuda") else K_t
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:65: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  self.K_t = K_t.to_sparse_csr() if str(device).startswith("cuda") else K_t
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:65: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  self.K_t = K_t.to_sparse_csr() if str(device).startswith("cuda") else K_t
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/train/pretrain.py:88: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:838.)
+  f"loss={float(loss):.4e}", flush=True)
+[pretrain profile worker 1] step 704/704 (100%) loss=-2.4549e-02
+[profile workers] 1/3 (33%) elapsed 00:00:23 eta 00:00:46 | profile 1
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/train/pretrain.py:88: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:838.)
+  f"loss={float(loss):.4e}", flush=True)
+[pretrain profile worker 2] step 704/704 (100%) loss=-1.5733e-02
+[profile workers] 2/3 (67%) elapsed 00:00:28 eta 00:00:14 | profile 2
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/train/pretrain.py:88: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:838.)
+  f"loss={float(loss):.4e}", flush=True)
+[pretrain profile worker 0] step 704/704 (100%) loss=-1.8564e-02
+[profile workers] 3/3 (100%) elapsed 00:00:28 eta 00:00:00 | profile 0
+[profile workers] done in 00:00:29
+[profile workers] starting: 3 units
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:61: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape,
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:61: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape,
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:61: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape,
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:65: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  self.K_t = K_t.to_sparse_csr() if str(device).startswith("cuda") else K_t
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:65: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  self.K_t = K_t.to_sparse_csr() if str(device).startswith("cuda") else K_t
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:65: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  self.K_t = K_t.to_sparse_csr() if str(device).startswith("cuda") else K_t
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/train/pretrain.py:88: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:838.)
+  f"loss={float(loss):.4e}", flush=True)
+[pretrain profile worker 0] step 64/64 (100%) loss=2.3025e-04
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/train/pretrain.py:88: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:838.)
+  f"loss={float(loss):.4e}", flush=True)
+[pretrain profile worker 2] step 64/64 (100%) loss=-1.3607e-04
+[profile workers] 1/3 (33%) elapsed 00:00:05 eta 00:00:10 | profile 0
+[profile workers] 2/3 (67%) elapsed 00:00:05 eta 00:00:02 | profile 2
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/train/pretrain.py:88: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:838.)
+  f"loss={float(loss):.4e}", flush=True)
+[pretrain profile worker 1] step 64/64 (100%) loss=-4.4701e-05
+[profile workers] 3/3 (100%) elapsed 00:00:05 eta 00:00:00 | profile 1
+[profile workers] done in 00:00:06
+[profile workers] starting: 3 units
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:61: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape,
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:61: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape,
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:65: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  self.K_t = K_t.to_sparse_csr() if str(device).startswith("cuda") else K_t
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:61: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape,
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:65: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  self.K_t = K_t.to_sparse_csr() if str(device).startswith("cuda") else K_t
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/anchor/energy.py:65: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  self.K_t = K_t.to_sparse_csr() if str(device).startswith("cuda") else K_t
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/train/pretrain.py:88: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:838.)
+  f"loss={float(loss):.4e}", flush=True)
+[pretrain profile worker 1] step 704/704 (100%) loss=-2.4234e-02
+[profile workers] 1/3 (33%) elapsed 00:00:21 eta 00:00:42 | profile 1
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/train/pretrain.py:88: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:838.)
+  f"loss={float(loss):.4e}", flush=True)
+[pretrain profile worker 0] step 704/704 (100%) loss=-1.8618e-02
+[profile workers] 2/3 (67%) elapsed 00:00:22 eta 00:00:11 | profile 0
+/root/autodl-tmp/FE-JEPA-v215/src/fejepa/train/pretrain.py:88: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:838.)
+  f"loss={float(loss):.4e}", flush=True)
+[pretrain profile worker 2] step 704/704 (100%) loss=-1.6347e-02
+[profile workers] 3/3 (100%) elapsed 00:00:26 eta 00:00:00 | profile 2
+[profile workers] done in 00:00:26
+{"worker3": {"ar": {"ms_per_step_per_unit": 33.846, "estimates_ms": [33.846, 35.593, 32.176], "valid": true, "units": 3, "threads_per_worker": 69}}}
+[pretrain] step 32/32 (100%) loss=2.8715e-04
+/root/miniconda3/lib/python3.12/site-packages/torch/profiler/profiler.py:272: UserWarning: Warning: Profiler clears events at the end of each cycle.Only events from the current cycle will be reported.To keep events across cycles, set acc_events=True.
+  _warn_once(
+USDT:2026-10-01 23:52:59 103100:103100 ActivityProfilerController.cpp:415] profiler_start
+[pretrain] step 96/96 (100%) loss=-3.0934e-04
+USDT:2026-10-01 23:53:05 103100:103100 ActivityProfilerController.cpp:455] profiler_stop
+{"what": "2D step timing (wp8 wrap-up item 5); reported only", "src": "/root/autodl-tmp/FE-JEPA-v215/src", "fejepa_file": "/root/autodl-tmp/FE-JEPA-v215/src/fejepa/__init__.py", "src_git": "prereg-wp2-e2", "src_head": "a548825da6d02c91c7ccc4b6fcd6814116b2117e", "torch": "2.12.1+cu130", "cuda": "13.0", "driver": "595.71.05", "numeric_policy": {"tf32": true, "device": "cuda", "torch": "2.12.1+cu130", "gpu": "NVIDIA GeForce RTX 5090"}, "cpu": "Intel(R) Xeon(R) Platinum 8470Q", "cpus": {"os_cpu_count": 208, "affinity": 208, "cgroup_cpu_max": 25.0, "usable": 25, "e1_worker_threads": 69, "env_OMP_NUM_THREADS": "25"}, "threads_default": 25, "gpu": "NVIDIA GeForce RTX 5090", "n_inst": 32, "median_nodes": 439, "epochs": [2, 6], "worker_epochs": [2, 22], "pairs": 3, "variants": {"default": {"ar": {"ms_per_step": 31.785, "estimates_ms": [33.8, 31.785, 26.712], "valid": true}, "torch_threads": 25, "sup": {"ms_per_step": 28.721, "estimates_ms": [29.835, 15.563, 28.721], "valid": true}}, "threads_w3": {"ar": {"ms_per_step": 32.116, "estimates_ms": [32.333, 27.639, 32.116], "valid": true}, "torch_threads": 8, "sup": {"ms_per_step": 32.377, "estimates_ms": [32.377, 31.55, 34.06], "valid": true}}, "threads_e1": {"ar": {"ms_per_step": 18.767, "estimates_ms": [15.835, 18.767, 33.456], "valid": true}, "torch_threads": 69, "sup": "not timed (the supervised loss uses neither anchors nor SIGReg)"}, "worker3": {"ar": {"ms_per_step_per_unit": 33.846, "estimates_ms": [33.846, 35.593, 32.176], "valid": true, "units": 3, "threads_per_worker": 69}}}}
