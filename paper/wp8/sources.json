@@ -1,0 +1,23 @@
+{
+ "generator": "scripts/make_wp8_paper_material.py",
+ "inputs_sha256": {
+  "records/wp8/bench_e2_m1024.json": "b07f6b01051fd2d413d8f527583ec498f21403018c29d869c29edf43f3064311",
+  "records/wp8/bench_e2_m512.json": "051eac48996ccbd7952a5c507fae9bad0971ae3e48b5ef5478f2a60358fb7c3c",
+  "records/wp8/e1/e1_2d_base/report.json": "0ebd53c3be1dcaf823bb76753692f41aced19734a1e4af972f0a064111cf36fe",
+  "records/wp8/e1/e1_2d_raw_s0/report.json": "e46664a472c5fbf494d1bb0c6c27006afeb56707373272370d8afb50cc553d78",
+  "records/wp8/e1/e1_2d_shaped/report.json": "a644f899502a0180b957752ec0e7e0262be0a811f511cd101bde3059f743a411",
+  "records/wp8/e1/e1_verdict.json": "4544bcaf33f9233c741c0e23a2c2934a14daa13755719ac2a752676df9191ad1",
+  "records/wp8/e1/sep_base_s0.json": "879aea6a8e1911ea2c1060b56f92c6c4f7f065f977ea44101664967dfa828c57",
+  "records/wp8/e1/sep_base_s1.json": "df6beadd9e7106858eed1f248fa91bfa0a61e820dbb21daddf4ca1d23e2c9e1b",
+  "records/wp8/e1/sep_base_s2.json": "00c1bf82dacda988ce92bd19b4614108025fc6591ba1c7ca251ceb371f5f1dc5",
+  "records/wp8/e1/sep_raw_s0.json": "52280a769f87e446f42bfc44e456e5900c0817122edc2eda0f3c82ada6811bca",
+  "records/wp8/e1/sep_shaped_s0.json": "414bf6d3851f078849218194720a571bebffe1c07e192523001f8a7a1685d69c",
+  "records/wp8/e1/sep_shaped_s1.json": "ebecebf0900dba5e389b43803818e21db65bcde7dc173903afd1fd188ff4cc74",
+  "records/wp8/e1/sep_shaped_s2.json": "7e0a8291a24f030db6653a2c1dc148dff2ae9b6b4c462fddcd3b0c69bed48c34",
+  "records/wp8/e2/baseline/report_phase2b.json": "320b6db5060ecae9f4747327228c7705d30877bece67d09af2f68d6c466f2794",
+  "records/wp8/e2/e2_m1024/report.json": "3bcd56f14c74ac2a27dfa37e34992b552249da7f6b5e4d4d9d6c6a945f6d3e4e",
+  "records/wp8/e2/e2_m512/report.json": "02db3bb6715d78861a0447c69a255d01747965ee9e7bd1f2ccbfc48f5a328ad1",
+  "records/wp8/e2/e2_verdict_M1024.json": "f7a5e13c17d7219f71a9f4438ae6de3e37d42bf9d96113952163c253016ac5ce",
+  "records/wp8/e2/e2_verdict_M512.json": "00b363d2c398eecbf5d8ace9639b78f05d051c4376d94a59103ca673beacdc35"
+ }
+}

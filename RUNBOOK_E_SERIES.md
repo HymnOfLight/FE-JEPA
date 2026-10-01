@@ -1,10 +1,11 @@
 # RUNBOOK -- E-series (wp8-lejepa), commands in execution order
 
-Stage 1.28-1.35 (29 Sep - 1 Oct 2026). Stage 1.34: 1b, 1c, 2a and 2b are DONE -- the pilot and
+Stage 1.28-1.36 (29 Sep - 1 Oct 2026). Stage 1.34: 1b, 1c, 2a and 2b are DONE -- the pilot and
 the bench returned (`records/wp8/`), PREREG_E1 and PREREG_E2 are stamped in one commit,
 and the tags `prereg-e1` and `prereg-e2` both point at it. Stage 1.35: 1d-1f and 2c-2d are
 DONE (1 Oct) -- E1 NO-GO, E2 KILLED at both M; the returned records are in
-`records/wp8/e1/` and `records/wp8/e2/`. Every block below was executed end to end at small
+`records/wp8/e1/` and `records/wp8/e2/`. Stage 1.36: Sec. 4, post-hoc readings (no
+training, nothing adjudicated). Every block below was executed end to end at small
 scale in the sandbox with the guards ON (scaled copies of the configurations,
 labelled PREREG files stamped through the CLI). The lambda pilot (1b) and the
 bench (2a) run BEFORE stamping, by design: they produce the numbers the stamp
@@ -25,7 +26,7 @@ git checkout -B wp8-lejepa origin/wp8-lejepa
 git rev-parse HEAD^{tree}               # the tree the operator instruction names
 git status --porcelain --untracked-files=no   # must print nothing (no local edits carried over)
 mkdir -p runs/wp8                       # tee opens its log before any script creates the directory
-python -m pytest -q 2>&1 | tee runs/wp8/pytest.log   # 289 passed (BRANCH_NOTES carries the count)
+python -m pytest -q 2>&1 | tee runs/wp8/pytest.log   # 310 passed (BRANCH_NOTES carries the count)
 ```
 
 ## 1. E1 -- 2D latent shaping
@@ -194,3 +195,50 @@ identical to an uninterrupted one (nor are two fresh runs: atomic reductions
 in the attention backward and the bottleneck's scatter-mean); the report's
 `d9_restart` block records every resumption -- state it, do not hide it. The
 bitwise-resume tests pin the CPU.
+
+## 4. Post-hoc readings (Stage 1.36; box; inference and timing only, no training)
+Reported only: none of these feeds a verdict. 4d and 4e refuse a state whose SHA-256 is
+not the one its run's report records and a corpus whose manifest is not the report's,
+and read model, split and evaluation sets from the report's embedded configuration;
+4a reads E1's validation split the same way (corpus check only; its models are
+untrained). 4b times fresh models and 4c reads the state it is given -- their inputs
+are not verified in-run; the return's provenance file lists the states' SHA-256, which
+are checked against the Phase-2b report on receipt. The reports are the committed records.
+Total about 4.5-5.5 h; the GPU must be otherwise idle (4b is a timing).
+```bash
+P=runs/wp8/posthoc; mkdir -p $P
+# 4a. E1's separation readings of UNTRAINED models on E1's validation split (~10 min)
+python scripts/posthoc_probe_random_init.py --report records/wp8/e1/e1_2d_base/report.json \
+    --out $P/probe_random_init.json
+# 4b. 2D step timing: this checkout (five variants + profile), then the August code (~30 min)
+python scripts/posthoc_profile_2d.py --out $P/profile_2d_head.json
+git worktree add ../FE-JEPA-v215 v2.1.5          # a second, read-only checkout
+python scripts/posthoc_profile_2d.py --src ../FE-JEPA-v215/src --variants default threads_w3 \
+    --out $P/profile_2d_v215.json
+# 4c. 3D intrinsic dimension of the Phase-2b AR states (the Stage-0 item never run; ~10 min)
+for s in 0 1 2; do
+  python scripts/intrinsic_dimension.py --config configs/phase2b_v1.json \
+      --state runs/phase2/e8_states/ar_p1024_s$s.pt --data runs/data3d_phase2 \
+      --n-instances 32 --out $P/id_phase2b_s$s.json
+done
+# 4d. error anatomy: 128 in-band validation and 32 fine-set instances per seed (~35-60 min)
+python scripts/posthoc_error_anatomy.py --report records/wp8/e2/baseline/report_phase2b.json \
+    --states-dir runs/phase2/e8_states --n-fine 32 --out $P/anat_phase2b.json
+for M in 512 1024; do
+  python scripts/posthoc_error_anatomy.py --report records/wp8/e2/e2_m$M/report.json \
+      --states-dir runs/e2_m$M/e8_states --n-fine 32 --out $P/anat_e2_m$M.json
+done
+# 4e. amplitude: c* in-band, on the fine set, and on 16 fresh geometries meshed at four lc
+#     (each mesh built once, read by all three seeds; ~2.5-3 h, the fine set dominates)
+python scripts/posthoc_amplitude.py --report records/wp8/e2/baseline/report_phase2b.json \
+    --states-dir runs/phase2/e8_states --remesh 16 --out $P/amp_phase2b.json
+for M in 512 1024; do
+  python scripts/posthoc_amplitude.py --report records/wp8/e2/e2_m$M/report.json \
+      --states-dir runs/e2_m$M/e8_states --remesh 16 --out $P/amp_e2_m$M.json
+done
+```
+4d and 4e print one JSON line per seed and set and rewrite their output file after each,
+so a late failure keeps what was measured. 4e also checks its uncorrected per-instance
+numbers against the report's own arrays (`reproduction`, the maximum relative deviation;
+small values, at TF32 and atomic-reduction round-off, are expected -- a large one means
+the evaluation path differs, and is reported, not corrected).

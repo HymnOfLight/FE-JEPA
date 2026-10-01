@@ -546,6 +546,84 @@ pre-registration stamps it.
   lines. Cost note: a 2D seed alone ran at ~58 ms/step (the August WP2
   reference, on another container, ~11 ms/step); cause not investigated, no
   verdict affected. Suite 289.
+- Stage 1.36 (1 Oct, wrap-up I): (i) E1 reading corrected. The geometry
+  descriptor is a per-node INPUT (broadcast; `features.geometry = true` in
+  every E1, Phase-2b and E2 configuration), and E1's separation readings
+  mostly read it back: untrained models built from E1's configuration, on
+  256 freshly generated instances of the same family (sandbox, same code),
+  read probe R^2 1.000 / 1.000 / 1.000, S +0.30 / +0.34 / +0.35 and 1-NN
+  0.97 -- against 0.95-0.97, -0.04 and 0.36-0.45 for the trained E1 base
+  states; without the descriptor input, untrained models read R^2 0.19, S
+  -0.05, 1-NN at chance. AR training DILUTES the input's geometry signal;
+  head-SIGReg diluted it slightly less. Stage 1.35's "R^2 0.95-0.98" is not
+  evidence of learned geometry; the E1 verdict (NO-GO) is unchanged.
+  (ii) Stage 2, decided by the PI on 1 October 2026 on the pre-registered
+  criteria: the token bottleneck does not become the Phase-3 line, and
+  SIGReg does not enter the default AR loss; bottleneck variants (larger M,
+  local refinement in the decoder) are deferred until the error anatomy of
+  (iii) is read. (iii) Post-hoc instruments, no training, reported only
+  (`analysis/posthoc.py`; `scripts/posthoc_amplitude.py`,
+  `posthoc_error_anatomy.py`, `posthoc_probe_random_init.py`,
+  `posthoc_profile_2d.py`). The amplitude and anatomy scripts refuse a state
+  whose SHA-256 is not the one its run's report records and a corpus whose
+  manifest is not the report's, and read model, split and evaluation sets
+  from the report's embedded configuration; the probe reads E1's validation
+  split the same way (corpus check; its models are untrained); the timing and
+  the intrinsic dimension are not verified in-run (the return lists the
+  states' SHA-256). The amplitude reading tests a mechanism measured in the
+  sandbox: both architectures multiply the decoded field by `fscale`, the
+  largest nodal load of the battery, which shrinks roughly as lc^2 under
+  refinement (x0.40-0.45 across the in-band lc range, a further x0.40-0.45
+  to the fine set; the resultant is invariant), so zero-shot transfer asks
+  the network to extrapolate the amplitude. The energy-optimal factor c* =
+  F^T u / (u^T K u) is label-free and never increases the energy error; a
+  remesh pass (16 fresh geometries, each meshed at four lc with identical
+  geometry and loads, each mesh read by all seeds) isolates its resolution
+  dependence. The profiling script also runs against a v2.1.5 checkout
+  (`--src`, checked here against the tag) to separate code from machine in
+  the 2D slowdown. Runbook Sec. 4. (iv) E1b withdrawn before stamping (PI, 1
+  October). A draft asked whether a start from the AR+SIGReg(head) state
+  fine-tunes better with 16 / 64 labels than a start from the AR state (E8
+  `ar_ft` from E1's own states). The pre-stamp review required that
+  fine-tuning beat its own AR start before a budget counts, and the
+  project's record says that in-band it does not: in the 2D phase raw AR
+  dominated every fine-tuned variant (PROVENANCE_NOTE Run 3; PREREG_PHASE2
+  Sec. 0, "fine-tuning hurts") -- at b = 64 the deciding run's `ar_ft`
+  energy gap was 0.201 +/- 0.027 against 0.082 for AR with zero labels
+  (PROVENANCE_NOTE Run 2), and WP2's was unstable (0.81 / 6.99 / 1.66) --
+  and in Phase-2b the AR cell (displacement 0.030) beat even 1,024 labels
+  (0.047).
+  E1b would have been UNINFORMATIVE by its own validity rule. The draft's
+  motivating number (16 labels: 5.3% against 80% from scratch) is P3's
+  few-shot fine-tuning on the FINE mesh, where the AR start is poor
+  (zero-shot 25.8%), not an in-band result. Nothing of E1b is kept in the
+  tree. A downstream test with a chance of being informative needs a
+  setting where the AR start is poor (resolution transfer) and waits for the
+  amplitude reading of (iii): if the fine-mesh error is mostly amplitude, a
+  one-parameter correction decides it, not the representation. (v) Paper
+  material (`scripts/make_wp8_paper_material.py` -> `paper/wp8/`): the E1
+  and E2 tables (LaTeX, Markdown) and the E2 cost/accuracy figure, every
+  number read from `records/wp8/` (seed mean +/- sample SD; the plotted
+  points as CSV; the inputs' SHA-256); the text outputs regenerate byte for
+  byte and agree with the verdict files (tests). The untrained-model rows of
+  the E1 table are added from post-hoc reading 4a when it is on record. (vi)
+  State bytes: an AR unit saved its state as a plain dict (the SIGReg-head
+  filter), which dropped the OrderedDict's `_metadata` -- identical tensors,
+  a different file SHA-256 from the wp7-3d main line's. The filter now keeps
+  the OrderedDict and its metadata (minus the head's entries); without a
+  head the file is the state dict's own bytes. No recorded run is affected.
+  (vii) Cross-branch regression (`scripts/regress_against_branch.py`): a
+  miniature of the stamped Phase-2b configuration (E8 with labels,
+  labels_anchor, AR and MGN; P3 zero- and few-shot; gate G2; toy sizes, CPU,
+  one thread) run on this tree and on wp7-3d `3940436`, sandbox, 1 October:
+  1,262 result numbers identical; after (vi), the 6 state files identical
+  byte for byte (before it, the 2 AR files differed). Every wp7-3d file is in
+  this tree; besides 10 `src/` files (changes behind switches) only
+  `conftest.py` and the bench script changed, by additions. The harvest plan
+  (which tools become main-line practice, which arms are retired and kept
+  only so the records stay reproducible) proposes that the main line
+  continue from this branch's final head, with wp7-3d frozen as the Phase-2b
+  record; the PI's decision is recorded at Stage 1.37. Suite 310.
 
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
@@ -587,3 +665,7 @@ With the Phase-2 verdict and E1/E2 on record, decide whether the bottleneck
 architecture becomes the Phase-3 main line (fire extension) and whether
 SIGReg enters the default AR loss. Both decisions are taken on measured
 numbers against pre-declared criteria, not on the literature.
+
+Decided 1 October 2026 (PI), on E1 NO-GO and E2 KILLED at both M: no and no.
+The bottleneck does not become the Phase-3 line; SIGReg does not enter the
+default AR loss (Stage 1.36).

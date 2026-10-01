@@ -1,0 +1,161 @@
+#!/usr/bin/env python3
+"""Cross-branch regression (wp8 Stage 1.36, harvest plan): does this checkout
+reproduce another checkout bitwise on the main-line (Phase-2b) code path?
+
+Runs a MINIATURE of a stamped configuration (default `configs/phase2b_v1.json`:
+same structure -- E8 with labels, labels_anchor, AR and MGN; P3 zero-shot and
+few-shot; gate G2 -- at toy sizes, CPU, one thread, guard off) twice, each in
+its own process importing `fejepa` from one source tree, and compares every
+number of the two reports' `results` and the bytes of every state file the
+runs saved. Exit status 0 iff everything is identical.
+
+    git worktree add ../FE-JEPA-wp7 origin/wp7-3d
+    python scripts/regress_against_branch.py --other ../FE-JEPA-wp7/src \
+        --work runs/regress_wp7 --out runs/regress_wp7/summary.json
+
+Bitwise identity is a same-machine, same-torch statement: run both sides here.
+Sandbox record (1 October 2026): wp8 Stage 1.36 against wp7-3d 3940436 --
+1,262 result numbers and 6 state files identical.
+"""
+from __future__ import annotations
+
+import argparse
+import copy
+import hashlib
+import json
+import math
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def miniature(cfg: dict, work: Path, n: int = 16, n_fine: int = 7) -> dict:
+    """The configuration at toy sizes; everything else as stamped."""
+    m = copy.deepcopy(cfg)
+    m["data"].update(dir=str(work / "d3"), n=n, lc_range=[0.30, 0.36])
+    if m.get("data_transfer"):
+        m["data_transfer"].update(dir=str(work / "d3f"), n=n_fine, lc=0.24,
+                                  split={"n_eval": 3, "n_fewshot_prefix": 4})
+    m["split"] = {"n_val": 3, "seed": 1}
+    if m.get("labels"):
+        m["labels"].update(inband_prefix=8, fine_prefix=4)
+    m["model"].update(dim=16, depth=1, heads=2, mgn_dim=16, mgn_depth=1)
+    m.setdefault("sup", {})["epochs"] = 2
+    m.setdefault("pretrain", {})["epochs"] = 2
+    exps = m["experiments"]
+    exps["e8"].update(budgets=[4, 8], seeds=2, ar_epochs=2, sup_epochs=2, pool_sizes=[8],
+                      mgn_budgets=[8])
+    if "p3_transfer" in exps:
+        exps["p3_transfer"].update(fewshot_budgets=[2, 4], fewshot_epochs=2, naive_budget=8)
+    for k in ("wp6", "e6"):                  # theory checks / probes: not the training path
+        if k in exps:
+            exps[k]["enabled"] = False
+    if m.get("gate_g2"):
+        m["gate_g2"].update(decision_budget=8, sanity_min_budget=8)
+    m["prereg_guard"] = False
+    m["device"], m["workers"] = "cpu", 1
+    m["out"] = str(work / "report.json")
+    return m
+
+
+_CHILD = r'''
+import json, sys
+from pathlib import Path
+src, cfg_path = sys.argv[1], sys.argv[2]
+sys.path.insert(0, src)
+
+def main():
+    import torch
+    torch.set_num_threads(1)
+    import fejepa
+    from fejepa.experiments.runner import run_config
+    run_config(cfg_path, device_override="cpu")
+    print("[regress] fejepa from", fejepa.__file__, flush=True)
+
+if __name__ == "__main__":
+    main()
+'''
+
+
+def run_side(src: str, cfg: dict, work: Path) -> dict:
+    work.mkdir(parents=True, exist_ok=True)
+    cp = work / "mini.json"
+    cp.write_text(json.dumps(miniature(cfg, work), indent=1))
+    child = work / "child.py"
+    child.write_text(_CHILD)
+    env = {k: v for k, v in __import__("os").environ.items() if k != "PYTHONPATH"}
+    r = subprocess.run([sys.executable, str(child), str(Path(src).resolve()), str(cp)],
+                       cwd=str(work), capture_output=True, text=True, env=env)
+    (work / "run.log").write_text(r.stdout + r.stderr)
+    if r.returncode != 0:
+        raise SystemExit(f"{src}: miniature run failed (see {work / 'run.log'}):\n"
+                         + (r.stdout + r.stderr)[-2000:])
+    rep = json.loads((work / "report.json").read_text())
+    states = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+              for p in sorted((work / "e8_states").glob("*.pt"))}
+    return {"results": rep["results"], "states": states}
+
+
+_SKIP = {"wall_clock_s", "seconds", "elapsed_s", "time_s", "timing", "state_path",
+         "state_dir", "cache_dir"}
+
+
+def compare(a, b, path="", out=None, n=None):
+    """Paths where two JSON trees differ (floats: exact; NaN equals NaN)."""
+    out = [] if out is None else out
+    n = [0] if n is None else n
+    if isinstance(a, dict) and isinstance(b, dict):
+        for k in sorted(set(a) | set(b)):
+            if k in _SKIP:
+                continue
+            if k not in a or k not in b:
+                out.append(f"{path}/{k}: present on one side only")
+            else:
+                compare(a[k], b[k], f"{path}/{k}", out, n)
+    elif isinstance(a, list) and isinstance(b, list):
+        if len(a) != len(b):
+            out.append(f"{path}: length {len(a)} vs {len(b)}")
+        else:
+            for i, (u, v) in enumerate(zip(a, b, strict=True)):
+                compare(u, v, f"{path}[{i}]", out, n)
+    elif isinstance(a, float) and isinstance(b, float):
+        n[0] += 1
+        if not (a == b or (math.isnan(a) and math.isnan(b))):
+            out.append(f"{path}: {a!r} vs {b!r}")
+    elif a != b:
+        out.append(f"{path}: {str(a)[:60]!r} vs {str(b)[:60]!r}")
+    return out, n[0]
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--other", required=True, help="the other checkout's src directory")
+    ap.add_argument("--src", default=str(ROOT / "src"), help="this side (default: here)")
+    ap.add_argument("--config", default=str(ROOT / "configs" / "phase2b_v1.json"))
+    ap.add_argument("--work", default="runs/regress")
+    ap.add_argument("--out", default=None)
+    a = ap.parse_args()
+    cfg = json.loads(Path(a.config).read_text())
+    work = Path(a.work)
+    this = run_side(a.src, cfg, work / "this")
+    other = run_side(a.other, cfg, work / "other")
+    diffs, n_float = compare(this["results"], other["results"])
+    names = sorted(set(this["states"]) | set(other["states"]))
+    states = {nm: this["states"].get(nm) == other["states"].get(nm) for nm in names}
+    summary = {"this": str(Path(a.src).resolve()), "other": str(Path(a.other).resolve()),
+               "config": a.config, "floats_compared": n_float, "differences": diffs[:50],
+               "n_differences": len(diffs), "state_files": len(names),
+               "state_files_identical": states,
+               "identical": not diffs and all(states.values()) and bool(names)}
+    text = json.dumps(summary, indent=1)
+    if a.out:
+        Path(a.out).parent.mkdir(parents=True, exist_ok=True)
+        Path(a.out).write_text(text + "\n")
+    print(text)
+    sys.exit(0 if summary["identical"] else 1)
+
+
+if __name__ == "__main__":
+    main()

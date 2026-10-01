@@ -147,6 +147,23 @@ def _state_dict(model):
     return getattr(model, "_orig_mod", model).state_dict()
 
 
+def deliverable_state(sd):
+    """The state a unit saves: `sd` without the SIGReg head (training
+    scaffolding). Stage 1.36: the result stays the OrderedDict that
+    `state_dict()` returns, `_metadata` included (minus the head's entries),
+    so that without a head the saved file is byte-identical to saving the
+    state dict itself -- the wp7-3d main line's bytes (a plain dict dropped
+    `_metadata`: identical tensors, different file SHA-256)."""
+    from collections import OrderedDict
+
+    out = OrderedDict((k, v) for k, v in sd.items() if not k.startswith("sigreg_head."))
+    meta = getattr(sd, "_metadata", None)
+    if meta is not None:
+        out._metadata = OrderedDict((k, v) for k, v in meta.items()
+                                    if k != "sigreg_head" and not k.startswith("sigreg_head."))
+    return out
+
+
 def _file_sha256(path) -> str:
     import hashlib
 
@@ -303,8 +320,7 @@ def pretrain_unit(payload: dict) -> dict:
         hist = pretrain(model, _load(payload["files"]), PretrainConfig(loss=loss, **pre))
         # the SIGReg head is training scaffolding: the deliverable state is the
         # encoder/decoder only (strict-loadable into a fresh model)
-        atomic_torch_save({k: v for k, v in _state_dict(model).items()
-                           if not k.startswith("sigreg_head.")}, sp)
+        atomic_torch_save(deliverable_state(_state_dict(model)), sp)
         Path(pre["ckpt_path"]).unlink(missing_ok=True)          # unit complete
         resumed_from = hist.get("resumed_from_epoch")
 
