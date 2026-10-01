@@ -19,8 +19,8 @@ Token bottleneck & 1,024 & 0.0892 $\pm$ 0.0096 & 0.0258 $\pm$ 0.0051 & 0.574 $\p
 \begin{minipage}{\linewidth}\footnotesize\raggedright
 M = 512: K1 in-band energy gap +280.9\% (resolution 287\%), fine displacement +79.1\% (resolution 42\%, fires); K2 (speed) fine step 0.049 s against the 2.0 s line: not triggered. Verdict: KILLED.\par
 M = 1,024: K1 in-band energy gap +183.3\% (resolution 70\%, fires), fine displacement +122.0\% (resolution 33\%, fires); K2 (speed) fine step 0.047 s against the 2.0 s line: not triggered. Verdict: KILLED.\par
-Seeds per architecture: 3; seed mean $\pm$ sample SD. In-band: the 256 Phase-2b validation instances (lc 0.0579--0.0906; the bench instances at the two ends have 3,774 and 12,318 nodes); fine: 256 instances at lc 0.0374 (41,367 nodes in the bench), never trained on. Errors are relative L2 displacement and relative energy gap.\par
-Step time: one label-free AR training step on one instance of the stated size, NVIDIA GeForce RTX 5090, TF32 on, from the E2 bench (bottleneck: set-up-free, median of three differential pairs; transformer: mean of its two bench measurements, 1,408 / 1,422 ms and 14,793 / 14,798 ms).\par
+Seeds per architecture: 3; seed mean $\pm$ sample SD. In-band: the 256 Phase-2b validation instances (lc 0.0579--0.0906; the bench's instances at these two ends have 12,318 and 3,774 nodes); fine: 256 instances at lc 0.0374 (41,367 nodes in the bench), never trained on. Errors are relative L2 displacement and relative energy gap.\par
+Step time: one label-free AR training step on one instance of the stated size, NVIDIA GeForce RTX 5090, TF32 on, from the E2 bench (bottleneck: set-up-free, median of 3 differential pairs of 10 and 110 steps; transformer: one timed call per phase, its set-up included, and the mean of its two bench measurements, 1,408 / 1,422 ms and 14,793 / 14,798 ms).\par
 Resolution: the pre-registered max(10\%, 2 $\times$ SE$_\mathrm{rel}$) of the difference of seed means.
 \end{minipage}
 \end{table}

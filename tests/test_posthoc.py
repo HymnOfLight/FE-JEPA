@@ -149,8 +149,10 @@ def test_amplitude_and_anatomy_scripts_run_and_never_worsen_the_energy(tmp_path,
                         "--n", "3", "--out", str(out2)], capture_output=True, text=True, env=ENV)
     assert r.returncode == 0, r.stderr[-2000:]
     summ = json.loads(out2.read_text())["seeds"]["s0"]["inband"]["summary"]
-    assert ("token_boundary" in summ) == (kind == "bottleneck")
+    assert ("token_straddle" in summ) == (kind == "bottleneck") == ("token_band" in summ)
     assert 0.0 <= summ["support"]["err_share_median"] <= 1.0
+    assert 0.0 < summ["support_phys"]["vol_share_median"] < 1.0      # the x = 0 face band
+    assert summ["complete"] is True
 
 
 def test_scripts_refuse_a_state_or_corpus_other_than_the_reports(tmp_path):
@@ -191,9 +193,20 @@ def test_random_init_probe_script_runs(tmp_path):
                         "--report", str(rp), "--seeds", "0", "--device", "cpu", "--out", str(out)],
                        capture_output=True, text=True, env=ENV)
     assert r.returncode == 0, r.stderr[-2000:]
-    rd = json.loads(out.read_text())["readings"]
-    assert set(rd) == {"geometry_input_true_s0", "geometry_input_false_s0"}
-    assert json.loads(out.read_text())["n_instances"] == 8
+    res = json.loads(out.read_text())
+    rd = res["readings"]
+    assert set(rd) == {"geometry_input_true_s0", "geometry_input_zeroed_s0",
+                       "geometry_input_false_s0"}
+    assert res["n_instances"] == 8 and res["record"] is None     # no recorded reading here
+    # the PC1 share is a property of the instances' descriptors: equal in every arm
+    pc1 = {round(v["pc1_variance_share"], 12) for v in rd.values()}
+    assert len(pc1) == 1 and "S_bootstrap_ci95" in rd["geometry_input_true_s0"]
+    rec = tmp_path / "sep.json"
+    rec.write_text(json.dumps({"pc1_variance_share": pc1.pop(), "n_instances": 8}))
+    r = subprocess.run([sys.executable, str(ROOT / "scripts" / "posthoc_probe_random_init.py"),
+                        "--report", str(rp), "--seeds", "0", "--device", "cpu", "--record",
+                        str(rec), "--out", str(out)], capture_output=True, text=True, env=ENV)
+    assert r.returncode == 0 and json.loads(out.read_text())["pc1_matches_record"] is True
 
 
 def test_profile_script_runs_every_variant_on_cpu(tmp_path):
@@ -207,19 +220,30 @@ def test_profile_script_runs_every_variant_on_cpu(tmp_path):
     cp = tmp_path / "c.json"
     cp.write_text(json.dumps(cfg))
     out = tmp_path / "prof.json"
+    inproc = ["default", "threads_w3", "threads_e1", "no_ckpt", "resident", "raw_sigreg"]
     r = subprocess.run([sys.executable, str(ROOT / "scripts" / "posthoc_profile_2d.py"),
                         "--config", str(cp), "--data", str(d), "--n-inst", "2", "--e1", "1",
-                        "--e2", "2", "--pairs", "1", "--device", "cpu", "--no-profile",
+                        "--e2", "2", "--worker-e1", "1", "--worker-e2", "2", "--pairs", "1",
+                        "--device", "cpu", "--no-profile", "--variants", *inproc, "worker",
                         "--out", str(out)], capture_output=True, text=True, env=ENV)
     assert r.returncode == 0, r.stderr[-2000:]
     v = json.loads(out.read_text())["variants"]
-    assert set(v) == {"default", "threads_w3", "no_ckpt", "resident", "raw_sigreg"}
-    for row in v.values():
-        assert isinstance(row["ar"]["ms_per_step"], float) and "sup" in row
+    assert set(v) == set(inproc) | {"worker"}
+    for name in inproc:
+        assert isinstance(v[name]["ar"]["ms_per_step"], float) and "sup" in v[name]
     assert isinstance(v["default"]["sup"]["ms_per_step"], float)
     assert isinstance(v["resident"]["sup"], str)                # anchors unused by the sup loss
+    w = v["worker"]["ar"]                                       # a spawned map_units worker
+    assert isinstance(w["ms_per_step_per_unit"], float) and w["units"] == 1
     env = json.loads(out.read_text())
     assert env["cpus"]["usable"] >= 1 and env["fejepa_file"].startswith(str(ROOT / "src"))
+    assert env["cpus"]["e1_worker_threads"] >= 1
+    r = subprocess.run([sys.executable, str(ROOT / "scripts" / "posthoc_profile_2d.py"),
+                        "--src", str(tmp_path / "no_such_worktree" / "src"), "--config", str(cp),
+                        "--data", str(d), "--device", "cpu", "--out", str(tmp_path / "x.json")],
+                       capture_output=True, text=True, env=ENV)
+    assert r.returncode != 0 and "no fejepa package" in r.stderr
+    assert not (tmp_path / "x.json").exists()
 
 
 def _script_module(name):
@@ -261,8 +285,7 @@ def test_reproduction_compares_with_the_reports_per_instance_arrays():
                                                 "energy_gap_rel": [0.01, 0.0404, 9.0]}}]}
     rep = mod.reproduction(rows, cell, 0)
     assert rep["checked"] and rep["disp_max_rel_dev"] == 0.0
-    assert rep["egap_max_rel_dev"] == pytest.approx(0.04 / 0.0404 - 1, abs=1e-12) or \
-        rep["egap_max_rel_dev"] == pytest.approx(abs(0.04 - 0.0404) / 0.0404)
+    assert rep["egap_max_rel_dev"] == pytest.approx(abs(0.04 - 0.0404) / 0.0404)
 
 
 def test_anatomy_regions_on_a_gmsh_instance_with_cavities_and_gravity():
@@ -279,14 +302,57 @@ def test_anatomy_regions_on_a_gmsh_instance_with_cavities_and_gravity():
             seen[key] = a
         if len(seen) == 2:
             break
+    assert len(seen) == 2
     rng = np.random.default_rng(1)
     for has_cav, a in seen.items():
         U = a.U_star * (1 + 0.2 * rng.standard_normal(a.U_star.shape)) * a.free_mask
-        res = mod.anatomy(a, U, None)
-        assert ("err_cavity" in res) == has_cav
+        geom = mod.instance_geometry(a)
+        res = mod.anatomy(geom, U, {})
+        assert ("err_cavity" in res) == has_cav == ("err_cavity_phys" in res)
         assert res["vol_load"] < 0.5                 # gravity (every node loaded) excluded
-        assert 0.0 <= res["err_support"] <= 1.0 and "err_token_boundary" not in res
+        assert 0.0 < res["vol_load_phys"] < 0.5 and 0.0 < res["vol_support_phys"] < 0.5
+        assert 0.0 <= res["err_support"] <= 1.0 and "err_token_straddle" not in res
         assert 0.0 < res["ref_low_order"] <= 1.0
+        exact = mod.anatomy(geom, a.U_star * a.free_mask, {})   # no error at all
+        assert exact["rough"] == 0.0 or np.isnan(exact["rough"]) or exact["rough"] < 1e-6
+
+
+def test_physical_regions_do_not_depend_on_the_mesh():
+    pytest.importorskip("gmsh")
+    from fejepa.fe.gmsh3d import gmsh3d_instance, sample_params3d
+
+    mod = _script_module("posthoc_error_anatomy")
+    for seed in range(40):
+        p = sample_params3d(np.random.default_rng(seed))
+        if p["holes"]:
+            break
+    shares = {}
+    for lc in (0.20, 0.12):
+        a = gmsh3d_instance(np.random.default_rng(5), lc=lc, labelled=False, params=p)
+        a.U_star = np.zeros_like(a.F)
+        g = mod.instance_geometry(a)
+        vol = g["op"]["vol"]
+        shares[lc] = {k: float(vol[m].sum() / vol.sum()) for k, m in
+                      (("cavity", g["static"]["cavity"]), ("cavity_phys", g["static"]["cavity_phys"]),
+                       ("support_phys", g["static"]["support_phys"]))}
+    # the physical bands keep their volume share under refinement; the 3h band shrinks
+    assert abs(shares[0.20]["cavity_phys"] - shares[0.12]["cavity_phys"]) < 0.25 * shares[0.12]["cavity_phys"]
+    assert abs(shares[0.20]["support_phys"] - shares[0.12]["support_phys"]) < 0.25 * shares[0.12]["support_phys"]
+    assert shares[0.12]["cavity"] < shares[0.20]["cavity"]
+
+
+def test_token_regions_and_margins():
+    from fejepa.analysis.posthoc import centroid_margin, plane_band, token_straddle
+
+    tets = np.array([[0, 1, 2, 3], [1, 2, 3, 4]])
+    assert token_straddle(np.array([0, 0, 0, 0, 1]), tets).tolist() == [False, True]
+    nodes = np.array([[0.0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 1]])
+    seeds = np.array([[0.0, 0, 0], [1.0, 1, 1]])
+    m = centroid_margin(nodes, tets, seeds)
+    assert m.shape == (2,) and np.all((m >= 0) & (m <= 1)) and m[0] > m[1]
+    band = plane_band(nodes[[0, 2, 3]], nodes, 0.5)                 # the x = 0 plane
+    assert band.tolist() == [True, False, True, True, False]
+    assert plane_band(nodes[[0, 4]], nodes, 0.5) is None             # not one plane
 
 
 def test_remesh_meshes_each_geometry_once_for_every_seed(monkeypatch):
@@ -310,7 +376,7 @@ def test_remesh_meshes_each_geometry_once_for_every_seed(monkeypatch):
     models = {s: _build_model({"kind": "fejepa", "model": mcfg, "seed": s}).eval()
               for s in (0, 1)}
     with torch.no_grad():
-        out = list(mod.remesh_rows(models, 2, "cpu"))
+        out = list(mod.remesh_rows(models, 2, "cpu", cache=None))
     assert len(calls) == 2 * 2                                  # geometries x lc, not x seeds
     for g in range(2):                                          # same geometry at every lc
         assert calls[2 * g][1:] == calls[2 * g + 1][1:]
@@ -322,3 +388,73 @@ def test_remesh_meshes_each_geometry_once_for_every_seed(monkeypatch):
             assert by[1]["n_nodes"] > by[0]["n_nodes"]
             assert by[1]["fscale"] < by[0]["fscale"]            # the load scale shrinks
         assert g_rows[0]["by_lc"][0]["fscale"] == g_rows[1]["by_lc"][0]["fscale"]
+
+
+
+def test_remesh_cache_is_reused_and_identical(tmp_path, monkeypatch):
+    pytest.importorskip("gmsh")
+    torch = pytest.importorskip("torch")
+    from fejepa.experiments.parallel import _build_model
+
+    mod = _script_module("posthoc_amplitude")
+    monkeypatch.setattr(mod, "REMESH_LC", (0.30, 0.22))
+    mcfg = {"dim": 16, "depth": 1, "heads": 2,
+            "features": {"load_summary": True, "geometry": True, "spatial_dim": 3}}
+    models = {0: _build_model({"kind": "fejepa", "model": mcfg, "seed": 0}).eval()}
+    with torch.no_grad():
+        first = list(mod.remesh_rows(models, 1, "cpu", cache=tmp_path))
+        again = list(mod.remesh_rows(models, 1, "cpu", cache=tmp_path))
+    a, b = first[0][0]["by_lc"], again[0][0]["by_lc"]
+    assert [r["from_cache"] for r in a] == [False, False]
+    assert [r["from_cache"] for r in b] == [True, True]
+    assert [r["mesh_sha256"] for r in a] == [r["mesh_sha256"] for r in b]
+    assert [r["c_battery"] for r in a] == [r["c_battery"] for r in b]
+    summ = mod.remesh_summary([first[0][0]])
+    assert summ["n_geometries"] == 1 and summ["u_norm_K_ratio_median_by_lc"][0.30] == 1.0
+
+
+def test_remesh_continues_after_a_failed_geometry(monkeypatch):
+    mod = _script_module("posthoc_amplitude")
+
+    def boom(g, lc, cache):
+        raise RuntimeError("gmsh failed")
+
+    monkeypatch.setattr(mod, "remesh_instance", boom)
+    out = list(mod.remesh_rows({0: object()}, 2, "cpu"))
+    assert [r[0]["geometry"] for r in out] == [0, 1] and all("error" in r[0] for r in out)
+    assert mod.remesh_summary([r[0] for r in out]) == {"n_geometries": 0, "n_failed": 2}
+
+
+def test_spearman_is_nan_for_a_constant_and_handles_ties():
+    mod = _script_module("posthoc_amplitude")
+    assert np.isnan(mod._spearman([3.0, 1.0, 2.0, 5.0], [0.0374] * 4))
+    assert mod._spearman([1, 2, 3, 4], [1, 1, 2, 2]) == pytest.approx(0.894427191, rel=1e-6)
+    assert mod._spearman([1, 2, 3, 4], [10, 20, 30, 40]) == pytest.approx(1.0)
+
+
+def test_write_json_is_atomic(tmp_path):
+    from fejepa.analysis.common import write_json
+
+    p = tmp_path / "o.json"
+    write_json(p, {"a": 1})
+    write_json(p, {"a": 2, "b": float("nan")})
+    assert json.loads(p.read_text())["a"] == 2 and not list(tmp_path.glob("*.tmp"))
+
+
+def test_probe_arms_are_paired(tmp_path):
+    torch = pytest.importorskip("torch")
+    from fejepa.models.features import GEOMETRY_DIM
+
+    mod = _script_module("posthoc_probe_random_init")
+    mcfg = {"dim": 16, "depth": 1, "heads": 2, "features": {"load_summary": True, "geometry": True}}
+    t = mod.build_arm(mcfg, "geometry_input_true", 1, "cpu")
+    z = mod.build_arm(mcfg, "geometry_input_zeroed", 1, "cpu")
+    f = mod.build_arm(mcfg, "geometry_input_false", 1, "cpu")
+    st, sz = t.state_dict(), z.state_dict()
+    for k in st:                                        # identical except the descriptor inputs
+        if k == "encoder.inp.weight":
+            assert torch.equal(st[k][:, :-GEOMETRY_DIM], sz[k][:, :-GEOMETRY_DIM])
+            assert torch.all(sz[k][:, -GEOMETRY_DIM:] == 0)
+        else:
+            assert torch.equal(st[k], sz[k]), k
+    assert f.state_dict()["encoder.inp.weight"].shape[1] == st["encoder.inp.weight"].shape[1] - GEOMETRY_DIM

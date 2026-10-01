@@ -115,6 +115,11 @@ def read_e2(rec: Path, used: dict) -> dict:
             "inband_0": b[m][f"bottleneck{m}_inband_0"]["ms_per_step"],
             "fine": b[m][f"bottleneck{m}_fine"]["ms_per_step"]}
     out["nodes"] = {ph: b[512][ph]["n_nodes"] for ph in ("inband_0", "inband_2", "fine")}
+    steps = {(*b[m][f"bottleneck{m}_{ph}"]["steps"], len(b[m][f"bottleneck{m}_{ph}"]["estimates_ms"]))
+             for m in (512, 1024) for ph in ("inband_0", "fine")}
+    if len(steps) != 1:
+        raise SystemExit(f"bench: the bottleneck phases used different step pairs {steps}")
+    out["bench_steps"] = list(steps.pop())
     cfg = base["config"]
     out["corpus"] = {"lc_range": [float(x) for x in cfg["data"]["lc_range"]],
                      "lc_fine": float(cfg["data_transfer"]["lc"]),
@@ -254,17 +259,19 @@ def e2_notes(e2: dict) -> list:
                      f"against the {v['kill_s']:.1f} s line: not triggered. Verdict: "
                      f"{v['verdict']}.")
     t = e2["archs"]["transformer"]["step_ms_both"]
-    c, n, mach = e2["corpus"], e2["nodes"], e2["machine"]
+    c, n, mach, st = e2["corpus"], e2["nodes"], e2["machine"], e2["bench_steps"]
     notes += [
         f"Seeds per architecture: {e2['n_seeds']}; seed mean ± sample SD. In-band: the {c['n_val']} "
-        f"Phase-2b validation instances (lc {c['lc_range'][0]}–{c['lc_range'][1]}; the bench "
-        f"instances at the two ends have {n['inband_2']:,} and {n['inband_0']:,} nodes); fine: "
+        f"Phase-2b validation instances (lc {c['lc_range'][0]}–{c['lc_range'][1]}; the bench's "
+        f"instances at these two ends have {n['inband_0']:,} and {n['inband_2']:,} nodes); fine: "
         f"{c['n_fine']} instances at lc {c['lc_fine']} ({n['fine']:,} nodes in the bench), "
         "never trained on. Errors are relative L2 displacement and relative energy gap.",
         "Step time: one label-free AR training step on one instance of the stated size, "
         f"{mach['gpu']}, TF32 {'on' if mach['tf32'] else 'off'}, from the E2 bench "
-        "(bottleneck: set-up-free, median of three differential pairs; transformer: mean of "
-        f"its two bench measurements, {t['inband_0'][0]:,.0f} / {t['inband_0'][1]:,.0f} ms and "
+        f"(bottleneck: set-up-free, median of {st[2]} differential pairs of {st[0]} and {st[1]} "
+        "steps; transformer: one timed call per phase, its set-up included, and the mean of "
+        "its two bench measurements, "
+        f"{t['inband_0'][0]:,.0f} / {t['inband_0'][1]:,.0f} ms and "
         f"{t['fine'][0]:,.0f} / {t['fine'][1]:,.0f} ms).",
         "Resolution: the pre-registered max(10%, 2 × SE_rel) of the difference of seed means.",
     ]
@@ -355,15 +362,19 @@ def make_figure(e2: dict, out_dir: Path) -> list:
     import matplotlib.pyplot as plt
     from matplotlib.ticker import FixedLocator, FuncFormatter, LogLocator, NullFormatter
 
-    plt.rcParams.update({"font.size": 8, "axes.edgecolor": INK2, "axes.labelcolor": INK,
-                         "xtick.color": INK2, "ytick.color": INK2, "axes.linewidth": 0.8,
-                         "pdf.fonttype": 42})
+    style = {"font.size": 8, "axes.edgecolor": INK2, "axes.labelcolor": INK,
+             "xtick.color": INK2, "ytick.color": INK2, "axes.linewidth": 0.8,
+             "pdf.fonttype": 42}
+    with plt.rc_context(style):                    # no global matplotlib state is changed
+        return _draw(plt, e2, out_dir, FixedLocator, FuncFormatter, LogLocator, NullFormatter)
+
+
+def _draw(plt, e2, out_dir, FixedLocator, FuncFormatter, LogLocator, NullFormatter) -> list:
     fig, axes = plt.subplots(1, 2, figsize=(7.0, 2.9), constrained_layout=True)
     n = e2["nodes"]
-    panels = (("inband_0", "egap", f"In-band energy gap (step timed on {n['inband_0']:,} nodes)",
+    panels = (("inband_0", "egap", f"In-band ({n['inband_0']:,}-node step)",
                "Relative energy gap (log scale)", True, (10, 1e4)),
-              ("fine", "fine_disp", f"Fine-mesh displacement, zero-shot (step timed on "
-                                    f"{n['fine']:,} nodes)",
+              ("fine", "fine_disp", f"Fine mesh, zero-shot ({n['fine']:,}-node step)",
                "Relative L2 displacement error", False, (10, 1e5)))
     # label anchors in axes-fraction coordinates, per panel and identity
     place = {("inband_0", 512): (0.30, 0.86), ("inband_0", 1024): (0.30, 0.50),

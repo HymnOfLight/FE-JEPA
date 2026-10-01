@@ -35,11 +35,18 @@ def free_mask(arch) -> np.ndarray:
     return np.asarray(arch.free_mask, dtype=bool).ravel()
 
 
-def amplitude_factor(U: np.ndarray, K, F: np.ndarray, free: np.ndarray) -> np.ndarray:
+def free_block(K, free: np.ndarray):
+    """K restricted to the free dofs (CSR); pass it as `Kf` to the amplitude
+    helpers to build it once per instance instead of once per call."""
+    return sp.csr_matrix(K)[free][:, free]
+
+
+def amplitude_factor(U: np.ndarray, K, F: np.ndarray, free: np.ndarray,
+                     Kf=None) -> np.ndarray:
     """Per-load c* = F^T u / (u^T K u) over the free dofs; NaN where u^T K u = 0."""
     U2 = np.atleast_2d(np.asarray(U, dtype=np.float64))[:, free]
     F2 = np.atleast_2d(np.asarray(F, dtype=np.float64))[:, free]
-    Kf = sp.csr_matrix(K)[free][:, free]
+    Kf = free_block(K, free) if Kf is None else Kf
     KU = (Kf @ U2.T).T
     num = np.einsum("ld,ld->l", F2, U2)
     den = np.einsum("ld,ld->l", U2, KU)
@@ -60,20 +67,21 @@ def l2_amplitude(U: np.ndarray, U_star: np.ndarray) -> np.ndarray:
     return out
 
 
-def energy_norms(U: np.ndarray, K, free: np.ndarray) -> np.ndarray:
+def energy_norms(U: np.ndarray, K, free: np.ndarray, Kf=None) -> np.ndarray:
     """Per-load energy norm ||u||_K over the free dofs."""
     U2 = np.atleast_2d(np.asarray(U, dtype=np.float64))[:, free]
-    Kf = sp.csr_matrix(K)[free][:, free]
+    Kf = free_block(K, free) if Kf is None else Kf
     return np.sqrt(np.maximum(np.einsum("ld,ld->l", U2, (Kf @ U2.T).T), 0.0))
 
 
-def battery_amplitude(U: np.ndarray, K, F: np.ndarray, free: np.ndarray) -> float:
+def battery_amplitude(U: np.ndarray, K, F: np.ndarray, free: np.ndarray, Kf=None) -> float:
     """One energy-optimal factor for the whole load battery,
     c_b = sum_l F_l^T u_l / sum_l u_l^T K u_l -- the level at which `fscale`
-    acts (it is a battery-level scale)."""
+    acts (it is a battery-level scale). c_b mixes amplitude and shape: per
+    load, c* = (||U*||_K / ||u||_K) x cos_K(u, U*)."""
     U2 = np.atleast_2d(np.asarray(U, dtype=np.float64))[:, free]
     F2 = np.atleast_2d(np.asarray(F, dtype=np.float64))[:, free]
-    Kf = sp.csr_matrix(K)[free][:, free]
+    Kf = free_block(K, free) if Kf is None else Kf
     den = float(np.einsum("ld,ld->", U2, (Kf @ U2.T).T))
     return float(np.einsum("ld,ld->", F2, U2) / den) if den > 0 else float("nan")
 
@@ -86,16 +94,32 @@ def apply_amplitude(U: np.ndarray, c: np.ndarray) -> np.ndarray:
 
 # ---------------------------------------------------------- 3D anatomy --
 
+def element_operator(nodes: np.ndarray, tets: np.ndarray, material: dict) -> dict:
+    """Per-element volumes, Voigt strain-displacement matrices (engineering
+    shears), dof map and elasticity matrix of P1 tetrahedra, built once per
+    mesh (Stage 1.37: the per-call rebuild dominated the anatomy's run time)."""
+    from ..fe.tet3d import _B_matrices, _elastic_D, _tet_geometry
+
+    tets = np.asarray(tets)
+    vol, grads = _tet_geometry(np.asarray(nodes, dtype=np.float64), tets)
+    return {"vol": vol, "B": _B_matrices(grads),
+            "dof": (3 * tets[:, :, None] + np.arange(3)).reshape(tets.shape[0], 12),
+            "D": _elastic_D(material)}
+
+
+def element_energies(op: dict, U: np.ndarray) -> np.ndarray:
+    """(L, E) element strain energies 0.5 eps^T D eps vol of node-major P1
+    fields U (L, ndof); each row sums to 0.5 u^T K u for
+    K = assemble_tet(nodes, tets, material)."""
+    U2 = np.atleast_2d(np.asarray(U, dtype=np.float64))
+    eps = np.einsum("eij,lej->lei", op["B"], U2[:, op["dof"]])
+    return 0.5 * np.einsum("lei,ij,lej->le", eps, op["D"], eps) * op["vol"][None, :]
+
+
 def element_energy(nodes: np.ndarray, tets: np.ndarray, u: np.ndarray,
                    material: dict) -> np.ndarray:
-    """(E,) element strain energies 0.5 sigma:eps vol of a node-major P1 field;
-    they sum to 0.5 u^T K u for K = assemble_tet(nodes, tets, material)."""
-    from ..fe.tet3d import _tet_geometry, tet_strains, tet_stresses
-
-    vol, _ = _tet_geometry(nodes, tets)
-    eps = tet_strains(nodes, tets, u)
-    sig = tet_stresses(nodes, tets, u, material)
-    return 0.5 * np.einsum("ei,ei->e", sig, eps) * vol
+    """(E,) element strain energies of one field (see element_energies)."""
+    return element_energies(element_operator(nodes, tets, material), u)[0]
 
 
 def cavity_distance(points: np.ndarray, holes) -> np.ndarray:
@@ -107,6 +131,59 @@ def cavity_distance(points: np.ndarray, holes) -> np.ndarray:
     h = np.asarray(holes, dtype=np.float64).reshape(-1, 4)
     d = np.linalg.norm(pts[:, None, :] - h[None, :, :3], axis=2) - h[None, :, 3]
     return np.abs(d).min(axis=1)
+
+
+def cavity_shell(points: np.ndarray, holes, factor: float = 1.0) -> np.ndarray:
+    """True where a point lies within `factor` x r of a spherical cavity's
+    surface (holes as (x, y, z, r)): a band set by the cavity's own size, so
+    the same physical region on every mesh."""
+    pts = np.asarray(points, dtype=np.float64)
+    if not holes:
+        return np.zeros(pts.shape[0], dtype=bool)
+    h = np.asarray(holes, dtype=np.float64).reshape(-1, 4)
+    d = np.linalg.norm(pts[:, None, :] - h[None, :, :3], axis=2) - h[None, :, 3]
+    return (np.abs(d) < factor * h[None, :, 3]).any(axis=1)
+
+
+def plane_band(on_plane: np.ndarray, points: np.ndarray, delta: float,
+               tol: float = 1e-9):
+    """True where a point lies within `delta` (physical units) of the
+    axis-aligned plane carrying all of `on_plane` (e.g. a loaded or supported
+    face); None when those points do not lie on one axis-aligned plane."""
+    P = np.asarray(on_plane, dtype=np.float64)
+    X = np.asarray(points, dtype=np.float64)
+    if P.size == 0:
+        return None
+    scale = max(float(np.ptp(X, axis=0).max()), 1e-12)
+    for ax in range(P.shape[1]):
+        if float(np.ptp(P[:, ax])) <= tol * scale:
+            return np.abs(X[:, ax] - P[0, ax]) < delta
+    return None
+
+
+def token_straddle(tok_idx: np.ndarray, tets: np.ndarray) -> np.ndarray:
+    """Elements whose nodes are not all pooled into the same token (the cell
+    boundaries of a bottleneck's hard assignment, exactly)."""
+    t = np.asarray(tok_idx)[np.asarray(tets)]
+    return (t != t[:, :1]).any(axis=1)
+
+
+def centroid_margin(nodes: np.ndarray, tets: np.ndarray, seed_xyz: np.ndarray) -> np.ndarray:
+    """Relative margin (d2 - d1) / (d2 + d1) of each element centroid to its two
+    nearest token seeds, in the bottleneck's unit-bounding-box coordinates
+    (the ratio is invariant to that similarity map): a band relative to the
+    token size, independent of the mesh resolution."""
+    from scipy.spatial import cKDTree
+
+    x = np.asarray(nodes, dtype=np.float64)
+    lo, hi = x.min(0), x.max(0)
+    xn = (x - lo) / max(float((hi - lo).max()), 1e-12)
+    cent = xn[np.asarray(tets)].mean(1)
+    seeds = np.asarray(seed_xyz, dtype=np.float64)
+    if seeds.shape[0] < 2:
+        return np.full(cent.shape[0], np.nan)
+    d, _ = cKDTree(seeds).query(cent, k=2)
+    return (d[:, 1] - d[:, 0]) / np.maximum(d[:, 1] + d[:, 0], 1e-300)
 
 
 def low_order_fraction(nodes: np.ndarray, e: np.ndarray, degree: int = 2) -> float:
@@ -160,7 +237,8 @@ def verified_states(report: dict, states_dir, seeds=None) -> dict:
     from pathlib import Path
 
     rec = report["results"]["e8"]["metrics"]["d9_restart"]["ar_states"]
-    pool = max(int(p) for p in report["config"]["experiments"]["e8"]["pool_sizes"])
+    # E8's d9 record and P3's states are those of pool_sizes[0] (e8_regimes ft_pool)
+    pool = int(report["config"]["experiments"]["e8"]["pool_sizes"][0])
     out = {}
     for s in (run_seeds(report) if seeds is None else seeds):
         p = Path(states_dir) / f"ar_p{pool}_s{s}.pt"

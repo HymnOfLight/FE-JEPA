@@ -94,6 +94,12 @@ def inputs_provenance(paths: list) -> dict:
 
 
 def write_json(path: str | Path, obj: dict) -> None:
+    """Write JSON atomically (temp file + os.replace, as R9a): a session that
+    ends mid-write leaves the previous complete file, never a truncated one."""
+    import os
+
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(json.dumps(obj, indent=1))
+    tmp = p.with_name(p.name + ".tmp")
+    tmp.write_text(json.dumps(obj, indent=1))
+    os.replace(tmp, p)

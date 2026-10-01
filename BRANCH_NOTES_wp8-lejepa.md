@@ -554,7 +554,10 @@ pre-registration stamps it.
   read probe R^2 1.000 / 1.000 / 1.000, S +0.30 / +0.34 / +0.35 and 1-NN
   0.97 -- against 0.95-0.97, -0.04 and 0.36-0.45 for the trained E1 base
   states; without the descriptor input, untrained models read R^2 0.19, S
-  -0.05, 1-NN at chance. AR training DILUTES the input's geometry signal;
+  -0.05, 1-NN at chance (sample-dependent: an independent sandbox sample read S
+  +0.28 to +0.31, 1-NN 0.91-0.92 and, without the descriptor, R^2 0.26-0.27;
+  post-hoc reading 4a, on E1's own instances, replaces both). AR training
+  DILUTES the input's geometry signal;
   head-SIGReg diluted it slightly less. Stage 1.35's "R^2 0.95-0.98" is not
   evidence of learned geometry; the E1 verdict (NO-GO) is unchanged.
   (ii) Stage 2, decided by the PI on 1 October 2026 on the pre-registered
@@ -573,8 +576,9 @@ pre-registration stamps it.
   states' SHA-256). The amplitude reading tests a mechanism measured in the
   sandbox: both architectures multiply the decoded field by `fscale`, the
   largest nodal load of the battery, which shrinks roughly as lc^2 under
-  refinement (x0.40-0.45 across the in-band lc range, a further x0.40-0.45
-  to the fine set; the resultant is invariant), so zero-shot transfer asks
+  refinement (on three sandbox geometries x0.41-0.48 across the in-band lc
+  range and a further x0.41-0.44 to the fine set, against lc^2 ratios of
+  0.41 and 0.42; the resultant is invariant), so zero-shot transfer asks
   the network to extrapolate the amplitude. The energy-optimal factor c* =
   F^T u / (u^T K u) is label-free and never increases the energy error; a
   remesh pass (16 fresh geometries, each meshed at four lc with identical
@@ -589,8 +593,9 @@ pre-registration stamps it.
   project's record says that in-band it does not: in the 2D phase raw AR
   dominated every fine-tuned variant (PROVENANCE_NOTE Run 3; PREREG_PHASE2
   Sec. 0, "fine-tuning hurts") -- at b = 64 the deciding run's `ar_ft`
-  energy gap was 0.201 +/- 0.027 against 0.082 for AR with zero labels
-  (PROVENANCE_NOTE Run 2), and WP2's was unstable (0.81 / 6.99 / 1.66) --
+  energy gap was 0.201 +/- 0.027 (as PROVENANCE_NOTE Run 3 quotes it) against
+  0.082 for AR with zero labels (Run 2's replication), and WP2's was unstable
+  (0.81 / 6.99 / 1.66) --
   and in Phase-2b the AR cell (displacement 0.030) beat even 1,024 labels
   (0.047).
   E1b would have been UNINFORMATIVE by its own validity rule. The draft's
@@ -617,13 +622,64 @@ pre-registration stamps it.
   labels_anchor, AR and MGN; P3 zero- and few-shot; gate G2; toy sizes, CPU,
   one thread) run on this tree and on wp7-3d `3940436`, sandbox, 1 October:
   1,262 result numbers identical; after (vi), the 6 state files identical
-  byte for byte (before it, the 2 AR files differed). Every wp7-3d file is in
-  this tree; besides 10 `src/` files (changes behind switches) only
-  `conftest.py` and the bench script changed, by additions. The harvest plan
-  (which tools become main-line practice, which arms are retired and kept
-  only so the records stay reproducible) proposes that the main line
-  continue from this branch's final head, with wp7-3d frozen as the Phase-2b
-  record; the PI's decision is recorded at Stage 1.37. Suite 310.
+  byte for byte (before it, the 2 AR files differed); that miniature ran
+  fresh only, at budgets below 64, without WP6 and E6 (extended at Stage
+  1.37). Every wp7-3d file is in this tree; besides 10 `src/` files (changes
+  mostly behind switches; the seeds-of-enabled-experiments fix and
+  `clean_state` on reuse are unconditional, neither on the Phase-2b path)
+  only `conftest.py` and the bench script changed, by additions. The
+  harvest plan (which tools become main-line practice, which arms are
+  retired and kept only so the records stay reproducible) proposes that the
+  main line continue from this branch's final head, with wp7-3d frozen as
+  the Phase-2b record (decided at Stage 1.37). Suite 310.
+- Stage 1.37 (1 Oct, pre-run review of the post-hoc instruments; three
+  independent reviews, no blocker; fixed before the box session): (i) Error
+  anatomy. The token-boundary region (mean node margin < 0.1) dropped the
+  elements that straddle a cell boundary -- averaging an unsigned margin
+  inflates it exactly there -- so it is replaced by `token_straddle`
+  (elements whose nodes are pooled into different tokens) and `token_band`
+  (centroid margin to the two nearest seeds < 0.1, relative to the token
+  size). The cavity / load / support regions are mesh layers whose physical
+  size shrinks with refinement; physical bands (`*_phys`: one cavity radius;
+  0.2 from the loaded or supported face) are added so in-band and fine
+  readings compare. Element energies come from one element operator per
+  mesh (7x faster, identical to 1e-15), and each instance is loaded and
+  prepared once for all seeds (the pack depends on the configuration and the
+  instance, not on the weights; the reproduction check covers every seed).
+  The summary adds the normalised excess (err - ref) / (1 - ref) beside the
+  enrichment, which is capped at 1 / ref and so not comparable between
+  meshes on which a region covers different shares. (ii) Amplitude. Instance-outer loop (one load and one free
+  stiffness block for three seeds); remesh meshes cached and reused by the
+  three runs (each row records the mesh SHA-256); a failed remesh geometry
+  is recorded and skipped; seed means are written before the remesh pass;
+  Spearman with tie-aware ranks (the fine set's constant lc gave a
+  meaningless number, now NaN); `amp_ratio_median` (||U*||_K / ||u||_K)
+  and, on the remesh, the predicted energy norm relative to the coarsest
+  mesh, since c* mixes amplitude and shape; states verified for
+  `pool_sizes[0]`, as E8 records them. (iii) 2D timing. E1's units ran in
+  spawned map_units workers with os.cpu_count() // 3 threads each (a
+  container can report the host's CPUs), the August reference in-process:
+  added `threads_e1` (that count, in-process), `worker` / `worker3` (one /
+  three AR units through map_units -- E1's exact path and set-up) and
+  `worker3_quota` (the quota-based count, the candidate remedy). The script
+  refuses to run unless fejepa is imported from the --src it is told to time
+  (a failed `git worktree add` would have timed the current code under the
+  v2.1.5 label), and writes its output after every variant. (iv) Probe: a paired
+  control arm (the trained arm's initialisation with the descriptor's input
+  weights zeroed; the no-descriptor model differs throughout); the PC1
+  share, a property of the instances alone, is checked against the record.
+  (v) `write_json` is atomic. (vi) Cross-branch regression extended: budget
+  64 (the gradient-balanced anchor), WP6 and E6 on, a restart pass
+  (`reuse_states`), whole reports compared with the corpus manifests;
+  against wp7-3d `3940436`, sandbox: 2,590 numbers compared over both
+  passes, all bitwise identical except WP6's ARPACK values (below 6e-15
+  relative; they differ as much between two passes of one branch), and the
+  6 state files identical.
+  (vii) Paper figure titles shortened (the right one was cut at the page
+  edge); the table notes state each architecture's bench protocol. (viii)
+  Main line, decided by the PI on 1 October 2026: option A of the harvest
+  plan -- later work starts from this branch's final head; wp7-3d is frozen
+  as the Phase-2b record. Suite 318.
 
 ## Stage 1 -- E-series pre-registrations (box free, after the deciding run)
 
