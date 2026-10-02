@@ -4,9 +4,11 @@ Stage 0a (1 Oct 2026) wrote Sec. 1, session 1 -- readings, timing and data
 generation; nothing is trained and nothing is adjudicated. Its outputs that
 select what session 2 runs are read by the rules committed before it ran
 (`scripts/w9_session1_decisions.py`; BRANCH_NOTES_wp9-pool.md, "Pre-declared
-readings"). Stage 0b (1-2 Oct 2026) wrote Sec. 2-4: session 2 (C1 and, if rule
-1 admits it, S), the adjudication, and the optional torch-stack timing (Sec.
-1e of Stage 0a, moved after session 2). PREREG_W9.md is stamped and tagged
+readings"). Stage 0b (1-2 Oct 2026) wrote Sec. 2-3 and 5: session 2 (C1 and,
+if rule 1 admits it, S), the adjudication, and the optional torch-stack timing
+(Sec. 1e of Stage 0a, moved after session 2). Stage 0d (2 Oct 2026) added
+Sec. 4: the paper's cost table, surrogate inference against the direct solve
+(nothing in PREREG_W9 reads it). PREREG_W9.md is stamped and tagged
 (`prereg-w9`) BEFORE session 1, covering every arm the rules can select, so
 the box runs session 1 and session 2 in one visit: Sec. 0, session 1, its
 return, the plan (it refuses to plan unless session 1 passed its gate), the
@@ -14,8 +16,8 @@ arms, their return. In the sandbox, a miniature laid out like the box (sizes
 scaled down, CPU) ran Sec. 0's git checks, Sec. 1a-1d, 1f, 2a, 2b with a
 worker killed mid-arm and the restart, 2d and Sec. 3 from the two returns
 (the rules' inputs edited so that every arm runs; 1f and 2d with shorter
-provenance blocks and no tarball; the suite, the GPU checks and Sec. 4 not
-run there).
+provenance blocks and no tarball; the suite, the GPU checks and Sec. 4-5 not
+run there; Sec. 4's script ran on small CPU runs in the tests).
 
 Roles: **box** = the GPU machine; **repo** = code, records, pre-registration,
 adjudication.
@@ -23,15 +25,16 @@ adjudication.
 Governance: nothing here touches a stamped configuration of another
 pre-registration, a run's `e8_states/` other than wp9's own, or `runs/data2d`;
 session 1 writes under `runs/w9/`, session 2 writes under `runs/w9/` and reads
-E1's states; Sec. 4 adds a virtual environment and a worktree next to the
-repository. The branch is frozen from the stamp until session 2 has returned:
-the box checks that HEAD is exactly the tagged commit, the plan checks it
-again, and the command script checks it before every arm.
+E1's states; Sec. 4 writes under `runs/w9/timing/` and reads E1's and
+Phase-2b's states and corpora; Sec. 5 adds a virtual environment and a
+worktree next to the repository. The branch is frozen from the stamp until
+session 2 has returned: the box checks that HEAD is exactly the tagged commit,
+the plan checks it again, and the command script checks it before every arm.
 
-Time and money: session 1 about 1 h; session 2 about 10 h without S, about
-13 h with S, 2-6 h more if N_max runs one seed at a time; Sec. 4 about 30 min.
-The instance's balance must cover about 24 h. Everything runs in ONE tmux
-session; nothing else may use the GPU meanwhile.
+Time and money: session 1 about 1 h; session 2 about 10 h without S,
+about 13 h with S, 2-6 h more if N_max runs one seed at a time; Sec. 4 about
+1 h; Sec. 5 about 30 min. The instance's balance must cover about 24 h.
+Everything runs in ONE tmux session; nothing else may use the GPU meanwhile.
 
 ## 0. Preconditions (box, once)
 
@@ -63,15 +66,15 @@ git checkout -B wp9-pool origin/wp9-pool     # "Switched to ..." or "Reset branc
 git describe --tags --match prereg-w9        # must print exactly: prereg-w9
 git rev-parse 'HEAD^{tree}'                  # the tree the operator instruction names
 git status --porcelain --untracked-files=no  # must print nothing
-df -h ~/autodl-tmp / | tail -n 2             # >= 10 GB free on the data disk (15 GB with Sec. 4), >= 3 GB on /
+df -h ~/autodl-tmp / | tail -n 2             # >= 10 GB free on the data disk (15 GB with Sec. 5), >= 3 GB on /
 pgrep -af "fejepa|spawn_main"                # must print nothing
 nvidia-smi --query-gpu=utilization.gpu,memory.used --format=csv,noheader   # about 0 %, under 1,000 MiB
 python -c "import torch; print(torch.__version__, torch.cuda.is_available())"   # 2.12.1+cu130 True
 mkdir -p runs/w9/session1
-python -m pytest -q 2>&1 | tee runs/w9/session1/pytest.log | tail -n 3   # "427 passed" (BRANCH_NOTES' count)
+python -m pytest -q 2>&1 | tee runs/w9/session1/pytest.log | tail -n 3   # "431 passed" (BRANCH_NOTES' count)
 ```
 Any output other than the comments describe: stop and report. The suite's last
-line reads `427 passed`, then warnings and the time; `426 passed, 1 skipped`
+line reads `431 passed`, then warnings and the time; `430 passed, 1 skipped`
 is also correct where `pdflatex` is missing (the paper tables' LaTeX build is
 then not compiled). Anything failed, an error, or another count: stop and
 report.
@@ -188,7 +191,8 @@ The summary line reads `S admitted: yes|no | N_max ... with k worker(s) at a
 time | checkpointing on|off | usable host memory X GB (source) | E1
 reproduction d`. If X is larger than the instance's memory shown in the AutoDL
 console, treat it as STOP. On STOP: send the STOP lines and
-`runs/w9/session2_plan.log`; shut the instance down without releasing it.
+`runs/w9/session2_plan.log`; then Sec. 4 (its own checks decide whether it
+can run); then shut the instance down without releasing it.
 
 ### 2b. The runs (hours; the same tmux window)
 ```bash
@@ -267,9 +271,9 @@ cd ~ && tar czf wp9_session2_return_$(date +%Y%m%d).tgz wp9_session2_return \
     && sha256sum wp9_session2_return_*.tgz && du -h wp9_session2_return_*.tgz
 ```
 Send the tarball. The states stay on the box (their SHA-256 are in the
-provenance file and in each report); so do the evaluation sets. Then Sec. 4 if
-the operator instruction asks for it; otherwise shut the instance down without
-releasing it.
+provenance file and in each report); so do the evaluation sets. Then Sec. 4
+(the paper's timing), then Sec. 5 if the operator instruction asks for it;
+then shut the instance down without releasing it.
 
 ## 3. Adjudication (repo)
 ```bash
@@ -287,7 +291,63 @@ PREREG_W9 Sec. 6, the secondary readings of Sec. 7, refused reports and
 deviations; the inputs' SHA-256 and the adjudicating code's are recorded in
 the verdict file.
 
-## 4. Optional, after 2d: the torch stack against the host (box; ~30 min)
+## 4. After 2d (also after a STOP in 2a): timing for the paper (box; ~1 h)
+The CMAME paper's cost table: per instance, on the same instances and this
+machine, the surrogate's inference (GPU, batch of one, every load case in one
+pass; its accuracy on those instances recorded too) against exact solves of
+the same system: the direct solve that bought every label (SuperLU on the
+free block, one process), unpreconditioned conjugate gradients to a relative
+residual of 1e-10 from zero, and the same CG started from the surrogate's
+prediction. 2D: E1's states on 32 validation instances and 32 of F5 (a few
+minutes). 3D: Phase-2b's states on 32 in-band validation instances (about
+10 min) and 8 of the fine set, whose direct solves take several minutes and
+an estimated 7-10 GB of host memory each (attempt 6 of Phase-2 factorised all
+fine instances in one process on this box); each solver stops starting new
+solves after 15 min per set (the one in progress completes), and the
+surrogate is timed on every instance. Read only: no state, corpus or report
+is written. A failure here costs nothing else; report it.
+
+First the checks, on their own:
+```bash
+cd ~/autodl-tmp/FE-JEPA
+P=runs/w9/timing; mkdir -p $P
+( date; pgrep -af "fejepa|spawn_main"
+  nvidia-smi --query-gpu=utilization.gpu,memory.used --format=csv,noheader ) 2>&1 | tee $P/precheck.txt
+```
+`pgrep` must print nothing and the GPU line must read about 0 % and under
+1,000 MiB; otherwise stop here and report (the timings would be wrong). Then:
+```bash
+cd ~/autodl-tmp/FE-JEPA
+P=runs/w9/timing
+[ -s $P/status.txt ] && mv $P/status.txt $P/status.txt.$(date +%Y%m%d-%H%M%S); : > $P/status.txt
+run() { local log=$1; shift; [ -e $P/$log ] && mv $P/$log $P/$log.$(date +%Y%m%d-%H%M%S)
+        "$@" 2>&1 | tee $P/$log; echo "$log exit=${PIPESTATUS[0]}" | tee -a $P/status.txt; }
+run timing_2d.log python scripts/time_inference_vs_solve.py \
+    --report records/wp8/e1/e1_2d_base/report.json --states-dir runs/e1_2d_base/e8_states \
+    --family F5=runs/w9/ood2d/F5 --out $P/timing_2d.json
+run timing_3d.log python scripts/time_inference_vs_solve.py \
+    --report records/wp8/e2/baseline/report_phase2b.json --states-dir runs/phase2/e8_states \
+    --out $P/timing_3d.json
+( echo "HEAD $(git rev-parse HEAD)"; echo "describe $(git describe --tags --match prereg-w9)"
+  nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader
+  lscpu | grep -E "^Model name|^CPU\(s\)|^Thread|^Socket"; echo "nproc $(nproc)"
+  cat /sys/fs/cgroup/cpu.max /sys/fs/cgroup/memory.max 2>/dev/null; free -g | head -n 2
+) > $P/machine.txt 2>&1
+OUT=~/wp9_timing_return && rm -rf $OUT && mkdir -p $OUT && cp $P/* $OUT/
+cd ~ && tar czf wp9_timing_return_$(date +%Y%m%d).tgz wp9_timing_return \
+    && sha256sum wp9_timing_return_*.tgz && du -h wp9_timing_return_*.tgz
+```
+Each step prints one line per instance (on the 3D fine set one every few
+minutes: long silences there are normal), then one line per set with the
+medians and the largest deviation of each solver's solution from the stored
+labels (`direct_label_max_rel_dev`: round-off, below 1e-12; the CG ones
+below about 1e-8), and last the check of the timed model against the
+report's own arrays (`disp_rel_l2_max_rel_dev` and
+`energy_gap_rel_max_rel_dev`, 0 or round-off). `status.txt` must show both
+steps with `exit=0` (`exit=3`: a family was skipped, the rest timed; report
+it). Send the tarball.
+
+## 5. Optional, after Sec. 4: the torch stack against the host (box; ~30 min)
 wp8's post-hoc timing could not separate the box's torch stack (2.12.1+cu130)
 from its host as the cause of the ~3x slower 2D step of the v2.1.5 code
 (WP2's run of 31 July 2026 used torch 2.11.0+cu128 on the same GPU model). This

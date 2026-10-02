@@ -539,3 +539,60 @@ disclosure only, and B, capping each instance's value at 0.25).
 Suite: 427 (Stage 0b 411 + 16) passed. On the box: 427 passed, or 426
 passed and 1 skipped where pdflatex is missing (the paper tables' LaTeX
 build).
+
+## Stage 0d (2 Oct 2026) -- the paper's cost table, timed on the box
+
+PI decisions (2 Oct, before any wp9 result exists): the CMAME manuscript is
+written now from the record up to wp8 and submitted as soon as possible;
+wp9's results are not part of it and are reported separately whatever they
+are; the inference time is measured on the box in this visit; the manuscript
+does not cite arXiv:2604.01349 (as PROVENANCE_NOTE.md requires; this
+supersedes the prior-art list at the top of BRANCH_NOTES_wp8-lejepa.md on
+that point).
+
+1. **`scripts/time_inference_vs_solve.py`**: per instance, on the same
+   instances and machine, the surrogate's inference (`prepare_instance`,
+   `forward_instance` repeated and synchronised, the copy to the host; batch
+   of one, every load case in one pass, the run's TF32 policy; cold, i.e.
+   with the first pass, as the headline, and warm) and its accuracy there
+   (the evaluation's own `evaluate_fields`), against three exact solves of
+   the free system: `solve_fe_displacement(method="direct")`, the SuperLU
+   call that bought every label (the labelling cost); unpreconditioned CG to
+   a relative residual of 1e-10 from zero (the 3D generator labels with CG
+   by default for that reason: a measured crossover at about 7k dof,
+   `fe/gmsh3d.py`); and the same CG from the surrogate's prediction
+   (iterations against CG from zero). A solve under
+   one second is repeated three times; each solution is checked against the
+   stored labels. Assembly is excluded from both sides (the archives hold K
+   and F; the surrogate needs no K). One SHA-verified state is timed; its
+   metrics on the first validation instances are compared with the report's
+   own per-instance arrays. Sets: the run's validation split, its fine set
+   (3D), and OOD-2D families by name (manifest and files verified; a family
+   failing the check is skipped and recorded, exit 3; a family of the other
+   dimension is refused before any timing). Each solver stops starting
+   solves after a per-set budget; the surrogate is timed on every instance.
+   One progress line per instance. Reported only.
+2. **RUNBOOK Sec. 4** (new; the torch-stack timing is now Sec. 5): after the
+   session-2 return, and also after a STOP in 2a, since it needs nothing
+   from session 2; its own GPU and process checks first (recorded); E1's
+   states on 32 validation and 32 F5 instances, Phase-2b's on 32 in-band and
+   8 fine instances; about 1 h; read only; its own return.
+3. **Tests** (`tests/test_w9_timing.py`): every timer and solver on a 3D run
+   with a fine set (the direct solve reproducing the stored labels to
+   round-off, fast solves repeated, CG iterations recorded, a CG cut short
+   by its iteration cap recorded as a fallback); the check
+   against the report's arrays built by the evaluation's own code path (0 for
+   the matching seed, a planted difference found); a 2D run with an OOD
+   family under a zero solve budget; a family other than the one named
+   skipped with exit 3 while the rest is timed; an empty set; a family of
+   the other dimension and a state other than the report's refused; the
+   summary statistics.
+4. **Independent review** of this stage before packaging: eleven findings,
+   all addressed -- chiefly that SuperLU alone overstated the 3D speed-up
+   against an exact solver (CG added, and CG from the prediction), that a
+   STOP in 2a skipped the timing, that the cold time and the accuracy on the
+   timed instances were missing, and that the checks before the runs left no
+   record.
+
+Suite: 431 (Stage 0c 427 + 4) passed. On the box: 431 passed, or 430 passed
+and 1 skipped where pdflatex is missing (the paper tables' LaTeX build).
