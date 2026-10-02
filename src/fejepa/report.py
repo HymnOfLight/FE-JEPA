@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -176,5 +177,10 @@ def write_report(path, payload: dict) -> Path:
         raise ValueError("plan B1: reports without a provenance block are void")
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=1, cls=_Encoder))
+    # wp9 Stage 0b: atomic (temp file, then rename) -- an interrupted write
+    # leaves the previous file or none, never a truncated report that a
+    # restart would take for a finished run; the bytes are unchanged
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(payload, indent=1, cls=_Encoder))
+    os.replace(tmp, path)
     return path

@@ -52,6 +52,9 @@ def main(argv=None) -> int:
     r.add_argument("--workers", type=int, default=None,
                    help="override the config's workers field (concurrent "
                         "training units on one GPU)")
+    r.add_argument("--activation-checkpointing", choices=["on", "off"], default=None,
+                   help="wp9: override model.activation_checkpointing (memory and time "
+                        "only; recorded in the report as a runtime override)")
 
     b = sub.add_parser("bench", help="measured ms/step (plan Sec.9)")
     b.add_argument("--device", default="cpu")
@@ -149,7 +152,9 @@ def main(argv=None) -> int:
 
         run_config(a.config, device_override=a.device,
                    workers_override=a.workers, reuse_states=a.reuse_states,
-                   dry_run=a.dry_run, label_workers_override=a.label_workers)
+                   dry_run=a.dry_run, label_workers_override=a.label_workers,
+                   activation_checkpointing=(None if a.activation_checkpointing is None
+                                             else a.activation_checkpointing == "on"))
 
     elif a.cmd == "bench":
         from .experiments.cost import bench, count_steps

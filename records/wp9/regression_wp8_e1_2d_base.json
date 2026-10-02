@@ -1,0 +1,14 @@
+{
+ "this": "/home/claude/fejepa/FE-JEPA-wp9/src",
+ "other": "/tmp/claude-0/-home-claude/a504aab6-a0d0-5d9e-9bef-0d45022ae4b4/scratchpad/wp8src/src",
+ "config": "configs/e1_2d_base.json",
+ "floats_compared": 162,
+ "differences": [],
+ "n_differences": 0,
+ "state_files": 2,
+ "state_files_identical": {
+  "ar_p64_s0.pt": true,
+  "ar_p64_s1.pt": true
+ },
+ "identical": true
+}

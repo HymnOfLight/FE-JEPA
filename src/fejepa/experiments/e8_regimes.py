@@ -78,7 +78,8 @@ def naive_baseline_cells(pool_archs, val_archs, budgets) -> dict:
 def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
     budgets = [int(b) for b in cfg.get("budgets", [16, 64, 256, 1024])]
     pool_sizes = [int(p) for p in cfg.get("pool_sizes", [1024])]
-    seeds = seeds_list(cfg.get("seeds", 3))
+    # wp9: e8.seed_offset shifts the seeds (independent replicates); 0 = as before
+    seeds = [int(cfg.get("seed_offset", 0) or 0) + s for s in seeds_list(cfg.get("seeds", 3))]
     device = cfg.get("device", "cpu")
     workers = int(cfg.get("workers", 1))
     tf32 = bool(cfg.get("tf32", True))
@@ -101,6 +102,11 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
     ar_only = bool(cfg.get("ar_only", False))   # wp8: AR pretraining only (E-series)
     if ar_only:
         budgets = []                              # no supervised cells at all
+    # wp9 (configuration block `evaluation`, e8.reuse_from; see w9_eval): absent
+    # from every earlier configuration, so their units and records are unchanged
+    holdouts = cfg.get("holdouts") or {}          # {name: [files]}, evaluation only
+    amplitude = bool(cfg.get("amplitude", False))
+    eval_only = cfg.get("eval_only_states")       # {seed: {pool: (path, sha256)}}
     need = max([*pool_sizes, *budgets])
     if len(pool_files) < need:
         raise ValueError(f"E8: pool has {len(pool_files)} archives; "
@@ -127,6 +133,13 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
                 "reuse_existing": reuse,
                 "eval_val_files": val_str, "tag": f"AR pool{p} s{s}",
             })
+            if holdouts:
+                pre_payloads[-1]["eval_sets"] = holdouts
+            if amplitude:
+                pre_payloads[-1]["amplitude"] = True
+            if eval_only:
+                path, sha = eval_only[s][p]
+                pre_payloads[-1]["eval_only_state"] = {"path": path, "sha256": sha}
     pre_out = dict(zip(pre_keys,
                        map_units(pretrain_unit, pre_payloads, workers,
                                  "E8 (AR pretrain)"), strict=True))
@@ -214,6 +227,8 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
                         triggered=bool(all(v < 0.40 for v in advantages.values())),
                         note=str({b: round(v, 3) for b, v in advantages.items()}))
 
+    hold_cells = {name: {p: _agg([pre_out[(s_, p)]["holdouts"][name] for s_ in seeds])
+                         for p in pool_sizes} for name in holdouts}
     proto = {"budgets": budgets, "pool_sizes": pool_sizes, "ar_only": ar_only,
              "ar_axis": "unlabeled pool size (never conflated with label budget)",
              "n_seeds": len(seeds), "sup": sup, "ar": pre,
@@ -232,7 +247,14 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
                  for s_ in seeds if "resumed_from_epoch" in pre_out[(s_, ft_pool)]},
               **{" ".join(map(str, k)): v["resumed_from_epoch"]
                  for k, v in sup_out.items() if "resumed_from_epoch" in v}}}
-    return result("E8", PLAN_REF, proto,
-                  {"cells": cells, "label_efficiency_auc_disp": auc,
-                   "ar_egap_advantage_by_budget": advantages,
-                   "d9_restart": d9}, [k2, adv_kill])
+    metrics = {"cells": cells, "label_efficiency_auc_disp": auc,
+               "ar_egap_advantage_by_budget": advantages, "d9_restart": d9}
+    if holdouts:
+        proto["holdouts"] = sorted(holdouts)
+        metrics["holdouts"] = hold_cells
+    if amplitude:
+        proto["amplitude"] = True
+    if eval_only:
+        proto["eval_only"] = True
+        d9["reused_from"] = cfg.get("reuse_provenance")
+    return result("E8", PLAN_REF, proto, metrics, [k2, adv_kill])

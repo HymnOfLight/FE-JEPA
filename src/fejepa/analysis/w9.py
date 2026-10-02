@@ -60,6 +60,14 @@ def predictions(models: dict, arch, device) -> dict:
     (wp8 Stage 1.37)."""
     import torch
 
+    def _prep_key(m):                    # what prepare_instance depends on (wp9 S)
+        c = getattr(m, "cfg", None)
+        return (getattr(c, "decode_scale", "max"), getattr(c, "decode_scale_factor", 1.0),
+                repr(getattr(c, "features", None)))
+
+    if len({_prep_key(m) for m in models.values()}) > 1:
+        raise ValueError("predictions: the models prepare instances differently (decode "
+                         "scale or features); one shared pack would mis-scale some of them")
     pack = next(iter(models.values())).prepare_instance(arch, device)
     out = {}
     for s, m in models.items():

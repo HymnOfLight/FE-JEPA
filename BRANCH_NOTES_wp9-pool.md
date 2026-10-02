@@ -15,20 +15,22 @@ Purpose: two questions, both in 2D, both label-free at training time.
   SHA-256 are in E1's report), provided the default training path is shown
   bitwise unchanged against `wp8-lejepa` (Stage 0b).
 - **Q2 (S, mesh-independent scale).** Do a decode scale and a load input that
-  do not change with the mesh (the battery's L1 load instead of its largest
-  nodal force; per-node load densities; load summaries free of the mesh)
-  remove the fine-mesh amplitude deficit of wp8's post-hoc reading 4e? S
-  enters the pre-registration only if session 1's rule 1 admits it.
+  do not change with the mesh (1/64 of the battery's L1 load instead of its
+  largest nodal force; per-node load densities; load summaries free of the
+  mesh) remove the growth of the error on a finer mesh than training saw --
+  the fine-mesh amplitude deficit of wp8's post-hoc reading 4e? S runs only if
+  session 1's rule 1 admits it, against a baseline trained afresh on fresh
+  seeds.
 
 C2 (adaptive allocation of the training budget) and 3D are not in this round.
 
 ## Governance (carried from wp8)
 
-- No file a stamped run reads is changed: the stamped configurations, the
-  PREREG files, the default training and evaluation paths. Every new switch
-  defaults to the old behaviour, with a test that the default path is bitwise
-  unchanged; Stage 0b proves it against `wp8-lejepa` with
-  `scripts/regress_against_branch.py`.
+- Nothing a stamped run depends on changes: the stamped configurations and
+  PREREG files are untouched, and every code change leaves the default
+  training and evaluation path bitwise unchanged -- new switches default to
+  the old behaviour, with tests, and `scripts/regress_against_branch.py`
+  checks the whole path against `wp8-lejepa` (Stage 0b, item 4).
 - wp8's records and tests stay in the suite.
 - The OOD-2D families are evaluation-only: no hyper-parameter, switch, rule or
   selection reads them (rule 1 below reads the base states' error on F5, a
@@ -156,16 +158,265 @@ the parallel schedule.
 
 Rehearsed in the sandbox on a miniature E1-like run (gmsh corpus of 48
 instances, model width 16, three seeds, CPU): every session-1 command ran with
-sizes scaled down. Suite 350.
+sizes scaled down. Suite 355 (the pushed text said 350: five review tests were
+added after the count was written; corrected at Stage 0b).
 
-## Stage 0b (open; written while session 1 runs)
+## Stage 0b (1-2 Oct 2026) -- session 2, CPU-validated; PREREG_W9 r2 drafted
 
-- S switch (default off): decode scale = the battery's L1 load; per-node load
-  densities; mesh-free load summaries. Tests: the default path bitwise
-  unchanged; outputs scale with the loads; S's features and decode scale
-  unchanged across h on R-type remeshes.
-- 2D multi-holdout evaluation in the runner (F1-F5, evaluation-only, pinned by
-  manifest) and c* readings in the evaluation outputs (secondary, label-free).
-- C1 and S configurations from session 1's decisions; the regression of the
-  default path against `wp8-lejepa`; PREREG_W9.md; the pre-run audit; stamp
-  and tag.
+The PI asked for every piece of code before the box runs anything (Song is
+away for a few days), so session 2 is written now and PREREG_W9 can be stamped
+BEFORE session 1, covering every arm the session-1 rules can select: the box
+can then run both sessions in one visit, and no reading precedes the stamp.
+Whether to stamp now is the PI's decision (the alternative, stamping after
+session 1, needs no code change, but session 1's decision step must then run
+again on the stamped commit: the plan and the adjudication require the
+decisions to have run on `prereg-w9`). After the stamp the branch is frozen
+until session 2 has returned (the box checks that HEAD is exactly
+`prereg-w9`; the plan and the command script check it again).
+
+1. **S switch** (`model.decode_scale`, `model.decode_scale_factor`,
+   `model.features.load_density`; off by default). `decode_scale = "l1"`: the
+   decoded field is multiplied by `decode_scale_factor` times the sum of the
+   absolute values of the battery's nodal force components, sum |F|
+   (`battery_l1`), instead of the largest of them -- for consistent nodal
+   loads the former is the
+   integral of the tractions and body forces and does not change with the
+   mesh, the latter shrinks like the element size. wp9 uses the factor 1/64:
+   over 256 training-family instances drawn in the sandbox, max|F| / sum|F|
+   had median 0.0156 (10th-90th percentile 0.0098-0.0226) and grew with the
+   mesh size, so at training mesh sizes S asks the network for outputs of
+   E1's level on the median instance (without the factor, 40-110x smaller;
+   the code review's design note). `load_density`: the per-node load
+   columns become load densities -- nodal force over the boundary length
+   (traction) or area (body load) the
+   node carries, from the facets or cells whose vertices are all loaded;
+   exact for uniform loads with P1 elements; a point load falls back to the
+   node's own share -- over the battery's largest density, and the load
+   summary becomes ratios of mesh-free totals (this case's sum |f| and
+   resultant over the battery's sum |F|; the loaded fraction of the boundary
+   or body). `load_densities` classifies a case as a body load iff it loads
+   an interior node. Dimension-generic (triangles and tetrahedra). The
+   factor must be positive and applies to "l1" only; "l1" needs the scaled
+   decode; `run_config` refuses S keys for any model kind but fejepa, and S
+   with MGN units. Tests (`test_w9_s_switch.py`, 16): the default features
+   are wp8's bit for bit (2D and 3D, every channel combination, against
+   wp8's function verbatim); default spec and decode scale unchanged;
+   refusals; simplex geometry (incl. a conforming Kuhn 3D mesh); densities
+   exact and uniform for uniform tractions and gravity; on structured
+   remeshes (6 x 4 to 24 x 16 cells) the S load columns, summary and decode
+   scale agree to 1e-9 while wp8's change; on gmsh remeshes with holes (h
+   0.12 and 0.05) the densities equal the applied tractions and gravity to
+   1e-9 and the summary agrees to 2%; equivariance; the point-load fallback;
+   an S model prepares exactly the S scale and features (pack against
+   `battery_l1` and `build_features_battery`); its AR loss scores exactly the
+   field inference decodes (the D14 spy); it trains through the unit path.
+   Observations, not changed: the tet3d smoke backend's hexahedron split
+   (`_HEX_TO_TETS`) covers 5/6 of each cell and is not conforming (no
+   deciding run used it; Phase-2 used gmsh3d); gravity on a mesh without
+   interior nodes would be classed as a traction, and a case mixing traction
+   and body force gets non-uniform densities (neither occurs in the wp9
+   corpora: classification and exactness were checked on F1-F4 and R).
+2. **Evaluation additions** (`experiments/w9_eval.py`, wired through
+   `runner.run_config`, `e8_regimes.run_e8`, `parallel.pretrain_unit`), all
+   opt-in: a configuration block `evaluation` with evaluation-only `holdouts`
+   (verified before anything trains: manifest family, per-file SHA-256,
+   labels; recorded in the report with each manifest's SHA-256) and
+   `amplitude` (per instance: c* per load case, c_b, the c*-scaled errors,
+   energy norms of prediction and solution); `e8.reuse_from` -- an
+   evaluation-only E8 on another run's states, refused unless each file's
+   SHA-256 is the one that run's report records (seeds from its d9 block, one
+   pool size) and the configuration equals that report's outside the
+   evaluation-only keys; `e8.seed_offset` (independent replicates; 0 = as
+   before); and `run-config --activation-checkpointing on|off`, a run-time
+   setting like `--workers`, recorded in the report as `runtime_overrides`.
+   `run_config` refuses the runner keys inside `experiments.e8`, `reuse_from`
+   without `ar_only` or with P3, and `seed_offset` with P3. The dry run
+   verifies holdouts and reused states too. `analysis.w9.predictions`
+   refuses models with different preparation settings (one shared pack
+   would decode with the wrong scale). Tests (`test_w9_runner_eval.py`,
+   14): a configuration without the blocks gains no key; with them,
+   training is bitwise unchanged and the validation arrays identical;
+   holdouts and amplitude recorded; the evaluator equals the frozen one plus
+   the amplitude block; the amplitude readings are the predictions' own
+   (recomputed from a reloaded state) and the summary by hand; the reused
+   arm trains nothing and reproduces the source's arrays; foreign states,
+   changed configurations, unlabelled holdouts, a source with several pools
+   or a missing state refused; the override recorded and exact; holdouts
+   refused before training; unsupported combinations refused; an S arm and
+   a seed offset run through the runner.
+3. **Process pool and reports, robust to a killed process** (scheduling
+   only). `parallel.map_units` runs units in a
+   `concurrent.futures.ProcessPoolExecutor` watched every 30 s: a worker
+   killed from outside (the out-of-memory killer) -- busy, idle, or half-way
+   through sending its result -- ends the map with an error that says to
+   restart with `--reuse-states`; a unit that raises ends it at once; the
+   other workers are terminated, not waited for, and the process exits
+   (after a death mid-send, closing this process's end of the result pipe
+   releases the executor's reader, which the interpreter would otherwise
+   join for ever at exit). With `multiprocessing.Pool` (until now) a killed
+   worker made the arm wait for ever with no output (the operations review),
+   and Pool's shutdown can block on a queue lock a dead worker held. Each
+   worker also exits within 5 s when its parent dies (no orphan unit keeps
+   training). A first fix with the Linux parent-death signal was withdrawn:
+   the signal is tied to the thread that started the worker, so Pool's
+   replacement workers died at shutdown holding the queue lock and the parent
+   hung -- found by the rehearsal below. The poll and the pipe release use
+   the executor's private `_processes` and `_result_queue` (present in
+   Python 3.11 and 3.12; the code review ran the kill tests on 3.11.15,
+   3.12.0, 3.12.3 and 3.12.11). `write_report` writes atomically (temporary
+   file and rename). Tests (`test_w9_parallel_kill.py`, 6): a busy worker,
+   an idle one (two distinct workers forced) and one killed while sending a
+   200 MB result (the process must exit; the test fails without the pipe
+   release and hangs without the poll); a failing unit; a killed parent (its
+   workers exit); and E8's AR units with holdouts and amplitude through the
+   pool equal the inline run (states byte for byte, metrics identical;
+   single-threaded torch, the E1 contract of `test_experiments_smoke.py`).
+4. **Default path against wp8-lejepa** (`scripts/regress_against_branch.py`,
+   CPU, both sides in their own processes, fresh and restart passes): a
+   miniature of E1's base configuration (2 states, 162 numbers) and of the
+   Phase-2b configuration (6 states, 2,590 numbers) -- identical, on the
+   final Stage 0b code (`records/wp9/`, with a README naming the code). The
+   miniatures run units inline; the pool path is covered by the
+   parallel-equals-inline tests of item 3. The tool now lets a miniature of
+   an `asis` configuration generate its own corpus. This is what licenses
+   reusing E1's states for C1's 1,024 arm.
+5. **Configurations** (`scripts/make_w9_configs.py`; `configs/w9_c1_n1024`,
+   `_n4096`, `_n25600`, `_n12800`, `w9_b_n1024`, `w9_s_n1024`): E1's base
+   (refused unless its canonical SHA-256 is PREREG_E1's stamped one) plus the
+   evaluation block, output directory, guard on PREREG_W9, and per arm the
+   pool size and epochs (204,800 steps per seed), `reuse_from` (1,024 arm),
+   `seed_offset` 3 (the fresh baseline and S) or S's three keys. Tests
+   (`test_w9_configs.py`, 5): byte-for-byte regeneration; differences from
+   E1 only in PREREG_W9 Sec. 2's keys; PREREG_W9's labelled lines name
+   exactly these configurations (and, once stamped, their hashes and the
+   file's self-hash); every configuration validates under the dry run.
+6. **PREREG_W9.md r2** (draft): the arms, the evaluation sets, the session-1
+   selection, measurements; H1 -- the N_max arm's in-band energy gap lower
+   than the 1,024 arm's beyond max(10%, 2 SE_rel) (the E-series guard, seed
+   means; by simulation at E1's sample noise, 4.9%: about 0.4% false support,
+   48% / 91% / 99.7% detection of true 10% / 15% / 20% reductions); H2 -- S
+   against the fresh baseline (seeds 3-5): F5 displacement error lower AND
+   the F5 / in-band displacement ratio lower, each beyond the guard, AND K1
+   on both in-band metrics; secondary readings (exploratory); mechanics;
+   preconditions with costs; deviations.
+7. **Adjudication** (`analysis/adjudicate_w9.py`, `scripts/adjudicate_w9.py`,
+   from the two box returns). Session-level faults refuse the adjudication:
+   decisions that the frozen rules, recomputed from the returned readings,
+   do not reproduce, or that other rules, other readings or another commit
+   than `prereg-w9` wrote; an incomplete OOD record or a foreign R manifest;
+   a plan made from another decision file; a session-2 return without its
+   plan, status or provenance file; a report the provenance file lists that
+   is missing or has another SHA-256; an arm the status file shows finished
+   without its report (a verdict cannot be avoided by leaving a report out).
+   A report that fails its own checks is refused alone -- left out, recorded
+   with the reason: not a guard-verified run under its own CONFIG_SHA256
+   line, another commit, a difference from E1's base beyond Sec. 2's keys,
+   not the stamped arm for its role, another corpus or seeds, a cell without
+   one evaluation per seed, holdout manifests other than session 1's, a
+   1,024 arm that is not E1's states or does not reproduce E1's validation
+   arrays (1e-4; a non-finite value never reproduces), an N_max or S arm the
+   rules did not select. A hypothesis without its valid reports, or with a
+   non-finite reference, is NOT EVALUATED; the other stands. Readings the
+   session could not produce (a failed timing step: rule 3 undecided) are
+   read as the decision script read them. Deviations: the run-time settings
+   against the plan, restarts and repeated attempts (from the status file),
+   resumed units, a non-zero solve ledger, a stack or GPU other than E1's.
+   Secondary readings never block a verdict; they include S against the
+   fresh baseline on every set and the fresh baseline against E1's states.
+   The verdict file records every input's SHA-256 and the code's.
+8. **Session-2 plan** (`scripts/w9_session2_plan.py`): the gate (the
+   required session-1 steps exited 0; the decision file is the frozen rules'
+   output on the readings beside it, recomputed, and was written on
+   `prereg-w9`, which the checkout must also be; rules 1-2 decided and a
+   pool found; the
+   six evaluation sets complete and the manifests on disk the record's; E1's
+   validation arrays reproduced to 1e-4; a GPU and E1's torch; 5 GB free),
+   the selection and order (1,024; N_max; the fresh baseline and S if
+   admitted; 4,096), workers (rule 2's for N_max) and checkpointing (rule 3;
+   kept on for an arm that would not fit without it, or when rule 3 is
+   undecided), a dry run of each selected configuration, a summary line, and
+   the command script: it changes to the repository, refuses to run twice at
+   once or without a GPU and E1's torch, checks before every arm that the
+   code is still `prereg-w9`, skips an arm whose report is complete, moves an
+   unreadable report aside, restarts an arm with states and no report under
+   `--reuse-states`, keeps every attempt's log and time-stamps each attempt;
+   on STOP no command script is left. Tests
+   (`test_w9_session2.py`, 15, on a miniature laid out like the box -- an
+   E1-like base stamped and run, its report copied to records/, the
+   evaluation sets under runs/w9/ood2d/, the six arms from the real
+   generator stamped against a PREREG_W9.md and run, session-1 readings
+   written so that the real decision script decides as each test needs):
+   the guard's semantics; every arm adjudicated; H1's verdicts on
+   constructed values (reference, metric, divergence); H2's three conditions
+   (a lower F5 error with the ratio unchanged is not support; K1 on each
+   in-band metric), divergence and a void reference; every per-report
+   refusal, each leaving only its own hypothesis not evaluated; every
+   session-level refusal; a missing primary arm; the decisions' integrity;
+   every deviation; the CLI from the two returns (and with the timing
+   reading absent, a report missing or altered, the plan missing, an
+   unstamped file); selection, order, flags and the real pre-flight;
+   checkpointing kept where memory would not fit, and on when rule 3 is
+   undecided; every gate stop (incl. the frozen rules' hash, the
+   recomputation, the commit, the amplitude reading's manifests, a
+   non-finite reproduction); the command script's first run, skip, restart
+   after a truncated report, and its stop on another commit. Eight targeted
+   mutations of these checks are each caught.
+9. **Runbook** (RUNBOOK_W9.md): one visit in one tmux session -- Sec. 0
+   (fetch in a subshell with an explicit FETCH-OK, the `prereg-w9` and tree
+   checks, disk, nothing running, the GPU idle, the suite), session 1
+   (earlier attempts' logs kept on a re-paste), its return (sent at once),
+   the plan with GO/STOP, the out-of-memory baseline and the memory sanity
+   check, the runs with their normal signs and durations, a health check by
+   process counts and GPU use (inside a container, nvidia-smi may list no
+   processes), the interruption and crash policy, the return (with the
+   reports' SHA-256), the adjudication, and Sec. 4 (the optional torch-stack
+   timing, formerly 1e, moved after session 2, with its own directory: pip
+   in a subshell, no cache, temporary files on the data disk, the venv's
+   torch checked before timing).
+
+**Pre-run reviews (2 Oct).** Three independent reviews of the r1 state --
+code and default path, pre-registration and adjudicator, operations -- found
+no defect in the default path and these issues, all addressed above:
+H2's reference was the very states rule 1 selected on F5 (winner's curse;
+now a fresh baseline on fresh seeds), and H2 tested the F5 level rather than
+its growth (now the ratio too, and K1 on both in-band metrics); S changed
+the output level by 40-110x (now the factor); the decision file and each
+report's stamped line and commit were not checked (now they are, and the
+decisions are recomputed); a killed worker hung the arm silently; a restart
+overwrote the failed attempt's log; a truncated report was skipped as
+complete; nothing checked the GPU and torch before the arms; the one-visit
+flow (tmux, the session-1 to session-2 step, 1e's network and disk use) and
+the costs (the sequential branch) were underspecified; the simulation used
+the population spread; exactness claims are bitwise on CPU only; several
+paths were untested (now tested: the S pack, the amplitude readings, the
+CLI, the refusals listed in items 2 and 7). Two further independent reviews
+of the resulting state (code; documents and operations) found: the suite
+would fail on the stamped head (a test read the repository's own describe;
+fixed, and the suite is now run on a stamped scratch clone before stamping);
+the adjudication crashed on a session-1 return without the timing reading;
+a verdict could be avoided by leaving a report out of the return; a failing
+secondary report blocked both verdicts; the plan did not recompute the
+decisions or check the commit; a worker killed while sending its result
+hung the process at exit; NaN slipped through the reproduction checks; the
+health check relied on nvidia-smi listing processes inside a container;
+several checks were untested (eight mutations survived). All are fixed above.
+
+**Rehearsal** (sandbox, 2 Oct, final code; `rehearse.sh` outside the
+repository): a box-like miniature (gmsh corpus of 48 instances, model width
+16, three seeds, CPU; E1-like base stamped, run and copied to records/; the
+six arms generated, PREREG_W9 stamped with its self-hash, committed and
+tagged `prereg-w9`): Sec. 0's describe and clean-tree checks; session 1
+(1a-1d) with the real commands at small sizes; the rules' inputs then edited
+(marked) so that the frozen rules choose the branch that runs every arm (S
+in, N_max 25,600 one seed at a time, checkpointing off) and the real
+decision script run on them; 1f; the plan (GO: the decisions recomputed,
+the commit checked, pre-flight passed); the command script with one worker
+of the 4,096 arm killed mid-run (the arm stopped within a second with the
+worker-death message, no worker left running); the re-run skipped the
+finished arms and restarted that one from its states (earlier log kept);
+2d (the reports hashed in the provenance file); the adjudication CLI on the
+two returns (every run on `prereg-w9`, the decisions recomputed, the return
+checked against its status and provenance files, no report refused, H1 and
+H2 issued, the restart recorded). Its numbers mean nothing (16 steps).
+
+Suite: 411 (Stage 0a 355 + 56) passed.

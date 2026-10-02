@@ -251,10 +251,44 @@ def _pool_need_in_memory(exps: dict) -> int:
     return need
 
 
+_W9_RUNNER_KEYS = ("holdouts", "amplitude", "eval_only_states", "reuse_provenance")
+
+
+def _w9_checks(cfg: dict) -> None:
+    """wp9: refuse, before anything runs, what the wp9 additions do not support:
+    the S keys outside an FE-JEPA model (or with supervised MGN units), the
+    runner-provided E8 keys written into a configuration (they would bypass the
+    holdout and state verification), and an evaluation-only E8 together with
+    P3 or the supervised grid."""
+    m = cfg.get("model") or {}
+    exps = cfg.get("experiments") or {}
+    e8 = exps.get("e8") or {}
+    s_keys = (m.get("decode_scale", "max") != "max" or "decode_scale_factor" in m
+              or bool((m.get("features") or {}).get("load_density")))
+    if s_keys and str(m.get("kind", "fejepa")) != "fejepa":
+        raise SystemExit("model.decode_scale / decode_scale_factor / features.load_density "
+                         "(wp9 S) are implemented for model kind 'fejepa' only")
+    if s_keys and e8.get("enabled") and e8.get("include_mgn") and not e8.get("ar_only"):
+        raise SystemExit("features.load_density (wp9 S) with E8's MGN units: the MGN "
+                         "baseline does not implement S")
+    bad = [k for k in _W9_RUNNER_KEYS if k in e8]
+    if bad:
+        raise SystemExit(f"experiments.e8 carries runner-provided keys {bad}: use the "
+                         "`evaluation` block and e8.reuse_from")
+    if int(e8.get("seed_offset", 0) or 0) and (exps.get("p3_transfer") or {}).get("enabled"):
+        raise SystemExit("e8.seed_offset (wp9) is not supported with P3 (it reads seeds 0..n-1)")
+    if e8.get("reuse_from"):
+        if not e8.get("ar_only"):
+            raise SystemExit("e8.reuse_from (evaluation only) needs e8.ar_only = true")
+        if (exps.get("p3_transfer") or {}).get("enabled"):
+            raise SystemExit("e8.reuse_from (evaluation only) cannot feed P3")
+
+
 def run_config(path, device_override: str | None = None,
                workers_override: int | None = None,
                reuse_states: bool = False, dry_run: bool = False,
-               label_workers_override: int | None = None) -> dict:
+               label_workers_override: int | None = None,
+               activation_checkpointing: bool | None = None) -> dict:
     cfg = json.loads(Path(path).read_text())
     # wp8: e6 / wp6 / e1 probe the FE-JEPA architecture through its own
     # interface; under another model.kind they must be disabled explicitly --
@@ -270,6 +304,7 @@ def run_config(path, device_override: str | None = None,
         if bad:
             raise SystemExit(f"model.kind={_mk!r} but FE-JEPA-only experiments are "
                              f"enabled: {bad}; disable them in the config")
+    _w9_checks(cfg)
     prereg = None
     prereg_status = "guard off"
     if cfg.get("prereg_guard"):
@@ -314,6 +349,23 @@ def run_config(path, device_override: str | None = None,
           f"| tf32={policy['tf32']}")
     plan_steps = count_steps(cfg)
     print(f"[plan] steps by experiment: {plan_steps}", flush=True)
+    # wp9: evaluation-only holdouts and e8.reuse_from are verified before
+    # anything is generated or trained (and by --dry-run)
+    w9_holdouts, w9_reuse, w9_status = {}, None, {}
+    if cfg.get("evaluation") or ((exps.get("e8") or {}).get("reuse_from")):
+        from .w9_eval import resolve_holdouts, verify_reuse
+
+        try:
+            w9_holdouts = resolve_holdouts(cfg.get("evaluation"))
+            w9_status["holdouts"] = {k: v["provenance"]["n_instances"]
+                                     for k, v in w9_holdouts.items()}
+            if (exps.get("e8") or {}).get("reuse_from"):
+                w9_reuse = verify_reuse(cfg, exps["e8"]["reuse_from"])
+                w9_status["reuse_from"] = "verified"
+        except Exception as exc:                                  # noqa: BLE001
+            if not dry_run:
+                raise
+            w9_status["error"] = f"{type(exc).__name__}: {exc}"
     if dry_run:
         # wp8: validate a configuration end to end up to the point where data
         # would be generated -- guards, model kind, plan, label need -- and stop.
@@ -328,6 +380,10 @@ def run_config(path, device_override: str | None = None,
                                            if (v or {}).get("enabled")],
                    "ar_only": bool((exps_dry.get("e8") or {}).get("ar_only")),
                    "loss_spec": (cfg.get("pretrain") or {}).get("loss_spec")}
+        if w9_status:
+            summary["w9"] = w9_status
+        if activation_checkpointing is not None:
+            summary["activation_checkpointing"] = bool(activation_checkpointing)
         print(f"[dry-run] {json.dumps(summary)}", flush=True)
         return summary
     stage("dataset")
@@ -380,8 +436,12 @@ def run_config(path, device_override: str | None = None,
     pool_archs = [load_instance(f) for f in split.pool_files[:pool_hi]]
     val_archs = [load_instance(f) for f in split.val_files]
 
-    factory, _ = make_model_factory(cfg.get("model", {}))
     model_cfg = cfg.get("model", {})
+    if activation_checkpointing is not None:
+        # wp9: memory and time only (exact; tests/test_w9_ckpt_switch.py), set at
+        # run time like device and workers; recorded in the report
+        model_cfg = {**model_cfg, "activation_checkpointing": bool(activation_checkpointing)}
+    factory, _ = make_model_factory(model_cfg)
     dev = {"device": device}
     run_opts = {"device": device, "workers": workers, "tf32": policy["tf32"],
                 "compile": bool(cfg.get("runtime", {}).get("compile", False)),
@@ -420,12 +480,20 @@ def run_config(path, device_override: str | None = None,
         from .e8_regimes import run_e8
         stage("E8")
 
+        w9_e8 = {}
+        if w9_holdouts:
+            w9_e8["holdouts"] = {k: v["files"] for k, v in w9_holdouts.items()}
+        if (cfg.get("evaluation") or {}).get("amplitude"):
+            w9_e8["amplitude"] = True
+        if w9_reuse:
+            w9_e8["eval_only_states"] = w9_reuse["states"]
+            w9_e8["reuse_provenance"] = w9_reuse["provenance"]
         results["e8"] = run_e8(model_cfg, split.pool_files, split.val_files,
                                {**exps["e8"], **run_opts,
                                 "ar_loss_spec": (cfg.get("pretrain") or {}).get("loss_spec"),
                                 "state_dir": str(Path(cfg.get("out",
                                                  "runs/report_v2.json")).parent
-                                                 / "e8_states")})
+                                                 / "e8_states"), **w9_e8})
 
     if (exps.get("wp2") or {}).get("enabled"):
         from .wp2_masking import run_wp2
@@ -587,7 +655,9 @@ def run_config(path, device_override: str | None = None,
     # Stage 1.31: seeds of the ENABLED experiments only -- a disabled block's
     # "seeds": 3 made the one-seed E1 raw ablation record seeds [0, 1, 2]
     seeds = sorted({int(s) for e in exps.values() if isinstance(e, dict) and e.get("enabled")
-                    for s in range(int(e.get("seeds", 0) or 0))}) or [0]
+                    for s in range(int(e.get("seed_offset", 0) or 0),        # wp9 offset
+                                   int(e.get("seed_offset", 0) or 0)
+                                   + int(e.get("seeds", 0) or 0))}) or [0]
     n_loads = val_archs[0].n_loads if val_archs else 4
     payload = {
         "config": cfg,
@@ -608,6 +678,14 @@ def run_config(path, device_override: str | None = None,
         "provenance": provenance(cfg, [ddir, *mr_dirs.values(),
                                        *extra_prov_dirs], seeds),
     }
+    if cfg.get("evaluation"):                     # wp9: the holdouts as evaluated
+        payload["evaluation"] = {
+            "holdouts": {k: v["provenance"] for k, v in w9_holdouts.items()},
+            "amplitude": bool((cfg.get("evaluation") or {}).get("amplitude"))}
+    if w9_reuse:
+        payload["reuse_from"] = w9_reuse["provenance"]
+    if activation_checkpointing is not None:
+        payload["runtime_overrides"] = {"activation_checkpointing": bool(activation_checkpointing)}
     out = cfg.get("out", "runs/report_v2.json")
     write_report(out, payload)
     print(f"[fejepa] report -> {out}")

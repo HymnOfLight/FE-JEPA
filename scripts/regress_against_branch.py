@@ -20,6 +20,13 @@ and the bytes of every state file. Exit status 0 iff all identical.
     python scripts/regress_against_branch.py --other ../FE-JEPA-wp7/src \
         --work runs/regress_wp7 --out runs/regress_wp7/summary.json
 
+wp9 Stage 0b runs it on E1's 2D base configuration against wp8-lejepa (the
+reuse of E1's states for C1's 1,024-instance arm rests on it):
+
+    python scripts/regress_against_branch.py --other ../FE-JEPA-wp8/src \
+        --config configs/e1_2d_base.json --work runs/regress_wp8_e1 \
+        --out runs/regress_wp8_e1/summary.json
+
 Bitwise identity is a same-machine, same-torch statement: run both sides here.
 """
 from __future__ import annotations
@@ -42,6 +49,10 @@ def miniature(cfg: dict, work: Path, n: int = 80, n_fine: int = 7) -> dict:
     (e8_regimes.POLICY_BALANCED_FROM) as well as the fixed one."""
     m = copy.deepcopy(cfg)
     m["data"].update(dir=str(work / "d3"), n=n, lc_range=[0.30, 0.36])
+    if m["data"].get("labelled_policy") == "asis":
+        # wp9: a stamped 2D configuration reads a pre-existing corpus; the
+        # miniature generates its own (unlabelled, then labelled as the run needs)
+        m["data"]["labelled_policy"] = "economy"
     if m.get("data_transfer"):
         m["data_transfer"].update(dir=str(work / "d3f"), n=n_fine, lc=0.24,
                                   split={"n_eval": 3, "n_fewshot_prefix": 4})

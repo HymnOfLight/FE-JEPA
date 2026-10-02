@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from .features import FeatureSpec, battery_fscale, build_features_battery
+from .features import FeatureSpec, battery_fscale, battery_l1, build_features_battery
 
 
 # ------------------------------------------------------------ region masking --
@@ -93,7 +93,28 @@ class FEJEPAConfig:
     # trains exactly as before. Small 2D meshes need no memory relief and pay
     # the recomputation in host time (wp8 post-hoc 4b).
     activation_checkpointing: bool = True
+    # wp9 S: the scale the decoded field is multiplied by. "max" = the battery's
+    # largest nodal force (WP7 3D-P0.5; shrinks like the element size, so a
+    # finer mesh asks the network for a larger output); "l1" = a fixed factor
+    # times the battery's total load (battery_l1), which does not change with
+    # the mesh. Both are homogeneous of degree one in the loads. The factor
+    # only sets the output level: S's configuration takes the training family's
+    # median of max|F| / sum|F|, so that at training mesh sizes the network is
+    # asked for outputs of the same level as under "max" (PREREG_W9 Sec. 2).
+    decode_scale: str = "max"
+    decode_scale_factor: float = 1.0
     features: FeatureSpec = field(default_factory=FeatureSpec)
+
+    def __post_init__(self):
+        if self.decode_scale not in ("max", "l1"):
+            raise ValueError(f"decode_scale {self.decode_scale!r}: 'max' or 'l1'")
+        if self.decode_scale == "l1" and not self.scale_decode:
+            raise ValueError("decode_scale 'l1' needs scale_decode = true (the scale is "
+                             "applied in decode)")
+        if not float(self.decode_scale_factor) > 0:
+            raise ValueError(f"decode_scale_factor {self.decode_scale_factor!r} must be > 0")
+        if self.decode_scale == "max" and float(self.decode_scale_factor) != 1.0:
+            raise ValueError("decode_scale_factor applies to decode_scale 'l1' only")
 
     def to_dict(self) -> dict:
         return {"dim": self.dim, "depth": self.depth, "heads": self.heads,
@@ -101,6 +122,8 @@ class FEJEPAConfig:
                 "predictor_stop_grad": self.predictor_stop_grad,
                 "scale_decode": self.scale_decode,
                 "activation_checkpointing": self.activation_checkpointing,
+                "decode_scale": self.decode_scale,
+                "decode_scale_factor": self.decode_scale_factor,
                 "features": self.features.to_dict()}
 
     @classmethod
@@ -225,8 +248,9 @@ def build_fejepa(cfg: FEJEPAConfig):
             feats = torch.as_tensor(build_features_battery(arch, cfg.features),
                                     device=device)
             free = torch.as_tensor(arch.free_mask, device=device).float()
-            fscale = torch.as_tensor(battery_fscale(arch.F), dtype=feats.dtype,
-                                     device=device)
+            scale = (battery_fscale(arch.F) if cfg.decode_scale == "max"
+                     else float(cfg.decode_scale_factor) * battery_l1(arch.F))   # wp9 S
+            fscale = torch.as_tensor(scale, dtype=feats.dtype, device=device)
             return {"feats": feats, "free": free, "fscale": fscale,
                     "arch": arch}
 

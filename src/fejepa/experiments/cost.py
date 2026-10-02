@@ -65,6 +65,8 @@ def count_steps(cfg: dict) -> dict:
         s = int(e8.get("seeds", 3))
         ar = sum(p * int(e8.get("ar_epochs", pre_ep))
                  for p in e8.get("pool_sizes", [1024]))
+        if e8.get("reuse_from"):                           # wp9: evaluation only
+            ar = 0
         if e8.get("ar_only"):                              # wp8 E-series: no supervised grid
             supd = 0
         else:

@@ -28,6 +28,9 @@ def build_mesh_gnn(dim: int = 128, depth: int = 8,
     from torch.utils.checkpoint import checkpoint
 
     spec = features or FeatureSpec()
+    if spec.load_density:              # wp9 S pairs the features with decode_scale
+        raise ValueError("features.load_density (wp9 S) is implemented for model kind "
+                         "'fejepa' only")
 
     def _mgn_layer(e, h, src, dst, nu, eu):
         """One message-passing layer: edge update, scatter-add, node update."""

@@ -58,6 +58,9 @@ class BottleneckConfig:
         spec = FeatureSpec(**feats) if isinstance(feats, dict) else (feats or FeatureSpec())
         keep = {k: d[k] for k in ("dim", "depth", "heads", "n_tokens", "scale_decode",
                                   "decode_k") if k in d}
+        if spec.load_density:          # wp9 S pairs the features with decode_scale
+            raise ValueError("features.load_density (wp9 S) is implemented for model "
+                             "kind 'fejepa' only")
         return cls(features=spec, **keep)
 
 

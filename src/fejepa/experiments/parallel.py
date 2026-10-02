@@ -32,7 +32,9 @@ from ..progress import Task
 
 # --------------------------------------------------------------- bootstrap ----
 
-def _bootstrap(threads: int) -> None:
+def _bootstrap(threads: int, parent_pid: int | None = None) -> None:
+    if parent_pid is not None:
+        _watch_parent(parent_pid)
     os.environ.setdefault("OMP_NUM_THREADS", str(threads))
     try:
         import torch
@@ -42,11 +44,42 @@ def _bootstrap(threads: int) -> None:
         pass
 
 
+PARENT_WATCH_S = 5.0
+
+
+def _watch_parent(parent_pid: int, period: float = PARENT_WATCH_S) -> None:
+    """wp9 Stage 0b: a worker whose parent process has died (killed from
+    outside) exits within `period` seconds instead of training its unit on as
+    an orphan that holds the GPU. A thread polls the parent's pid, so it does
+    not depend on which of the parent's threads started the worker.
+    Scheduling only."""
+    import threading
+    import time
+
+    def watch():
+        while True:
+            if os.getppid() != parent_pid:
+                os._exit(1)
+            time.sleep(period)
+
+    threading.Thread(target=watch, name="fejepa-parent-watch", daemon=True).start()
+
+
 def map_units(func, payloads: list[dict], workers: int, label: str) -> list:
     """Run `func(payload)` over all payloads; returns results in payload order.
 
-    workers <= 1: inline (trainer milestones stay on). workers > 1: spawn pool,
-    payloads get ``quiet=True`` (unit-level progress only).
+    workers <= 1: inline (trainer milestones stay on). workers > 1: a spawn
+    process pool, payloads get ``quiet=True`` (unit-level progress only).
+
+    wp9 Stage 0b: the pool is a `concurrent.futures.ProcessPoolExecutor`,
+    watched every WORKER_POLL_S seconds. A worker that dies -- killed from
+    outside, e.g. by the system's out-of-memory killer, while running a unit
+    or while waiting for one -- ends the map with RuntimeError instead of
+    letting it wait forever (multiprocessing.Pool waited for the lost unit,
+    and its shutdown could block on a queue lock the dead worker held). A
+    unit that raises ends the map at once too. Either way the other workers
+    are terminated, not waited for. Scheduling only -- every unit computes
+    what it did.
     """
     if not payloads:
         return []
@@ -59,31 +92,73 @@ def map_units(func, payloads: list[dict], workers: int, label: str) -> list:
         task.done()
         return out
 
+    from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
+    from concurrent.futures.process import BrokenProcessPool
+
     for p in payloads:
         p["quiet"] = True
     threads = int(os.environ.get("FEJEPA_WORKER_THREADS",
                                  max(1, (os.cpu_count() or 8) // workers)))
     ctx = mp.get_context("spawn")                    # fork would break CUDA
     results: dict[int, object] = {}
-    with ctx.Pool(processes=workers, initializer=_bootstrap,
-                  initargs=(threads,)) as pool:
-        jobs = [(i, p) for i, p in enumerate(payloads)]
-        for i, res in pool.imap_unordered(_indexed(func), jobs):
-            results[i] = res
-            task.step(payloads[i].get("tag", ""))
+    died = RuntimeError(f"{label}: a worker process died (killed by the system, e.g. for lack "
+                        "of memory, or failed at start-up: see the lines above) and its unit "
+                        "cannot finish; nothing of it was saved beyond its epoch checkpoint -- "
+                        "restart the run with --reuse-states")
+    ex = ProcessPoolExecutor(max_workers=workers, mp_context=ctx, initializer=_bootstrap,
+                             initargs=(threads, os.getpid()))
+    procs = []
+    try:
+        futs = {ex.submit(func, p): i for i, p in enumerate(payloads)}
+        procs = list((getattr(ex, "_processes", None) or {}).values())   # never replaced
+        pending = set(futs)
+        while pending:
+            done, pending = wait(pending, timeout=WORKER_POLL_S, return_when=FIRST_COMPLETED)
+            for fut in done:
+                i = futs[fut]
+                try:
+                    results[i] = fut.result()
+                except BrokenProcessPool:
+                    raise died from None
+                task.step(payloads[i].get("tag", ""))
+            if pending and not done and any(p.exitcode is not None for p in procs):
+                raise died
+    except BaseException:
+        _stop_workers(ex, procs)
+        raise
+    ex.shutdown(wait=True)
     task.done()
     return [results[i] for i in range(len(payloads))]
 
 
-class _indexed:
-    """Picklable wrapper carrying the unit function; returns (index, result)."""
+WORKER_POLL_S = 30.0
 
-    def __init__(self, func):
-        self.func = func
 
-    def __call__(self, job):
-        i, payload = job
-        return i, self.func(payload)
+def _stop_workers(ex, procs: list) -> None:
+    """End a failed map at once: cancel what has not started and terminate the
+    workers (a running unit is not waited for). A worker that died half-way
+    through sending its result leaves the executor's manager thread blocked
+    on the rest of the message, and the interpreter would join that thread
+    for ever at exit: once every worker is gone, closing this process's end
+    of the result pipe ends the read."""
+    procs = procs or list((getattr(ex, "_processes", None) or {}).values())
+    results = getattr(ex, "_result_queue", None)
+    ex.shutdown(wait=False, cancel_futures=True)
+    for p in procs:
+        try:
+            p.terminate()
+        except Exception:                                  # noqa: BLE001
+            pass
+    for p in procs:
+        try:
+            p.join(timeout=10)
+        except Exception:                                  # noqa: BLE001
+            pass
+    if results is not None and all(p.exitcode is not None for p in procs):
+        try:
+            results._writer.close()
+        except Exception:                                  # noqa: BLE001
+            pass
 
 
 # ------------------------------------------------------------ unit builders ----
@@ -297,7 +372,20 @@ def pretrain_unit(payload: dict) -> dict:
     sp = Path(payload["state_path"])
     reused = False
     resumed_from = None
-    if payload.get("reuse_existing") and sp.exists():
+    ev = payload.get("eval_only_state")
+    if ev:
+        # wp9 (e8.reuse_from): no training -- the state another run trained for
+        # this seed and pool, refused unless its bytes are the ones recorded
+        sp = Path(ev["path"])
+        got = _file_sha256(sp)
+        if got != ev["sha256"]:
+            raise ValueError(f"{sp}: SHA-256 {got[:12]}... is not the recorded "
+                             f"{ev['sha256'][:12]}...")
+        sd = clean_state(torch.load(str(sp), map_location="cpu", weights_only=True))
+        model.load_state_dict(sd, strict=True)
+        model.to(pre.get("device", "cpu"))
+        reused = True
+    elif payload.get("reuse_existing") and sp.exists():
         # D9: consume a state produced by an earlier attempt of the SAME stamped
         # configuration (identical configurations are trained once); the file's
         # SHA-256 is returned so the report can chain attempt-1 -> attempt-2.
@@ -328,9 +416,22 @@ def pretrain_unit(payload: dict) -> dict:
 
     out = {"state_path": str(sp), "reused_state": reused,
            "state_sha256": hashlib.sha256(sp.read_bytes()).hexdigest()}
+    if ev:
+        out["eval_only"] = True
     if not reused and resumed_from is not None:
         out["resumed_from_epoch"] = int(resumed_from)
-    if payload.get("eval_val_files"):
+    if payload.get("amplitude") or payload.get("eval_sets"):
+        # wp9 (configuration block `evaluation`): the same metric suite from the
+        # same predictions, with amplitude readings, on val and the holdouts
+        from .w9_eval import evaluate_model_w9
+
+        pred = torch_predictor(model, pre.get("device", "cpu"))
+        amp = bool(payload.get("amplitude"))
+        if payload.get("eval_val_files"):
+            out["val"] = evaluate_model_w9(pred, LazyArchives(payload["eval_val_files"]), amp)
+        out["holdouts"] = {name: evaluate_model_w9(pred, LazyArchives(files), amp)
+                           for name, files in (payload.get("eval_sets") or {}).items()}
+    elif payload.get("eval_val_files"):
         out["val"] = evaluate_model(
             torch_predictor(model, pre.get("device", "cpu")),
             LazyArchives(payload["eval_val_files"]))       # D12: iterated once
