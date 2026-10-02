@@ -596,3 +596,95 @@ that point).
 
 Suite: 431 (Stage 0c 427 + 4) passed. On the box: 431 passed, or 430 passed
 and 1 skipped where pdflatex is missing (the paper tables' LaTeX build).
+
+## Stage 0e (2 Oct 2026) -- the paper's field figures; CG at the surrogate's accuracy
+
+PI decisions (2 Oct, before any wp9 result exists): the CMAME manuscript
+shows field figures of Phase-2b's models (three instances, chosen by rules
+fixed in the export script); the cost table adds the time an exact solver
+needs to be as accurate as the surrogate.
+
+1. **`scripts/export_fields.py`** (box, RUNBOOK Sec. 4): Phase-2b's
+   label-free, labels-only and graph-network states (seeds 0-2, the largest
+   budget, the run's own `kind: mgn` build for the last), on the run's own
+   instance lists. The AR states are checked against the report's
+   d9_restart record and refused otherwise; the supervised ones against
+   `records/wp9/phase2_supervised_states.json`; every model also by
+   content -- its per-instance displacement error and relative energy gap on
+   the validation split, recomputed with the evaluation's own functions,
+   against the report's arrays. A supervised state is used if its hash or
+   its content matches (median relative deviations at most 1e-3, for the
+   graph network's non-bitwise CUDA reductions); one failing both is left
+   out, recorded, and the script ends with exit 4 after writing the rest;
+   a state used on its hash whose content does not match is recorded as a
+   content mismatch (exit 5). The instance lists and the three figure files
+   (present, labelled) are resolved before any model runs; the validation
+   figures reuse the energy pass's seed-0 predictions, so their energies are
+   those of `energies_val.npz`; `fields.json` records torch, CUDA and the
+   TF32 flags.
+   Outputs: per model, seed, validation instance and load case, Pi_h(u),
+   the relative energy gap, c* and the gap of c* u (`energies_val.npz`;
+   the counts of load cases with Pi_h(u) > 0, i.e. worse than the zero
+   field in the energy norm, and of instances whose load-averaged gap
+   exceeds 1, in `fields.json`), and three figure files with the mesh, the
+   reference, the seed-0 predictions, element von Mises stresses and the
+   per-load energies. The rules (from the report's arrays): fig5, the
+   validation instance with the labels-only arm's largest gap (seed 0; the
+   other seeds' choices recorded -- in the record all three are validation
+   index 107, `instance_00485.npz`); fig6, the label-free arm's median gap
+   (seed 0); fig7, the fine-set instance with the label-free arm's median
+   displacement error (seed 0). The fig5 rule was set after reading the
+   per-instance records, before any field was looked at; the manuscript says
+   so. Reported only.
+2. **`records/wp9/phase2_supervised_states.json`**: the six supervised
+   states' SHA-256 from the Phase-2 return package of 22 September 2026
+   (no report records them; Phase-2b reused those units and read those
+   files as its P3 shared checkpoints); README section added.
+3. **`scripts/time_inference_vs_solve.py`**: two more kinds, on by default.
+   `cg_match`: CG from zero, the `cg` solver's own CG, stopped on each load
+   case at the first step whose relative energy error is at or below the
+   surrogate's relative gap there (0 steps when the zero field already is);
+   the steps are found by an untimed pass with an energy-recording callback,
+   then that many steps are timed without it. `cg_match_cstar`: the same for
+   the prediction rescaled by c* (its time `cstar_s`, one mat-vec with the
+   full K, the median of three runs, is added to the surrogate's side; its
+   accuracy recorded as `energy_gap_rel_cstar` and `disp_rel_l2_cstar`).
+   One trace per load case serves both kinds and stops once the smaller
+   target is met; it also records CG's displacement error at the matched
+   step and how the trace ended; the timed run's step count is recorded and
+   compared with the one found. The untimed pass counts toward the per-set
+   budget. The stop is an oracle (the labels decide it), so `cg_match` is a
+   lower bound on any CG run to the surrogate's accuracy, matched in the
+   energy norm; the manuscript says so.
+4. **RUNBOOK Sec. 4**: the export after the timing (about 10-20 min,
+   estimated; Sec. 4 now about 1.5 h); the return copies directories
+   (`cp -r`); expected outputs and exit codes; header and suite count.
+5. **Tests**: `tests/test_w9_fields.py` (6: end to end on a Phase-2b-shaped
+   run with all three model kinds -- the rules, the content checks at 0, the
+   energy identities, c* against its formula, the stresses, the validation
+   figures' energies equal to the energy pass's; a supervised state with
+   other bytes but the same weights used, one with other weights left out
+   with exit 4 and the rest exported; a hash-verified state whose arrays
+   differ recorded with exit 5; a missing figure file refused before the
+   long pass; the rules on Phase-2b's own report (107 in every seed, 154,
+   77) and the hash record's keys; refusals of a changed AR state, a missing
+   supervised state and a report without P3 arrays);
+   `tests/test_w9_timing.py` (+2: the trace is CG's own energy error,
+   monotone, and stops at a target; one trace serves both kinds; the match
+   is the first step at or below the target and the timed CG makes exactly
+   those steps and reaches it; unreachable and zero-step targets recorded;
+   c* with the full K equals the free-dof value; an unlabelled instance
+   skips the matching kinds; the end-to-end test checks the new kinds'
+   steps against CG's and the rescaled targets against the raw ones).
+6. **Independent review** before packaging: no blocker; the three findings
+   to fix (a content mismatch on a hash-verified state was silent; the
+   figure inputs were read only after the long pass; `cstar_s` included a
+   free-block extraction c* does not need, from one sample) and the minor
+   ones (a shared, early-stopped trace instead of two full ones; the timed
+   step count checked; how a trace ended; the timed CG's tolerance tied to
+   `--cg-tol`; the runbook's expected values and file names; torch and TF32
+   recorded; `--n-val 0` and the default hash path; the oracle stop
+   documented) are all addressed.
+
+Suite: 439 (Stage 0d 431 + 8) passed. On the box: 439 passed, or 438 passed
+and 1 skipped where pdflatex is missing.

@@ -1,0 +1,17 @@
+{
+ "what": "SHA-256 of Phase-2's supervised states at the largest label budget (labels only and the graph network, seeds 0-2), as listed on the box's state directory on 22 September 2026, before Phase-2b, which reused these units from the cache (results.e8.metrics.d9_restart.sup_units_from_cache) and read these files as its P3 shared checkpoints. No report records them; scripts/export_fields.py checks the states against them and, independently, by content against the report's per-instance arrays.",
+ "source": {
+  "package": "phase2_return_20260922.tgz",
+  "package_sha256": "efdde33cb5891a4358fa92ca79e68e018514e8e860c754cac492fe96d30dec85",
+  "member": "e8_states_sha256.txt"
+ },
+ "states_dir": "runs/phase2/e8_states",
+ "sha256": {
+  "labels_b1024_s0.pt": "2566b87926fcf8df3a751634fd7efd912d60363b2cae95de29155fec54d35b60",
+  "labels_b1024_s1.pt": "a9a8e8a0d28d8da2767bd9624f3b48825cc088b5b202e7e17f955a7c637c79d4",
+  "labels_b1024_s2.pt": "ad12327898082bf67ea913d33b18a4d05f1c724c3a12b862dc542b25921b0bf9",
+  "mgn_b1024_s0.pt": "845e4b9bc62392e9d856e43191ded3e208f580f756066b11f4b5be878e86c783",
+  "mgn_b1024_s1.pt": "9de5a9940464efd5296cceb5afc8a53530435754c51588f7174978067bb786c2",
+  "mgn_b1024_s2.pt": "84e31aa00d91f3dd29b57dc23db6e3f48d7dd810661621d6be5ab3faa9cc8bb8"
+ }
+}

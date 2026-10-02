@@ -81,6 +81,18 @@ these seeds, pinned by the box's own manifests).
 README holds the pre-declared questions and red flags, what ran, and the
 readings. Exploratory: nothing in PREREG_W9 depends on it.
 
+## Phase-2's supervised states (Stage 0e)
+
+`phase2_supervised_states.json`: the SHA-256 of the labels-only and
+graph-network states at the largest budget (`labels_b1024_s{0,1,2}.pt`,
+`mgn_b1024_s{0,1,2}.pt` in `runs/phase2/e8_states`), copied from
+`e8_states_sha256.txt` in the Phase-2 return package of 22 September 2026
+(the package's SHA-256 as received is recorded with them). Phase-2b reused
+these units (`d9_restart.sup_units_from_cache`) and read these files as its
+P3 shared checkpoints, but no report records their hashes. The field export
+(`scripts/export_fields.py`) checks the states against this list and,
+independently, by content against Phase-2b's per-instance arrays.
+
 ## Later
 
 The adjudication of PREREG_W9 (`scripts/adjudicate_w9.py`) writes

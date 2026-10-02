@@ -8,7 +8,8 @@ readings"). Stage 0b (1-2 Oct 2026) wrote Sec. 2-3 and 5: session 2 (C1 and,
 if rule 1 admits it, S), the adjudication, and the optional torch-stack timing
 (Sec. 1e of Stage 0a, moved after session 2). Stage 0d (2 Oct 2026) added
 Sec. 4: the paper's cost table, surrogate inference against the direct solve
-(nothing in PREREG_W9 reads it). PREREG_W9.md is stamped and tagged
+(nothing in PREREG_W9 reads it); Stage 0e (2 Oct 2026) added to it the CG
+stopped at the surrogate's accuracy and the paper's field figures. PREREG_W9.md is stamped and tagged
 (`prereg-w9`) BEFORE session 1, covering every arm the rules can select, so
 the box runs session 1 and session 2 in one visit: Sec. 0, session 1, its
 return, the plan (it refuses to plan unless session 1 passed its gate), the
@@ -17,7 +18,7 @@ scaled down, CPU) ran Sec. 0's git checks, Sec. 1a-1d, 1f, 2a, 2b with a
 worker killed mid-arm and the restart, 2d and Sec. 3 from the two returns
 (the rules' inputs edited so that every arm runs; 1f and 2d with shorter
 provenance blocks and no tarball; the suite, the GPU checks and Sec. 4-5 not
-run there; Sec. 4's script ran on small CPU runs in the tests).
+run there; Sec. 4's scripts ran on small CPU runs in the tests).
 
 Roles: **box** = the GPU machine; **repo** = code, records, pre-registration,
 adjudication.
@@ -33,7 +34,7 @@ the plan checks it again, and the command script checks it before every arm.
 
 Time and money: session 1 about 1 h; session 2 about 10 h without S,
 about 13 h with S, 2-6 h more if N_max runs one seed at a time; Sec. 4 about
-1 h; Sec. 5 about 30 min. The instance's balance must cover about 24 h.
+1.5 h; Sec. 5 about 30 min. The instance's balance must cover about 24 h.
 Everything runs in ONE tmux session; nothing else may use the GPU meanwhile.
 
 ## 0. Preconditions (box, once)
@@ -71,10 +72,10 @@ pgrep -af "fejepa|spawn_main"                # must print nothing
 nvidia-smi --query-gpu=utilization.gpu,memory.used --format=csv,noheader   # about 0 %, under 1,000 MiB
 python -c "import torch; print(torch.__version__, torch.cuda.is_available())"   # 2.12.1+cu130 True
 mkdir -p runs/w9/session1
-python -m pytest -q 2>&1 | tee runs/w9/session1/pytest.log | tail -n 3   # "431 passed" (BRANCH_NOTES' count)
+python -m pytest -q 2>&1 | tee runs/w9/session1/pytest.log | tail -n 3   # "439 passed" (BRANCH_NOTES' count)
 ```
 Any output other than the comments describe: stop and report. The suite's last
-line reads `431 passed`, then warnings and the time; `430 passed, 1 skipped`
+line reads `439 passed`, then warnings and the time; `438 passed, 1 skipped`
 is also correct where `pdflatex` is missing (the paper tables' LaTeX build is
 then not compiled). Anything failed, an error, or another count: stop and
 report.
@@ -291,21 +292,29 @@ PREREG_W9 Sec. 6, the secondary readings of Sec. 7, refused reports and
 deviations; the inputs' SHA-256 and the adjudicating code's are recorded in
 the verdict file.
 
-## 4. After 2d (also after a STOP in 2a): timing for the paper (box; ~1 h)
+## 4. After 2d (also after a STOP in 2a): timing and field export for the paper (box; ~1.5 h)
 The CMAME paper's cost table: per instance, on the same instances and this
 machine, the surrogate's inference (GPU, batch of one, every load case in one
 pass; its accuracy on those instances recorded too) against exact solves of
 the same system: the direct solve that bought every label (SuperLU on the
 free block, one process), unpreconditioned conjugate gradients to a relative
-residual of 1e-10 from zero, and the same CG started from the surrogate's
-prediction. 2D: E1's states on 32 validation instances and 32 of F5 (a few
-minutes). 3D: Phase-2b's states on 32 in-band validation instances (about
-10 min) and 8 of the fine set, whose direct solves take several minutes and
-an estimated 7-10 GB of host memory each (attempt 6 of Phase-2 factorised all
-fine instances in one process on this box); each solver stops starting new
-solves after 15 min per set (the one in progress completes), and the
-surrogate is timed on every instance. Read only: no state, corpus or report
-is written. A failure here costs nothing else; report it.
+residual of 1e-10 from zero, the same CG started from the surrogate's
+prediction, and (Stage 0e) the same CG from zero stopped as soon as it is as
+accurate as the surrogate in energy, for the raw prediction and for the
+prediction rescaled by the label-free amplitude c*. 2D: E1's states on 32
+validation instances and 32 of F5 (a few minutes). 3D: Phase-2b's states on
+32 in-band validation instances (about 10 min) and 8 of the fine set, whose
+direct solves take several minutes and an estimated 7-10 GB of host memory
+each (attempt 6 of Phase-2 factorised all fine instances in one process on
+this box); each solver stops starting new solves after 15 min per set (the
+one in progress completes), and the surrogate is timed on every instance.
+Then (Stage 0e) the paper's field figures and per-load energies: Phase-2b's
+label-free, labels-only and graph-network states (seeds 0-2; the AR ones
+checked against the report, the supervised ones against
+`records/wp9/phase2_supervised_states.json`, all of them also by content) on
+all 256 validation instances, and three instances chosen by rules fixed in
+the script (about 10-20 min, estimated). Read only: no state, corpus or
+report is written. A failure here costs nothing else; report it.
 
 First the checks, on their own:
 ```bash
@@ -328,24 +337,41 @@ run timing_2d.log python scripts/time_inference_vs_solve.py \
 run timing_3d.log python scripts/time_inference_vs_solve.py \
     --report records/wp8/e2/baseline/report_phase2b.json --states-dir runs/phase2/e8_states \
     --out $P/timing_3d.json
+[ -d $P/fields ] && mv $P/fields $P/fields.$(date +%Y%m%d-%H%M%S)
+run fields_3d.log python scripts/export_fields.py \
+    --report records/wp8/e2/baseline/report_phase2b.json --states-dir runs/phase2/e8_states \
+    --out $P/fields
 ( echo "HEAD $(git rev-parse HEAD)"; echo "describe $(git describe --tags --match prereg-w9)"
   nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader
   lscpu | grep -E "^Model name|^CPU\(s\)|^Thread|^Socket"; echo "nproc $(nproc)"
   cat /sys/fs/cgroup/cpu.max /sys/fs/cgroup/memory.max 2>/dev/null; free -g | head -n 2
 ) > $P/machine.txt 2>&1
-OUT=~/wp9_timing_return && rm -rf $OUT && mkdir -p $OUT && cp $P/* $OUT/
+OUT=~/wp9_timing_return && rm -rf $OUT && mkdir -p $OUT && cp -r $P/* $OUT/
 cd ~ && tar czf wp9_timing_return_$(date +%Y%m%d).tgz wp9_timing_return \
     && sha256sum wp9_timing_return_*.tgz && du -h wp9_timing_return_*.tgz
 ```
-Each step prints one line per instance (on the 3D fine set one every few
-minutes: long silences there are normal), then one line per set with the
+Each timing step prints one line per instance (on the 3D fine set one every
+few minutes: long silences there are normal), then one line per set with the
 medians and the largest deviation of each solver's solution from the stored
-labels (`direct_label_max_rel_dev`: round-off, below 1e-12; the CG ones
-below about 1e-8), and last the check of the timed model against the
+labels (`direct_label_max_rel_dev`: round-off, below 1e-12; `cg` and
+`cg_warm` below about 1e-8; the two matching kinds print `null`, they stop
+short of a full solution), and last the check of the timed model against the
 report's own arrays (`disp_rel_l2_max_rel_dev` and
-`energy_gap_rel_max_rel_dev`, 0 or round-off). `status.txt` must show both
-steps with `exit=0` (`exit=3`: a family was skipped, the rest timed; report
-it). Send the tarball.
+`energy_gap_rel_max_rel_dev`, 0 or round-off). In the JSON,
+`cg_match_unreached`, `cg_match_cstar_unreached` and both `*_iters_mismatch`
+are 0. The field export prints a line every 16 validation instances, one
+line per figure and last a summary line: `content_median_rel_dev` about 0 for
+the `ar_*` and `labels_*` states and about 1e-4 for the `mgn_*` ones (the
+graph network's CUDA reductions are not bitwise reproducible); `left_out` and
+`content_mismatch` empty; the figures' files `instance_00485.npz` (fig5,
+validation index 107), `instance_00130.npz` (fig6, validation index 154) and
+`instance_00077.npz` (fig7, fine-set index 77). `status.txt` must show the
+three steps with `exit=0`. `exit=3` from a timing step: a family was skipped,
+the rest timed. `exit=4` from the field export: a supervised state failed
+both its hash and its content check and was left out, the rest exported;
+`exit=5`: a state used on its hash did not reproduce the report's arrays.
+Report any of these. The tarball is a few tens of MB with the fields. Send
+it.
 
 ## 5. Optional, after Sec. 4: the torch stack against the host (box; ~30 min)
 wp8's post-hoc timing could not separate the box's torch stack (2.12.1+cu130)
