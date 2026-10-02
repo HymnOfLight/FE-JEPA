@@ -4,9 +4,10 @@ stamped 2D base configuration -- never edited by hand.
 
 Every arm is E1's base configuration (corpus, split, model, schedule, numeric
 policy, workers) with:
-  * the evaluation block: the OOD-2D v1 families F1-F5 and the remesh set R as
-    evaluation-only holdouts (runs/w9/ood2d/<name>, verified by manifest at
-    run start), and the amplitude readings on every evaluation;
+  * the evaluation block: the in-band holdout IB (PREREG_W9 r3), the OOD-2D v1
+    families F1-F5 and the remesh set R as evaluation-only holdouts
+    (runs/w9/ood2d/<name>, verified by manifest at run start), and the
+    amplitude readings on every evaluation;
   * its own output directory and the guard on PREREG_W9.md;
 and, per arm:
   w9_c1_n1024   no training: E1's base states (seeds 0-2, SHA-verified against
@@ -19,16 +20,18 @@ and, per arm:
                 read
   w9_s_n1024    as w9_b_n1024 with S: decode_scale "l1" times S_FACTOR, and
                 features.load_density
-(the last two run only if session 1's rule 1 admits S). Every arm trains (or
-trained) 204,800 AR steps per seed. Workers (rule 2) and activation
+(the fresh baseline runs in every session 2 since PREREG_W9 r3; S only if
+session 1's rule 1 admits it). Every arm trains (or trained) 204,800 AR steps
+per seed. Workers (rule 2) and activation
 checkpointing (rule 3) are run-time settings, not configuration
 (`run-config --workers`, `--activation-checkpointing`).
 
 S_FACTOR = 1/64 sets the level of S's decoded output: the median of
-max|F| / sum|F| over 256 training-family instances drawn in the sandbox on 2
-October 2026 was 0.0156 (10th-90th percentile 0.0098-0.0226), so at training
-mesh sizes S's network is asked for outputs of the same level as E1's; on
-finer meshes E1's scale shrinks with the element size and S's does not.
+max|F| / sum|F| over the first 256 instances of E1's training corpus is
+0.0151 (10th-90th percentile 0.0096-0.0219; scripts/w9_scale_factor.py,
+records/wp9/scale_factor.json), so at training mesh sizes S's network is asked
+for outputs of about the level of E1's; on finer meshes E1's scale shrinks
+with the element size and S's does not.
 
     python scripts/make_w9_configs.py            # writes configs/w9_*.json
     python scripts/make_w9_configs.py --check    # the committed files are the generator's
@@ -49,7 +52,7 @@ report records)."""
 E1_REPORT = "records/wp8/e1/e1_2d_base/report.json"
 E1_STATES = "runs/e1_2d_base/e8_states"
 OOD_DIR = "runs/w9/ood2d"
-HOLDOUTS = ("F1", "F2", "F3", "F4", "F5", "R")
+HOLDOUTS = ("IB", "F1", "F2", "F3", "F4", "F5", "R")
 STEPS_PER_SEED = 204800
 S_FACTOR = 0.015625
 FRESH_SEED_OFFSET = 3

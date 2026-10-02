@@ -14,16 +14,17 @@ Gate (any failure: STOP, no command script, exit non-zero):
     identical, written on the expected commit (`prereg-w9`, which this
     checkout must also be); rules 1-2 decided and rule 2 found a pool; rule 3
     undecided keeps checkpointing on;
-  * the six evaluation sets complete in the record, and the manifests on disk
-    and those the amplitude reading used are the record's;
+  * the seven evaluation sets complete in the record, each of PREREG_W9's size
+    and seed, and the manifests on disk and those the amplitude reading used
+    are the record's;
   * the C0 evaluation reproduced E1's per-instance validation arrays
     (largest relative deviation <= 1e-4);
   * a GPU, and E1's torch version; at least 5 GB free on the data disk;
   * every selected configuration passes its dry run (stamped and verified).
 
-Order: the 1,024 arm (evaluation only), N_max, then -- if rule 1 admitted S --
-the fresh 1,024 baseline (seeds 3-5) and S, then 4,096: the primary
-comparisons first. Workers: rule 2's for N_max, the configuration's (3)
+Order: the 1,024 arm (evaluation only), N_max, the fresh 1,024 baseline
+(seeds 3-5; in every session 2 since PREREG_W9 r3), S if rule 1 admitted it,
+then 4,096: the primary comparisons first. Workers: rule 2's for N_max, the configuration's (3)
 otherwise. Activation checkpointing: rule 3 for every trained arm, kept on for
 an arm whose memory would not fit without it (the frozen memory rule's own
 test), and on when rule 3 is undecided.
@@ -55,7 +56,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 REQUIRED_STEPS = ("ood2d.log", "c0_val.log", "c0_amp2d.log", "c0_memory.log")
-FAMILIES = ("F1", "F2", "F3", "F4", "F5", "R")
+FAMILIES = ("IB", "F1", "F2", "F3", "F4", "F5", "R")
 REPRO_MAX = 1e-4
 MIN_FREE_GB = 5.0
 NMAX_CONFIG = {25600: "w9_c1_n25600", 12800: "w9_c1_n12800"}
@@ -113,6 +114,7 @@ def gate(s1: Path, repo: Path = Path("."), gpu_check: bool = True,
     """(problems, decisions, facts) from session 1's directory. With
     `expected_git`, the decisions and this checkout must both describe as it."""
     from fejepa.data.archive import manifest_sha256
+    from fejepa.fe.ood2d import DEFAULT_SEEDS, SET_SIZES
 
     problems, facts = [], {}
     st = _status(s1 / "status.txt")
@@ -164,6 +166,13 @@ def gate(s1: Path, repo: Path = Path("."), gpu_check: bool = True,
             problems.append(f"evaluation sets incomplete: {sorted(set(bad) | set(ood.get('failed') or []))}")
         rec = {f: (fam.get(f) or {}).get("manifest_sha256") for f in FAMILIES}
         facts["ood_manifests"] = rec
+        for f in FAMILIES:                               # PREREG_W9 Sec. 3's sizes and seeds
+            e = fam.get(f) or {}
+            if e.get("manifest_sha256") and \
+                    [e.get("n_instances"), e.get("seed")] != [SET_SIZES[f], DEFAULT_SEEDS[f]]:
+                problems.append(f"{f}: {e.get('n_instances')} instances from seed "
+                                f"{e.get('seed')}; PREREG_W9 Sec. 3 fixes {SET_SIZES[f]} from "
+                                f"seed {DEFAULT_SEEDS[f]}")
         for f in FAMILIES:
             p = repo / "runs" / "w9" / "ood2d" / f
             if rec.get(f) and (not (p / "manifest.json").is_file() or manifest_sha256(p) != rec[f]):
@@ -243,10 +252,11 @@ def select(dec: dict, memory: dict | None = None) -> tuple:
     arms = [("c1_n1024", "w9_c1_n1024", [])]
     arms.append((nmax_stem[3:], nmax_stem, ["--workers", str(nk),
                                             "--activation-checkpointing", ckpt(nmax_stem, nk)]))
-    if d["S_enters"]["value"]:
-        for stem in ("w9_b_n1024", "w9_s_n1024"):
-            arms.append((stem[3:], stem, ["--workers", str(workers3),
-                                          "--activation-checkpointing", ckpt(stem, workers3)]))
+    # r3: the fresh baseline runs in every session 2 (H2's reference, and the
+    # on-box check of the training path behind the reuse); S only if admitted
+    for stem in ("w9_b_n1024", "w9_s_n1024") if d["S_enters"]["value"] else ("w9_b_n1024",):
+        arms.append((stem[3:], stem, ["--workers", str(workers3),
+                                      "--activation-checkpointing", ckpt(stem, workers3)]))
     arms.append(("c1_n4096", "w9_c1_n4096",
                  ["--workers", str(workers3),
                   "--activation-checkpointing", ckpt("w9_c1_n4096", workers3)]))

@@ -57,7 +57,7 @@ def test_configurations_differ_from_e1_only_where_prereg_w9_says():
         ev = cfg["evaluation"]
         assert ev["amplitude"] is True
         assert ev["holdouts"] == {h: {"dir": f"runs/w9/ood2d/{h}", "family": h}
-                                  for h in ("F1", "F2", "F3", "F4", "F5", "R")}
+                                  for h in ("IB", "F1", "F2", "F3", "F4", "F5", "R")}
     assert _cfg("w9_c1_n1024")["experiments"]["e8"]["reuse_from"] == {
         "report": "records/wp8/e1/e1_2d_base/report.json",
         "states_dir": "runs/e1_2d_base/e8_states"}

@@ -38,7 +38,8 @@ MINI = {"w9_c1_n1024": dict(pool=4, epochs=4, reuse=True, s=False, seed_offset=0
         "w9_s_n1024": dict(pool=4, epochs=4, reuse=False, s=True, seed_offset=3)}
 SPECS = {k: _spec(v["pool"], v["epochs"], v["reuse"], v["seed_offset"], v["s"])
          for k, v in MINI.items()}
-FAMS = ("F1", "F2", "F3", "F4", "F5", "R")
+FAMS = ("IB", "F1", "F2", "F3", "F4", "F5", "R")
+SETS7 = ("val", *FAMS)                  # the name predates IB: val, IB, F1-F5, R
 
 
 def _module(name):
@@ -70,9 +71,12 @@ def box(tmp_path_factory):
     os.chdir(tmp)
     try:
         generate_synthetic_dataset(tmp / "runs" / "data2d", n=40, seed=3, labelled="all")
-        for k, fam in enumerate(FAMS[:5]):
+        for k, fam in enumerate(FAMS[1:-1]):                        # F1-F5
             _save_family(tmp / "runs/w9/ood2d" / fam,
                          [_labelled(100 + 10 * k + i, nx=6 + 3 * (fam == "F5")) for i in range(3)], fam)
+        # IB larger than the validation split (4), so that weighting by instance
+        # count differs from averaging the two sets' means
+        _save_family(tmp / "runs/w9/ood2d" / "IB", [_labelled(200 + i) for i in range(12)], "IB")
         r_archs, r_fields = [], []
         for g in range(2):
             for (nx, ny), h in (((6, 4), 0.2), ((12, 8), 0.1)):   # nominal mesh sizes
@@ -111,8 +115,14 @@ def box(tmp_path_factory):
 
 
 def _ood_record(tmp):
+    """Session 1's record; sizes and seeds as it records PREREG_W9's sets (the
+    plan and the adjudication check these fields; the miniature's files are
+    smaller)."""
+    from fejepa.fe.ood2d import DEFAULT_SEEDS, SET_SIZES
+
     return {"families": {f: {"manifest_sha256": manifest_sha256(tmp / "runs/w9/ood2d" / f),
-                             "status": "generated"} for f in FAMS}, "failed": []}
+                             "status": "generated", "n_instances": SET_SIZES[f],
+                             "seed": DEFAULT_SEEDS[f]} for f in FAMS}, "failed": []}
 
 
 def _describe() -> str:
@@ -232,33 +242,82 @@ def test_adjudication_reads_every_arm(box, tmp_path):
     rm = res["remesh"]["n1024"]
     assert len(rm) == 2 and rm["0.2"]["u_norm_ratio_median"] == [1.0, 1.0, 1.0]
     assert rm["0.2"]["ustar_norm_ratio_median"] == [1.0, 1.0, 1.0]
-    assert set(res["replication_b1024_vs_n1024"]) == {"energy_gap_rel", "disp_rel_l2"}
-    assert set(res["comparisons_s_vs_b1024_exploratory"]) == {"val", "F1", "F2", "F3", "F4",
-                                                              "F5", "R"}
+    assert set(res["replication_b1024_vs_n1024"]) == {*SETS7, "inband"}   # r3: every set
+    assert set(res["nmax_vs_b1024_exploratory"]) == {*SETS7, "inband"}
+    assert set(res["H1"]["robustness"]) == {"medians", "welch_95", "instance_resampling_95"}
+    assert "not_evaluated" not in res["H1"]["robustness"]["instance_resampling_95"]
+    t = res["tables"]["nmax"]
+    for k in range(3):                    # H1's per-seed value: val (4) and IB (12) by count
+        want = (4 * t["val"]["energy_gap_rel"]["per_seed"][k]
+                + 12 * t["IB"]["energy_gap_rel"]["per_seed"][k]) / 16
+        assert t["inband"]["energy_gap_rel"]["per_seed"][k] == pytest.approx(want)
+    assert res["H1"]["new_per_seed"] == pytest.approx(t["inband"]["energy_gap_rel"]["per_seed"])
+    assert set(res["H2"]["robustness"]) == {"F5_displacement", "F5_over_inband_ratio",
+                                            "K1_inband_energy_gap", "K1_inband_displacement"}
+    for k, r in res["H2"]["robustness"].items():
+        assert "not_evaluated" not in r["instance_resampling_95"], k
+        assert r["instance_resampling_95"]["low"] <= r["instance_resampling_95"]["high"]
+    t = res["tables"]["s"]
+    assert t["ratio_F5_over_val_disp_of_seed_means"] == pytest.approx(
+        t["F5"]["disp_rel_l2"]["seed_mean"] / t["val"]["disp_rel_l2"]["seed_mean"])
+    assert set(res["remesh_growth"]["s"]) == {"0.2"} and len(res["remesh_growth"]["s"]["0.2"]) == 3
+    assert set(res["remesh_growth_s_vs_b1024_exploratory"]) == {"0.2"}
+    assert set(res["comparisons_s_vs_b1024_exploratory"]) == {*SETS7, "inband"}
     assert any("no session-2 plan" in d for d in res["deviations"])
     assert not any("checkpointing" in d or "workers" in d for d in res["deviations"])
 
 
+def _inband(rep: dict, metric: str, values) -> None:
+    """H1's in-band set (r3): the validation split and IB, both set alike."""
+    for s in ("val", "IB"):
+        _set(rep, s, metric, values)
+
+
 def test_h1_verdicts_by_constructed_values(box, tmp_path):
-    """H1 reads the in-band energy gap, the 1,024 arm as the reference."""
+    """H1 reads the in-band energy gap -- the validation split and IB
+    together (r3) -- the 1,024 arm as the reference."""
     tmp, _, reports = box
     s1 = _session1(tmp_path, tmp)
 
     def h1(nmax_egap, nmax_disp=None):
         rep = _copy(reports)
-        _set(rep["n1024"], "val", "energy_gap_rel", (0.040, 0.041, 0.039))
-        _set(rep["nmax"], "val", "energy_gap_rel", nmax_egap)
+        _inband(rep["n1024"], "energy_gap_rel", (0.040, 0.041, 0.039))
+        _inband(rep["nmax"], "energy_gap_rel", nmax_egap)
         if nmax_disp:
-            _set(rep["nmax"], "val", "disp_rel_l2", nmax_disp)
+            _inband(rep["nmax"], "disp_rel_l2", nmax_disp)
         return _adj(tmp, rep, s1)["H1"]
 
     r = h1((0.030, 0.031, 0.029))
     assert r["verdict"] == "SUPPORTED" and np.isclose(r["rel_change"], -0.25)
-    assert r["base_per_seed"] == [0.040, 0.041, 0.039] and r["new_per_seed"] == [0.030, 0.031, 0.029]
+    assert np.allclose(r["base_per_seed"], [0.040, 0.041, 0.039])
+    assert np.allclose(r["new_per_seed"], [0.030, 0.031, 0.029]) and r["inband_sets"] == ["val", "IB"]
+    rep = _copy(reports)                         # the two sets weigh by their instance counts
+    _inband(rep["n1024"], "energy_gap_rel", (0.040, 0.040, 0.040))
+    _set(rep["nmax"], "val", "energy_gap_rel", (0.020, 0.020, 0.020))         # 4 instances
+    _set(rep["nmax"], "IB", "energy_gap_rel", (0.035, 0.035, 0.035))          # 12 instances
+    r = _adj(tmp, rep, s1)["H1"]
+    assert np.isclose(r["rel_change"], -0.21875) and r["verdict"] == "SUPPORTED"
+    _set(rep["nmax"], "IB", "energy_gap_rel", (0.042, 0.042, 0.042))
+    r = _adj(tmp, rep, s1)["H1"]                 # the two sets' means averaged would give -22.5 %
+    assert np.isclose(r["rel_change"], -0.0875) and r["verdict"] == "NOT SUPPORTED"
     assert h1((0.040, 0.0405, 0.0395))["verdict"] == "NOT SUPPORTED"
     assert h1((0.050, 0.051, 0.049))["verdict"] == "NOT SUPPORTED (worse beyond the guard)"
     assert h1((0.030, float("nan"), 0.030))["verdict"] == "NOT SUPPORTED (diverged)"
     assert h1((0.040, 0.041, 0.039), nmax_disp=(0.01, 0.01, 0.01))["verdict"] == "NOT SUPPORTED"
+    rep = _copy(reports)                         # r3: the fresh baseline checks the reuse
+    _inband(rep["n1024"], "energy_gap_rel", (0.040, 0.041, 0.039))
+    _inband(rep["b1024"], "energy_gap_rel", (0.040, 0.0405, 0.0395))
+    assert "fresh_baseline_flag" not in _adj(tmp, rep, s1)["H1"]
+    _inband(rep["b1024"], "energy_gap_rel", (0.052, 0.053, 0.051))
+    r = _adj(tmp, rep, s1)["H1"]
+    assert r["fresh_baseline_flag"].startswith("the fresh baseline's in-band energy gap is worse "
+                                               "than E1's states beyond the guard")
+    assert r["verdict"] in ("SUPPORTED", "NOT SUPPORTED", "NOT SUPPORTED (worse beyond the guard)")
+    _set(rep["b1024"], "IB", "energy_gap_rel", (0.04, float("nan"), 0.04))    # never blocks H1
+    for s_enters in (True, False):
+        res = _adj(tmp, rep, _session1(tmp_path / f"nan{s_enters}", tmp, s_enters=s_enters))
+        assert "non-finite (diverged)" in res["H1"]["fresh_baseline_flag"]
+        assert res["H1"]["verdict"].startswith(("SUPPORTED", "NOT SUPPORTED"))
 
 
 def test_h2_conditions_and_a_void_reference(box, tmp_path):
@@ -280,7 +339,10 @@ def test_h2_conditions_and_a_void_reference(box, tmp_path):
         return rep
 
     res = _adj(tmp, arms((0.20, 0.21, 0.19), (0.20, 0.20, 0.20)), s1)
-    assert res["H2"]["verdict"] == "SUPPORTED"
+    assert res["H2"]["verdict"] == "SUPPORTED" and "uninformative" not in res["H2"]
+    res = _adj(tmp, arms((0.24, 0.25, 0.26), (0.20, 0.20, 0.20), b_f5=(0.25, 0.25, 0.25)), s1)
+    assert res["H2"]["verdict"].startswith("NOT SUPPORTED: (i)")        # r3: no deficit to remove
+    assert "F5 / in-band ratio 1.25 < 1.5" in res["H2"]["uninformative"]
     res = _adj(tmp, arms((0.32, 0.33, 0.31), (0.16, 0.16, 0.16)), s1)    # both 20 % lower
     assert res["H2"]["verdict"].startswith("NOT SUPPORTED: (ii)")       # the growth is unchanged
     res = _adj(tmp, arms((0.20, 0.21, 0.19), (0.20, 0.20, 0.20), (0.07, 0.07, 0.07)), s1)
@@ -337,6 +399,11 @@ def test_reports_that_fail_their_checks_are_refused_alone(box, tmp_path):
          ["per_seed_eval"].pop(), "one evaluation per seed"),
         ("n4096", lambda r: r["n4096"]["evaluation"]["holdouts"]["F3"].update(
             manifest_sha256="0" * 64), "holdout manifests"),
+        ("nmax", lambda r: r["nmax"]["results"]["e8"]["metrics"]["holdouts"]["IB"]["16"]
+         ["per_seed_eval"][1]["per_instance"]["energy_gap_rel"].pop(),
+         "IB cell does not hold per-instance values for its 12 instances"),
+        ("n4096", lambda r: r["n4096"]["results"]["e8"]["metrics"]["cells"]["ar"]["8"]
+         ["per_seed_eval"][0].pop("per_instance"), "val cell does not hold per-instance"),
     ]
     for role, edit, match in cases:
         kw = {}
@@ -373,9 +440,14 @@ def test_reports_that_fail_their_checks_are_refused_alone(box, tmp_path):
     assert "rule 2 selected w9_c1_n12800" in res["refused_reports"]["nmax"]
     assert res["H1"]["verdict"] == "NOT EVALUATED (nmax: refused)"
     res = _adj(tmp, reports, _session1(tmp_path / "b", tmp, s_enters=False))
-    assert {"b1024", "s"} == set(res["refused_reports"])
+    assert {"s"} == set(res["refused_reports"])         # r3: the fresh baseline runs regardless
     assert "did not admit S" in res["refused_reports"]["s"]
     assert res["H2"]["verdict"].startswith("NOT RUN") and e1p.is_file()
+    assert "replication_b1024_vs_n1024" in res and "nmax_vs_b1024_exploratory" in res
+    rep_ = _copy(reports)
+    del rep_["b1024"], rep_["s"]
+    res = _adj(tmp, rep_, _session1(tmp_path / "c", tmp, s_enters=False))
+    assert "b1024: no report (planned arm not run or not returned)" in res["deviations"]
 
 
 def test_session_level_faults_refuse_the_adjudication(box, tmp_path):
@@ -385,6 +457,11 @@ def test_session_level_faults_refuse_the_adjudication(box, tmp_path):
     ood["families"]["F3"]["manifest_sha256"] = None
     with pytest.raises(ValueError, match="record is incomplete"):
         _adj(tmp, reports, s1, ood_record=ood)
+    for fam, key, value in (("IB", "n_instances", 512), ("F2", "seed", 1)):     # not Sec. 3's
+        ood = json.loads((s1 / "ood2d.json").read_text())
+        ood["families"][fam][key] = value
+        with pytest.raises(ValueError, match=f"sets are not PREREG_W9's .*'{fam}'"):
+            _adj(tmp, reports, s1, ood_record=ood)
     with pytest.raises(ValueError, match="R manifest given"):
         _adj(tmp, reports, s1, r_manifest_sha256="b" * 64)
     dec = json.loads((s1 / "decisions.json").read_text())
@@ -466,6 +543,71 @@ def test_a_missing_primary_arm_voids_only_its_own_hypothesis(box, tmp_path):
     assert set(res["S_mechanism"]) == {"b1024", "s"}
     res = _adj(tmp, {k: v for k, v in reports.items() if k != "s"}, s1)
     assert res["H2"]["verdict"] == "NOT EVALUATED (s: no report)" and res["H1"]["verdict"]
+
+
+
+# --------------------------------------------------------- paper material --
+
+def test_paper_material_from_the_verdict(box, tmp_path):
+    """scripts/make_w9_paper_material.py reads the adjudication's verdict only:
+    deterministic, every cell from the verdict, LaTeX text checked; without S
+    no H2 tables."""
+    tmp, _, reports = box
+    s1 = _session1(tmp_path, tmp)
+    mk = _module("make_w9_paper_material")
+    res = json.loads(json.dumps(_adj(tmp, reports, s1), default=str))
+    files = mk.build(res, "0" * 64)
+    assert set(files) == {"table_w9_h1.tex", "table_w9_c1.tex", "table_w9_c1_disp.tex",
+                          "table_w9_h2.tex", "table_w9_s_sets.tex", "table_w9_remesh.tex",
+                          "tables.md", "sources.json"}
+    assert mk.build(json.loads(json.dumps(res)), "0" * 64) == files        # deterministic
+    md = files["tables.md"]
+    for role in ("n1024", "nmax"):                   # H1's quantity: val and IB together (r3)
+        per = res["tables"][role]["inband"]["energy_gap_rel"]["per_seed"]
+        assert " / ".join(mk._g(x) for x in per) in md
+    assert f"Verdict: {res['H1']['verdict']}." in md and f"Verdict: {res['H2']['verdict']}." in md
+    assert "N_max against 1,024, beside the verdict (no criterion): per-seed medians" in md
+    assert "(i) F5 displacement, beside the verdict (no criterion)" in md
+    assert "| AR, fresh seeds | 4 | 4 | 3-5 |" in md          # r3: H1's table (miniature pool)
+    assert "| 4 | 0-2 |" in md and "| 4 | 3-5 |" in md          # C1: both 1,024-like arms
+    assert "AR, fresh seeds (4): displacement error at the finest mesh over that at h 0.2: " in md
+    assert "growth over h 0.2 (exploratory)" in md
+    assert "displacement error at the finest mesh" in files["table_w9_remesh.tex"]
+    assert json.loads(files["sources.json"])["verdict_sha256"] == "0" * 64
+    for name, text in files.items():
+        if name.endswith(".tex"):
+            assert "_W9" not in text.replace(r"\_W9", "") and "N_max" not in text, name
+    rep = _copy(reports)                             # a diverged N_max seed prints as such
+    _inband(rep["nmax"], "energy_gap_rel", (0.03, float("nan"), 0.03))
+    res = json.loads(json.dumps(_adj(tmp, rep, s1), default=str))
+    assert res["H1"]["verdict"] == "NOT SUPPORTED (diverged)"
+    files = mk.build(res, "2" * 64)
+    assert "0.0300 / diverged / 0.0300 | diverged |" in files["tables.md"]
+    rep = _copy(reports)
+    del rep["s"]
+    res = json.loads(json.dumps(_adj(tmp, rep, s1), default=str))
+    assert res["H2"]["verdict"].startswith("NOT EVALUATED")
+    files = mk.build(res, "1" * 64)
+    assert "table_w9_h2.tex" not in files and "table_w9_s_sets.tex" not in files
+    assert f"H2: {res['H2']['verdict']}." in files["tables.md"]
+
+
+@pytest.mark.skipif(shutil.which("pdflatex") is None, reason="no pdflatex")
+def test_paper_material_compiles(box, tmp_path):
+    tmp, _, reports = box
+    s1 = _session1(tmp_path, tmp)
+    files = _module("make_w9_paper_material").build(
+        json.loads(json.dumps(_adj(tmp, reports, s1), default=str)), "0" * 64)
+    tex = sorted(n for n in files if n.endswith(".tex"))
+    for n in tex:
+        (tmp_path / n).write_text(files[n], encoding="utf-8")
+    (tmp_path / "doc.tex").write_text(
+        "\\documentclass{article}\n\\usepackage[utf8]{inputenc}\n\\usepackage{booktabs}\n"
+        "\\usepackage{graphicx}\n\\begin{document}\n"
+        + "".join(f"\\input{{{n}}}\n\\clearpage\n" for n in tex) + "\\end{document}\n")
+    r = subprocess.run(["pdflatex", "-interaction=nonstopmode", "-halt-on-error", "doc.tex"],
+                       cwd=tmp_path, capture_output=True, text=True, timeout=120)
+    assert r.returncode == 0, r.stdout[-3000:]
 
 
 def _return2(tmp, where, arms=("c1_n1024", "c1_n25600", "b_n1024", "s_n1024", "c1_n4096"),
@@ -593,7 +735,7 @@ def test_plan_selects_orders_and_preflights(box, tmp_path):
     assert plan["decisions_sha256"] == hashlib.sha256((s1 / "decisions.json").read_bytes()).hexdigest()
     s1b = _session1(tmp_path / "b", tmp, s_enters=False, pool="12800p")
     arms, _ = mk.select(mk.gate(s1b, tmp, gpu_check=False)[1])
-    assert [a[1] for a in arms] == ["w9_c1_n1024", "w9_c1_n12800", "w9_c1_n4096"]
+    assert [a[1] for a in arms] == ["w9_c1_n1024", "w9_c1_n12800", "w9_b_n1024", "w9_c1_n4096"]
     assert arms[1][2] == ["--workers", "3", "--activation-checkpointing", "on"]
 
 
@@ -661,10 +803,13 @@ def test_plan_gate_stops(box, tmp_path):
     rec = json.loads((s1 / "ood2d.json").read_text())
     rec["families"]["F2"]["status"] = "failed"
     rec["families"]["F4"]["manifest_sha256"] = "0" * 64
+    rec["families"]["IB"]["n_instances"] = 512
     (s1 / "ood2d.json").write_text(json.dumps(rec))
     problems = mk.gate(s1, tmp, gpu_check=False)[0]
     assert any("incomplete: ['F2']" in p for p in problems)
     assert any("ood2d/F4: the manifest on disk" in p for p in problems)
+    assert "IB: 512 instances from seed 91007; PREREG_W9 Sec. 3 fixes 2048 from seed 91007" \
+        in problems
     out = tmp_path / "s2w"
     out.mkdir()
     (out / "commands.sh").write_text("stale")

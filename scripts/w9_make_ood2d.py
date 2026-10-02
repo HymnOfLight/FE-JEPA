@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """wp9 Stage 0a: generate and label the OOD-2D v1 evaluation families
-(F1-F5) and the 2D remesh set (R) -- on the box, once; the manifests (with
-per-file SHA-256) then pin them. See fejepa.fe.ood2d for the definitions.
+(F1-F5), the 2D remesh set (R) and (Stage 0c, PREREG_W9 r3) the in-band
+holdout IB -- on the box, once; the manifests (with per-file SHA-256) then
+pin them. See fejepa.fe.ood2d for the definitions.
 
 F5 and R come first: session 1's rule 1 reads them. A family that fails is
 recorded and the others still run; the script then exits non-zero.
@@ -26,7 +27,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-ORDER = ["F5", "R", "F1", "F2", "F3", "F4"]
+ORDER = ["F5", "R", "IB", "F1", "F2", "F3", "F4"]
 
 
 def _expected(fam: str, a) -> dict:
@@ -35,6 +36,8 @@ def _expected(fam: str, a) -> dict:
     if fam == "R":
         return {"family": "R", "seed": DEFAULT_SEEDS["R"],
                 "n_instances": a.n_remesh * len(REMESH_H), "hs": [float(h) for h in REMESH_H]}
+    if fam == "IB":
+        return {"family": "IB", "seed": DEFAULT_SEEDS["IB"], "n_instances": a.n_inband}
     return {"family": fam, "seed": DEFAULT_SEEDS[fam], "n_instances": a.n}
 
 
@@ -60,21 +63,29 @@ def _existing(d: Path, want: dict):
 
 
 def main() -> None:
+    from fejepa.fe.ood2d import FAMILY_N, IB_N, REMESH_GEOMETRIES
+
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="runs/w9/ood2d")
     ap.add_argument("--families", nargs="+", default=ORDER)
-    ap.add_argument("--n", type=int, default=256, help="instances per family F1-F5")
-    ap.add_argument("--n-remesh", type=int, default=16, help="geometries of the remesh set R")
+    ap.add_argument("--n", type=int, default=FAMILY_N,
+                    help="instances per family F1-F5 (PREREG_W9: ood2d.FAMILY_N; tests only "
+                         "change it)")
+    ap.add_argument("--n-remesh", type=int, default=REMESH_GEOMETRIES,
+                    help="geometries of the remesh set R (PREREG_W9: ood2d.REMESH_GEOMETRIES)")
+    ap.add_argument("--n-inband", type=int, default=IB_N,
+                    help="instances of the in-band holdout IB (PREREG_W9: ood2d.IB_N)")
     ap.add_argument("--record", required=True, help="summary JSON (manifest SHA-256 per family)")
     a = ap.parse_args()
 
     from fejepa.analysis.common import write_json
     from fejepa.data.archive import load_manifest, manifest_sha256
-    from fejepa.fe.ood2d import DEFAULT_SEEDS, FAMILIES, generate_family, generate_remesh
+    from fejepa.fe.ood2d import DEFAULT_SEEDS, FAMILIES, generate_family, generate_inband, \
+        generate_remesh
     from fejepa.report import _git_describe
 
     for fam in a.families:
-        if fam not in FAMILIES and fam != "R":
+        if fam not in FAMILIES and fam not in ("R", "IB"):
             raise SystemExit(f"unknown family {fam!r}")
     out = Path(a.out)
     res = {"what": "wp9 OOD-2D v1 families and remesh set (evaluation only)",
@@ -90,6 +101,8 @@ def main() -> None:
                     shutil.rmtree(d)
                 if fam == "R":
                     generate_remesh(d, a.n_remesh, DEFAULT_SEEDS["R"])
+                elif fam == "IB":
+                    generate_inband(d, a.n_inband, DEFAULT_SEEDS["IB"])
                 else:
                     generate_family(d, fam, a.n, DEFAULT_SEEDS[fam])
                 _existing(d, _expected(fam, a))          # the new family checks out

@@ -16,7 +16,9 @@ unless its configuration is PREREG_E1's stamped e1_2d_base. The decisions are
 recomputed with the frozen rules (`scripts/w9_session1_decisions.py`, whose
 SHA-256 they must record); every report and the decisions must have run on
 `prereg-w9`; each report's verified hash must be PREREG_W9's line for its arm.
-The verdict file records every input's SHA-256 and the adjudicating code's."""
+The verdict file records every input's SHA-256 and the adjudicating code's;
+adjudicating files that differ from their `prereg-w9` versions (`--code-ref`)
+are recorded as a deviation (PREREG_W9 r3, Sec. 8)."""
 from __future__ import annotations
 
 import argparse
@@ -37,6 +39,11 @@ SESSION1_FILES = {"amp2d": "c0_amp2d.json", "timing": "profile_2d_w9.json",
                   "memory": "c0_memory.json", "trainval": "c0_trainval.json",
                   "val": "c0_val.json"}
 SESSION2_REQUIRED = ("plan.json", "status.txt", "provenance.txt")
+ADJUDICATING_FILES = ("src/fejepa/analysis/adjudicate_w9.py", "src/fejepa/analysis/adjudicate.py",
+                      "src/fejepa/report.py", "scripts/adjudicate_w9.py",
+                      "scripts/w9_session1_decisions.py")
+"""The files whose code decides a verdict or a refusal (the adjudication, the
+guard, the stamped-line reader, the frozen rules)."""
 
 
 def _rules():
@@ -53,6 +60,31 @@ def _git(*args) -> str:
                               timeout=10).stdout.strip() or "unavailable"
     except Exception:                                     # noqa: BLE001
         return "unavailable"
+
+
+def code_against(ref: str) -> dict:
+    """The adjudicating files in this checkout (working tree) against their
+    versions at `ref` (the stamp), as `git diff --quiet <ref> -- <file>` sees
+    them: {"ref", "compared", "differs": [paths], "note"?}. Never raises."""
+    out = {"ref": ref, "compared": False, "differs": []}
+    try:
+        ok = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--verify", "--quiet",
+                             f"{ref}^{{commit}}"], capture_output=True, timeout=10).returncode == 0
+        if not ok:
+            out["note"] = f"no {ref} in this checkout"
+            return out
+        for p in ADJUDICATING_FILES:
+            rc = subprocess.run(["git", "-C", str(ROOT), "diff", "--quiet", ref, "--", p],
+                                capture_output=True, timeout=30).returncode
+            if rc == 1:
+                out["differs"].append(p)
+            elif rc != 0:
+                raise RuntimeError(f"git diff exited {rc} on {p}")
+        out["compared"] = True
+    except Exception as exc:                              # noqa: BLE001
+        out["differs"] = []
+        out["note"] = f"comparison failed ({type(exc).__name__}: {exc})"
+    return out
 
 
 def find_reports(s2: Path) -> dict:
@@ -104,6 +136,8 @@ def main() -> None:
     ap.add_argument("--prereg", default=str(ROOT / "PREREG_W9.md"))
     ap.add_argument("--expected-git", default="prereg-w9",
                     help="the git describe every run must record")
+    ap.add_argument("--code-ref", default="prereg-w9",
+                    help="the commit the adjudicating code is compared with")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
     s1, s2 = Path(a.session1), Path(a.session2)
@@ -153,11 +187,17 @@ def main() -> None:
                         for f in SESSION2_REQUIRED},
                      "e1_report": {"path": a.e1_report, "sha256": file_sha256(a.e1_report)},
                      "prereg": {"path": a.prereg, "sha256": file_sha256(a.prereg)}}
+    code = code_against(a.code_ref)
     res["adjudicator"] = {
         "git": _git("describe", "--always", "--dirty", "--tags"),
-        "sha256": {p: file_sha256(ROOT / p) for p in (
-            "src/fejepa/analysis/adjudicate_w9.py", "src/fejepa/analysis/adjudicate.py",
-            "scripts/adjudicate_w9.py", "scripts/w9_session1_decisions.py")}}
+        "sha256": {p: file_sha256(ROOT / p) for p in ADJUDICATING_FILES},
+        "against_stamp": code}
+    if not code["compared"]:
+        res["deviations"].append(f"adjudicating code not compared with {a.code_ref} "
+                                 f"({code.get('note')})")
+    elif code["differs"]:
+        res["deviations"].append(f"adjudicating code differs from {a.code_ref} in "
+                                 f"{code['differs']} (its SHA-256 under adjudicator)")
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     Path(a.out).write_text(json.dumps(res, indent=1) + "\n")
     print(json.dumps({"H1": res["H1"]["verdict"], "H1_rel_change": res["H1"].get("rel_change"),

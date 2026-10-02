@@ -1,6 +1,6 @@
 {
- "this": "/home/claude/fejepa/FE-JEPA-wp9/src",
- "other": "/tmp/claude-0/-home-claude/a504aab6-a0d0-5d9e-9bef-0d45022ae4b4/scratchpad/wp8src/src",
+ "this_src_tree": "710ccb32a703bb99355d0e797895698fa2155300",
+ "other_src_tree": "5be6357b912cad058121092f274e6a322169b9f6",
  "config": "configs/e1_2d_base.json",
  "floats_compared": 162,
  "differences": [],

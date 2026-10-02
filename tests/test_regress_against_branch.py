@@ -7,7 +7,12 @@ checkout)."""
 import importlib.util
 import json
 import math
+import os
+import shutil
+import subprocess
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -66,3 +71,40 @@ def test_miniature_keeps_the_stamped_structure(tmp_path):
     assert m["experiments"]["wp6"]["enabled"] and m["experiments"]["e6"]["enabled"]
     assert m["labels"]["inband_prefix"] >= max(bud)
     assert m["data"]["n"] >= max(bud) + m["split"]["n_val"]
+
+
+def test_src_tree_is_gits_tree_id(tmp_path):
+    """wp9 Stage 0c: the summary names each side by `src_tree`, which must be
+    git's own id of the files' tree: ignored files and empty directories
+    skipped, a directory sorted as its name plus '/', the execute bit kept."""
+    git = shutil.which("git")
+    if git is None:
+        pytest.skip("no git")
+    mod = _mod()
+    src = tmp_path / "src"
+    (src / "pkg" / "a").mkdir(parents=True)
+    (src / "pkg" / "__init__.py").write_text("x = 1\n")
+    (src / "pkg" / "a" / "z.py").write_bytes("\u00e9 = 2\n".encode())
+    (src / "pkg" / "a-b.py").write_text("")             # sorts before the directory "a"
+    (src / "pkg" / "tool.sh").write_text("#!/bin/sh\n")
+    (src / "pkg" / "tool.sh").chmod(0o755)
+    (src / "pkg" / "__pycache__").mkdir()
+    (src / "pkg" / "__pycache__" / "m.cpython-311.pyc").write_bytes(b"\0")
+    (src / "pkg" / "stray.pyc").write_bytes(b"\0")
+    (src / "pkg" / "empty").mkdir()
+    (src / "fejepa.egg-info").mkdir()
+    (src / "fejepa.egg-info" / "PKG-INFO").write_text("x\n")
+    shutil.copyfile(ROOT / ".gitignore", tmp_path / ".gitignore")
+    env = {**os.environ, "GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
+
+    def g(*args):
+        return subprocess.run([git, "-C", str(tmp_path), "-c", "core.autocrlf=false",
+                               "-c", "core.fileMode=true", *args], capture_output=True,
+                              text=True, check=True, env=env).stdout.strip()
+
+    g("init", "-q")
+    g("add", "-A")
+    assert mod.src_tree(src) == g("write-tree", "--prefix=src/")
+    (src / "pkg" / "tool.sh").chmod(0o644)                     # the mode is part of the id
+    g("add", "-A")
+    assert mod.src_tree(src) == g("write-tree", "--prefix=src/")

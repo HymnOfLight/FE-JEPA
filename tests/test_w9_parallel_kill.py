@@ -61,10 +61,12 @@ def test_map_units_raises_when_a_busy_worker_is_killed(tmp_path, monkeypatch):
     assert parallel.map_units(mod.unit, [{"i": i, "dir": d} for i in range(4)], 2, "ok") == \
         [0, 1, 2, 3]
     t0 = time.time()
-    with pytest.raises(RuntimeError, match="worker process died"):
+    with pytest.raises(RuntimeError, match="worker process died") as err:
         parallel.map_units(mod.unit, [{"i": i, "dir": d, "kill": i == 1, "secs": 30}
                                       for i in range(3)], 3, "kill test")
     assert time.time() - t0 < 20                          # the others are not waited for
+    codes = str(err.value).split("worker exit codes ")[1].split("]")[0] + "]"
+    assert sorted(eval(codes)) == [-15, -15, -9]          # the killed one; the two stopped
     time.sleep(1)
     assert not any(_alive(p) for p in _pids(tmp_path))
 
@@ -88,11 +90,12 @@ def test_map_units_raises_when_an_idle_worker_is_killed(tmp_path, monkeypatch):
 
     threading.Thread(target=killer, daemon=True).start()
     t0 = time.time()
-    with pytest.raises(RuntimeError, match="worker process died"):
+    with pytest.raises(RuntimeError, match="worker process died") as err:
         parallel.map_units(mod.unit, [{"i": 0, "dir": d, "secs": 0.0, "wait_for": "w1.pid",
                                        "done_marker": True},
                                       {"i": 1, "dir": d, "secs": 30}], 2, "idle kill")
     assert time.time() - t0 < 30
+    assert "-9" in str(err.value)
     assert _pids(tmp_path) and len(set(_pids(tmp_path))) == 2       # two distinct workers
 
 

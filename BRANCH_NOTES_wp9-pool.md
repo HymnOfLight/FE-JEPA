@@ -17,10 +17,10 @@ Purpose: two questions, both in 2D, both label-free at training time.
 - **Q2 (S, mesh-independent scale).** Do a decode scale and a load input that
   do not change with the mesh (1/64 of the battery's L1 load instead of its
   largest nodal force; per-node load densities; load summaries free of the
-  mesh) remove the growth of the error on a finer mesh than training saw --
+  mesh) reduce the growth of the error on a finer mesh than training saw --
   the fine-mesh amplitude deficit of wp8's post-hoc reading 4e? S runs only if
   session 1's rule 1 admits it, against a baseline trained afresh on fresh
-  seeds.
+  seeds (since r3 the baseline runs in every session 2).
 
 C2 (adaptive allocation of the training budget) and 3D are not in this round.
 
@@ -329,10 +329,11 @@ until session 2 has returned (the box checks that HEAD is exactly
    output on the readings beside it, recomputed, and was written on
    `prereg-w9`, which the checkout must also be; rules 1-2 decided and a
    pool found; the
-   six evaluation sets complete and the manifests on disk the record's; E1's
+   evaluation sets (six; seven with IB since r3) complete and the manifests
+   on disk the record's; E1's
    validation arrays reproduced to 1e-4; a GPU and E1's torch; 5 GB free),
-   the selection and order (1,024; N_max; the fresh baseline and S if
-   admitted; 4,096), workers (rule 2's for N_max) and checkpointing (rule 3;
+   the selection and order (1,024; N_max; the fresh baseline -- since r3 in
+   every session 2; S if admitted; 4,096), workers (rule 2's for N_max) and checkpointing (rule 3;
    kept on for an arm that would not fit without it, or when rule 3 is
    undecided), a dry run of each selected configuration, a summary line, and
    the command script: it changes to the repository, refuses to run twice at
@@ -420,3 +421,121 @@ checked against its status and provenance files, no report refused, H1 and
 H2 issued, the restart recorded). Its numbers mean nothing (16 steps).
 
 Suite: 411 (Stage 0a 355 + 56) passed.
+
+## Stage 0c (2 Oct 2026) -- pre-stamp review; PREREG_W9 r3; CPU pilot of S
+
+PI decisions (2 Oct). Stage 0b's four recommendations approved: PREREG_W9
+stamped before session 1 so that both sessions run in one visit; S's factor
+1/64; H2 against a fresh baseline on seeds 3-5 with three conditions; the r2
+text. The stamp waits until the PI calls the run. After the pre-stamp review
+below, r3 approved as recommended (A1-A3, C1-C12; options B1, B2, B3, B5; not
+B4, a scale-only ablation arm, nor B6, fallbacks for a failed gate); and the
+in-band holdout IB in H1's in-band set (option C, chosen by the PI over A,
+disclosure only, and B, capping each instance's value at 0.25).
+
+1. **Pre-stamp review** of r2 (mine and an independent one). The main
+   finding: the seed spread of H1's reference (E1's states, in band
+   0.0374 / 0.0405 / 0.0371) comes from one validation instance (#233: 0.760
+   in seed 1 against 0.011 in seeds 0 and 2; without it the coefficient of
+   variation is 0.6%); one such blow-up moves a 256-instance arm mean by
+   about 2.6%, so the 10% floor meant 7.9-13% of the reference's clean level
+   depending on how many blow-ups N_max shows. r3 adds IB (2,048 fresh
+   training-family instances, seed 91007) to H1's in-band set (2,304
+   instances: a blow-up then moves an arm mean by 0.2-0.3%) and states the
+   finding; it also says what a verdict licenses, corrects Q1's reading of
+   the theory note (a statement about cost) and Q2's "remove", states H2's
+   operating characteristics, its remaining selection on F5's instances, the
+   bundle's scope, the two ratio definitions and the uninformative case,
+   commits the 1/64 measurement and every simulation it quotes, gives the
+   reuse chain from E1's commit (`cdac731`: post-hoc modules, an atomic JSON
+   write and the saved-state container changed since, none on the training
+   path), records the CPU pilot, and names the stamp script. Options: B1 the
+   fresh baseline runs in every session 2 (a coarse on-box check of the
+   training path behind the reuse, and N_max against it beside H1); B2
+   per-seed medians, Welch and instance-resampling intervals beside H1 and
+   each H2 condition; B3 a growth reading on R; B5 the adjudicating code
+   compared with `prereg-w9`. No threshold changed.
+2. **Code.** `fe/ood2d.generate_inband` and session 1's `w9_make_ood2d.py`
+   (IB, seed 91007, 2,048); every configuration evaluates IB (all six
+   regenerated; the configurations differ from E1's base only in Sec. 2's
+   keys, as before); the plan's gate checks seven sets; the adjudicator
+   decides H1 on the validation split and IB together (`pooled_seed_means`,
+   each set weighted by its instance count; H2 and rule 1 read the
+   validation split alone), reports the pooled in-band readings in every
+   arm's table, the readings beside the verdicts (`robustness`,
+   `welch_interval`, `instance_bootstrap`), R's growth (`remesh_growth`),
+   the fresh-baseline flag and H2's uninformative note -- none of which can
+   change or block a verdict -- and the ratio of seed means (rule 1's form);
+   the plan and the adjudicator expect the fresh baseline in every session 2;
+   the CLI compares the adjudicating files (incl. `report.py`) with
+   `prereg-w9` (`code_against`) and records a difference as a deviation. A
+   worker's death names the workers' exit codes (`parallel._died`; -9 is the
+   out-of-memory killer's signal). New scripts: `stamp_prereg_w9.py` (the
+   stamp of Sec. 8 in one step: refuses anything but the r3 draft, fills the
+   six lines and the status, computes and verifies the self-hash),
+   `w9_scale_factor.py` (`records/wp9/scale_factor.json`), `w9_sims.py`
+   (`records/wp9/simulations.json`), `w9_pilot_s.py`
+   (`records/wp9/pilot_s_cpu/`), `make_w9_paper_material.py` (tables from
+   the verdict file; diverged values print as such; LaTeX-checked);
+   `paper/wp9/scale_lemma.tex` (why max|F| shrinks like h^(d-1) and the
+   summed |F| does not, with proof-status flags). `tests/test_w9_records.py`
+   ties the regression record to the committed `src` tree.
+3. **CPU pilot of S** (exploratory, toy scale, own seeds;
+   `records/wp9/pilot_s_cpu/README.md`): no red flag; at that scale the
+   baseline's median c* on an F5-like set was 2.4-2.7 and S's 0.94-0.98, and
+   S's predicted energy norm followed the exact one across R-like mesh
+   sizes. A side finding: on CPU, PyTorch's inference path of
+   `nn.MultiheadAttention` materializes the attention matrices (about 3.9 GB
+   at 7,760 nodes with 4 heads and 4 load cases), which killed a pilot
+   worker in the sandbox; CUDA evaluates without them (Phase 2 evaluated
+   about 4e4-node 3D meshes with this encoder on the box), and no box step
+   evaluates on CPU.
+4. **Independent review of Stage 0c** found thirteen issues, all addressed:
+   the adjudication crashed on a non-finite fresh baseline (the flag's
+   format; now flagged as diverged, tested); the paper tables crashed on a
+   diverged arm (now printed as diverged, tested); statement (b) of the
+   scale lemma needed load cases that are a traction or a body load alone;
+   three numbers were double-rounded; the stamp comparison of B5 now uses
+   `git diff` and covers `report.py`; H2's secondary readings moved out of
+   its try block; "a check" of the reuse became "a coarse check"; LaTeX's
+   "<"; and wording in r3.
+5. **Regression** re-run on the final Stage 0c code (`src` tree
+   `710ccb32...` in `records/wp9/README.md`): identical (162 and 2,590
+   numbers, every state file byte for byte). The summaries now name the two
+   sides by their `src` trees -- git tree ids computed from the files
+   (`regress_against_branch.src_tree`, tested against `git write-tree`; the
+   other side is `wp8-lejepa` at `5f8e2df` exactly) -- instead of the
+   sandbox's paths, which Stage 0b's copies held (they remain in the
+   history); `tests/test_w9_records.py` checks the summaries' trees against
+   the README.
+6. **Independent review of the IB change** (IB, the simulations, the
+   workers' exit codes, the r3 text): nothing that could break the one-visit
+   run or change a verdict; three medium and seven low findings, all
+   addressed. A commit hash the remote does not have, in the pilot's README
+   (removed). The sandbox paths in the regression summaries (item 5). No
+   suite count for the box's step 0c to compare with (RUNBOOK and this
+   section now give it). Nothing checked IB's size or seed:
+   `w9_make_ood2d.py --n-inband` could have changed H1's set unnoticed (the
+   plan's gate and the adjudication now refuse a session-1 record whose sets
+   are not Sec. 3's sizes and seeds, `ood2d.SET_SIZES` and `DEFAULT_SEEDS`,
+   which are also the script's defaults). The tests could not tell weighted
+   from unweighted pooling (the miniature's IB now holds 12 instances against
+   the validation split's 4). A report without per-instance arrays would
+   have stopped the whole adjudication (`check_arm` now refuses it alone).
+   r3 names the in-band set each reading uses (H1: the validation split and
+   IB; H2, rule 1 and every F5 / in-band ratio: the validation split), states
+   that a set that fails to generate stops session 2, and its revision line
+   no longer overclaims. Stale text (session 2's 10-19 h, docstrings, the
+   pilot README's seeds). Two simulation sections shared a random stream
+   (`exploratory` has its own now: its quoted 4-6% unchanged; every other
+   section byte-identical).
+7. **The evaluation sets at full size** (`records/wp9/ood2d_sandbox.json`):
+   step 1a as the runbook runs it, in the sandbox -- all seven sets
+   generated and verified from their seeds, no failed draw (3,408
+   instances, 5.5 min on one CPU, 0.83 GB; gmsh 4.15.2). The instance files
+   are byte-reproducible on one machine, so session 1's manifests can be
+   compared with these.
+
+Suite: 427 (Stage 0b 411 + 16) passed. On the box: 427 passed, or 426
+passed and 1 skipped where pdflatex is missing (the paper tables' LaTeX
+build).

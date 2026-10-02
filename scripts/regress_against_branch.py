@@ -14,7 +14,9 @@ supervised units from the cache). It compares every number of the two
 reports (all top-level blocks except the configuration and provenance, whose
 paths and git strings differ; the corpus manifests are compared), for both
 passes -- bitwise, except WP6's ARPACK values (round-off, see _TOLERANT) --
-and the bytes of every state file. Exit status 0 iff all identical.
+and the bytes of every state file. Exit status 0 iff all identical. The
+summary names each side by its source tree's git id (`src_tree`: what `git
+rev-parse <commit>:src` prints for a commit of those files), not by a path.
 
     git worktree add ../FE-JEPA-wp7 origin/wp7-3d
     python scripts/regress_against_branch.py --other ../FE-JEPA-wp7/src \
@@ -41,6 +43,46 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+_IGNORED_DIRS = {"__pycache__", ".pytest_cache", ".ruff_cache", ".ipynb_checkpoints", "runs"}
+_IGNORED_SUFFIXES = (".pyc", ".pt")
+"""What the repository's .gitignore leaves out (plus *.egg-info directories)."""
+
+
+def src_tree(path) -> str:
+    """The git tree id of a source directory as it is on disk: what `git
+    rev-parse <commit>:src` prints for a commit of exactly these files. Regular
+    files are blobs (mode 100755 if the owner may execute them, else 100644),
+    directories trees; what .gitignore leaves out and empty directories are
+    skipped; a symbolic link is refused."""
+    def tree(d: Path):
+        entries = []
+        for p in d.iterdir():
+            if p.is_symlink():
+                raise ValueError(f"{p}: a symbolic link (src_tree does not hash links)")
+            if p.is_dir():
+                if p.name in _IGNORED_DIRS or p.name.endswith(".egg-info"):
+                    continue
+                h = tree(p)
+                if h is not None:
+                    entries.append((p.name + "/", b"40000 " + p.name.encode(), h))
+            elif not p.name.endswith(_IGNORED_SUFFIXES):
+                data = p.read_bytes()
+                mode = b"100755" if p.stat().st_mode & 0o100 else b"100644"
+                entries.append((p.name, mode + b" " + p.name.encode(),
+                                hashlib.sha1(b"blob %d\0" % len(data) + data).digest()))
+        if not entries:
+            return None
+        body = b"".join(head + b"\0" + h for _, head, h in sorted(entries))
+        return hashlib.sha1(b"tree %d\0" % len(body) + body).digest()
+
+    h = tree(Path(path))
+    return h.hex() if h is not None else hashlib.sha1(b"tree 0\0").hexdigest()
+
+
+def _rel(path) -> str:
+    """A path relative to this checkout if it lies inside, else its name."""
+    p = Path(path).resolve()
+    return p.relative_to(ROOT).as_posix() if p.is_relative_to(ROOT) else p.name
 
 
 def miniature(cfg: dict, work: Path, n: int = 80, n_fine: int = 7) -> dict:
@@ -193,8 +235,8 @@ def main() -> None:
         n_float += n
     names = sorted(set(this["states"]) | set(other["states"]))
     states = {nm: this["states"].get(nm) == other["states"].get(nm) for nm in names}
-    summary = {"this": str(Path(a.src).resolve()), "other": str(Path(a.other).resolve()),
-               "config": a.config, "floats_compared": n_float, "differences": diffs[:50],
+    summary = {"this_src_tree": src_tree(a.src), "other_src_tree": src_tree(a.other),
+               "config": _rel(a.config), "floats_compared": n_float, "differences": diffs[:50],
                "n_differences": len(diffs), "state_files": len(names),
                "state_files_identical": states,
                "identical": not diffs and all(states.values()) and bool(names)}

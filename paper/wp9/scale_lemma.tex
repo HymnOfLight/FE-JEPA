@@ -1,0 +1,89 @@
+% wp9 Stage 0c: why S's decode scale does not change with the mesh and E1's
+% does. Hand-written (not generated). Needs amsmath and amsthm with a `lemma'
+% environment. Status flags: [proved] = a complete argument below; [empirical]
+% = a measured record; the step from (a) to an extrapolation failure of a
+% trained network is empirical, not proved.
+
+\begin{lemma}[Mesh dependence of the two decode scales]\label{lem:w9-scale}
+Let $\Omega_h \subset \mathbb{R}^d$ ($d = 2, 3$) carry a shape-regular,
+quasi-uniform family of simplicial meshes of size $h$ with continuous
+piecewise-linear nodal basis functions $\varphi_i \ge 0$, $\sum_i \varphi_i
+\equiv 1$. For load case $c$ with traction $t^{(c)}$ on the Neumann boundary
+$\Gamma_N$ and body load $b^{(c)}$, the consistent nodal load of node $i$ in
+direction $k$ is
+\[
+  F^{(c)}_{ik} = \int_{\Gamma_N} t^{(c)}_k \varphi_i \,\mathrm{d}s
+               + \int_{\Omega_h} b^{(c)}_k \varphi_i \,\mathrm{d}x .
+\]
+\begin{enumerate}
+\item[(a)] \emph{[proved]} $\max_{i,k,c} |F^{(c)}_{ik}| \le C_1 h^{d-1}
+  \max_c \|t^{(c)}\|_{L^\infty(\Gamma_N)} + C_2 h^{d} \max_c
+  \|b^{(c)}\|_{L^\infty(\Omega_h)}$, with $C_1, C_2$ depending only on the shape
+  regularity. If some component $t^{(c)}_k$ is continuous and non-zero at a
+  point of the relative interior of a flat part of $\Gamma_N$, then also
+  $\max_{i,k,c} |F^{(c)}_{ik}| \ge c_0\, h^{d-1}$ for all small $h$: with
+  tractions present, the largest nodal force is $\Theta(h^{d-1})$.
+\item[(b)] \emph{[proved]} $\sum_{i,k,c} |F^{(c)}_{ik}| \le \sum_{k,c} \big(
+  \|t^{(c)}_k\|_{L^1(\Gamma_N)} + \|b^{(c)}_k\|_{L^1(\Omega_h)} \big)$. Let
+  each load case be a traction alone or a body load alone (as each of this
+  battery's four is). Then equality holds when no load component changes
+  sign on the support of any $\varphi_i$ (in particular for uniform loads),
+  and for Lipschitz loads whose components vanish on finite unions of
+  Lipschitz pieces of dimension $d-2$ in $\Gamma_N$ (points when $d = 2$) and
+  $d-1$ in $\Omega$, the deficit is $O(h^2)$. (A load case combining a
+  traction and a body load of opposite signs can lose $O(h)$ on the boundary
+  nodes.)
+\end{enumerate}
+\end{lemma}
+
+\begin{proof}
+(a) Upper bound: $|F^{(c)}_{ik}| \le \|t^{(c)}\|_\infty \int_{\Gamma_N}
+\varphi_i + \|b^{(c)}\|_\infty \int_{\Omega_h} \varphi_i$, and shape
+regularity bounds the $(d-1)$-measure of $\operatorname{supp}\varphi_i \cap
+\Gamma_N$ by $C h^{d-1}$ and the $d$-measure of $\operatorname{supp}\varphi_i$
+by $C h^d$, while $0 \le \varphi_i \le 1$. Lower bound: let $t^{(c)}_k(x_0)
+\ne 0$ and let $i$ be a boundary node nearest $x_0$. For small $h$ the patch
+$\operatorname{supp}\varphi_i$ lies in the flat part, within distance $C h$
+of $x_0$, where $|t^{(c)}_k - t^{(c)}_k(x_0)| \le |t^{(c)}_k(x_0)|/2$ by
+continuity; hence $|F^{(c)}_{ik}| \ge \tfrac12 |t^{(c)}_k(x_0)| \int_{\Gamma_N}
+\varphi_i - C h^d \|b^{(c)}\|_\infty \ge c_0 h^{d-1}$, using quasi-uniformity
+for $\int_{\Gamma_N} \varphi_i \ge c h^{d-1}$.
+
+(b) By the triangle inequality and the partition of unity, $\sum_i |\int
+g\,\varphi_i| \le \sum_i \int |g|\,\varphi_i = \int |g|$ for each scalar load
+density $g$ (a traction component on $\Gamma_N$ or a body-load component on
+$\Omega_h$), with equality iff $g$ has one sign on every
+$\operatorname{supp}\varphi_i$. The deficit is at most $2\int_{N_h} |g|$,
+where $N_h$ is the union of the supports on which $g$ changes sign; these lie
+within distance $C h$ of the zero set of $g$, whose $C h$-neighbourhood has
+measure $O(h)$ for the finite unions of Lipschitz pieces assumed, and $|g| \le
+L C h$ on $N_h$, which gives $O(h^2)$.
+\end{proof}
+
+\paragraph{Consequence.} The discrete solution $u_h$ converges to the
+continuum solution as $h \to 0$, so its size is $\Theta(1)$ in $h$. A decoder
+whose output is multiplied by $s_h$ must produce the raw field $u_h / s_h$.
+With E1's scale $s_h = \max|F| = \Theta(h^{d-1})$ that raw field grows like
+$h^{-(d-1)}$: for a fixed geometry and fixed loads, refining the mesh from a
+training size $h_0$ to $h$ multiplies the raw field the network must produce
+by about $(h_0/h)^{d-1}$. With S's scale $s_h = \tfrac{1}{64}\sum|F|$, which
+converges by (b), the raw field converges as well \emph{[proved]}. That a
+network trained on a range of mesh sizes does not extrapolate its output
+magnitude to finer meshes, and so under-predicts the amplitude there ($c^\ast
+> 1$), is \emph{[empirical]}: wp8's 3D reading 4e (trained on $\ell_c$
+0.0579--0.0906; median $c^\ast$ 1.23 at $\ell_c = 0.0374$ against 1.00 in
+band) and this work's CPU pilot (trained on $h$ 0.05--0.12; median $c^\ast$
+2.4--2.7 at $h = 0.025$ under E1's scale, 0.94--0.98 under S's, at toy
+scale).
+
+\paragraph{Records \emph{[empirical]}.} 2D, this work
+(\texttt{records/wp9/scale\_factor.json}; 16 training-family geometries meshed
+again with geometry, material and loads unchanged): from $h = 0.12$ to $0.085
+/ 0.05 / 0.035 / 0.025$, $\max|F|$ scales by $0.711 / 0.422 / 0.296 / 0.213$
+(medians over the geometries; at $h = 0.025$ the range is 0.204--0.225; $h$
+itself scales by $0.708 / 0.417 / 0.292 / 0.208$), $\sum|F|$ by $1.000$ to
+within $0.3\%$ (the battery's tractions are uniform on straight edges, so (b) holds
+with equality for them; the body load's integral follows the polygonal holes'
+area). 3D, wp8 reading 4e: relative to $\ell_c = 0.0906$, $\max|F|$ scales by
+$0.705 / 0.430 / 0.186$ at $\ell_c = 0.0742 / 0.0579 / 0.0374$, against
+$(\ell_c / 0.0906)^2 = 0.671 / 0.408 / 0.170$.

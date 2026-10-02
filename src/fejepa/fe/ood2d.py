@@ -14,6 +14,9 @@ from the training ranges:
   F5  mesh size target_h = 0.025                      (training: 0.05-0.12)
   R   remesh set: training-family geometries and loads, each meshed at
       several target_h (only the mesh changes)
+  IB  in-band holdout (PREREG_W9 r3): the training family itself, drawn
+      afresh by the training sampler -- with E1's validation split, H1's
+      in-band set
 
 Instances are labelled at generation (direct solve, counted in the
 manifest's ledger) and serve evaluation only: no training and no selection
@@ -54,10 +57,21 @@ FAMILIES = {
     "F4": "Poisson ratio 0.40-0.45 (training 0.25-0.38)",
     "F5": "mesh size target_h = 0.025 (training 0.05-0.12)",
 }
-DEFAULT_SEEDS = {"F1": 91001, "F2": 91002, "F3": 91003, "F4": 91004, "F5": 91005, "R": 91006}
+DEFAULT_SEEDS = {"F1": 91001, "F2": 91002, "F3": 91003, "F4": 91004, "F5": 91005, "R": 91006,
+                 "IB": 91007}
+IB_N = 2048
+IB_DEFINITION = ("training family (fejepa.fe.generator.sample_params), drawn afresh: an "
+                 "in-band holdout")
 F5_TARGET_H = 0.025
 REMESH_H = (0.12, 0.085, 0.05, 0.035, 0.025)
 MAX_REDRAWS = 2000
+FAMILY_N = 256
+REMESH_GEOMETRIES = 16
+SET_SIZES = {**{f: FAMILY_N for f in FAMILIES}, "R": REMESH_GEOMETRIES * len(REMESH_H),
+             "IB": IB_N}
+"""PREREG_W9's evaluation sets (Sec. 3): instances per set, each drawn from its
+DEFAULT_SEEDS seed (scripts/w9_make_ood2d.py's defaults). The session-2 plan
+and the adjudication check session 1's record against both."""
 
 
 def _place(rng, width, height, n_holes, rmin, rmax, strict, edge_clear=0.0):
@@ -169,6 +183,28 @@ def generate_family(out, family: str, n: int, seed: int | None = None) -> Path:
         "backend": "gmsh", "gmsh_version": _gmsh_version(), "family": family,
         "definition": FAMILIES[family], "seed": seed, "labelled_policy": "all",
         "purpose": "evaluation only (wp9 OOD-2D v1)", "ledger": _ledger(ledger)})
+    return out
+
+
+def generate_inband(out, n: int = IB_N, seed: int | None = None) -> Path:
+    """`n` labelled instances of the training family itself (instance i from
+    SeedSequence(seed).spawn(n)[i], drawn by the training sampler as the
+    corpus is; serial, manifest order = index order): the in-band holdout IB."""
+    seed = DEFAULT_SEEDS["IB"] if seed is None else int(seed)
+    out = Path(out)
+    out.mkdir(parents=True, exist_ok=True)
+    ledger, records = SolveLedger(), []
+    for i, child in enumerate(np.random.SeedSequence(seed).spawn(n)):
+        params = dict(sample_params(np.random.default_rng(child)), family="IB")
+        arch = labelled_instance(params, ledger)
+        path = out / f"instance_{i:05d}.npz"
+        save_instance(arch, path)
+        records.append(_record(path, arch, params))
+    write_manifest(out, records, {
+        "backend": "gmsh", "gmsh_version": _gmsh_version(), "family": "IB",
+        "definition": IB_DEFINITION, "seed": seed, "labelled_policy": "all",
+        "purpose": "evaluation only (wp9: H1's in-band set with E1's validation split)",
+        "ledger": _ledger(ledger)})
     return out
 
 

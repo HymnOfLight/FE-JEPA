@@ -101,10 +101,6 @@ def map_units(func, payloads: list[dict], workers: int, label: str) -> list:
                                  max(1, (os.cpu_count() or 8) // workers)))
     ctx = mp.get_context("spawn")                    # fork would break CUDA
     results: dict[int, object] = {}
-    died = RuntimeError(f"{label}: a worker process died (killed by the system, e.g. for lack "
-                        "of memory, or failed at start-up: see the lines above) and its unit "
-                        "cannot finish; nothing of it was saved beyond its epoch checkpoint -- "
-                        "restart the run with --reuse-states")
     ex = ProcessPoolExecutor(max_workers=workers, mp_context=ctx, initializer=_bootstrap,
                              initargs=(threads, os.getpid()))
     procs = []
@@ -119,12 +115,14 @@ def map_units(func, payloads: list[dict], workers: int, label: str) -> list:
                 try:
                     results[i] = fut.result()
                 except BrokenProcessPool:
-                    raise died from None
+                    raise _WorkerDied() from None
                 task.step(payloads[i].get("tag", ""))
             if pending and not done and any(p.exitcode is not None for p in procs):
-                raise died
-    except BaseException:
+                raise _WorkerDied()
+    except BaseException as exc:
         _stop_workers(ex, procs)
+        if isinstance(exc, _WorkerDied):        # the exit codes are known once all are stopped
+            raise _died(label, procs) from None
         raise
     ex.shutdown(wait=True)
     task.done()
@@ -132,6 +130,32 @@ def map_units(func, payloads: list[dict], workers: int, label: str) -> list:
 
 
 WORKER_POLL_S = 30.0
+
+
+class _WorkerDied(Exception):
+    """A worker of the pool died (internal: becomes `_died`'s error once the
+    workers are stopped)."""
+
+
+def _died(label: str, procs: list) -> RuntimeError:
+    """wp9 Stage 0c: the error of a map whose worker died names the workers'
+    exit codes, read after every worker was stopped and joined (-9: killed by
+    signal 9, the system's out-of-memory killer's signal; -11: a crash; -15:
+    a worker stopped after the death; a positive code: the worker exited,
+    e.g. failed at start-up). The executor's own thread may still be reaping
+    a worker when the map stops: a code not yet known is waited for up to 2 s
+    (None if it stays unknown). Scheduling only."""
+    import time
+
+    codes, deadline = [p.exitcode for p in procs], time.monotonic() + 2.0
+    while any(c is None for c in codes) and time.monotonic() < deadline:
+        time.sleep(0.05)
+        codes = [p.exitcode for p in procs]
+    return RuntimeError(f"{label}: a worker process died (worker exit codes {codes}; -9 is a "
+                        "kill by signal 9, e.g. by the system's out-of-memory killer; -15 a "
+                        "worker stopped after the death; see also the lines above) and its unit "
+                        "cannot finish; nothing of it was saved beyond its epoch checkpoint -- "
+                        "restart the run with --reuse-states")
 
 
 def _stop_workers(ex, procs: list) -> None:

@@ -2,8 +2,9 @@
 C1) and H2 (mesh-independent scale, S), with the secondary readings.
 
 Inputs: the arms' reports by role -- `n1024` (E1's states, evaluation only),
-`nmax`, `n4096`, and, when session 1's rule 1 admitted S, `b1024` (E1's base
-retrained with fresh seeds, H2's reference) and `s`; E1's base report (the
+`nmax`, `n4096`, `b1024` (E1's base retrained with fresh seeds: H2's reference
+and a second 1,024 arm, run in every session 2 since r3) and, when session
+1's rule 1 admitted S, `s`; E1's base report (the
 records copy); session 1's decision file and the readings it was computed
 from (recomputed here with the frozen rules); session 1's OOD-2D record;
 optionally session 2's plan and status file, and the remesh set's manifest.
@@ -33,8 +34,12 @@ GUARD_BAND = 0.10
 GUARD_K = 2.0
 TAIL_Q = 90
 REPRO_MAX = 1e-4
-SETS = ("val", "F1", "F2", "F3", "F4", "F5", "R")
+SETS = ("val", "IB", "F1", "F2", "F3", "F4", "F5", "R")
 METRICS = ("energy_gap_rel", "disp_rel_l2")
+INBAND = ("val", "IB")
+"""H1's in-band set since r3: E1's validation split and the in-band holdout IB
+(2,048 fresh training-family instances) together; a seed's value is its mean
+over all their instances. H2 and rule 1 read the validation split alone."""
 ALLOWED_DIFF = {("_comment",), ("out",), ("prereg_file",), ("evaluation",),
                 ("experiments", "e8", "pool_sizes"), ("experiments", "e8", "ar_epochs"),
                 ("experiments", "e8", "reuse_from"), ("experiments", "e8", "seed_offset"),
@@ -43,6 +48,16 @@ ALLOWED_DIFF = {("_comment",), ("out",), ("prereg_file",), ("evaluation",),
 """The keys in which a wp9 configuration may differ from E1's base (PREREG_W9
 Sec. 2); `prereg_guard` is on in both."""
 S_FACTOR = 0.015625
+RULE1_RATIO_MIN, RULE1_CSTAR_MIN = 1.5, 1.10
+"""Rule 1's thresholds (scripts/w9_session1_decisions.py; a test keeps the two
+in agreement): H2's uninformative case reads the fresh baseline against them."""
+BOOT_N, BOOT_SEED = 2000, 20261002
+"""r3 (Sec. 7): the instance-resampling interval's resamples and generator
+seed, fixed so that the readings are deterministic."""
+TRAIN_H_MIN = 0.05
+"""The finest training mesh size (OOD-2D v1: training target_h 0.05-0.12): R's
+growth reading divides its finest mesh's error by each training-range mesh
+size's (r3, Sec. 7)."""
 
 
 def _spec(pool, epochs, reuse=False, offset=0, s=False) -> dict:
@@ -115,6 +130,42 @@ def seed_ratios(rep: dict, num_set: str = "F5", den_set: str = "val",
     return [x / y if y else float("nan") for x, y in zip(a, b, strict=True)]
 
 
+def per_instance(c: dict, metric: str) -> list:
+    """Per seed: the per-instance values of `metric` (one float array each)."""
+    return [np.asarray(e["per_instance"][metric], float) for e in c["per_seed_eval"]]
+
+
+def seed_medians(c: dict, metric: str) -> list:
+    """Per seed: the median of `metric` over the set's instances."""
+    return [float(np.median(x)) for x in per_instance(c, metric)]
+
+
+def pooled_seed_means(rep: dict, sets=INBAND, metric: str = "energy_gap_rel") -> list:
+    """Per seed: the mean of `metric` over the instances of `sets` together
+    (each set's seed mean weighted by its number of instances). A non-finite
+    seed mean of any set makes the seed's value non-finite."""
+    cells = [cell(rep, s) for s in sets]
+    n = {len(c["per_seed_eval"]) for c in cells}
+    if len(n) != 1:
+        raise ValueError(f"adjudication refused: the sets {sets} hold different numbers of seeds")
+    out = []
+    for k in range(n.pop()):
+        tot = cnt = 0
+        for c in cells:
+            e = c["per_seed_eval"][k]
+            m = len(e["per_instance"][metric])
+            tot += float(e[metric]) * m
+            cnt += m
+        out.append(tot / cnt)
+    return out
+
+
+def pooled_per_instance(rep: dict, sets, metric: str) -> list:
+    """Per seed: the per-instance values of `metric` over `sets`, concatenated."""
+    per = [per_instance(cell(rep, s), metric) for s in sets]
+    return [np.concatenate(xs) for xs in zip(*per, strict=True)]
+
+
 # ------------------------------------------------------------------ guard --
 
 def guard(base_vals, new_vals, band: float = GUARD_BAND, k: float = GUARD_K) -> dict:
@@ -137,12 +188,97 @@ def guard(base_vals, new_vals, band: float = GUARD_BAND, k: float = GUARD_K) -> 
             "diverged": False, "base_per_seed": b, "new_per_seed": a}
 
 
-def _soft(fn, *args):
+def _soft(fn, *args, **kw):
     """A secondary reading: computed, or reported as not evaluated."""
     try:
-        return fn(*args)
+        return fn(*args, **kw)
     except Exception as exc:                              # noqa: BLE001
         return {"not_evaluated": f"{type(exc).__name__}: {exc}"}
+
+
+# ------------------------------------------------- robustness (r3, Sec. 7) --
+
+def welch_interval(base_vals, new_vals, level: float = 0.95) -> dict:
+    """rel = mean(new)/mean(base) - 1 with a Welch interval: rel +/- t(df) x
+    SE_rel (the guard's SE_rel, Welch-Satterthwaite degrees of freedom)."""
+    from scipy.stats import t as student_t
+
+    b, a = np.asarray(base_vals, float), np.asarray(new_vals, float)
+    if not (np.all(np.isfinite(b)) and np.all(np.isfinite(a))):
+        raise ValueError("non-finite per-seed values")
+    vb, va = b.var(ddof=1) / len(b), a.var(ddof=1) / len(a)
+    rel = float(a.mean() / b.mean() - 1)
+    if vb + va == 0:
+        return {"rel_change": rel, "low": rel, "high": rel, "df": None, "level": level}
+    df = (vb + va) ** 2 / (vb ** 2 / (len(b) - 1) + va ** 2 / (len(a) - 1))
+    half = float(student_t.ppf(0.5 + level / 2, df) * math.sqrt(vb + va) / b.mean())
+    return {"rel_change": rel, "low": rel - half, "high": rel + half, "df": float(df),
+            "level": level}
+
+
+def instance_bootstrap(base: list, new: list, base_den: list | None = None,
+                       new_den: list | None = None, n: int = BOOT_N, seed: int = BOOT_SEED,
+                       level: float = 0.95) -> dict:
+    """An interval for rel from resampling the instances, the seeds kept: per
+    resample, the same instances are drawn for both arms and every seed; each
+    seed's value is its mean over them, the arm's the seed mean. With
+    `*_den` (the in-band arrays) a seed's value is the ratio of its two sets'
+    means, each set drawn on its own."""
+    def stack(xs):
+        arr = np.stack([np.asarray(x, float) for x in xs])
+        if not np.all(np.isfinite(arr)):
+            raise ValueError("non-finite per-instance values")
+        return arr
+
+    rng = np.random.default_rng(seed)
+    B, A = stack(base), stack(new)
+    if B.shape[1] != A.shape[1]:
+        raise ValueError("the arms' instance counts differ")
+    idx = rng.integers(0, B.shape[1], size=(n, B.shape[1]))
+    vb, va = B[:, idx].mean(axis=2), A[:, idx].mean(axis=2)
+    if base_den is not None:
+        Bd, Ad = stack(base_den), stack(new_den)
+        if Bd.shape[1] != Ad.shape[1]:
+            raise ValueError("the arms' instance counts differ")
+        jdx = rng.integers(0, Bd.shape[1], size=(n, Bd.shape[1]))
+        vb, va = vb / Bd[:, jdx].mean(axis=2), va / Ad[:, jdx].mean(axis=2)
+    rel = va.mean(axis=0) / vb.mean(axis=0) - 1
+    lo, hi = np.percentile(rel, [50 * (1 - level), 50 * (1 + level)])
+    return {"low": float(lo), "high": float(hi), "resamples": n, "level": level}
+
+
+def robustness(b: dict, a: dict, set_name, metric: str, ratio: bool = False) -> dict:
+    """Beside a verdict's comparison of report `a` with reference `b` (no
+    criterion): the guard on per-seed medians over the instances, rel's Welch
+    interval, and the instance-resampling interval. `set_name`: one set, or a
+    tuple of sets read together (H1's in-band set). `ratio`: the comparison
+    is of the per-seed set_name / validation ratio (medians: the ratio of the
+    two sets' medians)."""
+    if not isinstance(set_name, str):
+        pb, pa = pooled_per_instance(b, set_name, metric), pooled_per_instance(a, set_name, metric)
+        return {"medians": _soft(guard, [float(np.median(x)) for x in pb],
+                                 [float(np.median(x)) for x in pa]),
+                "welch_95": _soft(welch_interval, pooled_seed_means(b, set_name, metric),
+                                  pooled_seed_means(a, set_name, metric)),
+                "instance_resampling_95": _soft(instance_bootstrap, pb, pa)}
+    cb, ca = cell(b, set_name), cell(a, set_name)
+    if ratio:
+        vb, va = cell(b, "val"), cell(a, "val")
+        med_b = [x / y for x, y in zip(seed_medians(cb, metric), seed_medians(vb, metric),
+                                       strict=True)]
+        med_a = [x / y for x, y in zip(seed_medians(ca, metric), seed_medians(va, metric),
+                                       strict=True)]
+        means_b = seed_ratios(b, set_name, "val", metric)
+        means_a = seed_ratios(a, set_name, "val", metric)
+        boot = (per_instance(cb, metric), per_instance(ca, metric),
+                per_instance(vb, metric), per_instance(va, metric))
+    else:
+        med_b, med_a = seed_medians(cb, metric), seed_medians(ca, metric)
+        means_b, means_a = seed_means(cb, metric), seed_means(ca, metric)
+        boot = (per_instance(cb, metric), per_instance(ca, metric))
+    return {"medians": _soft(guard, med_b, med_a),
+            "welch_95": _soft(welch_interval, means_b, means_a),
+            "instance_resampling_95": _soft(instance_bootstrap, *boot)}
 
 
 # ----------------------------------------------------------- consistency --
@@ -233,11 +369,18 @@ def check_arm(role: str, rep: dict, e1: dict, specs: dict, prereg_entries: dict 
     ev = rep.get("evaluation") or {}
     if not ev.get("amplitude") or sorted(ev.get("holdouts") or {}) != sorted(SETS[1:]):
         raise ValueError(f"adjudication refused: the {role} arm's evaluation is not "
-                         "PREREG_W9's (holdouts F1-F5 and R, amplitude readings)")
+                         "PREREG_W9's (holdouts IB, F1-F5 and R, amplitude readings)")
+    sizes = {"val": int(cfg["split"]["n_val"]),
+             **{k: int(v["n_instances"]) for k, v in ev["holdouts"].items()}}
     for s in SETS:
         if len(cell(rep, s)["per_seed_eval"]) != len(want_seeds):
             raise ValueError(f"adjudication refused: the {role} arm's {s} cell does not hold "
                              f"one evaluation per seed")
+        for e in cell(rep, s)["per_seed_eval"]:          # the verdicts read these arrays
+            per = e.get("per_instance") or {}
+            if any(len(per.get(m) or ()) != sizes[s] for m in METRICS):
+                raise ValueError(f"adjudication refused: the {role} arm's {s} cell does not "
+                                 f"hold per-instance values for its {sizes[s]} instances")
     e8 = rep["results"]["e8"]
     d9 = e8["metrics"]["d9_restart"]
     out = {"identity": ident, "label": label, "workers": e8["protocol"].get("workers"),
@@ -322,8 +465,19 @@ def arm_table(rep: dict) -> dict:
             row[k] = _soft(seed_amp, c, k)
         out[s] = {k: ({"seed_mean": float(np.mean(v)), "per_seed": v}
                       if isinstance(v, list) else v) for k, v in row.items()}
+    out["inband"] = {}                       # H1's set (r3): validation split and IB together
+    for m in METRICS:
+        v = _soft(pooled_seed_means, rep, INBAND, m)
+        out["inband"][m] = ({"seed_mean": float(np.mean(v)), "per_seed": v}
+                            if isinstance(v, list) else v)
+    v = _soft(lambda: [float(np.percentile(x, TAIL_Q))
+                       for x in pooled_per_instance(rep, INBAND, "energy_gap_rel")])
+    out["inband"]["tail_energy_gap_rel"] = ({"seed_mean": float(np.mean(v)), "per_seed": v}
+                                            if isinstance(v, list) else v)
     out["ratio_F5_over_val_disp"] = _soft(lambda: {
         "per_seed": seed_ratios(rep), "seed_mean": float(np.mean(seed_ratios(rep)))})
+    out["ratio_F5_over_val_disp_of_seed_means"] = _soft(   # rule 1's form (r3, Sec. 5)
+        lambda: float(out["F5"]["disp_rel_l2"]["seed_mean"] / out["val"]["disp_rel_l2"]["seed_mean"]))
     return out
 
 
@@ -360,14 +514,30 @@ def remesh_readings(rep: dict, manifest: dict) -> dict:
     return out
 
 
+def remesh_growth(rep: dict, manifest: dict, metric: str = "disp_rel_l2") -> dict:
+    """r3 (Sec. 7): per seed, R's mean `metric` at its finest mesh size over
+    its mean at each training-range mesh size (only the mesh changes; rule 1
+    never read R's errors)."""
+    recs = manifest["instances"]
+    hs = sorted({float(r["target_h"]) for r in recs})
+    vals = per_instance(cell(rep, "R"), metric)
+    if any(len(v) != len(recs) for v in vals):
+        raise ValueError("R's readings and manifest differ in length")
+    at = {h: [i for i, r in enumerate(recs) if float(r["target_h"]) == h] for h in hs}
+    return {repr(h): [float(np.mean(v[at[hs[0]]]) / np.mean(v[at[h]])) for v in vals]
+            for h in hs if h >= TRAIN_H_MIN and h != hs[0]}
+
+
 def comparisons(base_tab: dict, new_tab: dict) -> dict:
     """Exploratory: every metric and set against the reference, with the
     Sec. 6 guard computed (no verdict attached; about a hundred comparisons)."""
     keys = (*METRICS, "tail_energy_gap_rel", "egap_c", "disp_c")
     out = {}
-    for s in SETS:
+    for s in (*SETS, "inband"):
         out[s] = {}
         for k in keys:
+            if s == "inband" and k not in base_tab[s] and k not in new_tab[s]:
+                continue
             b, n = base_tab[s].get(k, {}), new_tab[s].get(k, {})
             out[s][k] = (_soft(guard, b["per_seed"], n["per_seed"])
                          if "per_seed" in b and "per_seed" in n else
@@ -414,6 +584,42 @@ def h2_verdict(b: dict, s: dict, tab_b: dict, tab_s: dict) -> dict:
     return {"F5_displacement": f5, "F5_over_inband_ratio": ratio,
             "K1_inband_energy_gap": k1_egap, "K1_inband_displacement": k1_disp,
             "verdict": "SUPPORTED" if not fails else "NOT SUPPORTED: " + "; ".join(fails)}
+
+
+def _fresh_baseline_flag(g: dict) -> str | None:
+    """r3 (Sec. 7): the fresh baseline against E1's states on the in-band
+    energy gap -- a coarse check of the reuse (other seeds; the guard's floor
+    is 10%): a difference beyond the guard, or a diverged baseline, is
+    reported with H1 as a flag and never changes its verdict."""
+    if not isinstance(g, dict) or "not_evaluated" in g:
+        return None
+    if g.get("diverged"):
+        return ("the fresh baseline's in-band energy gap is non-finite (diverged): the coarse "
+                "check of the reuse could not be made; H1's verdict stands")
+    if not (g.get("lower") or g.get("worse")):
+        return None
+    return (f"the fresh baseline's in-band energy gap is {'lower' if g['lower'] else 'worse'} "
+            f"than E1's states beyond the guard (rel {g['rel_change']:+.1%}, tau "
+            f"{g['threshold']:.1%}): the coarse check of the reuse shows a difference; H1's "
+            "verdict stands")
+
+
+def _uninformative(tab_b: dict) -> str | None:
+    """r3 (Sec. 7): the fresh baseline does not show the deficit rule 1
+    admitted S on -- its F5 / in-band ratio of seed means below rule 1's
+    line, or its median c* on F5 below rule 1's line."""
+    ratio = tab_b.get("ratio_F5_over_val_disp_of_seed_means")
+    cstar = (tab_b["F5"].get("c_star_median") or {}).get("seed_mean")
+    low = []
+    if isinstance(ratio, float) and ratio < RULE1_RATIO_MIN:
+        low.append(f"F5 / in-band ratio {ratio:.3g} < {RULE1_RATIO_MIN}")
+    if isinstance(cstar, float) and cstar < RULE1_CSTAR_MIN:
+        low.append(f"median c* on F5 {cstar:.3g} < {RULE1_CSTAR_MIN}")
+    if not low:
+        return None
+    return ("the fresh baseline does not show the deficit rule 1 admitted S on ("
+            + "; ".join(low) + "): NOT SUPPORTED is uninformative about S's mechanism; "
+            "the verdict stands")
 
 
 ROLE_OF_ARM = {"c1_n1024": "n1024", "c1_n25600": "nmax", "c1_n12800": "nmax",
@@ -463,6 +669,14 @@ def adjudicate_w9(reports: dict, e1: dict, decisions: dict, ood_record: dict,
     if sorted(want_manifests) != sorted(SETS[1:]) or not all(want_manifests.values()):
         raise ValueError("adjudication refused: session 1's OOD-2D record is incomplete "
                          f"({ {k: bool(v) for k, v in want_manifests.items()} })")
+    from ..fe.ood2d import DEFAULT_SEEDS, SET_SIZES
+
+    off = {k: [v.get("n_instances"), v.get("seed")] for k, v in ood_record["families"].items()
+           if [v.get("n_instances"), v.get("seed")] != [SET_SIZES[k], DEFAULT_SEEDS[k]]}
+    if off:
+        raise ValueError("adjudication refused: session 1's evaluation sets are not PREREG_W9's "
+                         f"(instances, seed): {off}, Sec. 3 fixes "
+                         f"{ {k: [SET_SIZES[k], DEFAULT_SEEDS[k]] for k in off} }")
     if r_manifest_sha256 is not None and r_manifest_sha256 != want_manifests["R"]:
         raise ValueError("adjudication refused: the R manifest given is not session 1's")
     if plan is not None and plan.get("decisions_sha256") and decisions.get("_sha256") and \
@@ -480,7 +694,7 @@ def adjudicate_w9(reports: dict, e1: dict, decisions: dict, ood_record: dict,
     nmax_label = f"w9_c1_n{int(dec['pool_max']['n'])}"
     for role, rep in reports.items():
         try:
-            if role in ("b1024", "s") and not s_admitted:
+            if role == "s" and not s_admitted:
                 raise ValueError("adjudication refused: rule 1 did not admit S")
             a = check_arm(role, rep, e1, specs, prereg_entries, expected_git, e1_report_sha256)
             if role == "nmax" and a["label"] != nmax_label:
@@ -496,7 +710,7 @@ def adjudicate_w9(reports: dict, e1: dict, decisions: dict, ood_record: dict,
     valid = {r: reports[r] for r in arms}
 
     deviations = [f"{role}: report refused -- {why}" for role, why in sorted(refused.items())]
-    expected_roles = {"n1024", "nmax", "n4096"} | ({"b1024", "s"} if s_admitted else set())
+    expected_roles = {"n1024", "nmax", "n4096", "b1024"} | ({"s"} if s_admitted else set())
     for role in sorted(expected_roles - set(reports)):
         deviations.append(f"{role}: no report (planned arm not run or not returned)")
     rule3 = dec.get("checkpointing_off", {}).get("value")
@@ -559,14 +773,16 @@ def adjudicate_w9(reports: dict, e1: dict, decisions: dict, ood_record: dict,
           "rel_change": None, "threshold": None}
     if {"n1024", "nmax"} <= set(arms):
         try:
-            h1 = guard(tabs["n1024"]["val"]["energy_gap_rel"]["per_seed"],
-                       tabs["nmax"]["val"]["energy_gap_rel"]["per_seed"])
+            h1 = guard(pooled_seed_means(valid["n1024"]), pooled_seed_means(valid["nmax"]))
             h1["verdict"] = ("SUPPORTED" if h1["lower"] else
                              "NOT SUPPORTED (diverged)" if h1["diverged"] else
                              "NOT SUPPORTED (worse beyond the guard)" if h1["worse"] else
                              "NOT SUPPORTED")
             h1["n_max"] = arms["nmax"]["identity"]["pool"]
             h1["n_max_configuration"] = arms["nmax"]["label"]
+            h1["inband_sets"] = list(INBAND)
+            h1["robustness"] = _soft(robustness, valid["n1024"], valid["nmax"], INBAND,
+                                     "energy_gap_rel")
         except ValueError as exc:                         # a non-finite reference value
             h1 = {"verdict": "NOT EVALUATED (a non-finite value of the 1,024 arm voids the "
                              f"comparison: {exc})", "rel_change": None, "threshold": None}
@@ -594,6 +810,16 @@ def adjudicate_w9(reports: dict, e1: dict, decisions: dict, ood_record: dict,
                                     f"voids the comparison: {exc})"}
             deviations.append("b1024: a non-finite value in H2's reference -- H2 not "
                               "evaluated; H1 is unaffected")
+        else:                     # secondary readings beside the verdict (r3, Sec. 7)
+            out["H2"]["robustness"] = {
+                k: _soft(robustness, valid["b1024"], valid["s"], *args)
+                for k, args in (("F5_displacement", ("F5", "disp_rel_l2")),
+                                ("F5_over_inband_ratio", ("F5", "disp_rel_l2", True)),
+                                ("K1_inband_energy_gap", ("val", "energy_gap_rel")),
+                                ("K1_inband_displacement", ("val", "disp_rel_l2")))}
+            note = _soft(_uninformative, tabs["b1024"])
+            if isinstance(note, str) and out["H2"]["verdict"] != "SUPPORTED":
+                out["H2"]["uninformative"] = note
         out["comparisons_s_vs_b1024_exploratory"] = comparisons(tabs["b1024"], tabs["s"])
     else:
         out["H2"] = {"verdict": f"NOT EVALUATED ({missing(('b1024', 's'))})"}
@@ -602,11 +828,23 @@ def adjudicate_w9(reports: dict, e1: dict, decisions: dict, ood_record: dict,
                                   "ratio_F5_over_val_disp": tabs[r]["ratio_F5_over_val_disp"]}
                               for r in ("b1024", "s", "n1024") if r in tabs}
     if {"b1024", "n1024"} <= set(tabs):
-        out["replication_b1024_vs_n1024"] = {
-            k: _soft(guard, tabs["n1024"]["val"][k]["per_seed"], tabs["b1024"]["val"][k]["per_seed"])
-            for k in METRICS}
+        out["replication_b1024_vs_n1024"] = comparisons(tabs["n1024"], tabs["b1024"])
+        flag = _soft(_fresh_baseline_flag,
+                     out["replication_b1024_vs_n1024"]["inband"]["energy_gap_rel"])
+        if isinstance(flag, str):
+            h1["fresh_baseline_flag"] = flag
+    if {"b1024", "nmax"} <= set(tabs):
+        out["nmax_vs_b1024_exploratory"] = comparisons(tabs["b1024"], tabs["nmax"])
     if r_manifest is not None:
         out["remesh"] = {r: _soft(remesh_readings, rep, r_manifest) for r, rep in valid.items()}
+        out["remesh_growth"] = {r: _soft(remesh_growth, rep, r_manifest)
+                                for r, rep in valid.items()}
+        gb, gs = out["remesh_growth"].get("b1024"), out["remesh_growth"].get("s")
+        if gb is not None and gs is not None:
+            out["remesh_growth_s_vs_b1024_exploratory"] = (
+                {h: _soft(guard, gb[h], gs[h]) for h in gb}
+                if "not_evaluated" not in gb and "not_evaluated" not in gs else
+                {"not_evaluated": "a growth reading is missing"})
     return out
 
 

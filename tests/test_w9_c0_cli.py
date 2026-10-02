@@ -217,3 +217,19 @@ def test_make_ood2d_refuses_a_different_family_and_continues(tmp_path):
     got = json.loads(rec.read_text())["families"]
     assert got["F5"]["status"] == "refused" and "'seed': (1, 91005)" in got["F5"]["error"]
     assert got["F4"]["status"] == "verified existing"
+
+
+def test_make_ood2d_generates_the_inband_holdout(tmp_path):
+    """IB (PREREG_W9 r3) through the session-1 script: generated, recorded,
+    then verified (not regenerated) on a re-run."""
+    pytest.importorskip("gmsh")
+    out, rec = tmp_path / "ood", tmp_path / "rec.json"
+    cmd = [sys.executable, str(ROOT / "scripts" / "w9_make_ood2d.py"), "--out", str(out),
+           "--families", "IB", "--n-inband", "2", "--record", str(rec)]
+    r = subprocess.run(cmd, capture_output=True, text=True, cwd=str(ROOT))
+    assert r.returncode == 0, r.stdout + r.stderr
+    got = json.loads(rec.read_text())["families"]["IB"]
+    assert got["status"] == "generated" and got["n_instances"] == 2 and got["seed"] == 91007
+    r = subprocess.run(cmd, capture_output=True, text=True, cwd=str(ROOT))
+    assert r.returncode == 0 and json.loads(rec.read_text())["families"]["IB"]["status"] == \
+        "verified existing"

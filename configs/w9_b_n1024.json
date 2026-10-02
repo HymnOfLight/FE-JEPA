@@ -164,6 +164,10 @@
  "prereg_file": "PREREG_W9.md",
  "evaluation": {
   "holdouts": {
+   "IB": {
+    "dir": "runs/w9/ood2d/IB",
+    "family": "IB"
+   },
    "F1": {
     "dir": "runs/w9/ood2d/F1",
     "family": "F1"

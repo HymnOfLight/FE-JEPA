@@ -105,6 +105,42 @@ def test_generated_family_and_remesh_set(tmp_path):
     assert json.loads((r / "manifest.json").read_text())["hs"] == list(REMESH_H[:3])
 
 
+def test_inband_holdout_is_the_training_family(tmp_path):
+    """IB (PREREG_W9 r3): instance i is the training sampler's draw for child i
+    of SeedSequence(91007), meshed and labelled as the corpus is."""
+    pytest.importorskip("gmsh")
+    pytest.importorskip("skfem")
+    from fejepa.data.archive import instance_files, load_instance, load_manifest, manifest_sha256
+    from fejepa.fe.generator import sample_params
+    from fejepa.fe.ood2d import IB_N, generate_inband, verify_manifest_files
+
+    assert IB_N == 2048 and DEFAULT_SEEDS["IB"] == 91007
+    d = generate_inband(tmp_path / "IB", n=3)
+    m = load_manifest(d)
+    assert m["family"] == "IB" and m["seed"] == 91007 and m["n_instances"] == 3
+    assert m["ledger"]["total"] == 12 and verify_manifest_files(d) == []
+    want = [sample_params(np.random.default_rng(c))
+            for c in np.random.SeedSequence(91007).spawn(3)]
+    for f, w in zip(instance_files(d), want, strict=True):
+        a = load_instance(f)
+        ex = a.meta["extra"]
+        assert a.labelled and ex["family"] == "IB" and ex["target_h"] == w["target_h"]
+        assert ex["width"] == w["width"] and ex["holes"] == w["holes"]
+        assert a.meta["material"]["nu"] == w["nu"] and 0.05 <= ex["target_h"] <= 0.12
+    assert manifest_sha256(generate_inband(tmp_path / "IB2", n=3)) == manifest_sha256(d)
+
+
+def test_set_sizes_and_seeds_are_prereg_w9s():
+    """PREREG_W9 Sec. 3's sizes and seeds, which scripts/w9_make_ood2d.py
+    generates by default and the session-2 plan and the adjudication check."""
+    from fejepa.fe.ood2d import SET_SIZES
+
+    assert SET_SIZES == {"F1": 256, "F2": 256, "F3": 256, "F4": 256, "F5": 256, "R": 80,
+                         "IB": 2048}
+    assert DEFAULT_SEEDS == {"F1": 91001, "F2": 91002, "F3": 91003, "F4": 91004, "F5": 91005,
+                             "R": 91006, "IB": 91007}
+
+
 def test_manifest_check_reports_missing_and_changed_files(tmp_path):
     import hashlib
 

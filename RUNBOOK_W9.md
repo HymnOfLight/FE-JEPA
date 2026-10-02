@@ -28,7 +28,7 @@ repository. The branch is frozen from the stamp until session 2 has returned:
 the box checks that HEAD is exactly the tagged commit, the plan checks it
 again, and the command script checks it before every arm.
 
-Time and money: session 1 about 1 h; session 2 about 7 h without S, about
+Time and money: session 1 about 1 h; session 2 about 10 h without S, about
 13 h with S, 2-6 h more if N_max runs one seed at a time; Sec. 4 about 30 min.
 The instance's balance must cover about 24 h. Everything runs in ONE tmux
 session; nothing else may use the GPU meanwhile.
@@ -68,9 +68,13 @@ pgrep -af "fejepa|spawn_main"                # must print nothing
 nvidia-smi --query-gpu=utilization.gpu,memory.used --format=csv,noheader   # about 0 %, under 1,000 MiB
 python -c "import torch; print(torch.__version__, torch.cuda.is_available())"   # 2.12.1+cu130 True
 mkdir -p runs/w9/session1
-python -m pytest -q 2>&1 | tee runs/w9/session1/pytest.log | tail -n 3   # the count BRANCH_NOTES carries
+python -m pytest -q 2>&1 | tee runs/w9/session1/pytest.log | tail -n 3   # "427 passed" (BRANCH_NOTES' count)
 ```
-Any output other than the comments describe: stop and report.
+Any output other than the comments describe: stop and report. The suite's last
+line reads `427 passed`, then warnings and the time; `426 passed, 1 skipped`
+is also correct where `pdflatex` is missing (the paper tables' LaTeX build is
+then not compiled). Anything failed, an error, or another count: stop and
+report.
 
 ## 1. Session 1 (box; ~1 h; nothing else on the GPU)
 
@@ -90,10 +94,11 @@ P=runs/w9/session1
 run() { local log=$1; shift; [ -e $P/$log ] && mv $P/$log $P/$log.$(date +%Y%m%d-%H%M%S)
         "$@" 2>&1 | tee $P/$log; echo "$log exit=${PIPESTATUS[0]}" | tee -a $P/status.txt; }
 R=records/wp8/e1/e1_2d_base/report.json; S=runs/e1_2d_base/e8_states
-# 1a. OOD-2D v1 (F1-F5, 256 each) and the remesh set R (16 geometries x 5 h): gmsh,
-#     labelled by direct solve, manifests pin every file (CPU; ~3-5 min). F5 and R
-#     come first; a family that fails is recorded and the others still run. A re-run
-#     verifies a family that has a manifest instead of regenerating it.
+# 1a. OOD-2D v1 (F1-F5, 256 each), the remesh set R (16 geometries x 5 h) and the
+#     in-band holdout IB (2,048 training-family instances): gmsh, labelled by direct
+#     solve, manifests pin every file (CPU; ~5-10 min). F5 and R come first; a family
+#     that fails is recorded and the others still run. A re-run verifies a family
+#     that has a manifest instead of regenerating it.
 run ood2d.log python scripts/w9_make_ood2d.py --out runs/w9/ood2d --record $P/ood2d.json
 # 1b. C0 readings on E1's base states (~15-30 min)
 run c0_val.log python scripts/w9_c0.py val --report $R --states-dir $S --out $P/c0_val.json
@@ -128,7 +133,7 @@ cd ~/autodl-tmp/FE-JEPA
 P=runs/w9/session1; S=runs/e1_2d_base/e8_states
 OUT=~/wp9_session1_return && rm -rf $OUT && mkdir -p $OUT
 cp $P/*.json $P/*.log* $P/status.txt* $OUT/
-for f in F1 F2 F3 F4 F5 R; do mkdir -p $OUT/ood2d/$f; cp runs/w9/ood2d/$f/manifest.json $OUT/ood2d/$f/; done
+for f in IB F1 F2 F3 F4 F5 R; do mkdir -p $OUT/ood2d/$f; cp runs/w9/ood2d/$f/manifest.json $OUT/ood2d/$f/; done
 ( echo "HEAD $(git rev-parse HEAD)"; echo "tree $(git rev-parse 'HEAD^{tree}')"
   echo "describe $(git describe --tags --match prereg-w9)"
   echo "--- git status --porcelain ---"; git status --porcelain | grep -v '^?? runs/' | head -40
@@ -149,7 +154,7 @@ Send the tarball now and go on with Sec. 2; do not shut down. The instances
 under `runs/w9/ood2d/` stay on the box (the manifests in the return pin them);
 session 2 evaluates on them. Do not delete or regenerate them.
 
-## 2. Session 2 -- C1 (and S) training and evaluation (box; 7-19 h)
+## 2. Session 2 -- C1 (and S) training and evaluation (box; 10-19 h)
 
 ### 2a. Checks and the plan (minutes)
 ```bash
@@ -168,16 +173,16 @@ either `STOP` with the reasons, or the arms, any notes, one summary line and
 STOP. The gate: the required session-1 steps (ood2d, c0_val, c0_amp2d,
 c0_memory) exited 0; the decision file is the frozen rules' output on the
 readings beside it (recomputed here), written on `prereg-w9`, which this
-checkout must also be; rules 1-2 decided and a pool found; the six evaluation
+checkout must also be; rules 1-2 decided and a pool found; the seven evaluation
 sets complete and the manifests on disk the record's; E1's validation arrays
 reproduced; a GPU and E1's torch; 5 GB free on the data disk; every selected
 configuration passes its dry run (stamped, holdouts and E1's states
 verified). It selects the stamped configurations (the 1,024 arm; N_max =
-`w9_c1_n25600` or `w9_c1_n12800` by rule 2; `w9_b_n1024` and `w9_s_n1024`
-only if rule 1 admitted S; the 4,096 arm), sets workers (rule 2's for N_max,
-3 otherwise) and activation checkpointing (rule 3; kept on for an arm that
-would not fit without it, and when rule 3 is undecided), and writes
-`runs/w9/session2/plan.json` and `commands.sh`.
+`w9_c1_n25600` or `w9_c1_n12800` by rule 2; the fresh baseline `w9_b_n1024`;
+`w9_s_n1024` only if rule 1 admitted S; the 4,096 arm), sets workers (rule
+2's for N_max, 3 otherwise) and activation checkpointing (rule 3; kept on for
+an arm that would not fit without it, and when rule 3 is undecided), and
+writes `runs/w9/session2/plan.json` and `commands.sh`.
 
 The summary line reads `S admitted: yes|no | N_max ... with k worker(s) at a
 time | checkpointing on|off | usable host memory X GB (source) | E1
@@ -190,8 +195,8 @@ console, treat it as STOP. On STOP: send the STOP lines and
 cd ~/autodl-tmp/FE-JEPA
 bash runs/w9/session2/commands.sh
 ```
-Order: the 1,024 arm (E1's states, evaluation only; 10-30 min), N_max, then --
-if S was admitted -- the fresh baseline and S, then 4,096. Normal signs:
+Order: the 1,024 arm (E1's states, evaluation only; 10-30 min), N_max, the
+fresh baseline, S (if it was admitted), then 4,096. Normal signs:
 - the script first prints the torch version, E1's, and `cuda True`;
 - each arm's log starts with `[prereg] verified against PREREG_W9.md`; with
   three workers nothing new is printed for about 3 h (one line per finished
