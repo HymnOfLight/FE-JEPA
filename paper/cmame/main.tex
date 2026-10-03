@@ -1,0 +1,108 @@
+% Manuscript for Computer Methods in Applied Mechanics and Engineering.
+% Every number in the text, tables and figures comes from generated/ (written by
+% scripts/make_cmame_material.py from the committed records); do not type numbers
+% by hand. Build: latexmk -pdf main.tex (from this directory).
+\documentclass[preprint,12pt]{elsarticle}
+
+\usepackage[british]{babel}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit}
+\usepackage{microtype}
+\usepackage[hidelinks,hypertexnames=false]{hyperref}
+\usepackage[capitalise,nameinlink]{cleveref}
+\biboptions{sort&compress}
+\hypersetup{pdftitle={Training finite-element surrogates without solutions: the discrete
+  potential energy as exact objective, metric and failure detector},
+  pdfauthor={Ruifeng Cao, Xidan Song}}
+\makeatletter
+\g@addto@macro{\UrlBreaks}{\do\_\do\.}
+\myfooterfont{\scriptsize\itshape}
+% the first-page footer of elsarticle without the stray space after its box
+\def\ps@pprintTitle{\let\@oddhead\@empty\let\@evenhead\@empty
+  \def\@oddfoot{\@myfooterfont Preprint submitted to \@journal\hfill\@date}%
+  \let\@evenfoot\@oddfoot}
+\makeatother
+
+% one-line footer, date as DD Month YYYY
+\date{\number\day\space\ifcase\month\or January\or February\or March\or April\or May\or
+  June\or July\or August\or September\or October\or November\or December\fi
+  \space\number\year}
+
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposition}{Proposition}
+\newtheorem{corollary}{Corollary}
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+\crefname{lemma}{Lemma}{Lemmas}
+\crefname{proposition}{Proposition}{Propositions}
+\crefname{corollary}{Corollary}{Corollaries}
+\crefname{remark}{Remark}{Remarks}
+
+\newcommand{\norm}[1]{\lVert #1\rVert}
+\newcommand{\gap}{\operatorname{gap}}
+\newcommand{\vm}{\sigma_{\mathrm{vm}}}
+\newcommand{\Ustar}{U^{\ast}}
+\newcommand{\cstar}{c^{\ast}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\pending}[1]{\par\smallskip\noindent\fbox{\parbox{\dimexpr\linewidth-2\fboxsep-2\fboxrule\relax}{\small\textbf{Pending.} #1}}\par\smallskip}
+
+\input{generated/numbers}
+
+\journal{Computer Methods in Applied Mechanics and Engineering}
+
+\begin{document}
+
+\begin{frontmatter}
+
+\title{Training finite-element surrogates without solutions: the discrete potential
+energy as exact objective, metric and failure detector}
+
+\author[man]{Ruifeng Cao\corref{cor1}}
+\ead{ruifeng.cao@manchester.ac.uk}
+\cortext[cor1]{Corresponding author.}
+\author[whu]{Xidan Song}
+
+\affiliation[man]{organization={The University of Manchester},
+  city={Manchester}, country={United Kingdom}}
+\affiliation[whu]{organization={Wuhan University},
+  city={Wuhan}, country={China}}
+
+\begin{abstract}
+\input{sections/abstract}
+\end{abstract}
+
+\begin{keyword}
+finite element method \sep surrogate modelling \sep label-free training \sep
+minimum total potential energy \sep energy norm \sep pre-registration
+\end{keyword}
+
+\end{frontmatter}
+
+\input{sections/introduction}
+\input{sections/related}
+\input{sections/theory}
+\input{sections/methods}
+\input{sections/results2d}
+\input{sections/results3d}
+\input{sections/transfer}
+\input{sections/cost}
+\input{sections/discussion}
+\input{sections/conclusion}
+
+\appendix
+\input{sections/appendix_prereg}
+\input{sections/appendix_e1}
+\input{sections/appendix_repro}
+
+\input{sections/declarations}
+
+\bibliographystyle{elsarticle-num}
+\bibliography{references}
+
+\end{document}

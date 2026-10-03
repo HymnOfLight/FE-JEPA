@@ -1,0 +1,114 @@
+\section{Pre-registration record and deviations}\label{app:prereg}
+\setcounter{table}{0}\setcounter{figure}{0}\setcounter{equation}{0}
+
+\input{generated/table_criteria}
+
+\Cref{tab:criteria} lists every criterion fixed in advance for the runs reported in this
+paper, with the value measured and the outcome as recorded by the code at the time. The
+two-dimensional pre-registration also retired, before its run, an earlier criterion (a
+displacement improvement of at least 10\% from the energy term with 64 labels) that an
+earlier run had already answered in the negative; the run of 16 July 2026 measured
+\numGOneRetired{} with the fixed-weight form of the energy term, and the criterion played no
+part in its decisions. The following departures from the plans bear on the results. They
+are recorded in the repository's list of deviations and its provenance note, except the
+remark at the end of the paragraph on the energy term, which was noticed while this paper
+was written.
+
+\paragraph{Deviation D14}
+The initial three-dimensional run (21 September 2026) completed its registered protocol and
+read NO-GO, with conditions (a), (b) and (c) of its gate unmet and kill conditions KP1,
+KP2 and KP4 triggered. After the verdict, its label-free networks were found to have a
+displacement error of \numDfourteenDisp{} and a relative energy gap of
+\numDfourteenGap{}, identical to five decimals across seeds and consistent with predicting
+the solution scaled by $\alpha=\numDfourteenAlpha{}$ (displacement error $1-\alpha$,
+relative energy gap $(1-\alpha)^2$). The cause was in the code: inference multiplied the
+decoded field by $F_{\max}$, the label-free objective scored it without that factor, and on
+this corpus $F_{\max}\approx\alpha$. The fix gives the network one decoding path, used by
+the objective and by inference, with a test that fails on the registered code. The
+supervised networks, which are trained and evaluated through the inference path, were not
+affected. The verdict of the initial run stands as recorded. A pre-registered amendment then
+repeated everything that depended on the label-free objective: the label-free networks,
+their fine-tuning on the finer mesh and the latent-alignment criterion read from them. It
+reused the 30 trained supervised networks and the 6 networks trained from scratch on the
+fine mesh, each checked against its recorded SHA-256 hash, and it required a short pilot
+run first: one seed, 20 epochs, which had to bring the displacement error below
+\numPilotLimit{} and reached \numPilotDisp{}. A first version of the amendment was
+registered and withdrawn on the same day, before any run, because the audit of its
+execution path had not been completed; the second version was registered after the audit.
+The amended run (28 September 2026) was executed once, without interruption.
+
+\paragraph{The sanity condition of the three-dimensional gate}
+Condition (a) of the three-dimensional gate required the supervised transformer with the
+energy term to be at least three times more accurate in displacement than the zero field,
+and better than both naive baselines, at every budget. In the initial run it failed at 16
+labels (\numGTwoSanitySixteen{} times), independently of D14. The amendment, written with
+this result known, assessed condition (a) only from the decision budget of 64 labels, where
+it was met by factors of \numGTwoSanitySixtyFour{} to \numGTwoSanityMax{}. Its stated
+rationale is that the factor of three had been calibrated on the two-dimensional family,
+and that on the three-dimensional family the supervised network itself sits below it with
+16 labels and above it from 64 labels on. In two dimensions the condition had read the
+networks of the energy-term sub-experiment, which met it at every budget; the networks of
+\cref{tab:labeleff} would not have met it with 16 labels (\numGOneSanityTableSixteen{}
+times), because of the scatter described in \cref{sec:results2d:labels}. The amendment
+declared the change as made after the fact and required the original form to be computed
+and reported beside it; both readings are in \cref{tab:criteria}. The change affects only
+the gate's verdict, not any measurement reported in this paper.
+
+\paragraph{Deviation D16}
+The text of the three-dimensional pre-registration states that the label-free network
+trains on the 1,744 in-band instances outside the validation set. The registered
+configuration, which is what ran, trained it on the first 1,024 of them, the same instances
+on which the supervised networks were trained with labels. Every three-dimensional run
+executed this way. The discrepancy was found after the amended run and is recorded with the
+other deviations. It works against the label-free network, which saw fewer instances than
+the text promised, and it leaves the cleaner comparison: the same instances, with and
+without their solutions.
+
+\paragraph{The energy term with 16 labels}
+In the networks of \cref{tab:2d,tab:labeleff}, the two-dimensional supervised transformer
+with the energy term used the gradient-scaled form at every budget, and with 16 labels its
+displacement errors scattered across seeds (\cref{sec:results2d:labels}); the energy-term
+sub-experiment of the same run trained both the gradient-scaled and the fixed-weight form.
+An exploratory run (30 July 2026), with six seeds in two separate experiments, gave
+displacement errors from \numDiagScaledMin{} to \numDiagScaledMax{} for the gradient-scaled
+form, against \numDiagFixedMin{} to \numDiagFixedMax{} in all \numDiagFixedSeeds{} seeds for
+a fixed weight of one on the normalised energy. The three-dimensional pre-registration
+therefore fixed that weight at 16 labels and the gradient-scaled form from 64 on. The
+description of the protocol stored in the three-dimensional report still names the
+gradient-scaled form for every budget; the registered code applied the pre-registered
+policy.
+
+\paragraph{The joint-embedding term (criterion K3)}
+Criterion K3 of the two-dimensional pre-registration concerned a separate run
+(31 July 2026, \ref{app:repro}). That run pretrained the transformer without labels for 200
+epochs, once on the energy alone and once on the energy together with a self-supervised
+joint-embedding term (\ref{app:e1}), which predicts the latent vectors of masked regions of
+the mesh from those of the rest, with a regulariser on the mean latent vectors; it then
+fine-tuned both with 16, 64 and 256 labels for 200 epochs, with three seeds. K3 would have dropped the term, and with it the version of the
+planned paper that used it, had the term changed neither the displacement error nor the
+relative energy gap by more than \numKthreeBand{} at any budget. K3 was not triggered, and
+the registered rule therefore kept the term (\cref{tab:criteria}). The criterion did not
+state a direction. Of the \numKthreeOutside{} changes outside the band, \numKthreeWorse{}
+made the fine-tuned network less accurate; the remaining one, a relative energy gap
+\numKthreeGain{} lower with 64 labels, compares with a baseline whose seeds scattered
+widely (relative energy gaps of \numKthreeBaseSeeds{}, against \numKthreeBaseRef{} for the
+same configuration in the run of 16 July 2026). This paper reports the energy objective
+without the term. That scope was chosen after the result was known, and it departs from
+the version of the paper that the rule selected.
+
+\paragraph{Provenance of the two-dimensional runs}
+The two-dimensional runs were executed outside a version-controlled checkout, so their
+reports record no commit. The code checked their configuration hashes against the
+pre-registration documents at start-up, and the code version was established afterwards
+from the runs' console output and by comparing the source trees of the released packages.
+The pre-registration documents of these runs were committed to the repository on 3 August
+2026, after the runs; the repository's provenance note, compiled on 1 August 2026, records
+the hashes of the documents that the runs checked, and those of the reports and of the
+archives that contained them. The three reports used here are committed with their
+hashes (\ref{app:repro}).
+
+\paragraph{Audit}
+An independent script recomputed the three-dimensional verdict from the report and agreed
+on \numAuditItems{} items. Its first pass reported one discrepancy, which was in the audit
+script itself: it had combined the gate's conditions more strictly than the pre-registered
+rule. Both outputs are archived.

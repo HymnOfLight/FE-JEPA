@@ -1,0 +1,77 @@
+\section{Latent representations: a negative result}\label{app:e1}
+\setcounter{table}{0}\setcounter{figure}{0}\setcounter{equation}{0}
+\setcounter{proposition}{0}\renewcommand{\theproposition}{\Alph{section}.\arabic{proposition}}
+
+Three criteria of \cref{tab:criteria} (K4, E6 and KP6) and the experiment of this appendix
+concern the latent vectors of the transformer, the outputs of its encoder, one per node,
+which the rest of the paper does not use. Self-supervised representation learning guards
+against representational collapse, the mapping of different inputs to nearly identical
+latent vectors, with regularisers on the distribution of the latent vectors. The sketched
+isotropic Gaussian regulariser SIGReg \cite{Balestriero2025LeJEPA} projects the latent
+vectors onto random directions and penalises the mean, over the directions, of the
+Epps--Pulley statistic \cite{EppsPulley1983}, which measures how far the distribution of a
+projection is from the standard normal one; it was introduced for joint-embedding
+predictive architectures (JEPA), self-supervised networks that predict the latent
+representation of one part of an input from that of another.
+
+Under a separate pre-registration we added SIGReg, applied to a learned projection of the
+latent vectors (a projection head), to the label-free objective of the two-dimensional
+transformer, with the later code of \cref{sec:results2d:other}, and asked whether it kept
+the accuracy and separated the geometries better in latent space (\cref{tab:e1}). The
+separation was measured by the silhouette $S\in[-1,1]$ of the instance-mean latent vectors
+of the 256 validation instances, grouped into four bins by the quartiles of the first
+principal component of the geometry descriptor; $S$ is near zero when the bins overlap and
+near one when they are well separated. The accuracy was unchanged within the
+pre-registered resolution. The separation rose in every seed, by \numEOneDeltaMin{} to
+\numEOneDeltaMax{}, but by less than the \numEOneFloor{} required in every seed, and the
+experiment read NO-GO. Untrained networks that received the geometry descriptor as input
+separated the bins better than trained ones, and a linear probe read the descriptor from
+them perfectly; without that input, or with its input weights set to zero, untrained
+networks did not separate the bins at all. The descriptor is an input feature of every
+node, so these readings measure the input rather than anything learned. We report the
+experiment because it was pre-registered; it does not bear on the results of the paper.
+
+Criterion K4 of the two-dimensional run of 16 July 2026 (\cref{tab:criteria}) concerned the
+same kind of regulariser in an earlier setting: three regularisers of the latent
+distribution, each added to the energy and the masked-prediction term of the
+joint-embedding objective (\ref{app:prereg}) and trained for 2,000 steps on 64 instances,
+with and without the geometry descriptor, were compared by the standardised effective rank
+of the latent vectors on 256 instances. The best raised it by more than the factor of 1.5
+at or below which the criterion would have been triggered.
+
+What accuracy does imply for the latent representation is limited to load cases on a
+shared stiffness matrix. Fix one instance, with load vectors $F_1,\dots,F_L$ and solutions
+$\Ustar_j=K^{-1}F_j$, and let $\gap(u;F_j)=\Pi_h(u;F_j)-\Pi_h(\Ustar_j;F_j)$ be the energy
+gap for the load $F_j$, where $\Pi_h(\cdot\,;F_j)$ is the energy \eqref{eq:energy} with that
+load. Let $z_j$ be the network's latent representation of load case $j$, the latent vectors
+of all nodes stacked, and let the decoder $D$ be Lipschitz from the latent space, with the
+Euclidean norm, to $(\R^{n},\norm{\cdot}_K)$, with constant $\Lambda$.
+
+\begin{proposition}[Separation on a shared operator \cite{CaoSong2026}]\label{prop:sep}
+If $\norm{D(z_j)-\Ustar_j}_K\le\delta$ for every $j$, that is, by \cref{lem:exact},
+$\gap(D(z_j);F_j)\le\delta^2/2$, then for all $i\neq j$
+\begin{equation}
+\norm{z_i-z_j} \ge \frac{\norm{\Ustar_i-\Ustar_j}_K-2\delta}{\Lambda}.
+\label{eq:sep}
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+By the triangle inequality,
+$\norm{\Ustar_i-\Ustar_j}_K\le\norm{\Ustar_i-D(z_i)}_K+\norm{D(z_i)-D(z_j)}_K
++\norm{D(z_j)-\Ustar_j}_K\le2\delta+\Lambda\norm{z_i-z_j}$.
+\end{proof}
+
+The bound is informative when the solutions themselves are separated; on sixteen
+validation instances of each corpus the smallest separation between the load cases of one
+instance, relative to the mean energy norm of its solutions, was \numPremiseTwo{} (two
+dimensions) and \numPremiseThree{} (three). Across geometries there is no common stiffness
+norm, and the natural analogue in a transported metric fails: among the same sixteen
+instances, two different geometries had solutions under the same load, normalised to unit
+length and interpolated to common coordinates, closer to each other (\numCrossTwo{} and
+\numCrossThree{}) than the closest two load cases on a single geometry (\numWithinTwo{} and
+\numWithinThree{}). Within a geometry, the rank correlation between the distances of the
+latent representations and those of the solutions was \numRhoTwo{} and \numRhoThree{}
+(criteria E6 and KP6).
+
+\input{generated/table_e1}

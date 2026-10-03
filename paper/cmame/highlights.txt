@@ -1,0 +1,5 @@
+Minimising discrete energy is stiffness-norm regression with no labels
+In 3D, zero labels beat 1,024 labels on all five metrics for the same network
+Graph network: lower displacement error, yet 5.3 times the label-free stress error
+Energy flags predictions worse than the zero field without reference solutions
+Pre-registered 2D and 3D tests; unmet criteria reported alongside met ones

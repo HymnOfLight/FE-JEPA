@@ -1,0 +1,79 @@
+\section{Transfer to a finer mesh}\label{sec:transfer}
+
+\subsection{Zero-shot and few-shot}\label{sec:transfer:zeroshot}
+
+\input{generated/table_transfer}
+
+\Cref{tab:transfer} evaluates the networks trained in-band on the 256 fine-mesh evaluation
+instances, meshed at $l_c=0.0374$, about half the in-band element size, which no network
+had seen. None transferred. The label-free transformer's displacement error rose from
+\numAmpInDisp{} in-band to \numFineFreeDisp{}, a factor of \numFineRatio{}; the
+pre-registered criterion for transfer allowed \numFineWin{} and the kill condition KP4 was
+triggered above \numFineKill{}, so the transfer claim was withdrawn. The supervised transformer
+had almost the same displacement error, \numFineLabDisp{}, and the graph network
+\numFineMgnDisp{}, worse than the nearest-neighbour field's \numFineKnnDisp{}. The
+label-free transformer kept the lowest relative energy gap (\numFineFreeGap{} against
+\numFineLabGap{} and \numFineMgnGap{}) and the lowest von Mises error (\numFineFreeVm{}
+against \numFineLabVm{} and \numFineMgnVm{}).
+
+Training on a few labelled fine-mesh instances, starting from the trained label-free
+network, was
+pre-registered as a reported comparison without a criterion. With 64 such instances the
+displacement error returned to the in-band level, \numFewSixtyFourDisp{}, and with 16 it
+was \numFewSixteenDisp{}, against \numFewSixtyFourScratchDisp{} and
+\numFewSixteenScratchDisp{} when the same network was trained from scratch on the same
+instances. The relative energy gap, von Mises error and peak stress error did not recover
+as far: with 64 instances they remained \numFewFactorMin{} to \numFewFactorMax{} times their
+in-band values.
+
+\subsection{On the finer mesh, most of the label-free error is an error of
+amplitude}\label{sec:transfer:amplitude}
+
+\input{generated/table_amplitude}
+
+Rescaling each prediction by its energy-optimal amplitude $\cstar$ (\cref{prop:amp}),
+which needs no label and no solve, separates errors of amplitude from errors of shape. We
+measured it after the runs, on the stored networks (\cref{tab:amplitude}); no verdict was
+revisited. On the finer mesh the median $\cstar$ of the label-free transformer was
+\numAmpFineCstar{}, against \numAmpInCstar{} in-band: its predictions were too small.
+Rescaling lowered its fine-mesh displacement error from \numAmpFineDisp{} to
+\numAmpFineDispC{}, by \numAmpFineRedMin{} to \numAmpFineRedMax{} in each seed, and the
+median relative energy gap from \numAmpFineGapMedian{} to \numAmpFineGapMedianC{}. In-band
+it also helped, from \numAmpInDisp{} to \numAmpInDispC{} in displacement and from
+\numAmpInGap{} to \numAmpInGapC{} in mean relative energy gap. Measured as KP4 measures
+transfer, with $\cstar$ applied on both meshes, the ratio of fine-mesh to in-band
+displacement error fell from \numFineRatio{} to \numAmpRatioBoth{}; with $\cstar$ applied
+on the finer mesh only it was \numAmpRatioFineOnly{}. Rescaling removes most of the error
+but not the failure to transfer.
+
+\input{generated/table_remesh}
+
+Why the amplitude is wrong on the finer mesh is suggested by \cref{tab:remesh}, also
+measured after the runs: \numRemeshGeometries{} new geometries, each meshed at four
+characteristic lengths with the same loads, so that only the mesh changes. For each mesh
+we computed the single energy-optimal amplitude of all four load cases,
+$c_b=\sum_jF_j^{\top}u_j/\sum_ju_j^{\top}Ku_j$, the counterpart of \eqref{eq:cstar} for
+the sum of their energies. Over the training range the median $c_b$ of the label-free
+transformer stayed within \numRemeshInDev{} of one, and at $l_c=0.0374$ it was
+\numRemeshFine{}. The largest nodal load $F_{\max}$, by which the output is multiplied
+(\cref{sec:methods:networks}), shrinks with the element size, roughly as $l_c^2$ for the
+face tractions, whereas the solution does not depend on the mesh; a finer mesh therefore
+asks the network for a larger output than any it produced in training. We have not tested
+this explanation causally. It agrees with the two-dimensional observation of
+\cref{sec:results2d:other}, where the output was not multiplied by $F_{\max}$ and networks
+trained on meshes \numCoarsenLow{} and \numCoarsenHigh{} times coarser lost little accuracy
+on the original meshes; but the two-dimensional errors were probably dominated by the
+missing load amplitude (\cref{sec:results2d:other}), so the contrast is suggestive only. A separate pre-registered
+study, outside the scope of this paper, tests an output scale that does not depend on the
+mesh. \Cref{fig:field-fine} shows a typical fine-mesh prediction before and after the
+rescaling.
+
+\begin{figure}[tbp]
+\centering
+\pending{Field plot of the fine-mesh instance with the median displacement error of the
+label-free transformer, seed 0: reference solution, label-free prediction and the
+prediction rescaled by $\cstar$.}
+\caption{A typical fine-mesh instance, seed 0 (selection rule in
+\cref{sec:methods:prereg}).}
+\label{fig:field-fine}
+\end{figure}

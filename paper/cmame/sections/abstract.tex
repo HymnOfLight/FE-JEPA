@@ -1,0 +1,19 @@
+Supervised training of a finite-element surrogate requires solving the full system for
+every training example, the very cost the surrogate should remove. For linear
+elastostatics we train on the assembled discrete potential energy instead. Minimising it
+is exactly supervised regression in the stiffness norm, which measures the strain energy
+of the error, so the surrogate learns from a weighted mean-square stress error without
+any example being solved. In pre-registered comparisons on three-dimensional tetrahedral
+meshes, a transformer trained on the energy alone was more accurate, on every metric,
+than the same network trained on the solutions of the same instances. A graph network
+trained with labels had smaller displacement errors on most instances but larger
+stress-field errors on almost all of them: displacement error ranked these two
+surrogates in the opposite order to stress error. Every supervised network also returned
+some predictions further from the solution, in the energy norm, than the zero field; the
+label-free network rarely did, and the energy detects such failures without a reference
+solution. In two dimensions, the label-free network was slightly less accurate than its
+supervised counterpart in displacement but more accurate in energy and stress. No
+network tested transferred to a substantially finer three-dimensional mesh without
+retraining; a post hoc, closed-form, label-free rescaling removed most of the label-free
+network's error there. The discrete energy thus serves as training objective, evaluation
+metric and failure detector.

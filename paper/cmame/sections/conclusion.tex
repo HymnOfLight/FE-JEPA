@@ -1,0 +1,19 @@
+\section{Conclusion}\label{sec:conclusion}
+
+For linear elastostatics, the assembled discrete potential energy is an exact label-free
+training objective: minimising it is supervised regression in the stiffness norm, which
+measures the strain energy of the stress error, and it needs no solve. The same identity
+makes the energy an evaluation metric that follows the stress rather than the displacement,
+and a failure detector: the sign of the energy of a prediction tells whether it is worse
+than the zero field, and a closed-form rescaling ensures that it is not. In
+pre-registered comparisons on three-dimensional tetrahedral meshes, a transformer trained
+on the energy alone was more accurate on every metric than the same transformer trained on
+the solutions of the same instances, and a supervised graph network with lower
+displacement errors had several times larger stress errors, so that displacement error
+ranked the two in the opposite order to stress error. In two dimensions the label-free
+network was slightly less accurate in displacement and more accurate in energy and stress,
+and warm starts from a label-free prediction did not shorten conjugate gradients to
+a tight tolerance. In three dimensions no network transferred to a substantially finer mesh without
+retraining, although a label-free rescaling removed most of the label-free network's error
+there.
+These limits, and the criteria that were not met, are reported with the results.

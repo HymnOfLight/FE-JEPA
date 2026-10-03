@@ -1,0 +1,57 @@
+\section{Computational cost}\label{sec:cost}
+
+\subsection{Labels}\label{sec:cost:labels}
+
+In two dimensions the comparison consumed \numTwoSolves{} solves:
+\numTwoSolvesOffline{} for the 256 validation and 1,024 training instances, four load cases
+each, and \numTwoSolvesRun{} for the coarsened validation sets of
+\cref{sec:results2d:other}. In three dimensions it consumed \numThreeSolves{}:
+\numThreeTrainSolves{} for the 1,024 labelled training instances, \numThreeFewSolves{} for
+the 64 fine-mesh instances reserved for few-shot training and \numThreeEvalSolves{} for the in-band and fine-mesh
+validation sets. The validation solves are needed to evaluate any method; the training
+solves are the price of supervision, and the label-free transformer needed none of them.
+
+\subsection{Training}\label{sec:cost:training}
+
+Label-free training of the three-dimensional transformer took \numTimeThreeSeed{} h per
+seed on one NVIDIA GeForce RTX 5090, for 204,800 steps; the supervised transformer costs
+the same per step, plus its labels. Full self-attention over all nodes dominates this cost
+and grows with the square of the number of nodes: one training step took
+\numEtwoTransformerFineStep{} s on a fine-mesh instance of \numEtwoNodesFine{} nodes. In
+two dimensions, with the later code of \cref{sec:results2d:other}, three label-free seeds
+trained in parallel on one GPU of the same type took \numTimeTwoParallel{}.
+
+To reduce the cost of attention we tested, under a separate pre-registration, a
+token-bottleneck network that pools the nodes into $M=512$ or $M=1{,}024$ tokens seeded by
+farthest-point sampling, applies attention to the tokens only, and decodes each node from
+a smooth blend of its six nearest tokens; it was trained on the energy alone, with every
+other setting as for the transformer (\cref{tab:e2,fig:e2}). It trained
+\numTimeBottleneckSpeedup{} times faster per seed (\numTimeBottleneckSeedMin{} h against
+\numTimeThreeSeed{} h), but it was less accurate: its in-band relative energy gap was
+\numEtwoGapMin{} to \numEtwoGapMax{} times the transformer's and its zero-shot fine-mesh
+displacement error \numEtwoFineMin{} to \numEtwoFineMax{} times. Both variants were
+dropped under their pre-registered accuracy criterion (\cref{tab:criteria}).
+
+\input{generated/table_e2}
+
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=\linewidth]{generated/fig_e2_cost_accuracy.pdf}
+\caption{Cost against accuracy of the label-free transformer and the token bottleneck
+(three dimensions, three seeds each; faint markers are seeds, ringed markers seed means).
+Left: in-band relative energy gap against the time of one training step on an in-band
+instance. Right: zero-shot fine-mesh displacement error against the time of one step on a
+fine-mesh instance.}
+\label{fig:e2}
+\end{figure}
+
+\subsection{Inference and solving}\label{sec:cost:inference}
+
+\pending{A cost table: on the training machine and on the same validation and fine-mesh
+instances, the time of surrogate inference (first call and repeated calls) against a
+sparse direct solve, conjugate gradients from zero, conjugate gradients from the
+prediction, and conjugate gradients stopped once the energy error of the iterate reaches
+that of the prediction, with and without the rescaling of \cref{prop:amp}, together with
+the surrogate's accuracy on those instances. The last two use the reference solution to
+decide when to stop, so they give a lower bound on the time conjugate gradients need to
+match the surrogate.}

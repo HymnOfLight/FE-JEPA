@@ -1,0 +1,459 @@
+{
+ "config": {
+  "_comment": "WP2/E2 run (pre-registered via PREREG_WP2.md): the one-shot JEPA-vs-AR verdict (PREREG.md Sec.6, kill K3). E2 values are exactly the pre-committed block that sat disabled in phase1_rec8_v2.json; do not tune. Corpus and its 1280 labels reused as-is (labelled_policy=asis).",
+  "data": {
+   "dir": "runs/data2d",
+   "n": 30000,
+   "seed": 0,
+   "backend": "gmsh",
+   "labelled_policy": "asis"
+  },
+  "split": {
+   "n_val": 256,
+   "seed": 1
+  },
+  "model": {
+   "dim": 256,
+   "depth": 8,
+   "heads": 8,
+   "mask_frac": 0.4,
+   "features": {
+    "load_summary": true,
+    "geometry": true
+   },
+   "mgn_dim": 256,
+   "mgn_depth": 8
+  },
+  "sup": {
+   "epochs": 200,
+   "lr": 0.0015
+  },
+  "pretrain": {
+   "epochs": 200,
+   "lr": 0.001
+  },
+  "experiments": {
+   "e1": {
+    "enabled": false
+   },
+   "e2": {
+    "enabled": true,
+    "budgets": [
+     16,
+     64,
+     256
+    ],
+    "seeds": 3,
+    "pool_size": 1024,
+    "pre_epochs": 200,
+    "ft_epochs": 200,
+    "decision_budget": 64
+   },
+   "e3": {
+    "enabled": false
+   },
+   "e4": {
+    "enabled": false
+   },
+   "e5": {
+    "enabled": false
+   },
+   "e6": {
+    "enabled": false
+   },
+   "e7": {
+    "enabled": false
+   },
+   "e8": {
+    "enabled": false
+   },
+   "wp2": {
+    "enabled": true,
+    "ratios": [
+     0.2,
+     0.4,
+     0.6
+    ],
+    "steps": 2000,
+    "n_train": 64,
+    "n_holdout": 64
+   },
+   "wp6": {
+    "enabled": false
+   }
+  },
+  "gate": {
+   "decision_budget": 64
+  },
+  "out": "runs/wp2_e2/report_wp2_e2.json",
+  "device": "auto",
+  "workers": 3,
+  "tf32": true,
+  "prereg_guard": true,
+  "prereg_file": "PREREG_WP2.md"
+ },
+ "prereg": {
+  "file": "PREREG_WP2.md",
+  "config_sha256": "60088135b1fecb2768d882ad6fee37add0fc3463160decee98a34b511159cb2c"
+ },
+ "data_economy": {
+  "labelled_instances": 512,
+  "labelled_val": 256,
+  "labelled_pool_prefix": 256,
+  "solves_per_labelled_instance": 4,
+  "reference_solves_total": 0,
+  "unlabeled_pool_depth_used": 1024,
+  "unlabeled_over_labelled_pool": 4.0,
+  "ledger": {
+   "per_stage": {
+    "asis-preexisting-corpus": 0
+   },
+   "total": 0,
+   "wall_clock_s": 0.0
+  }
+ },
+ "runtime_policy": {
+  "tf32": true,
+  "device": "cuda",
+  "torch": "2.11.0+cu128",
+  "gpu": "NVIDIA GeForce RTX 5090"
+ },
+ "planned_steps": {
+  "e2": 1833600,
+  "wp2": 6000,
+  "total": 1839600
+ },
+ "results": {
+  "wp2": {
+   "id": "WP2-mask",
+   "plan_ref": "plan v2.0 WP2 (mask ratios {0.2,0.4,0.6}), Sec.5 item 6 (pre-E2)",
+   "protocol": {
+    "ratios": [
+     0.2,
+     0.4,
+     0.6
+    ],
+    "steps": 2000,
+    "epochs": 32,
+    "n_train": 64,
+    "n_holdout": 64,
+    "selection": "argmin held-out masked-prediction MSE; standardized rank reported alongside (design dial, no kill; must conclude BEFORE E2's one-shot verdict)"
+   },
+   "metrics": {
+    "per_ratio": [
+     {
+      "ratio": 0.2,
+      "holdout_pred_mse": 0.0038721275536772737,
+      "pooled_std_rank": 1.7469964433592093
+     },
+     {
+      "ratio": 0.4,
+      "holdout_pred_mse": 0.015952062839460268,
+      "pooled_std_rank": 1.6236026674883037
+     },
+     {
+      "ratio": 0.6,
+      "holdout_pred_mse": 0.045469498636521166,
+      "pooled_std_rank": 1.34704799812131
+     }
+    ],
+    "recommended_ratio": 0.2
+   },
+   "kills": []
+  },
+  "e2": {
+   "id": "E2",
+   "plan_ref": "plan v2.0 Sec.6 E2, C4, Sec.5 item 6, kill K3",
+   "protocol": {
+    "pipeline": "P-B: pretrain -> fine-tune",
+    "pool_size": 1024,
+    "budgets": [
+     16,
+     64,
+     256
+    ],
+    "n_seeds": 3,
+    "pretrain": {
+     "epochs": 200,
+     "lr": 0.001,
+     "device": "cuda"
+    },
+    "finetune": {
+     "epochs": 200,
+     "lr": 0.0015,
+     "device": "cuda"
+    },
+    "run_after_wp2_redesign": true
+   },
+   "metrics": {
+    "table": {
+     "scratch": {
+      "16": {
+       "disp": {
+        "mean": 0.2574061834279554,
+        "std": 0.014189644824539492,
+        "per_seed": [
+         0.26990950868235947,
+         0.23756153828929524,
+         0.26474750331221153
+        ]
+       },
+       "egap": {
+        "mean": 11.262232764799554,
+        "std": 4.258078300294042,
+        "per_seed": [
+         5.626478036106935,
+         12.242843764225793,
+         15.91737649406593
+        ]
+       }
+      },
+      "64": {
+       "disp": {
+        "mean": 0.19591210634819958,
+        "std": 0.004671117915769899,
+        "per_seed": [
+         0.19781349741189716,
+         0.18948258357945896,
+         0.20044023805324268
+        ]
+       },
+       "egap": {
+        "mean": 2.2170558262879543,
+        "std": 0.10636142686515213,
+        "per_seed": [
+         2.3458413736884607,
+         2.2199671518146475,
+         2.085358953360755
+        ]
+       }
+      },
+      "256": {
+       "disp": {
+        "mean": 0.17273718884573985,
+        "std": 0.000335905792016194,
+        "per_seed": [
+         0.17230826970725704,
+         0.17277481422386592,
+         0.1731284826060966
+        ]
+       },
+       "egap": {
+        "mean": 0.9223148387837864,
+        "std": 0.12823987899448816,
+        "per_seed": [
+         0.7564601735537768,
+         1.0687824921633462,
+         0.941701850634236
+        ]
+       }
+      }
+     },
+     "ar_ft": {
+      "16": {
+       "disp": {
+        "mean": 0.19960875375508944,
+        "std": 0.009448730011554338,
+        "per_seed": [
+         0.19963418042005984,
+         0.18802377775014456,
+         0.21116830309506385
+        ]
+       },
+       "egap": {
+        "mean": 0.1702341261040643,
+        "std": 0.02298372850361685,
+        "per_seed": [
+         0.1483487150531471,
+         0.20198906964568175,
+         0.16036459361336403
+        ]
+       }
+      },
+      "64": {
+       "disp": {
+        "mean": 0.1885881176284359,
+        "std": 0.0022967278692582987,
+        "per_seed": [
+         0.1879596695103759,
+         0.18614259023483076,
+         0.19166209314010105
+        ]
+       },
+       "egap": {
+        "mean": 3.150948045540952,
+        "std": 2.7340068083279094,
+        "per_seed": [
+         0.810563425133635,
+         6.9864995648186365,
+         1.6557811466705836
+        ]
+       }
+      },
+      "256": {
+       "disp": {
+        "mean": 0.1872482290597182,
+        "std": 0.003986245106140612,
+        "per_seed": [
+         0.18429696718351066,
+         0.1928835192474334,
+         0.18456420074821056
+        ]
+       },
+       "egap": {
+        "mean": 0.2163694755961377,
+        "std": 0.01597607452573244,
+        "per_seed": [
+         0.22285694076559426,
+         0.23186839577546475,
+         0.19438309024735406
+        ]
+       }
+      }
+     },
+     "jepa_ft": {
+      "16": {
+       "disp": {
+        "mean": 0.22660589258785072,
+        "std": 0.013287684007106745,
+        "per_seed": [
+         0.21235116361742476,
+         0.2443373056345262,
+         0.2231292085116012
+        ]
+       },
+       "egap": {
+        "mean": 0.25258468318300203,
+        "std": 0.006653642112446806,
+        "per_seed": [
+         0.2438915576108571,
+         0.260050317286146,
+         0.2538121746520029
+        ]
+       }
+      },
+      "64": {
+       "disp": {
+        "mean": 0.1896229303147202,
+        "std": 0.004604760412052143,
+        "per_seed": [
+         0.18627014916286022,
+         0.18646456426912272,
+         0.1961340775121776
+        ]
+       },
+       "egap": {
+        "mean": 0.23573739498224033,
+        "std": 0.04210604613416362,
+        "per_seed": [
+         0.18295675308965914,
+         0.23825238215842845,
+         0.2860030496986335
+        ]
+       }
+      },
+      "256": {
+       "disp": {
+        "mean": 0.1824092609949837,
+        "std": 0.004330361231762374,
+        "per_seed": [
+         0.1846037977087925,
+         0.17636062423579546,
+         0.18626336104036312
+        ]
+       },
+       "egap": {
+        "mean": 0.2519094979487496,
+        "std": 0.03940821342888746,
+        "per_seed": [
+         0.20323887715825545,
+         0.29975839872033133,
+         0.25273121796766207
+        ]
+       }
+      }
+     }
+    },
+    "jepa_vs_ar_improvements": {
+     "16": {
+      "disp": -0.13525027497484154,
+      "egap": -0.48374881678305065
+     },
+     "64": {
+      "disp": -0.005487157405765797,
+      "egap": 0.925185248510891
+     },
+     "256": {
+      "disp": 0.025842530468959606,
+      "egap": -0.16425617455832262
+     }
+    },
+    "jepa_improvement_at_decision_budget": {
+     "disp": -0.005487157405765797,
+     "egap": 0.925185248510891
+    }
+   },
+   "kills": [
+    {
+     "condition": "K3: full JEPA within 3% of AR at every budget (disp AND egap) => drop SSL term, branch B",
+     "triggered": false,
+     "note": "{16: {'disp': -0.1353, 'egap': -0.4837}, 64: {'disp': -0.0055, 'egap': 0.9252}, 256: {'disp': 0.0258, 'egap': -0.1643}}"
+    }
+   ]
+  }
+ },
+ "gate_g1_prime": {
+  "plan_ref": "plan v2.0 Sec.5 item 2 (G1'), item 1 (retirement)",
+  "decision_budget": 64,
+  "thresholds": {
+   "egap_reduction": 0.5,
+   "vm_reduction": 0.25,
+   "transfer_egap": 0.1,
+   "transfer_disp": 0.05
+  },
+  "conditions": {
+   "a": false,
+   "b": false,
+   "c": false
+  },
+  "reasons": {
+   "a_sanity": "E5' not run -- condition unmeasured, gate fails closed",
+   "b_physics": "E8 not run -- condition unmeasured, gate fails closed",
+   "c_transfer": "E8 not run -- condition unmeasured, gate fails closed"
+  },
+  "passed": false,
+  "retired_displacement_criterion": null
+ },
+ "solve_ledger": {
+  "per_stage": {
+   "asis-preexisting-corpus": 0
+  },
+  "total": 0,
+  "wall_clock_s": 0.0
+ },
+ "provenance": {
+  "timestamp_utc": "2026-07-31T22:25:26+00:00",
+  "git": "unavailable",
+  "config_sha256": "60088135b1fecb2768d882ad6fee37add0fc3463160decee98a34b511159cb2c",
+  "datasets": [
+   {
+    "dir": "runs/data2d",
+    "manifest_sha256": "3553396d183115b843512a35cba1a1e8448b9e83e10c1d1a5b02b235a7c79d26",
+    "n_instances": 30000,
+    "backend": "gmsh",
+    "labelled_policy": "none"
+   }
+  ],
+  "seeds": [
+   0,
+   1,
+   2
+  ],
+  "versions": {
+   "python": "3.12.3",
+   "numpy": "2.3.2",
+   "scipy": "1.17.1",
+   "torch": "2.11.0+cu128"
+  }
+ }
+}

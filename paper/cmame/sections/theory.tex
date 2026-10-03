@@ -1,0 +1,368 @@
+\section{Theory}\label{sec:theory}
+
+This section collects the identities on which the method and its evaluation rest.
+\Cref{lem:exact,lem:cond}, \cref{cor:modes}, \cref{rem:dual} and \cref{prop:sep} of
+\ref{app:e1} are restated, with proofs, from the companion note \cite{CaoSong2026}, and
+\eqref{eq:cheb} is the classical Chebyshev bound of conjugate gradients \cite{Saad2003}; the other
+statements are added here. All are elementary consequences of the energy-norm algebra of
+symmetric positive definite systems \cite{Ciarlet1978,Saad2003}. What they provide is an
+exact account of what label-free training optimises, of how its results should be measured,
+and of what the energy of a prediction reveals without a reference solution. Each statement
+with numerical content is implemented as an executable check (\cref{sec:theory:checks}).
+
+\subsection{Discrete setting}\label{sec:theory:setting}
+
+Consider a linear elastostatic problem on a domain $\Omega\subset\R^{d}$, $d\in\{2,3\}$,
+discretised by conforming finite elements, with homogeneous Dirichlet conditions on part
+of the boundary. After the constrained degrees of freedom are eliminated, the $n$ free
+nodal displacements of the finite-element solution $\Ustar\in\R^{n}$ satisfy
+\begin{equation}
+K\Ustar = F,
+\label{eq:system}
+\end{equation}
+where $K\in\R^{n\times n}$ is the stiffness matrix restricted to the free degrees of
+freedom and $F\in\R^{n}$, $F\neq0$, the load vector. We call $\Ustar$ the reference
+solution; with sufficient Dirichlet constraints, $K$ is symmetric positive definite. The
+discrete potential energy of a vector $u\in\R^{n}$ is
+\begin{equation}
+\Pi_h(u) = \tfrac12\,u^{\top}Ku - F^{\top}u ,
+\label{eq:energy}
+\end{equation}
+and the stiffness norm, or energy norm, is $\norm{v}_K=(v^{\top}Kv)^{1/2}$ for
+$v\in\R^{n}$. For a prediction $u$ with error $e=u-\Ustar$ we call
+$\gap(u)=\Pi_h(u)-\Pi_h(\Ustar)$ its energy gap and
+\begin{equation}
+g(u) = \frac{\norm{u-\Ustar}_K^{2}}{\norm{\Ustar}_K^{2}}
+\label{eq:relgap}
+\end{equation}
+its relative energy gap. Substituting \eqref{eq:system} into \eqref{eq:energy} gives
+$\Pi_h(\Ustar)=-\tfrac12\norm{\Ustar}_K^2$, so the zero field has $g(0)=1$. The smallest
+and largest eigenvalues of $K$ are $\lambda_{\min}$ and $\lambda_{\max}$, and
+$\kappa=\lambda_{\max}/\lambda_{\min}$ is its spectral condition number. Evaluating
+$\Pi_h(u)$ requires $K$ and $F$, which every finite-element code assembles before solving,
+and one sparse matrix-vector product; it does not require $\Ustar$. The energy gap and
+$g$ do require $\Ustar$: in this paper they are evaluation quantities, computed on
+validation instances only.
+
+\subsection{Label-free training is stiffness-norm regression}\label{sec:theory:exact}
+
+\begin{lemma}[Exactness]\label{lem:exact}
+For every $u\in\R^{n}$,
+\begin{equation}
+\Pi_h(u)-\Pi_h(\Ustar) = \tfrac12\norm{u-\Ustar}_K^{2}
+\qquad\text{and}\qquad
+\nabla\Pi_h(u) = K(u-\Ustar).
+\label{eq:exact}
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+Expanding $\tfrac12\norm{u-\Ustar}_K^2=\tfrac12u^{\top}Ku-u^{\top}K\Ustar
++\tfrac12\Ustar{}^{\top}K\Ustar$ and using $K\Ustar=F$ gives
+$\tfrac12\norm{u-\Ustar}_K^2=\Pi_h(u)+\tfrac12\norm{\Ustar}_K^2=\Pi_h(u)-\Pi_h(\Ustar)$.
+Differentiating \eqref{eq:energy} gives $\nabla\Pi_h(u)=Ku-F=K(u-\Ustar)$.
+\end{proof}
+
+Hence $g(u)=\gap(u)/\lvert\Pi_h(\Ustar)\rvert$: the relative energy gap is the ratio of the
+strain energy of the error to that of the solution. A surrogate is trained on many
+instances. Let instance $i\in\{1,\dots,N\}$ have stiffness matrix $K_i$ and $L$ load
+vectors $F_{ij}$, $j\in\{1,\dots,L\}$, with solutions $\Ustar_{ij}=K_i^{-1}F_{ij}$ and
+energies $\Pi_{ij}(u)=\tfrac12u^{\top}K_iu-F_{ij}^{\top}u$, and let $u_{ij}(\theta)$ be the
+prediction of a network with parameters $\theta$.
+
+\begin{corollary}[Training objective]\label{cor:training}
+The label-free objective satisfies
+\begin{equation}
+\mathcal{L}_{\Pi}(\theta) = \frac{1}{NL}\sum_{i=1}^{N}\sum_{j=1}^{L}\Pi_{ij}\bigl(u_{ij}(\theta)\bigr)
+= \frac{1}{NL}\sum_{i=1}^{N}\sum_{j=1}^{L}\tfrac12\norm{u_{ij}(\theta)-\Ustar_{ij}}_{K_i}^{2}
++ \Pi^{\ast},
+\label{eq:training}
+\end{equation}
+where $\Pi^{\ast}=\frac{1}{NL}\sum_{i,j}\Pi_{ij}(\Ustar_{ij})$ does not depend on $\theta$.
+Minimising $\mathcal{L}_\Pi$ is therefore supervised regression in the stiffness norm: the
+two objectives have the same minimisers and the same gradient with respect to $\theta$ at
+every $\theta$, yet $\mathcal{L}_\Pi$ is evaluated without any $\Ustar_{ij}$.
+\end{corollary}
+
+\begin{proof}
+Apply \cref{lem:exact} to each term; the chain rule carries the equality of gradients
+from $u_{ij}$ to $\theta$.
+\end{proof}
+
+The regression in \eqref{eq:training} sums squared energy-norm errors without normalising
+them, so instances whose solutions carry more strain energy weigh more. Normalising each
+term by $\lvert\Pi_{ij}(\Ustar_{ij})\rvert$ would require the solutions; the label-free
+objective cannot do it.
+
+\begin{remark}[Dual norm]\label{rem:dual}
+With the residual $r(u)=F-Ku=-Ke$, \cref{lem:exact} reads
+$\gap(u)=\tfrac12\,r(u)^{\top}K^{-1}r(u)$: the energy gap is half the squared residual
+measured in the norm induced by $K^{-1}$, the norm in which a small residual means an
+accurate solution. The inverse cancels algebraically in $\Pi_h$, so the objective needs
+neither a solve nor a preconditioner. A Euclidean residual loss, by contrast, is
+$\norm{r(u)}_2^2=e^{\top}K^{2}e$, a regression in the norm of $K^2$, whose condition
+number is $\kappa^2$ \cite{DeRyck2024}.
+\end{remark}
+
+\subsection{The energy gap measures the stress error}\label{sec:theory:stress}
+
+Let $v_h$ denote the finite-element displacement field of a vector $v\in\R^n$, extended by
+zero on the constrained degrees of freedom, $\varepsilon(v_h)$ its strain,
+$\sigma(v_h)=\mathbb{C}:\varepsilon(v_h)$ its stress for the fourth-order elasticity
+tensor $\mathbb{C}$, $s=\sigma-\tfrac13(\operatorname{tr}\sigma)I$ the deviatoric stress,
+$p=\tfrac13\operatorname{tr}\sigma$ the mean stress and $\vm(\sigma)=(\tfrac32\,s:s)^{1/2}$
+the von Mises stress of a stress tensor $\sigma$; we write $\vm(v_h)$ and $p(v_h)$ for the
+fields $\vm(\sigma(v_h))$ and $p(\sigma(v_h))$. For a homogeneous isotropic material with Young's modulus $E$ and Poisson's
+ratio $\nu$, $G=E/(2(1+\nu))$ is the shear modulus and $B=E/(3(1-2\nu))$ the bulk modulus.
+
+\begin{proposition}[Energy gap and stress error]\label{prop:stress}
+Let the material be homogeneous and isotropic and the stiffness matrix be integrated
+exactly, as it is for linear elements. For every $v\in\R^{n}$,
+\begin{equation}
+\norm{v}_K^{2} = \int_{\Omega}\sigma(v_h):\mathbb{C}^{-1}:\sigma(v_h)\,\mathrm{d}\Omega
+= \int_{\Omega}\Bigl(\frac{\vm(v_h)^{2}}{3G}+\frac{p(v_h)^{2}}{B}\Bigr)\mathrm{d}\Omega .
+\label{eq:stressnorm}
+\end{equation}
+Consequently, for a prediction $u$ with error $e=u-\Ustar$,
+\begin{equation}
+\gap(u) = \frac12\int_{\Omega}\bigl(\sigma(u_h)-\sigma(\Ustar_h)\bigr):\mathbb{C}^{-1}:
+\bigl(\sigma(u_h)-\sigma(\Ustar_h)\bigr)\,\mathrm{d}\Omega ,
+\label{eq:gapstress}
+\end{equation}
+and the von Mises fields of $u$ and $\Ustar$ satisfy
+\begin{gather}
+\bigl\lVert\vm(u_h)-\vm(\Ustar_h)\bigr\rVert_{L^2(\Omega)}^{2}\le 3G\,\norm{u-\Ustar}_K^{2},
+\label{eq:vmbound}\\
+\frac{\lVert\vm(u_h)-\vm(\Ustar_h)\rVert_{L^2(\Omega)}^{2}}{\lVert\vm(\Ustar_h)\rVert_{L^2(\Omega)}^{2}}
+\le (1+\gamma^{\ast})\,g(u),
+\label{eq:vmboundrel}
+\end{gather}
+where $\gamma^{\ast}=3G\lVert p(\Ustar_h)\rVert_{L^2(\Omega)}^2/
+(B\lVert\vm(\Ustar_h)\rVert_{L^2(\Omega)}^2)$, defined when $\vm(\Ustar_h)\neq0$, is the
+ratio of the volumetric to the deviatoric strain energy of the solution. In plane stress
+the same statements hold for the plane stress state, with the three-dimensional moduli $G$
+and $B$.
+\end{proposition}
+
+\begin{proof}
+For a conforming discretisation with exactly integrated stiffness,
+\begin{equation*}
+v^{\top}Kv=\int_\Omega\varepsilon(v_h):\mathbb{C}:\varepsilon(v_h)\,\mathrm{d}\Omega
+=\int_\Omega\sigma(v_h):\mathbb{C}^{-1}:\sigma(v_h)\,\mathrm{d}\Omega .
+\end{equation*}
+For an isotropic
+material $\mathbb{C}^{-1}:\sigma=s/(2G)+\operatorname{tr}\sigma\,I/(9B)$, so
+$\sigma:\mathbb{C}^{-1}:\sigma=s:s/(2G)+(\operatorname{tr}\sigma)^2/(9B)
+=\vm^2/(3G)+p^2/B$, which is \eqref{eq:stressnorm}. Equation \eqref{eq:gapstress}
+follows from \cref{lem:exact} with $v=e$ and the linearity of $\sigma$. As a function of
+the stress tensor, $\vm$ is $(3/2)^{1/2}$ times the Frobenius norm of the deviatoric part,
+a seminorm, so that pointwise
+$\lvert\vm(u_h)-\vm(\Ustar_h)\rvert\le\vm(\sigma(u_h)-\sigma(\Ustar_h))=\vm(e_h)$;
+squaring, integrating and dropping the volumetric term of \eqref{eq:stressnorm} with $v=e$
+gives \eqref{eq:vmbound}. With $v=\Ustar$, \eqref{eq:stressnorm} gives
+$\norm{\Ustar}_K^2=(1+\gamma^\ast)\lVert\vm(\Ustar_h)\rVert_{L^2}^2/(3G)$, and
+\eqref{eq:vmboundrel} follows. In plane stress, the energy density of the plane stress
+state equals $\tfrac12\sigma:\mathbb{C}^{-1}:\sigma$ with the three-dimensional compliance,
+because the out-of-plane strain does no work, and the von Mises stress is the
+three-dimensional formula applied to that state.
+\end{proof}
+
+Equation \eqref{eq:gapstress} is the sense in which a network trained on the energy learns
+from a weighted mean-square stress error: by \cref{cor:training}, $\mathcal{L}_\Pi$ is,
+up to a constant, the mean over the training set of half the integral of the
+compliance-weighted squared stress error. The bounds \eqref{eq:vmbound} and
+\eqref{eq:vmboundrel} concern the volume-weighted von Mises error, whereas the metric
+reported in \cref{sec:methods:metrics} weights elements equally, as pre-registered; on
+graded meshes the two differ, so the bounds explain rather than bound the reported numbers.
+
+\subsection{Displacement error and energy-norm error}\label{sec:theory:metrics}
+
+\begin{lemma}[Conditioning]\label{lem:cond}
+For every $u\in\R^{n}$,
+\begin{equation}
+\norm{u-\Ustar}_2 \le \Bigl(\frac{2\gap(u)}{\lambda_{\min}}\Bigr)^{1/2}
+\qquad\text{and}\qquad
+\frac{\norm{u-\Ustar}_2^{2}}{\norm{\Ustar}_2^{2}} \le \kappa\, g(u).
+\label{eq:cond}
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+$2\gap(u)=\norm{e}_K^2\ge\lambda_{\min}\norm{e}_2^2$ gives the first inequality; with
+$\norm{\Ustar}_K^2\le\lambda_{\max}\norm{\Ustar}_2^2$ it gives the second.
+\end{proof}
+
+\begin{corollary}[Modewise contraction]\label{cor:modes}
+Let $K=\sum_{m}\lambda_m w_mw_m^{\top}$ be the eigendecomposition of $K$, with orthonormal
+eigenvectors $w_m$, and $u^{+}=u-\eta\nabla\Pi_h(u)$ one gradient-descent step with step
+size $\eta>0$. The error component $\hat e_m=w_m^{\top}(u-\Ustar)$ in eigenmode $m$ evolves
+exactly as
+\begin{equation}
+\hat e_m^{+} = (1-\eta\lambda_m)\,\hat e_m .
+\label{eq:modes}
+\end{equation}
+\end{corollary}
+
+\begin{proof}
+Immediate from $\nabla\Pi_h(u)=K(u-\Ustar)$ and the diagonalisation of $K$.
+\end{proof}
+
+In the same eigenbasis, $\norm{e}_K^2=\sum_m\lambda_m\hat e_m^2$ while
+$\norm{e}_2^2=\sum_m\hat e_m^2$: the energy norm weights the error in mode $m$ by
+$\lambda_m$, the Euclidean displacement norm weights all modes equally. In elasticity the
+smooth, low-frequency modes have small eigenvalues and the oscillatory, high-frequency modes
+large ones, so an error made of low-frequency modes is large in displacement and small in
+energy, and one made of high-frequency modes the reverse; by \cref{prop:stress} it is the
+energy that follows the stresses.
+
+\begin{remark}[Opposite rankings]\label{rem:rank}
+For two predictions with errors $e_a,e_b\neq0$,
+\begin{equation}
+\kappa^{-1/2} \le \frac{\norm{e_a}_K/\norm{e_b}_K}{\norm{e_a}_2/\norm{e_b}_2} \le \kappa^{1/2},
+\label{eq:rank}
+\end{equation}
+by $\lambda_{\min}\norm{e}_2^2\le\norm{e}_K^2\le\lambda_{\max}\norm{e}_2^2$, and both bounds
+are attained by eigenvectors of $\lambda_{\max}$ and $\lambda_{\min}$. Hence two
+predictions can be ranked in opposite orders by the displacement error and by the
+energy-norm error only if their displacement errors differ by less than a factor
+$\kappa^{1/2}$, and for every ratio within that factor some pair of errors is so ranked. On
+the instances checked in this study, $\kappa^{1/2}$ lies between about \numSqrtKappaMin{}
+and \numSqrtKappaMax{} (\cref{sec:theory:checks}). By \cref{prop:stress} the energy-norm
+error is the compliance-weighted stress error, so the same holds for it; for the von Mises
+error, \eqref{eq:vmbound} gives a one-sided bound only. \Cref{sec:results3d} reports
+reversals between two trained networks.
+\end{remark}
+
+\subsection{The energy as metric and failure detector}\label{sec:theory:detector}
+
+\begin{proposition}[Energy-optimal amplitude]\label{prop:amp}
+Let $u\in\R^{n}$ with $u^{\top}Ku>0$ and let
+\begin{equation}
+\cstar = \frac{F^{\top}u}{u^{\top}Ku}.
+\label{eq:cstar}
+\end{equation}
+Then $\cstar$ minimises $\Pi_h(cu)$ over $c\in\R$,
+\begin{equation}
+\Pi_h(\cstar u) = -\frac{(F^{\top}u)^{2}}{2\,u^{\top}Ku} \le \min\{\Pi_h(u),\,0\},
+\qquad
+g(\cstar u) = 1-\cos^{2}\psi ,
+\label{eq:amp}
+\end{equation}
+where $\cos\psi=u^{\top}K\Ustar/(\norm{u}_K\norm{\Ustar}_K)$; in particular
+$g(\cstar u)\le\min\{g(u),1\}$.
+\end{proposition}
+
+\begin{proof}
+$\Pi_h(cu)=\tfrac12c^2u^{\top}Ku-cF^{\top}u$ is a convex quadratic in $c$ with minimiser
+$\cstar$ and minimum $-(F^{\top}u)^2/(2u^{\top}Ku)$; since $c=1$ and $c=0$ are admissible,
+the minimum is at most $\Pi_h(u)$ and $\Pi_h(0)=0$. By \cref{lem:exact} and
+$\Pi_h(\Ustar)=-\tfrac12\norm{\Ustar}_K^2$, $g(w)=1+2\Pi_h(w)/\norm{\Ustar}_K^2$ for every
+$w$; with $F^{\top}u=\Ustar{}^{\top}Ku$ this gives $g(\cstar u)=1-\cos^2\psi$.
+\end{proof}
+
+The rescaled prediction $\cstar u$ is the $K$-orthogonal projection of $\Ustar$ onto the
+span of $u$, the one-dimensional Ritz approximation. It needs no label and no work beyond
+evaluating $\Pi_h(u)$, since $u^{\top}Ku$ and $F^{\top}u$ are the two terms of $\Pi_h(u)$.
+After the rescaling only the error of direction, $\sin^2\psi$, remains; an error of
+amplitude is removed exactly. The improvement is in the energy norm: in other norms, such
+as the displacement error, rescaling can make a prediction worse.
+
+\begin{corollary}[Zero-field test and ranking]\label{cor:zero}
+For each load case, $\Pi_h(u)>0$ if and only if $\norm{u-\Ustar}_K>\norm{\Ustar}_K$, that
+is, if and only if $g(u)>1$: the prediction is further from the solution in the energy
+norm than the zero field. More generally, for any two predictions $u_1,u_2$ of the same
+load case, $\Pi_h(u_1)-\Pi_h(u_2)=\gap(u_1)-\gap(u_2)$, so the energy ranks any set of
+predictions exactly by their energy-norm errors. Neither statement needs a reference
+solution.
+\end{corollary}
+
+\begin{proof}
+Apply \cref{lem:exact} at $u$ and at $0$, and use $\Pi_h(0)=0$.
+\end{proof}
+
+Ranking candidate fields by their energy is the Ritz minimum principle itself; what
+\cref{cor:zero} adds for surrogates is a test against a fixed reference, the zero field,
+that each prediction passes or fails on its own. The counts of predictions worse than the
+zero field in \cref{sec:results2d,sec:results3d} use the mean of $g$ over the four load
+cases of an instance, as the evaluation records it; for a single load case the count and
+the sign test of \cref{cor:zero} coincide exactly. Together, \cref{cor:zero} and
+\cref{prop:amp} give a deployment guard: compute $\Pi_h(u)$, flag the prediction if it is
+positive, and rescale it by $\cstar$, which never makes it worse in the energy norm and
+makes it no worse than the zero field.
+
+\subsection{Conjugate gradients from a prediction}\label{sec:theory:cg}
+
+A prediction can serve as the initial iterate of the conjugate gradient method
+\cite{HestenesStiefel1952} applied to \eqref{eq:system}. Let $u^k$ be the iterate after
+$k$ iterations and $\gap_k=\gap(u^k)$, so that $\gap_0$ is the energy gap of the initial
+iterate. For $\kappa>1$ the classical bound \cite{Saad2003} is
+\begin{equation}
+\frac{\gap_k}{\gap_0} \le 4\rho^{2k},
+\qquad
+\rho = \frac{\kappa^{1/2}-1}{\kappa^{1/2}+1}.
+\label{eq:cheb}
+\end{equation}
+
+\begin{corollary}[Iteration bound of a warm start]\label{cor:warm}
+Let $\bar g\in(0,1)$ be a target relative energy gap and $g_0\in(\bar g,1]$ the relative
+energy gap of the initial iterate. Under \eqref{eq:cheb}, $k\ge\ln(4g_0/\bar g)/(2\ln\rho^{-1})$
+iterations suffice to reach $\bar g$, and $g_0=1$ for the zero field. The warm start
+therefore lowers this iteration bound by $\ln(1/g_0)/(2\ln\rho^{-1})$ iterations, a fraction
+\begin{equation}
+\frac{\ln(1/g_0)}{\ln(4/\bar g)}
+\label{eq:warm}
+\end{equation}
+of the bound for the zero field; the fraction does not depend on $\kappa$.
+\end{corollary}
+
+\begin{proof}
+By \eqref{eq:cheb}, $g(u^k)=g_0\gap_k/\gap_0\le4g_0\rho^{2k}$, which is at most $\bar g$
+once $k$ reaches the stated value; subtract the two iteration counts.
+\end{proof}
+
+The corollary compares bounds, not iteration counts: how many iterations a warm start
+actually saves depends on the spectral content of its error and can even be negative. What
+it shows is that a prediction of given accuracy lowers the iteration bound by a fixed number
+of iterations, while the bound grows with $\ln(1/\bar g)$, so that its share shrinks as the
+tolerance tightens. For $g_0=\numKfiveStartGap$, the initialiser tested in
+\cref{sec:results2d}, the fraction \eqref{eq:warm} is \numWarmFractionSeven{} for
+$\bar g=10^{-7}$, \numWarmFractionTwelve{} for $\bar g=10^{-12}$ and
+\numWarmFractionSeventeen{} for $\bar g=10^{-17}$. The residual test of that section,
+$\norm{r_k}_2\le\tau\norm{F}_2$ with $\tau=10^{-6}$, corresponds to targets in this
+range: it guarantees $g\le\kappa\tau^2$, which is up to about \numKappaTauTwo{} for the
+two-dimensional condition numbers of \cref{sec:theory:checks}, and an iterate exactly at
+the threshold has $g\ge\tau^2/\kappa$, which is down to about \numTauSqKappaTwo{}.
+
+\begin{remark}[Residual-based stopping]\label{rem:residual}
+The initial residual of a prediction is $r_0=-Ke_0$, so
+$\norm{r_0}_2^2=e_0^{\top}K^2e_0\le\lambda_{\max}\norm{e_0}_K^2$, and with
+$\norm{\Ustar}_K^2=F^{\top}K^{-1}F\le\norm{F}_2^2/\lambda_{\min}$,
+\begin{equation}
+\frac{\norm{r_0}_2}{\norm{F}_2} \le (\kappa\,g_0)^{1/2},
+\label{eq:residual}
+\end{equation}
+while the zero field starts from $\norm{r_0}_2/\norm{F}_2=1$. Both inequalities are attained,
+the first when $e_0$ is an eigenvector of $\lambda_{\max}$ and the second when $F$ is one
+of $\lambda_{\min}$, so the bound is sharp. A prediction that is accurate in energy can
+therefore start with a larger residual than the zero field, by a factor of up to
+$(\kappa g_0)^{1/2}$, because $K$ amplifies the stiff-mode components of its error, and a
+residual-based stopping test then credits a warm start with less than its energy accuracy.
+\end{remark}
+
+\subsection{Executable checks}\label{sec:theory:checks}
+
+The statements of this section are checked numerically, as follows. \Cref{lem:exact} holds
+on assembled instances to machine precision. The checks of
+\cref{lem:cond}, \cref{cor:modes} and \eqref{eq:cheb} were pre-registered for sixteen
+assembled validation instances of each corpus (criteria C5 and KP5 in
+\cref{tab:criteria}); none was violated. The modewise identity \eqref{eq:modes} held to \numModesPhrase{} on
+the extreme eigenvectors; for random perturbations of the solutions, the displacement errors reached at
+most \numCondTwo{} and \numCondThree{} of the bound \eqref{eq:cond}, and the
+conjugate-gradient ratios at most \numChebTwo{} and \numChebThree{} of the bound
+\eqref{eq:cheb}; and $\kappa$ ranged from \numKappaTwoLow{} to \numKappaTwoHigh{} in two
+dimensions and from \numKappaThreeLow{} to \numKappaThreeHigh{} in three.
+\Cref{prop:stress,prop:amp}, \cref{cor:zero,cor:warm} and \cref{rem:rank,rem:residual} are
+checked on assembled two- and three-dimensional instances by the repository's test suite
+(\ref{app:repro}). On the \numAmpRows{} instance-seed evaluations of the post hoc readings of
+\cref{sec:transfer}, the relative energy gap after rescaling, computed from the energies,
+agreed with $1-\cos^2\psi$ to within \numAmpIdentity{}.
