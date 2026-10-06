@@ -5,7 +5,10 @@ by its fixed rules from the report's arrays, records per-load energies whose
 identities hold (Pi > 0 exactly when the relative gap exceeds 1; the c*
 rescaling never raises the gap and never leaves it above the zero field's),
 checks every model by hash and by content, and leaves out a supervised state
-that fails both while exporting the rest."""
+that fails both while exporting the rest. cmame-paper Stage 1: the per-load
+error norms, Rayleigh quotients and von Mises errors (element-count and
+volume-weighted) agree with direct computations, Proposition 1's identity and
+bound hold on every prediction, and the summaries read the arrays."""
 
 import hashlib
 import json
@@ -173,6 +176,81 @@ def test_export_end_to_end(tmp_path):
     for ai, arm in enumerate(("ar", "labels", "mgn")):
         assert np.array_equal(F5[f"pi_{arm}"], E["pi"][ai, 0, i5])
     assert np.array_equal(F5["pi_star"], E["pi_star"][i5])
+    _check_diagnostics(E, res, F5, a)
+
+
+def _check_diagnostics(E, res, F5, a):
+    """cmame-paper Stage 1: the error norms, Rayleigh quotients and von Mises
+    errors of energies_val.npz and fields.json against direct computations."""
+    from fejepa.fe.tet3d import _tet_geometry, tet_stresses
+    from fejepa.metrics import vm_suite
+
+    shape = E["rel"].shape
+    for k in ("e2", "eK", "vm_elem", "vm_vol", "stress_energy", "u_dirichlet_max"):
+        assert E[k].shape == shape and np.isfinite(E[k]).all(), k
+    assert (E["u_dirichlet_max"] == 0).all()               # the models zero the constrained dofs
+    for k in ("u2_star", "uK_star", "gamma_star"):
+        assert E[k].shape == E["pi_star"].shape and np.isfinite(E[k]).all(), k
+    # ||e||_K^2 = 2 (Pi(u) - Pi(U*)) (Lemma 1) and = the stress-energy integral (Prop. 1)
+    assert np.allclose(E["eK"], 2 * (E["pi"] - E["pi_star"]), rtol=1e-8, atol=0)
+    assert np.allclose(E["stress_energy"], E["eK"], rtol=1e-8, atol=0)
+    assert np.allclose(E["uK_star"], -2 * E["pi_star"], rtol=1e-8, atol=0)
+    assert (E["gamma_star"] > 0).all()
+    # Proposition 1's bound on every prediction: vm_vol^2 <= (1 + gamma*) g
+    g = E["eK"] / E["uK_star"]
+    assert np.all(E["vm_vol"] ** 2 <= (1 + E["gamma_star"]) * g * (1 + 1e-9))
+    assert np.allclose(g, E["rel"], rtol=1e-8)
+    # the figure instance: direct computations from its stored fields
+    i5 = res["figures"]["fig5"]["index"]
+    vol, _ = _tet_geometry(a.nodes, a.elements)
+    assert np.allclose(F5["vol"], vol)
+    fr = np.asarray(a.free_mask, dtype=bool)
+    kff = a.K.tocsr()[fr][:, fr].toarray()
+    lam = np.linalg.eigvalsh(kff)
+    # gamma* from the stress tensors directly: deviatoric and mean parts, by volume
+    m = a.meta["material"]
+    G, Bk = m["E"] / (2 * (1 + m["nu"])), m["E"] / (3 * (1 - 2 * m["nu"]))
+    for j in range(a.n_loads):
+        s = tet_stresses(a.nodes, a.elements, a.U_star[j], m)
+        p = s[:, :3].mean(axis=1)
+        dev = s[:, :3] - p[:, None]
+        ss = (dev ** 2).sum(axis=1) + 2 * (s[:, 3:] ** 2).sum(axis=1)       # s : s
+        gam = 3 * G * (p ** 2 @ vol) / (Bk * (1.5 * ss @ vol))
+        assert np.isclose(E["gamma_star"][i5, j], gam, rtol=1e-10)
+    for ai, arm in enumerate(("ar", "labels", "mgn")):
+        U = F5[f"U_{arm}"]
+        err = U - a.U_star
+        assert np.allclose(E["e2"][ai, 0, i5], (err ** 2).sum(axis=1), rtol=1e-10)
+        ef = err[:, fr]                                     # the paper's free-block norm
+        assert np.allclose(E["eK"][ai, 0, i5], np.einsum("ld,ld->l", ef, (kff @ ef.T).T),
+                           rtol=1e-10)
+        assert np.allclose(E["vm_elem"][ai, 0, i5], vm_suite(U, a)["vm_rel_l2"], rtol=1e-9)
+        vm_u = F5[f"vm_{arm}"].astype(float)
+        vm_s = F5["vm_ref"].astype(float)
+        vv = np.sqrt((((vm_u - vm_s) ** 2) @ vol) / ((vm_s ** 2) @ vol))
+        assert np.allclose(E["vm_vol"][ai, 0, i5], vv, rtol=1e-4)      # the figure's float32
+        rq = E["eK"][ai, 0, i5] / E["e2"][ai, 0, i5]                     # Rayleigh quotient
+        assert np.all(rq >= lam[0] * (1 - 1e-9)) and np.all(rq <= lam[-1] * (1 + 1e-9))
+    # the summaries
+    d = res["diagnostics"]
+    for ai, arm in enumerate(("ar", "labels", "mgn")):
+        rq = (E["eK"][ai] / E["e2"][ai]) / (E["uK_star"] / E["u2_star"])[None]
+        assert np.isclose(d[arm]["rayleigh_ratio_median"], np.median(rq))
+        assert np.allclose(d[arm]["rayleigh_ratio_p10_p90"], np.percentile(rq, [10, 90]))
+        assert np.isclose(d[arm]["vm_vol_median"], np.median(E["vm_vol"][ai]))
+        assert np.isclose(d[arm]["vm_elem_median"], np.median(E["vm_elem"][ai]))
+        ratio = E["vm_vol"][ai] ** 2 / ((1 + E["gamma_star"])[None] * (E["eK"][ai] / E["uK_star"]))
+        assert np.isclose(d[arm]["prop1_bound_ratio_max"], ratio.max())
+        assert np.isclose(d[arm]["prop1_bound_ratio_median"], np.median(ratio))
+        assert d[arm]["prop1_bound_ratio_max"] <= 1 + 1e-9
+        assert d[arm]["stress_identity_max_rel_dev"] < 1e-8
+        assert d[arm]["gap_identity_max_rel_dev"] < 1e-8
+        assert d[arm]["u_dirichlet_max"] == 0
+    for ai, arm in ((1, "labels"), (2, "mgn")):
+        rq_a = E["eK"][ai] / E["e2"][ai]
+        rq_0 = E["eK"][0] / E["e2"][0]
+        assert np.isclose(d[arm]["rayleigh_above_label_free_share"], np.mean(rq_a > rq_0))
+    assert "rayleigh_above_label_free_share" not in d["ar"]
 
 
 def test_supervised_states_by_hash_and_by_content(tmp_path):
@@ -195,7 +273,12 @@ def test_supervised_states_by_hash_and_by_content(tmp_path):
     assert res["left_out"] == ["mgn_s1"]
     E = np.load(out / "energies_val.npz")
     assert np.isnan(E["rel"][2, 1]).all() and not np.isnan(E["rel"][2, 0]).any()
+    assert np.isnan(E["vm_vol"][2, 1]).all() and not np.isnan(E["vm_vol"][2, 0]).any()
     assert res["counts"]["mgn"]["instances"] == 5                 # seed 0 only
+    rq = (E["eK"][2, 0] / E["e2"][2, 0]) / (E["uK_star"] / E["u2_star"])
+    assert np.isclose(res["diagnostics"]["mgn"]["rayleigh_ratio_median"], np.median(rq))
+    share = np.mean(E["eK"][2, 0] / E["e2"][2, 0] > E["eK"][0, 0] / E["e2"][0, 0])
+    assert np.isclose(res["diagnostics"]["mgn"]["rayleigh_above_label_free_share"], share)
     assert set(res["figures"]) == {"fig5", "fig6", "fig7"}        # seed 0 models: all used
     assert "mgn" in res["figures"]["fig5"]["models"]
 
