@@ -69,6 +69,16 @@ def count_steps(cfg: dict) -> dict:
             ar = 0
         if e8.get("ar_only"):                              # wp8 E-series: no supervised grid
             supd = 0
+        elif "include_knorm" in e8:
+            # cmame-paper configurations (they name include_knorm): the exact count --
+            # the rows the configuration enables, the graph network at its budgets
+            buds = [int(b) for b in e8.get("budgets", [16, 64, 256, 1024])]
+            n_tf = (1 + bool(e8.get("include_anchor", True))
+                    + bool(e8.get("include_ar_ft", True)) + bool(e8.get("include_knorm")))
+            mgn_b = ([int(b) for b in e8.get("mgn_budgets", buds)]
+                     if e8.get("include_mgn") else [])
+            ep = int(e8.get("sup_epochs", sup_ep))
+            supd = ep * (n_tf * sum(buds) + sum(b for b in buds if b in mgn_b))
         else:
             n_sup = 3 + (1 if e8.get("include_mgn") else 0)   # labels, anchored, ar_ft(+mgn)
             supd = sum(n_sup * int(e8.get("sup_epochs", sup_ep)) * b

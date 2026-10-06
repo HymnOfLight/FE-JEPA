@@ -42,6 +42,12 @@ REUSE_FREE_KEYS = ("_comment", "out", "prereg_file", "prereg_guard", "evaluation
 """Top-level keys in which a configuration may differ from the run whose
 states it reuses (besides `experiments.e8.reuse_from` itself): none of them
 reaches training."""
+REUSE_SUPERVISED_KEYS = ("ar_only", "budgets", "include_mgn", "mgn_budgets", "include_ar_ft",
+                         "include_anchor", "include_knorm", "sup_epochs", "sup_lr",
+                         "include_naive_baselines")
+"""cmame-paper (`reuse_from.supervised_grid`): the `experiments.e8` keys that only
+shape the supervised grid and the naive baselines -- none of them reaches the AR
+units whose states are reused -- may also differ."""
 
 
 # -------------------------------------------------------------- holdouts --
@@ -130,13 +136,16 @@ def _sha256(path) -> str:
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
-def _strip(cfg: dict) -> dict:
+def _strip(cfg: dict, supervised_grid: bool = False) -> dict:
     c = json.loads(json.dumps(cfg))
     for k in REUSE_FREE_KEYS:
         c.pop(k, None)
     e8 = (c.get("experiments") or {}).get("e8")
     if isinstance(e8, dict):
         e8.pop("reuse_from", None)
+        if supervised_grid:
+            for k in REUSE_SUPERVISED_KEYS:
+                e8.pop(k, None)
     return c
 
 
@@ -147,7 +156,8 @@ def verify_reuse(cfg: dict, reuse: dict) -> dict:
     that report records for it."""
     rp = Path(reuse["report"])
     src = json.loads(rp.read_text())
-    a, b = _strip(cfg), _strip(src["config"])
+    grid = bool(reuse.get("supervised_grid"))
+    a, b = _strip(cfg, grid), _strip(src["config"], grid)
     if a != b:
         diff = sorted(k for k in set(a) | set(b) if a.get(k) != b.get(k))
         sub = []
@@ -180,4 +190,5 @@ def verify_reuse(cfg: dict, reuse: dict) -> dict:
                            "states_dir": str(reuse["states_dir"]),
                            "states_sha256": {f"s{s}": v[pools[0]][1]
                                              for s, v in states.items()},
-                           "source_config_sha256": src["provenance"].get("config_sha256")}}
+                           "source_config_sha256": src["provenance"].get("config_sha256"),
+                           **({"supervised_grid": True} if grid else {})}}

@@ -1,7 +1,20 @@
 # RUNBOOK -- cmame-paper, commands in execution order
 
 The box sessions that the CMAME manuscript (`paper/cmame/`) needs. Roles:
-**box** = the GPU machine; **repo** = code, records and the manuscript.
+**box** = the GPU machine; **repo** = code, records, pre-registration and
+the manuscript.
+
+- Sec. A: timing and field export (read only; ~1.5 h; no pre-registration).
+- Sec. B: CM2D, the two-dimensional supervised networks retrained with the
+  current code beside E1's label-free states, with a stiffness-norm control
+  (PREREG_CM2D; ~10-15 h, up to ~18 h; only after PREREG_CM2D is stamped and
+  tagged `prereg-cm2d`, except its readiness check B0).
+- Sec. C: CM2D's adjudication (repo).
+
+The sections are independent: each reads E1's or Phase-2b's states and
+corpora; Sec. A and B0 write only under `runs/cmame/`, Sec. B otherwise only
+under `runs/cm2d/`; none writes to a stamped configuration of another
+pre-registration, another run's `e8_states/` or `runs/data2d`.
 
 ## A. Timing and field export, standalone (box; ~1.5 h)
 
@@ -72,7 +85,7 @@ python -m pytest -q --deselect tests/test_cmame_material.py::test_manuscript_com
     --deselect tests/test_w9_session2.py::test_paper_material_compiles \
     2>&1 | tee runs/cmame/timing/pytest.log | tail -n 3
 ```
-The suite's last line reads `455 passed, 2 deselected`, then warnings and the
+The suite's last line reads `499 passed, 2 deselected`, then warnings and the
 time (the two LaTeX builds are left out: they need a TeX installation that
 this section does not use). Anything failed, an error, or another count: stop
 and report. Any other output than the comments describe: stop and report.
@@ -157,3 +170,233 @@ The return is checked (HEAD and tree against the pushed commit, the states'
 and report's hashes recorded in the JSON files, the exit codes) and committed
 under `records/cmame/timing/`; the manuscript's cost table, field figures and
 per-load counts are then generated from it.
+
+## B. CM2D: the 2D supervised networks retrained, with a stiffness-norm control (box; ~10-15 h)
+
+PREREG_CM2D.md governs. One run of the stamped configuration
+`configs/cm2d_v1.json` on E1's corpus, split and seeds: E1's three label-free
+states evaluated (not trained; each checked by SHA-256), and the supervised
+grid trained with the current code -- the labels-only transformer and the same
+transformer trained on the relative stiffness-norm error at 16, 64, 256 and
+1,024 labels, the graph network at 64 and 1,024, and the naive rows.
+2,284,800 supervised steps in 30 units on three workers: about 11 h,
+10-15 h by the graph network's speed (not measured), up to about 18 h if its
+step is twice the transformer's. The instance's balance must cover about
+20 h. Everything is written under `runs/cm2d/`. The branch is frozen from the
+stamp until the return: the checkout must be exactly the tagged commit.
+
+### B0. Readiness (box; optional, after A2 or on any visit before the stamp; read only; ~10 min)
+The checks of B2 without the tag and the stamp, on the commit the operator
+instruction names for B0 (Sec. A's commit has no `scripts/cm2d_precheck.py`).
+They also evaluate E1's three states on the validation split and train two
+steps that are not kept, so a FAIL here changes the plan before the stamp
+instead of after it. Nothing else may run meanwhile (not during A1).
+```bash
+cd ~/autodl-tmp/FE-JEPA
+( source /etc/network_turbo
+  for i in 1 2 3; do git fetch origin +refs/heads/cmame-paper:refs/remotes/origin/cmame-paper && exit 0; sleep 10; done
+  exit 1 ) && echo FETCH-OK || echo FETCH-FAILED
+git checkout -B cmame-paper origin/cmame-paper   # "Switched to ..." or "Reset branch ...", maybe "set up to track"
+git rev-parse --short HEAD                   # the commit the operator instruction names for B0
+git status --porcelain --untracked-files=no  # must print nothing
+P=runs/cmame; mkdir -p $P
+python scripts/cm2d_precheck.py --pre-stamp --out $P/cm2d_ready.json 2>&1 \
+    | tee $P/cm2d_ready.log | grep -v '^\[dry-run\] {'
+```
+What you see: a `[dry-run] prereg guard would refuse: ... unstamped ...`
+line, a banner (`=== fejepa v2 run: configs/cm2d_v1.json | ...`), a
+`[plan] steps by experiment: {'e8': 2284800, 'total': 2284800}` line, a
+`[sup:none] step 2/2 (100%) knorm=...` line (the two training steps),
+possibly torch `UserWarning` blocks (harmless), then one `[precheck]` line
+per check: `info` for `tag` (it may read `fatal: No names found ...`),
+`report_git`, `head` and `stamp`, `ok` for every other check, and last
+`GO`. Send `runs/cmame/cm2d_ready.log` beside the Sec. A tarball (or on its
+own). A traceback, or a last line other than `GO` / `STOP: ...`, counts as
+STOP.
+
+### B1. Preconditions (box)
+
+B1a. The tmux session -- on its own line, outside tmux (skip it if a tmux
+status bar is already showing); after a dropped connection, `tmux attach -t cm`:
+```bash
+tmux new -A -s cm
+```
+
+B1b. Fetch the branch and the tag:
+```bash
+cd ~/autodl-tmp/FE-JEPA
+( source /etc/network_turbo
+  for i in 1 2 3; do git fetch origin +refs/heads/cmame-paper:refs/remotes/origin/cmame-paper +refs/tags/prereg-cm2d:refs/tags/prereg-cm2d && exit 0; sleep 10; done
+  exit 1 ) && echo FETCH-OK || echo FETCH-FAILED
+git rev-parse --short origin/cmame-paper     # the commit the operator instruction names
+git rev-parse --short 'prereg-cm2d^{commit}' # the same commit
+```
+Continue only if `FETCH-OK` is printed and both lines are the named commit
+(an error printed by a failed first attempt before `FETCH-OK` is harmless);
+otherwise stop here and report.
+
+B1c. Checkout, checks and the suite (~5 min):
+```bash
+cd ~/autodl-tmp/FE-JEPA
+git checkout -B cmame-paper origin/cmame-paper   # "Switched to ..." or "Reset branch ...", maybe "set up to track"
+git describe --tags --match prereg-cm2d      # must print exactly: prereg-cm2d
+git rev-parse 'HEAD^{tree}'                  # the tree the operator instruction names
+git status --porcelain --untracked-files=no  # must print nothing
+df -h ~/autodl-tmp / | tail -n 2             # >= 7 GB free on the data disk, >= 3 GB on /
+pgrep -af "fejepa|spawn_main|scripts/[A-Za-z0-9_]+\.py"   # must print nothing
+nvidia-smi --query-gpu=utilization.gpu,memory.used --format=csv,noheader   # about 0 %, under 1,000 MiB
+grep oom_kill /sys/fs/cgroup/memory.events 2>/dev/null   # note the number: B2' compares with it
+mkdir -p runs/cm2d
+python -m pytest -q --deselect tests/test_cmame_material.py::test_manuscript_compiles \
+    --deselect tests/test_w9_session2.py::test_paper_material_compiles \
+    2>&1 | tee runs/cm2d/pytest.log | tail -n 3
+```
+The suite's last line reads `499 passed, 2 deselected`, then warnings and the time.
+Anything failed, an error, another count, or any other output than the
+comments describe: stop and report.
+
+### B2. Checks and the run (box; ~10-15 h; nothing else on the GPU)
+The checks (~10 min; they evaluate E1's states and train two steps that are
+not kept):
+```bash
+cd ~/autodl-tmp/FE-JEPA
+P=runs/cm2d
+for f in precheck.json precheck.log; do [ -e $P/$f ] && mv $P/$f $P/$f.$(date +%Y%m%d-%H%M%S); done
+python scripts/cm2d_precheck.py --out $P/precheck.json 2>&1 \
+    | tee $P/precheck.log | grep -v '^\[dry-run\] {'
+```
+What you see: `[prereg] verified against PREREG_CM2D.md: <12 hex>...`, the
+banner and the `[plan]` line, the `[sup:none] step 2/2 (100%) knorm=...`
+line, possibly torch `UserWarning` blocks (harmless), then one `[precheck]`
+line per check: `info` for `head`, `ok` for every other check, and last `GO`.
+On `STOP: ...` (or a traceback, or another last line): stop here, send
+`runs/cm2d/precheck.log`, and shut the instance down without releasing it. On
+`GO`, in the same window (the run uses up the GO: pasting this block again
+prints the STOP line and starts nothing):
+```bash
+cd ~/autodl-tmp/FE-JEPA
+P=runs/cm2d
+run() { local log=$1; shift; [ -e $P/$log ] && mv $P/$log $P/$log.$(date +%Y%m%d-%H%M%S)
+        echo "$log start $(date -u +%FT%TZ)" >> $P/status.txt
+        "$@" 2>&1 | tee $P/$log; echo "$log exit=${PIPESTATUS[0]}" | tee -a $P/status.txt; }
+grep -q '"go": true' $P/precheck.json 2>/dev/null || echo "STOP: no unused GO in $P/precheck.json -- nothing started"
+grep -q '"go": true' $P/precheck.json 2>/dev/null && mv $P/precheck.json $P/precheck.json.used && run run.log python -m fejepa.cli run-config configs/cm2d_v1.json
+```
+Normal signs:
+- the log starts with `[prereg] verified against PREREG_CM2D.md` and
+  `[plan] steps by experiment: {'e8': 2284800, 'total': 2284800}`; torch
+  `UserWarning` blocks (sparse tensors, a tensor converted to a scalar) are
+  harmless, as in E1's log;
+- the labelling stage only checks the labels (no solves);
+  `[E8 (AR pretrain)] starting: 3 units` evaluates E1's states in minutes;
+- `[E8 (supervised grid)] starting: 30 units`, then for each finished unit a
+  line from its worker (`[sup:none E8 labels b16 s0] step 3200/3200 (100%)
+  disp=...`, `... knorm=...` for the stiffness-norm row) and one from the
+  run (`[E8 (supervised grid)] k/30 ... | labels b16 s0`); the 1,024-label
+  units take about 3 h each, so hours without a new line are normal;
+- at the end, in this order: `runs/cm2d/report.json`, `RESULTS.md`, a figure,
+  a `gate G1'` line that reads `passed=False` (it always does here: it is not
+  a CM2D verdict), and the solve ledger with `'total': 0`;
+- `status.txt` shows `run.log start ...` and `run.log exit=0`.
+
+### B2'. Health check (any time; a second tmux window: Ctrl-b c; back: Ctrl-b 0)
+```bash
+cd ~/autodl-tmp/FE-JEPA; date; tail -n 2 runs/cm2d/run.log; tail -n 2 runs/cm2d/status.txt
+pgrep -af "fejepa.cli run-config" | cut -c1-120; echo "workers: $(pgrep -fc spawn_main)"
+nvidia-smi --query-gpu=utilization.gpu,memory.used --format=csv,noheader
+find runs/cm2d/e8_states -type f -mmin -30 -printf '%TH:%TM %f\n' | sort | tail -n 6
+grep -h oom_kill /sys/fs/cgroup/memory.events 2>/dev/null; df -h ~/autodl-tmp / | tail -n 2
+```
+Healthy: one `run-config` process; `workers: 3`; the GPU in use (memory well
+above 1,000 MiB); `oom_kill` unchanged since B1c (or since B3 after a box
+restart); a file under `e8_states/` written within the last 30 min (the
+units' epoch checkpoints, every 5-6 min). Also normal -- check again 15 min
+later: before `[E8 (supervised grid)] starting: 30 units` and for a few
+minutes after it, `find` prints `No such file or directory` or nothing (E1's
+states are only evaluated); after `[E8 (supervised grid)] done in`,
+`workers: 0` and the GPU nearly idle for a few minutes (naive rows, report).
+Once `status.txt` shows `run.log exit=`, the run has ended: go to B3 or B4,
+not here. Otherwise: Ctrl-C in window 0, wait for the prompt, send this
+output plus `tail -n 60 runs/cm2d/run.log`; then B4 (return) and shut the
+instance down without releasing it; do not restart.
+
+### B3. Interruptions and crashes
+- A dropped connection: `tmux attach -t cm`; the run goes on.
+- If `runs/cm2d/report.json` exists, the run has finished: do not restart,
+  whatever happened afterwards; go to B4.
+- The box restarted, or the run ended with an exit other than 0, and there
+  is no report (after a Ctrl-C of yours under B2': B4, no restart): read
+  `tail -n 30 runs/cm2d/run.log; tail -n 3 runs/cm2d/status.txt; grep oom_kill /sys/fs/cgroup/memory.events`.
+  If the log mentions `out of memory` or `a worker process died`, or the
+  status file shows `exit=137`, or `oom_kill` rose (it starts again from 0
+  after a box restart): do not restart; go to B4 and report. Otherwise
+  restart once as below.
+- Never delete `runs/cm2d/e8_states/`, the report, a log or `status.txt`.
+
+The restart keeps the finished units (from the unit cache) and the
+interrupted ones (up to three, from their epoch checkpoints); E1's states are
+checked and evaluated again; all of it is recorded in the report. Open tmux
+again (B1a) and run `pgrep -af fejepa.cli`: if it prints a line, the run is
+still going -- back to B2', no restart. Note the `oom_kill` number again (B2'
+compares with it from now on). Then the checks for a restart (the checkout,
+the GPU, and that no report exists):
+```bash
+cd ~/autodl-tmp/FE-JEPA
+P=runs/cm2d
+for f in precheck_restart.json precheck_restart.log; do [ -e $P/$f ] && mv $P/$f $P/$f.$(date +%Y%m%d-%H%M%S); done
+python scripts/cm2d_precheck.py --restart --out $P/precheck_restart.json 2>&1 \
+    | tee $P/precheck_restart.log | grep -v '^\[dry-run\] {'
+```
+On `GO` (read as in B2), the restart (it uses up the GO as in B2):
+```bash
+cd ~/autodl-tmp/FE-JEPA
+P=runs/cm2d
+run() { local log=$1; shift; [ -e $P/$log ] && mv $P/$log $P/$log.$(date +%Y%m%d-%H%M%S)
+        echo "$log start $(date -u +%FT%TZ)" >> $P/status.txt
+        "$@" 2>&1 | tee $P/$log; echo "$log exit=${PIPESTATUS[0]}" | tee -a $P/status.txt; }
+grep -q '"go": true' $P/precheck_restart.json 2>/dev/null || echo "STOP: no unused GO in $P/precheck_restart.json -- not restarted"
+grep -q '"go": true' $P/precheck_restart.json 2>/dev/null && mv $P/precheck_restart.json $P/precheck_restart.json.used && run run.log python -m fejepa.cli run-config configs/cm2d_v1.json --reuse-states
+```
+If the checks print STOP, or the restarted run fails again: go to B4 and
+report.
+
+### B4. Return (box; minutes)
+```bash
+cd ~/autodl-tmp/FE-JEPA
+P=runs/cm2d
+T=$(date +%Y%m%d-%H%M)
+OUT=~/cm2d_return && rm -rf $OUT && mkdir -p $OUT
+cp $P/report.json $P/RESULTS*.md $P/figure1_energy_gap*.png $P/status.txt $P/precheck* \
+    $P/pytest.log $P/run.log* $OUT/ 2>/dev/null
+( echo "HEAD $(git rev-parse HEAD)"; echo "tree $(git rev-parse 'HEAD^{tree}')"
+  echo "describe $(git describe --tags --match prereg-cm2d)"
+  echo "describe-all $(git describe --always --dirty --tags)"
+  echo "--- git status --porcelain ---"; git status --porcelain | grep -v '^?? runs/' | head -40
+  python -c "import torch; print('torch', torch.__version__, torch.cuda.is_available())"
+  echo "--- report ---"; sha256sum $P/report.json
+  echo "--- states ---"; ls -l --full-time $P/e8_states/*.pt
+  sha256sum $P/e8_states/*.pt runs/e1_2d_base/e8_states/ar_*.pt
+  nvidia-smi --query-gpu=name,driver_version,memory.total,memory.used --format=csv,noheader
+  echo "hostname $(hostname)"; echo "nproc $(nproc)"
+  cat /sys/fs/cgroup/memory.events 2>/dev/null; df -h ~/autodl-tmp / | tail -n 2
+) > $OUT/provenance.txt 2>&1
+cd ~ && tar czf cm2d_return_$T.tgz cm2d_return \
+    && sha256sum cm2d_return_$T.tgz && du -h cm2d_return_$T.tgz
+```
+Send the tarball with the SHA-256 line (a few MB). The states stay on the box
+(their SHA-256 are in the provenance file); then shut the instance down
+without releasing it.
+
+## C. CM2D's adjudication (repo)
+```bash
+python scripts/adjudicate_cm2d.py --return <the unpacked cm2d_return> \
+    --out records/cmame/cm2d/verdict.json
+```
+It reads the report, `status.txt`, `provenance.txt` and the run logs from the
+return, E1's report from `records/wp8/e1/`, July's from `records/phase1/`
+(descriptive only) and PREREG_CM2D.md, checks the recorded commit and tree
+against the tag `prereg-cm2d`, and writes H1, H2a and H2b per PREREG_CM2D
+Sec. 4, the reading H3, the secondary readings of Sec. 5, the label-free row's
+reuse checks and the deviations, with every input's SHA-256 and the
+adjudicating code's. The return is committed under `records/cmame/cm2d/` with
+the verdict.

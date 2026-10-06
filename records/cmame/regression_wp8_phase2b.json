@@ -1,0 +1,18 @@
+{
+ "this_src_tree": "2da09d0593669f50149f4fb546c01861ac0d5149",
+ "other_src_tree": "5be6357b912cad058121092f274e6a322169b9f6",
+ "config": "configs/phase2b_v1.json",
+ "floats_compared": 2590,
+ "differences": [],
+ "n_differences": 0,
+ "state_files": 6,
+ "state_files_identical": {
+  "ar_p64_s0.pt": true,
+  "ar_p64_s1.pt": true,
+  "labels_b64_s0.pt": true,
+  "labels_b64_s1.pt": true,
+  "mgn_b64_s0.pt": true,
+  "mgn_b64_s1.pt": true
+ },
+ "identical": true
+}

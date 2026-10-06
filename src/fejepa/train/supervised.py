@@ -9,6 +9,9 @@ Plan v2.0 mapping:
     a lambda grid is E1's secondary axis.
   - Metrics/eval: validation is evaluated with the frozen hierarchy via
     :func:`fejepa.metrics.evaluate_model` (per-instance arrays included, plan B6).
+  - cmame-paper: ``loss='knorm'`` replaces the displacement norm of the usual loss by
+    the stiffness norm, mean_j ||u_j - U*_j||_K / ||U*_j||_K (labels required); the
+    default ``loss='disp'`` is the mean relative L2 displacement error, unchanged.
 """
 
 from __future__ import annotations
@@ -41,11 +44,15 @@ class SupervisedConfig:
     ckpt_min_interval_s: float = 300.0   # R10 throttle (first/last epoch always)
     resume: bool = False
     stop_after_epoch: int | None = None   # test hook (simulated interruption)
+    loss: str = "disp"               # disp | knorm (cmame-paper; see the module doc)
 
     def protocol(self) -> dict:
-        return {"epochs": self.epochs, "lr": self.lr, "seed": self.seed,
-                "anchor_mode": self.anchor_mode, "lambda_phys": self.lambda_phys,
-                "balance_ratio": self.balance_ratio}
+        out = {"epochs": self.epochs, "lr": self.lr, "seed": self.seed,
+               "anchor_mode": self.anchor_mode, "lambda_phys": self.lambda_phys,
+               "balance_ratio": self.balance_ratio}
+        if self.loss != "disp":                  # absent by default: records unchanged
+            out["loss"] = self.loss
+        return out
 
 
 def _disp_loss(u, u_star, free):
@@ -55,6 +62,16 @@ def _disp_loss(u, u_star, free):
     num = diff.norm(dim=-1)
     den = (u_star * free).norm(dim=-1) + 1e-30
     return (num / den).mean()
+
+
+def _knorm_loss(anchor, u, u_star, ustar_k):
+    """Mean per-load relative stiffness-norm error ||u - U*||_K / ||U*||_K (torch):
+    the displacement loss above with the Euclidean norm replaced by the stiffness
+    norm. `ustar_k` holds ||U*_j||_K per load case (from the labels)."""
+    import torch
+
+    q = anchor.quad(u - u_star)                   # (L,), Dirichlet dofs masked
+    return (torch.sqrt(q.clamp_min(0.0) + 1e-30) / ustar_k).mean()
 
 
 def _balanced_grads(model, disp_loss, phys_loss, ratio: float) -> float:
@@ -103,6 +120,10 @@ def train_supervised(model, train_archs, val_archs, cfg: SupervisedConfig,
     if not train_archs:
         raise ValueError("train_supervised: empty training set "
                          "(check budget/pool splits)")
+    if cfg.loss not in ("disp", "knorm"):
+        raise ValueError(f"unknown supervised loss {cfg.loss!r}")
+    if cfg.loss == "knorm" and cfg.anchor_mode != "none":
+        raise ValueError("loss 'knorm' is defined without an energy term (anchor_mode 'none')")
     anchors = AnchorCache(device=cfg.device)
     prepared = []
     for a in train_archs:
@@ -112,6 +133,9 @@ def train_supervised(model, train_archs, val_archs, cfg: SupervisedConfig,
         pack["u_star"] = torch.as_tensor(a.U_star, dtype=pack["free"].dtype,
                                          device=cfg.device)
         pack["pi_norm"] = float(pi_star_abs(a).mean())
+        if cfg.loss == "knorm":                   # ||U*_j||_K = (2 |Pi(U*_j)|)^(1/2)
+            pack["ustar_k"] = torch.as_tensor(np.sqrt(2.0 * pi_star_abs(a)),
+                                              dtype=pack["free"].dtype, device=cfg.device)
         prepared.append((a, pack))
 
     opt = torch.optim.AdamW(model.parameters(), lr=cfg.lr,
@@ -149,7 +173,10 @@ def train_supervised(model, train_archs, val_archs, cfg: SupervisedConfig,
                 u = u.float()
             else:
                 u = model.forward_instance(pack)
-            disp = _disp_loss(u, pack["u_star"], pack["free"])
+            if cfg.loss == "knorm":
+                disp = _knorm_loss(anchors.get(arch), u, pack["u_star"], pack["ustar_k"])
+            else:
+                disp = _disp_loss(u, pack["u_star"], pack["free"])
 
             opt.zero_grad(set_to_none=True)
             if cfg.anchor_mode == "none":
@@ -172,7 +199,7 @@ def train_supervised(model, train_archs, val_archs, cfg: SupervisedConfig,
             if step % every == 0 or step == total_steps:
                 tag = f" {cfg.desc}" if cfg.desc else ""
                 print(f"[sup:{cfg.anchor_mode}{tag}] step {step}/{total_steps} "
-                      f"({100.0 * step / total_steps:.0f}%) disp={float(disp):.4f}",
+                      f"({100.0 * step / total_steps:.0f}%) {cfg.loss}={float(disp):.4f}",
                       flush=True)
         due = (cfg.ckpt_path and (_epoch + 1) % max(1, cfg.ckpt_every_epochs) == 0
                and (last_ckpt_t is None or _epoch + 1 == cfg.epochs

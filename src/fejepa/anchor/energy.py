@@ -105,6 +105,20 @@ class EnergyAnchor:
         u2 = u2 * free_t                           # autograd chains the mask
         return _EnergyFn.apply(u2, K_t, F_t)
 
+    def quad(self, v):
+        """Per-load v^T K v of a (L, ndof) or (ndof,) field, Dirichlet dofs masked:
+        twice the energy of v under no load, through the same fp32 path and
+        analytic gradient (2 K v). cmame-paper: the stiffness-norm loss."""
+        import torch
+
+        if v.dtype != self.K_t.dtype:
+            v = v.to(self.K_t.dtype)
+        with torch.autocast(device_type=v.device.type, enabled=False):
+            v2 = v if v.dim() == 2 else v.unsqueeze(0)
+            K_t, _F_t, free_t = self._tensors_on(v2.device)
+            v2 = v2 * free_t
+            return 2.0 * _EnergyFn.apply(v2, K_t, torch.zeros_like(v2))
+
     def __call__(self, u):
         return self.energies(u).mean()
 

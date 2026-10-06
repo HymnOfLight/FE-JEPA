@@ -12,6 +12,12 @@ persisted (plan Sec.5 item 3).
 This experiment turns the June-17 single point (1024, seed 1) into the replicated
 curve behind claim C1, and feeds gate conditions (b) and (c).
 
+cmame-paper (opt-in, absent from every earlier configuration): ``include_anchor``
+(default true) drops the labels+anchor row when false; ``include_knorm`` (default
+false) adds a ``labels_knorm`` row, the same network trained on the relative
+stiffness-norm error (``SupervisedConfig.loss = 'knorm'``) with the labels-only arm's
+settings otherwise; its largest-budget states are kept beside the labels-only ones.
+
 Execution: two unit phases through :mod:`~fejepa.experiments.parallel` --
 (A) AR pretrainings (state dicts saved under ``cfg["state_dir"]``, evaluated on val),
 (B) the supervised grid (AR->FT units load the phase-A states from disk).
@@ -94,6 +100,8 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
     ar_loss = cfg.get("ar_loss_spec") or "ar"
     include_mgn = bool(cfg.get("include_mgn", False))
     include_ar_ft = bool(cfg.get("include_ar_ft", True))
+    include_anchor = bool(cfg.get("include_anchor", True))     # cmame-paper
+    include_knorm = bool(cfg.get("include_knorm", False))      # cmame-paper
     mgn_budgets = set(int(b) for b in cfg.get("mgn_budgets", budgets))
     reuse = bool(cfg.get("reuse_states", False))        # D9 restart mode
     cache_dir = str(state_dir / "unit_cache")   # always written; read only on reuse
@@ -112,8 +120,10 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
         raise ValueError(f"E8: pool has {len(pool_files)} archives; "
                          f"needs {need}")
     val_str = [str(f) for f in val_files]
-    regimes = (["labels", "labels_anchor"]
+    regimes = (["labels"]
+               + (["labels_anchor"] if include_anchor else [])
                + (["ar_ft"] if include_ar_ft else [])
+               + (["labels_knorm"] if include_knorm else [])
                + (["mgn"] if include_mgn else []))
     if ar_only:
         regimes = []                          # no supervised rows exist
@@ -149,6 +159,7 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
     sup_keys, sup_payloads = [], []
     arm_kw = {"labels": dict(anchor_mode="none"),
               "ar_ft": dict(anchor_mode="none"),
+              "labels_knorm": dict(anchor_mode="none", loss="knorm"),
               "mgn": dict(anchor_mode="none")}
     for s in seeds:
         for b in budgets:
@@ -172,7 +183,8 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
                     # configurations trained once): persist the b_max states of
                     # the labels and mgn arms for zero-shot transfer evaluation.
                     "state_path": (str(state_dir / f"{r}_b{b}_s{s}.pt")
-                                   if (b == max(budgets) and r in ("labels", "mgn"))
+                                   if (b == max(budgets)
+                                       and r in ("labels", "mgn", "labels_knorm"))
                                    else None),
                     "tag": f"{r} b{b} s{s}",
                     "cache_dir": cache_dir, "reuse_existing": reuse,
@@ -254,6 +266,11 @@ def run_e8(model_cfg: dict, pool_files, val_files, cfg: dict) -> dict:
         metrics["holdouts"] = hold_cells
     if amplitude:
         proto["amplitude"] = True
+    if not include_anchor:                        # cmame-paper; absent by default
+        proto["include_anchor"] = False
+    if include_knorm:
+        proto["include_knorm"] = True
+        proto["knorm_loss"] = "mean over load cases of ||u - U*||_K / ||U*||_K"
     if eval_only:
         proto["eval_only"] = True
         d9["reused_from"] = cfg.get("reuse_provenance")

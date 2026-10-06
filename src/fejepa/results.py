@@ -178,7 +178,7 @@ def render_results(payload: dict) -> str:
     if e8:
         budgets = e8["protocol"]["budgets"]
         cells = e8["metrics"]["cells"]
-        order = ["labels", "labels_anchor", "ar_ft", "mgn",
+        order = ["labels", "labels_anchor", "ar_ft", "labels_knorm", "mgn",
                  "zero", "scale_aware_poly", "knn_field"]
         regimes = [x for x in order if _get(cells, x) is not None]
         for key, title in (("disp_rel_l2", "Displacement rel-L2"),
@@ -364,7 +364,8 @@ def write_figures(payload_or_path, out_dir, suffix: str = "") -> list[Path]:
     fig, ax = plt.subplots(figsize=(6.0, 4.2))
     for reg, label in (("labels", "labels only"),
                        ("labels_anchor", "labels + anchor (balanced)"),
-                       ("ar_ft", "AR -> fine-tune")):
+                       ("ar_ft", "AR -> fine-tune"),
+                       ("labels_knorm", "labels, stiffness-norm loss")):
         col = _get(cells, reg)
         if not col:
             continue

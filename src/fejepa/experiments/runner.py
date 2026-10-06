@@ -259,7 +259,9 @@ def _w9_checks(cfg: dict) -> None:
     the S keys outside an FE-JEPA model (or with supervised MGN units), the
     runner-provided E8 keys written into a configuration (they would bypass the
     holdout and state verification), and an evaluation-only E8 together with
-    P3 or the supervised grid."""
+    P3, or with the supervised grid unless `reuse_from.supervised_grid` is set
+    (cmame-paper; then without the AR->FT row, which would train the reused
+    states)."""
     m = cfg.get("model") or {}
     exps = cfg.get("experiments") or {}
     e8 = exps.get("e8") or {}
@@ -278,8 +280,13 @@ def _w9_checks(cfg: dict) -> None:
     if int(e8.get("seed_offset", 0) or 0) and (exps.get("p3_transfer") or {}).get("enabled"):
         raise SystemExit("e8.seed_offset (wp9) is not supported with P3 (it reads seeds 0..n-1)")
     if e8.get("reuse_from"):
-        if not e8.get("ar_only"):
-            raise SystemExit("e8.reuse_from (evaluation only) needs e8.ar_only = true")
+        sup_grid = bool((e8.get("reuse_from") or {}).get("supervised_grid"))
+        if not e8.get("ar_only") and not sup_grid:
+            raise SystemExit("e8.reuse_from (evaluation only) needs e8.ar_only = true, or "
+                             "reuse_from.supervised_grid = true (cmame-paper)")
+        if sup_grid and e8.get("include_ar_ft", True):
+            raise SystemExit("e8.reuse_from.supervised_grid: the AR->FT arm would fine-tune "
+                             "the reused states; set e8.include_ar_ft = false")
         if (exps.get("p3_transfer") or {}).get("enabled"):
             raise SystemExit("e8.reuse_from (evaluation only) cannot feed P3")
 
