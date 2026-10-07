@@ -44,6 +44,15 @@ st = _script("stamp_prereg_cm2d")
 mk = _script("make_cm2d_config")
 
 
+@pytest.fixture(autouse=True)
+def _precheck_on_the_cpu(monkeypatch):
+    """The miniature's reference values are computed on the CPU, so the
+    precheck evaluates and trains there too, and its reproduction is exact on
+    any machine (on the box it uses the GPU, as the run does; a GPU's
+    rounding differs from the CPU's)."""
+    monkeypatch.setattr(pre, "_device", lambda: "cpu")
+
+
 def _cfg(tmp, name, data, out=None, **e8):
     cfg = {"data": {"dir": str(data), "n": 12, "seed": 3, "backend": "synthetic",
                     "labelled_policy": "asis"},
@@ -129,8 +138,10 @@ def test_the_miniature_is_adjudicated(world):
     for pair in sec["pairing"].values():
         for m in pair.values():
             assert m["pairs"] == 2 * 4 and 0 <= m["first_lower"] + m["ties"] <= m["pairs"]
-    assert set(sec["worse_than_zero"]) == {"ar", "labels", "labels_knorm", "mgn"}
+    assert set(sec["worse_than_zero"]) == {"ar", "labels", "labels_knorm", "mgn", *adj.NAIVE}
     assert sec["worse_than_zero"]["labels"]["2"]["of"] == 8
+    assert sec["worse_than_zero"]["knn_field"]["2"]["of"] == 4          # no seeds
+    assert sec["worse_than_zero"]["zero"]["4"] == {"count": 0, "of": 4}  # its gap is exactly 1
     gn = sec["graph_network"]
     assert gn["budget"] == 4 and set(gn["energy_gap_seed_means"]) == {"ar", "labels", "mgn"}
     assert gn["mgn_gap_above_label_free"] == \
@@ -293,6 +304,54 @@ def test_secondary_readings_never_block_a_verdict(world):
     c = _adj(world, rep)["secondary"]["comparisons"]["crit_recall"]["2"]["labels_knorm_vs_labels"]
     assert c["better_direction"] == "higher" and c["worse"] is True
     assert c["new_better_beyond_guard"] is True and c["new_worse_beyond_guard"] is False
+
+
+def test_a_restart_beside_the_reused_states_is_exact_and_recorded(world, tmp_path):
+    """RUNBOOK_CMAME B3 on the miniature: an attempt that ended before its
+    report and before one unit's result, restarted in the runner's restart
+    mode, evaluates E1's states again (they have no result cache), takes the
+    other units from the unit cache, trains the missing one again and ends
+    with the first attempt's values everywhere (CPU); the adjudicator gives
+    the same verdicts and readings and records the restart. (A unit resumed
+    from its epoch checkpoint: tests/test_cm2d_training.py.)"""
+    reuse = {"report": str(world["e1_path"]),
+             "states_dir": str(world["e1_path"].parent / "e8_states"), "supervised_grid": True}
+    cpath = _cfg(tmp_path, "R", world["data"], reuse_from=reuse, **GRID)
+    run_config(cpath)
+    out = tmp_path / "R"
+    first = json.loads((out / "report.json").read_text())
+    (out / "report.json").unlink()                       # the attempt ended before its report
+    (out / "e8_states" / "unit_cache" / "labels_knorm_b4_s1.pkl").unlink()    # and this unit's
+    run_config(cpath, reuse_states=True)
+    second = json.loads((out / "report.json").read_text())
+    d9 = second["results"]["e8"]["metrics"]["d9_restart"]
+    assert second["d9_reuse_states"] is True and all(v["reused"] for v in d9["ar_states"].values())
+    assert d9["ar_states"] == first["results"]["e8"]["metrics"]["d9_restart"]["ar_states"]
+    units = {f"{r} {b} {s}" for s in (0, 1) for b in (2, 4) for r in ("labels", "labels_knorm")}
+    units |= {f"mgn 4 {s}" for s in (0, 1)}
+    assert set(d9["sup_units_from_cache"]) == units - {"labels_knorm 4 1"}
+    assert _cells(second) == _cells(first)
+    cfg = json.loads(cpath.read_text())
+
+    def adjudicated(rep, status, logs):
+        rep = copy.deepcopy(rep)
+        h = rep["provenance"]["config_sha256"]
+        rep["prereg"] = {"file": "PREREG_CM2D.md", "config_sha256": h}
+        rep["provenance"]["git"] = "prereg-cm2d"
+        return adj.adjudicate_cm2d(rep, world["e1"], cfg, {"cm2d_v1": h}, "prereg-cm2d",
+                                   world["e1_sha"], status, run_logs=logs)
+
+    a = adjudicated(first, STATUS, 1)
+    b = adjudicated(second, "run.log start a\nrun.log start b\nrun.log exit=0\n", 2)
+    assert b["reuse"]["ok"] and b["reuse"]["reproduction_max_rel_dev"] == 0.0
+    for k in ("H1", "H2a", "H2b", "H3", "secondary"):
+        assert b[k] == a[k], k
+    assert a["deviations"] == ["workers 1 (PREREG_CM2D Sec. 6: 3)"]
+    dev = " | ".join(b["deviations"])
+    for s in ("restarted with --reuse-states", "unit cache: ['labels 2 0'",
+              "2 started, exit codes [0]", "2 run logs"):
+        assert s in dev, s
+    assert "labels_knorm 4 1" not in dev
 
 
 # ---------------------------------------------------- the command line --
@@ -476,8 +535,9 @@ def test_the_precheck_passes_a_fresh_miniature_before_the_stamp(world):
     assert res["go"], res
     c = res["checks"]
     assert c["stamp"]["ok"] is None and "8 of 8 labelled" in c["labels"]["detail"]
-    assert c["reproduction"]["ok"] and "deviation 0" in c["reproduction"]["detail"]
-    assert c["smoke"]["ok"] and c["fresh"]["ok"]
+    assert c["reproduction"]["ok"]
+    assert "deviation 0 over 2 states on cpu" in c["reproduction"]["detail"]
+    assert c["smoke"]["ok"] and "on cpu" in c["smoke"]["detail"] and c["fresh"]["ok"]
     # after the stamp the guard must verify: a run with the guard off is refused
     res = _pre(world)
     assert not res["go"] and res["stop"] == ["stamp"]

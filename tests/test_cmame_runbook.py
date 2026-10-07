@@ -123,3 +123,43 @@ def test_the_runbook_states_the_suite_count():
     assert text.count(f"`{n - len(LATEX)} passed, {len(LATEX)} deselected`") == 2   # A0c, B1c
     assert text.count(f"--deselect {LATEX[0]}") == 2         # A0c and B1c
     assert all(f"--deselect {t}" in text for t in LATEX)
+
+
+# ---- the suite the runbook runs on the box ends with its summary line ------
+def _sigpipe_ignored() -> bool:
+    import signal
+
+    for line in Path("/proc/self/status").read_text().splitlines():
+        if line.startswith("SigIgn:"):
+            return bool(int(line.split()[1], 16) & (1 << (signal.SIGPIPE - 1)))
+    raise AssertionError("no SigIgn line")
+
+
+def test_a_test_that_meshes_with_gmsh_in_the_test_process():
+    """gmsh.initialize() restores SIGPIPE's default action (ending the
+    process) in the process that meshes; the test after this one checks that
+    the next test starts with it ignored again (tests/conftest.py)."""
+    pytest = __import__("pytest")
+    pytest.importorskip("gmsh")
+    if not sys.platform.startswith("linux"):
+        pytest.skip("reads /proc")
+    import numpy as np
+
+    from fejepa.fe.generator import mesh_plate
+
+    state = np.random.get_state()             # mesh_plate names its model from it
+    try:
+        nodes, tris = mesh_plate(1.0, 1.0, [], 0.5)
+    finally:
+        np.random.set_state(state)
+    assert len(nodes) > 3 and len(tris) > 1
+
+
+def test_every_test_starts_with_sigpipe_ignored():
+    """A failed worker pool after a gmsh test (tests/test_w9_parallel_kill.py
+    after tests/test_w9_ood2d.py) could otherwise end the whole run by
+    SIGPIPE, without the summary line RUNBOOK_CMAME A0c and B1c read."""
+    pytest = __import__("pytest")
+    if not sys.platform.startswith("linux"):
+        pytest.skip("reads /proc")
+    assert _sigpipe_ignored()

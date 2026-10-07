@@ -1,0 +1,209 @@
+{
+ "what": "cmame-paper Stage 3: functional check of the stiffness-norm loss before PREREG_CM2D's stamp (disclosed in its Sec. 4); not evidence for any of its hypotheses",
+ "script_sha256": "5a09f53ef3b632d882885fce962b0b1182bd888b23e0d8d6d5d9b3edf1932a2e",
+ "src_tree": "2da09d0593669f50149f4fb546c01861ac0d5149",
+ "settings": {
+  "model": {
+   "dim": 32,
+   "depth": 2,
+   "heads": 4,
+   "features": {
+    "load_summary": true,
+    "geometry": true
+   }
+  },
+  "epochs": 25,
+  "seeds": [
+   0,
+   1
+  ],
+  "lr": {
+   "disp": 0.0015,
+   "knorm": 0.0015,
+   "ar": 0.001
+  },
+  "steps_per_epoch": 48,
+  "device": "cpu",
+  "threads": 1
+ },
+ "versions": {
+  "python": "3.11.15",
+  "numpy": "2.4.4",
+  "scipy": "1.17.1",
+  "torch": "2.14.0+cu130"
+ },
+ "corpus": {
+  "generator": "gmsh, 2D training family",
+  "seed": 777,
+  "n": 72,
+  "n_train": 48,
+  "n_val": 24,
+  "manifest_sha256": "b303bec85e753e7c0395308bf7ba62601b2744215e900156413244c62304dd0d",
+  "nodes_median": 468,
+  "nodes_max": 1523,
+  "generation_seconds": 4.8
+ },
+ "runs": {
+  "disp": {
+   "0": {
+    "val": {
+     "disp_rel_l2": 0.46148788151532094,
+     "energy_gap_rel": 12.731529286964083,
+     "vm_rel_l2": 2.6983203565592935,
+     "peak_vm_rel_err": 3.3374535893502455,
+     "crit_recall": 0.11041072322859886,
+     "n_val": 24
+    },
+    "train": {
+     "disp_rel_l2": 0.3859485860590624,
+     "energy_gap_rel": 10.523635639771435,
+     "vm_rel_l2": 2.425838875258625
+    },
+    "grad_norm_before_clip": {
+     "steps": 1200,
+     "p10_p50_p90": [
+      0.21772579252719879,
+      0.7598380148410797,
+      3.3046143054962163
+     ],
+     "share_clipped": 0.405
+    },
+    "seconds": 165.5
+   },
+   "1": {
+    "val": {
+     "disp_rel_l2": 0.39526721130935655,
+     "energy_gap_rel": 9.584130548218509,
+     "vm_rel_l2": 2.3846138724082744,
+     "peak_vm_rel_err": 2.860990818751052,
+     "crit_recall": 0.12947339221559614,
+     "n_val": 24
+    },
+    "train": {
+     "disp_rel_l2": 0.3421063666013751,
+     "energy_gap_rel": 9.826184006577195,
+     "vm_rel_l2": 2.415413888746428
+    },
+    "grad_norm_before_clip": {
+     "steps": 1200,
+     "p10_p50_p90": [
+      0.2680751830339432,
+      1.3719673156738281,
+      4.311494779586794
+     ],
+     "share_clipped": 0.6058333333333333
+    },
+    "seconds": 164.2
+   }
+  },
+  "knorm": {
+   "0": {
+    "val": {
+     "disp_rel_l2": 0.40994573463316425,
+     "energy_gap_rel": 0.2591276845791861,
+     "vm_rel_l2": 0.4038680156278474,
+     "peak_vm_rel_err": 0.3089919128296731,
+     "crit_recall": 0.619376429531821,
+     "n_val": 24
+    },
+    "train": {
+     "disp_rel_l2": 0.44163700597363903,
+     "energy_gap_rel": 0.23422943648315422,
+     "vm_rel_l2": 0.39209693130928497
+    },
+    "grad_norm_before_clip": {
+     "steps": 1200,
+     "p10_p50_p90": [
+      0.33790912926197053,
+      1.0876904726028442,
+      3.3723505735397348
+     ],
+     "share_clipped": 0.5283333333333333
+    },
+    "seconds": 160.6
+   },
+   "1": {
+    "val": {
+     "disp_rel_l2": 0.426391673736323,
+     "energy_gap_rel": 0.28679975509286965,
+     "vm_rel_l2": 0.43008101114115505,
+     "peak_vm_rel_err": 0.3442231236249091,
+     "crit_recall": 0.6228751141524497,
+     "n_val": 24
+    },
+    "train": {
+     "disp_rel_l2": 0.44707963083806984,
+     "energy_gap_rel": 0.25264250950703565,
+     "vm_rel_l2": 0.40931831596105517
+    },
+    "grad_norm_before_clip": {
+     "steps": 1200,
+     "p10_p50_p90": [
+      0.28760717809200287,
+      0.8345910310745239,
+      2.320506238937378
+     ],
+     "share_clipped": 0.4275
+    },
+    "seconds": 167.6
+   }
+  },
+  "ar": {
+   "0": {
+    "val": {
+     "disp_rel_l2": 0.7552797852675326,
+     "energy_gap_rel": 0.4508745497263513,
+     "vm_rel_l2": 0.53217477820836,
+     "peak_vm_rel_err": 0.3465829738808759,
+     "crit_recall": 0.6472313811652514,
+     "n_val": 24
+    },
+    "train": {
+     "disp_rel_l2": 0.7447930435354216,
+     "energy_gap_rel": 0.3486202200975083,
+     "vm_rel_l2": 0.44334251668636543
+    },
+    "grad_norm_before_clip": {
+     "steps": 1200,
+     "p10_p50_p90": [
+      0.018279872089624404,
+      0.07664557918906212,
+      0.1911309957504273
+     ],
+     "share_clipped": 0.0008333333333333334
+    },
+    "seconds": 165.1
+   },
+   "1": {
+    "val": {
+     "disp_rel_l2": 0.4525490368780017,
+     "energy_gap_rel": 0.2498899522132925,
+     "vm_rel_l2": 0.40730150619334743,
+     "peak_vm_rel_err": 0.23990731221375824,
+     "crit_recall": 0.6567455052880012,
+     "n_val": 24
+    },
+    "train": {
+     "disp_rel_l2": 0.45793180759293506,
+     "energy_gap_rel": 0.20405851493063662,
+     "vm_rel_l2": 0.3606289562378126
+    },
+    "grad_norm_before_clip": {
+     "steps": 1200,
+     "p10_p50_p90": [
+      0.015422974899411204,
+      0.07158028706908226,
+      0.1770078450441361
+     ],
+     "share_clipped": 0.0
+    },
+    "seconds": 163.0
+   }
+  }
+ },
+ "knorm_loss_against_lemma_1": {
+  "steps": 200,
+  "max_rel_dev": 0.00011090778894100033,
+  "median_rel_dev": 7.025351763671558e-06
+ }
+}

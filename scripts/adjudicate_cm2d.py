@@ -420,12 +420,12 @@ def pairing(rep: dict, g: dict) -> dict:
 
 
 def worse_than_zero(rep: dict, g: dict) -> dict:
-    """Instance-seed values with a relative energy gap above 1 (a prediction
-    further from the solution, in the energy norm, than the zero field)."""
+    """Per row and budget, the instance-seed values with a relative energy gap
+    above 1 (a prediction further from the solution, in the energy norm, than
+    the zero field); the naive rows, which have no seeds, count their
+    instance values."""
     out = {}
     for row, b in row_cells(g):
-        if row in NAIVE:
-            continue
         x = np.concatenate(per_instance(cell(rep, row, b), PRIMARY))
         out.setdefault(row, {})[str(b)] = {"count": int(np.sum(x > 1.0)), "of": int(x.size)}
     return out

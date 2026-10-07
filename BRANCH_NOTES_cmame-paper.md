@@ -136,3 +136,70 @@ stiffness norm against label-free).
   deviations, the command line on a made-up return around E1's report, the
   pre-run checks on a miniature laid out like the box, the git and stack
   checks), `tests/test_cmame_runbook.py` per section. Suite 501.
+
+## Stage 3 (7 Oct 2026) -- a full check of Stages 1-2; RUNBOOK_CMAME Sec. B rehearsed end to end; PREREG_CM2D r2
+
+- Checked: the code of Stages 1-2 read against PREREG_CM2D and RUNBOOK_CMAME;
+  every number PREREG_CM2D quotes from E1's, July's and Phase-2b's records
+  recomputed (all as quoted). No defect in `src`, which is unchanged.
+- A functional check of the stiffness-norm loss (`scripts/cm2d_funccheck.py`,
+  `records/cmame/cm2d_funccheck.json`: another corpus drawn by the 2D
+  generator, a transformer of width 32 and depth 2 trained for 25 epochs on
+  48 instances with each loss and the label-free objective, two seeds): L_K's
+  validation energy gap and von Mises error far below L_D's, the L_K value
+  the trainer computes equal to the mean square root of the per-load relative
+  energy gap up to float32 round-off (relative deviation 7e-6 in the median,
+  1.1e-4 at most: the stiffness spread of these meshes amplifies it, as the
+  same formula in float32 shows), gradient clipping at 1 acting about as
+  often for both losses. Its result bears on H2a and H2b (and on H1's and
+  H3's comparisons), so PREREG_CM2D r2 discloses it, with the rehearsal's
+  adjudication of its miniature (Sec. 1, 4, 7 and 9; r1 said that no
+  supervised network had been trained with the stiffness norm and that the
+  effects of L_K had never been measured); no question, arm, measurement or
+  criterion changed, and the stamp script accepts only the r2 draft.
+- Rehearsed (sandbox, CPU): Sec. B0-B4 and C, their blocks run verbatim on a
+  miniature laid out like the box -- a local origin, an E1-like run on a tag
+  `prereg-e1`, the generated configuration, the stamp and the tag
+  `prereg-cm2d`; B0's and B2's checks gave GO; the run started on its GO and
+  was killed with its workers as by a box restart; the re-pasted block
+  started nothing; B3's checks gave GO and the restart took the finished
+  units from the unit cache and resumed the interrupted one from its epoch
+  checkpoint; B2' ran during it; B4's return was adjudicated by Sec. C with
+  the reuse checks passed and the restart, the cached and resumed units, the
+  two attempts and the two run logs recorded as deviations (on that
+  miniature -- three supervised epochs beside label-free states of one --
+  H1 NOT SUPPORTED, H2a and H2b SUPPORTED, H3 the stiffness-norm
+  transformer lower: mechanics, not evidence). What a CPU
+  sandbox cannot provide was stood in for in the sandbox copy only (an idle
+  `nvidia-smi`, the CPU accepted on the precheck's torch line, E1's hash
+  constants following the miniature).
+- Fixed: one of the precheck's tests compared the precheck's reproduction of
+  E1-like values with reference values computed on the CPU and required an
+  exact match, while the precheck evaluates on the GPU whenever there is one:
+  it passes on a machine without a GPU and would fail on the box. The
+  precheck's tests now run it on the CPU; on the box the precheck itself
+  still uses the GPU, as the run does. The zero-field count of the
+  adjudication covers every row, the naive rows included (PREREG_CM2D
+  Sec. 5: "per row and budget"). The test of the loss the trainer computes
+  allows a relative deviation of 1e-4 (3e-5 observed), not 2e-3. And the
+  suite could end without its summary line: `gmsh.initialize()` restores
+  SIGPIPE's default action in the process that meshes, gmsh stays
+  initialised in the test process after the first test that meshes in it,
+  and a failed worker pool that still writes to its stopped workers' queue
+  (tests/test_w9_parallel_kill.py, after tests/test_w9_ood2d.py) then ends
+  the whole process (once in five full runs in the sandbox; reproduced in
+  isolation). `tests/conftest.py` starts every test with SIGPIPE ignored
+  again, as Python has it. The runs themselves are not affected: neither
+  CM2D's run nor Sec. A's scripts mesh in their main process. (A run that
+  generates a gmsh corpus in its main process and then loses a worker would
+  end by SIGPIPE instead of its RuntimeError: for wp9, not changed here.)
+- New tests: a restart beside the reused states, after an attempt that ended
+  before its report and before one unit's result, evaluates the states
+  again, takes the other units from the cache, ends with the first attempt's
+  values everywhere and is adjudicated to the same verdicts with the restart
+  recorded; a stiffness-norm training resumed from its epoch checkpoint ends
+  bit for bit as the uninterrupted one; the functional check's record is the
+  script's output on the Stage 2 code, PREREG_CM2D quotes its numbers, and
+  the script runs; every test starts with SIGPIPE ignored, also after a test
+  that meshed in the test process. An independent review of this stage
+  addressed. Suite 507.

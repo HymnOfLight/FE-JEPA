@@ -46,3 +46,20 @@ of `configs/cm2d_v1.json` in the order the run submits them on three workers,
 at the measured 52 ms per supervised step plus a minute per unit, for the
 graph network's (unmeasured) step at 0.5-2 times the transformer's. The
 script regenerates the file byte for byte (`--check`; tested).
+
+## A functional check of the stiffness-norm loss (PREREG_CM2D Sec. 4)
+
+`cm2d_funccheck.json`: `scripts/cm2d_funccheck.py`, run in the sandbox on 7
+October 2026 (CPU, one thread; about 15 minutes) with the Stage 2 code (`src`
+tree `2da09d05...`), before PREREG_CM2D's stamp. 72 instances of the 2D
+training family drawn by the gmsh generator with its own seed (777; not E1's
+corpus), 48 for training and 24 for validation; a transformer of width 32 and
+depth 2 trained for 25 epochs with L_D, with L_K and with the label-free
+objective, seeds 0 and 1. Recorded per loss and seed: the metric suite, the
+gradient norms before clipping and the share of clipped steps; and the L_K
+value the trainer computes against Lemma 1 over 200 steps. PREREG_CM2D Sec. 4
+quotes its energy gaps and von Mises errors (tested); it is not evidence for
+any of PREREG_CM2D's hypotheses. The record carries the script's SHA-256 and
+the tree of the `src` it ran (named only when `src` had no local changes);
+rerunning the script on the same machine and library versions gives the same
+numbers apart from the wall-clock seconds.

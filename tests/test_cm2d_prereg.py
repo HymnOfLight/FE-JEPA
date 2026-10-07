@@ -81,7 +81,7 @@ def test_the_configuration_passes_the_reuse_comparison_with_e1():
 def _draft_text() -> str:
     """PREREG_CM2D.md as its approved draft (a stamped file un-stamped)."""
     text = PREREG.read_text(encoding="utf-8")
-    m = re.search(r"\*\*Status:\*\* r1, stamped (.+?) before the run:", text)
+    m = re.search(r"\*\*Status:\*\* r2, stamped (.+?) before the run:", text)
     if m:
         text = text.replace(st.stamped_status(m.group(1)), st.DRAFT_STATUS)
     text = re.sub(r"^CONFIG_SHA256\[cm2d_v1\] = [0-9a-f]{64}$",
@@ -132,7 +132,8 @@ def test_the_stamp_refuses(tmp_path):
         p.write_text(_draft_text(), encoding="utf-8")
         with pytest.raises(SystemExit, match="--date"):
             st.stamp(p, CONFIG, bad_date)
-    p.write_text(_draft_text().replace("r1 DRAFT", "r0 DRAFT"), encoding="utf-8")
+    r1 = _draft_text().replace("r2 DRAFT (7 October 2026)", "r1 DRAFT (6 October 2026)")
+    p.write_text(r1, encoding="utf-8")                      # the superseded draft
     with pytest.raises(SystemExit, match="status line"):
         st.stamp(p, CONFIG, "8 October 2026")
     p.write_text(_draft_text() + "\nmore\n", encoding="utf-8")
@@ -222,3 +223,62 @@ def test_the_prereg_names_the_adjudicators_constants():
     assert "7 GB free before the run (5 GB before a restart)" in text
     assert "(no report, `e8_states/`, run log or status file)" in text
     assert prc.ATTEMPT_TRACES == ("report.json", "e8_states", "run.log", "status.txt")
+
+
+FUNCCHECK = ROOT / "records" / "cmame" / "cm2d_funccheck.json"
+STAGE2_SRC = "2da09d0593669f50149f4fb546c01861ac0d5149"
+"""The `src` tree of cmame-paper Stage 2 (records/cmame/README.md)."""
+
+
+def test_the_functional_check_is_disclosed_as_recorded():
+    """Sec. 4 quotes the functional check run before the stamp from its record,
+    the script's output on the Stage 2 code."""
+    import hashlib
+
+    rec = json.loads(FUNCCHECK.read_text())
+    script = ROOT / "scripts" / "cm2d_funccheck.py"
+    assert rec["script_sha256"] == hashlib.sha256(script.read_bytes()).hexdigest()
+    assert rec["src_tree"] == STAGE2_SRC
+    s, c = rec["settings"], rec["corpus"]
+    assert (s["model"]["dim"], s["model"]["depth"], s["epochs"], s["seeds"]) == (32, 2, 25, [0, 1])
+    assert (c["n_train"], c["n_val"], c["seed"], s["device"], s["threads"]) == \
+        (48, 24, 777, "cpu", 1)
+    # float32 arithmetic of L_K against Lemma 1 in float64: round-off, amplified by the
+    # stiffness spread of these meshes (1.1e-4 at most, median 7e-6)
+    lem = rec["knorm_loss_against_lemma_1"]
+    assert lem["steps"] == 200 and lem["max_rel_dev"] < 1e-3 and lem["median_rel_dev"] < 1e-5
+
+    def pair(kind, metric):
+        return " / ".join(f"{rec['runs'][kind][str(k)]['val'][metric]:#.3g}" for k in s["seeds"])
+
+    text = " ".join(PREREG.read_text(encoding="utf-8").split())
+    assert "(`scripts/cm2d_funccheck.py`, `records/cmame/cm2d_funccheck.json`)" in text
+    assert ("trained a transformer of width 32 and depth 2 for 25 epochs on 48 instances "
+            "drawn by the 2D generator with its own seed (not E1's corpus)") in text
+    assert "seeds 0 and 1, and evaluated it on 24 others" in text
+    assert (f"relative energy gap {pair('knorm', 'energy_gap_rel')} with L_K against "
+            f"{pair('disp', 'energy_gap_rel')} with L_D, von Mises error "
+            f"{pair('knorm', 'vm_rel_l2')} against {pair('disp', 'vm_rel_l2')} (the label-free "
+            f"objective: {pair('ar', 'energy_gap_rel')} and {pair('ar', 'vm_rel_l2')})") in text
+    for k in s["seeds"]:                       # both reductions, on every seed
+        lk, ld = rec["runs"]["knorm"][str(k)]["val"], rec["runs"]["disp"][str(k)]["val"]
+        assert lk["energy_gap_rel"] < ld["energy_gap_rel"] and lk["vm_rel_l2"] < ld["vm_rel_l2"]
+    assert "Both reductions that H2a and H2b test were thus seen before the stamp" in text
+    assert "The effects of L_K have never been measured" not in text
+    assert "No supervised network has been trained with the stiffness norm" not in text
+    assert "(since then, only in the small functional check of Sec. 4)" in text
+    assert "its adjudication read H2a and H2b as SUPPORTED, H1 as NOT SUPPORTED" in text
+
+
+def test_the_functional_check_script_runs(tmp_path):
+    pytest.importorskip("torch")
+    pytest.importorskip("gmsh")
+    out = tmp_path / "fc.json"
+    res = subprocess.run([sys.executable, str(ROOT / "scripts" / "cm2d_funccheck.py"), "--out",
+                          str(out), "--n-train", "2", "--n-val", "1", "--epochs", "1",
+                          "--seeds", "0"], capture_output=True, text=True, cwd=ROOT, timeout=600)
+    assert res.returncode == 0, res.stderr[-2000:]
+    rec = json.loads(out.read_text())
+    assert set(rec["runs"]) == {"disp", "knorm", "ar"} and rec["corpus"]["n"] == 3
+    assert rec["knorm_loss_against_lemma_1"]["steps"] == 2
+    assert all(rec["runs"][k]["0"]["grad_norm_before_clip"]["steps"] == 2 for k in rec["runs"])

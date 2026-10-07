@@ -246,7 +246,31 @@ def test_the_trainer_minimises_the_mean_square_root_of_the_relative_energy_gap(m
     for U, Us, loss in calls:
         a = next(x for x in archs if np.allclose(x.U_star, Us, rtol=1e-6, atol=1e-12))
         want = float(np.mean(np.sqrt(energy_gap_rel(U, a))))
-        assert np.isclose(loss, want, rtol=2e-3), (loss, want)
+        assert np.isclose(loss, want, rtol=1e-4), (loss, want)
+
+
+def test_a_stiffness_norm_training_resumes_from_its_epoch_checkpoint_exactly(tmp_path):
+    """RUNBOOK_CMAME B3's usual case for the new row: a stiffness-norm training
+    interrupted after an epoch and resumed from its epoch checkpoint ends with
+    the uninterrupted training's weights and validation values, bit for bit
+    (CPU), and records the epoch it resumed from."""
+    from fejepa.experiments.parallel import _build_model
+
+    rng = np.random.default_rng(8)
+    train = [synthetic_instance(rng, labelled=True) for _ in range(3)]
+    val = [synthetic_instance(rng, labelled=True) for _ in range(2)]
+    base = dict(epochs=3, lr=1e-3, seed=0, loss="knorm", log_every=-1)
+    payload = {"kind": "fejepa", "model": MODEL, "seed": 0}
+    m_ref = _build_model(payload)
+    r_ref = train_supervised(m_ref, train, val, SupervisedConfig(**base))
+    ck = str(tmp_path / "knorm.ckpt")
+    train_supervised(_build_model(payload), train, val,
+                     SupervisedConfig(**base, ckpt_path=ck, stop_after_epoch=1))
+    m = _build_model(payload)
+    r = train_supervised(m, train, val, SupervisedConfig(**base, ckpt_path=ck, resume=True))
+    a, b = m_ref.state_dict(), m.state_dict()
+    assert a.keys() == b.keys() and all(torch.equal(a[k], b[k]) for k in a)
+    assert r["val"] == r_ref["val"] and r["resumed_from_epoch"] == 1
 
 
 def _capture(monkeypatch, cfg, pool_files, val_files):
