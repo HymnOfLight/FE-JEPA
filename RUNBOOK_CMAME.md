@@ -24,7 +24,9 @@ diagnostics of cmame-paper Stage 1 in the field export. Nothing in PREREG_W9
 reads them, and they read no output of wp9's sessions; the 2D timing therefore
 runs on E1's validation instances only (the OOD family F5 is made by wp9's
 session 1, which has not run). When this section has returned complete, wp9's
-Sec. 4 need not be repeated, except its 2D timing on F5 if wp9 wants it.
+Sec. 4 need not be repeated, except its 2D timing on F5 if wp9 wants it. It
+ran on 8 October 2026 on commit `61f018f` and returned complete; the return
+is in `records/cmame/timing/` (`records/cmame/README.md`).
 
 What it measures. The manuscript's cost table: per instance, on the same
 instances and this machine, the surrogate's inference (GPU, batch of one, every
@@ -85,7 +87,7 @@ python -m pytest -q --deselect tests/test_cmame_material.py::test_manuscript_com
     --deselect tests/test_w9_session2.py::test_paper_material_compiles \
     2>&1 | tee runs/cmame/timing/pytest.log | tail -n 3
 ```
-The suite's last line reads `505 passed, 2 deselected`, then warnings and the
+The suite's last line reads `513 passed, 2 deselected`, then warnings and the
 time (the two LaTeX builds are left out: they need a TeX installation that
 this section does not use). Anything failed, an error, or another count: stop
 and report. Any other output than the comments describe: stop and report.
@@ -187,7 +189,9 @@ stamp until the return: the checkout must be exactly the tagged commit.
 
 ### B0. Readiness (box; optional, after A2 or on any visit before the stamp; read only; ~10 min)
 The checks of B2 without the tag and the stamp, on the commit the operator
-instruction names for B0 (Sec. A's commit has no `scripts/cm2d_precheck.py`).
+instruction names for B0, which must contain `scripts/cm2d_precheck.py`
+(Stage 1's commit `58f079f`, on which Sec. A was first planned, does not;
+Sec. A and B0 both ran on Stage 3's, `61f018f`).
 They also evaluate E1's three states on the validation split and train two
 steps that are not kept, so a FAIL here changes the plan before the stamp
 instead of after it. Nothing else may run meanwhile (not during A1).
@@ -251,7 +255,7 @@ python -m pytest -q --deselect tests/test_cmame_material.py::test_manuscript_com
     --deselect tests/test_w9_session2.py::test_paper_material_compiles \
     2>&1 | tee runs/cm2d/pytest.log | tail -n 3
 ```
-The suite's last line reads `505 passed, 2 deselected`, then warnings and the time.
+The suite's last line reads `513 passed, 2 deselected`, then warnings and the time.
 Anything failed, an error, another count, or any other output than the
 comments describe: stop and report.
 

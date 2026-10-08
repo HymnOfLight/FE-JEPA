@@ -1,0 +1,24 @@
+.................................................................................................................................................................... [ 32%]
+.................................................................................................................................................................... [ 64%]
+.................................................................................................................................................................... [ 97%]
+.............                                                                                                                                                        [100%]
+============================================================================= warnings summary =============================================================================
+tests/test_anchor.py::test_energy_matches_numpy
+  /root/autodl-tmp/FE-JEPA/src/fejepa/anchor/energy.py:70: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+    K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape).coalesce()   # CPU
+
+tests/test_audit_phase2.py::test_audit_adjudicates_a_phase2b_shaped_report
+  /root/autodl-tmp/FE-JEPA/src/fejepa/train/pretrain.py:126: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+  Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:838.)
+    f"loss={float(loss):.4e}", flush=True)
+
+tests/test_d10_anchor_residency.py::test_cuda_target_constructs_on_cpu_and_stays_cpu_resident
+  /root/autodl-tmp/FE-JEPA/src/fejepa/anchor/energy.py:74: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+    self.K_t = K_t.to_sparse_csr() if cuda_target else K_t
+
+tests/test_wp8_properties.py::test_sigreg_gradient_matches_finite_differences
+  /root/miniconda3/lib/python3.12/site-packages/torch/autograd/gradcheck.py:2124: UserWarning: Input #0 requires gradient and is not a double precision floating point or complex. This check will likely fail if all the inputs are not of double precision floating point or complex. 
+    _check_inputs(tupled_inputs)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+505 passed, 2 deselected, 4 warnings in 193.62s (0:03:13)

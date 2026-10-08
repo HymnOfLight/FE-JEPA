@@ -1,0 +1,12 @@
+HEAD 61f018f59243d5268b908fbabdc96ae2ecd94152
+tree ec2ecbf2057f28a97a94b1fe867ad2c9eb89a4ca
+NVIDIA GeForce RTX 5090, 595.71.05, 32607 MiB
+CPU(s):                          128
+Model name:                      Intel(R) Xeon(R) Gold 6459C
+Thread(s) per core:              2
+Socket(s):                       2
+nproc 16
+1600000 100000
+98784247808
+               total        used        free      shared  buff/cache   available
+Mem:             754          85         130          77         537         586

@@ -243,3 +243,85 @@ stiffness norm against label-free).
   service records. A dated archive taken before the move, with an export of
   the service's record, is a further safeguard.
 - No code, configuration, record or generated file changed. Suite 507.
+
+## Stage 4b (8 Oct 2026) -- the return of RUNBOOK_CMAME Sec. A and B0, recorded
+
+- `records/cmame/timing/`: Sec. A as it ran on the box on 8 October 2026 on
+  commit `61f018f` (Stage 3): inference timing against exact solves (2D:
+  E1's label-free state of seed 0 on 32 validation instances; 3D: Phase-2b's
+  on 32 validation and the first 8 fine-set instances) and the field export
+  of Phase-2b's nine states of the 1,024-instance budget, with the box's
+  suite (505 passed, the two LaTeX builds deselected), the machine and the
+  check before the timing. Fourteen files, copied byte for byte from the
+  operator's tarball, whose SHA-256 matched on receipt;
+  `records/cmame/README.md` lists their hashes and what each holds.
+- `records/cmame/cm2d_ready.log`: B0 on the same commit (after Sec. A, by
+  the operator's account): GO, with PREREG_CM2D unstamped, as it must be
+  until the stamp.
+- `tests/test_cmame_timing_records.py` (8 tests): the files and their
+  hashes; every step exited 0 on the named commit and tree, with the GPU
+  idle before the timing; the reports read are the committed records and the
+  states the runs' own; every solver solved every instance, no CG fell back
+  to the direct solve, the solutions agree with the labels, every matching
+  CG met its target, and the timed model reproduces its report on every
+  timed instance; the field export is complete and within the runbook's
+  ranges; its counts agree with the manuscript's numbers; on every load case
+  of `energies_val.npz`, the exactness lemma, the zero-field test and
+  ranking, and the stress bound hold between quantities computed
+  independently (the energies against the error's stiffness norm, the von
+  Mises error against that norm), and the energy-optimal amplitude holds on
+  the stored gaps; the per-instance means reproduce the report's energy
+  gaps, displacement errors and von Mises errors; the figure rules,
+  applied to the report's arrays, select the exported instances; B0 said GO
+  on the same commit with PREREG_CM2D unstamped. Corruptions of a scratch
+  copy of the records, with the README's hashes updated so that the hash
+  test could not mask them, each made the test reading that record fail
+  (an energy's sign, a timed row, the stamp line, the suite's summary line,
+  and fourteen more in the review).
+- `RUNBOOK_CMAME.md`: the suite count the box should now see is 513 passed,
+  2 deselected (A0c, B1c); Sec. A says that it has returned, and where; B0's
+  note on its commit now reads that the commit must contain the precheck
+  script (Stage 1's, on which Sec. A was first planned, does not; both ran on
+  Stage 3's).
+- What the records show, for the next stage. The manuscript does not read
+  these records yet; what it already states from other records (the
+  label-free per-load count, the 2D warm-start finding) agrees with them.
+  - Cost, medians over instances. Surrogate: first call on the GPU,
+    preparation and copy back included. Solvers on the CPU, in a 16-CPU
+    allotment with OMP and MKL set to 16 threads (the threads the direct
+    solve and the mat-vec actually used are not recorded; to be settled
+    before the manuscript states any): SuperLU on
+    the free block, CG unpreconditioned to a relative residual of 1e-10, and
+    the matching CG, stopped by the labels and so a lower bound. 2D
+    validation (about 1,100 free dofs): surrogate 2.6 ms, direct 3.1 ms, CG
+    24 ms, matching CG 7.2 ms. 3D validation (about 14,000): 49 ms, 0.91 s,
+    1.2 s, 0.22 s. 3D fine set (about 112,000): 2.2 s, 105 s, 26 s, 4.3 s;
+    there the surrogate's displacement error is 0.27 (median over the 8
+    timed instances; 0.20 over all 256 of the fine set; seed 0) against
+    0.031 on the 32 validation ones, and on 3 of the 32 fine load cases it
+    is worse than the zero field, so that the matching CG took no step
+    there. Started from the prediction, CG to 1e-10 took about as many
+    iterations as from zero (per-instance ratios 0.98 to 1.04; on the fine
+    set 1.6% to 3.5% more).
+  - Per load case on the 3D validation split (3,072 per network): labels
+    only 126 and graph network 106 worse than the zero field, label-free 1;
+    none after the rescaling by c*.
+  - The errors' Rayleigh quotient over the solution's, median: label-free
+    12, labels only 132, graph network 1,026; a supervised error has the
+    larger quotient on 89% (labels only) and 99.9% (graph network) of the
+    instance, load case and seed triples. The volume-weighted von Mises
+    error is close to the unweighted element-wise one (medians 0.047 and
+    0.051 label-free, 0.25 and 0.26 labels only, 0.21 and 0.23 graph
+    network), and Proposition 1's bound held on every prediction (largest
+    ratio 0.85).
+- The manuscript is unchanged. The next stage is to write the cost table,
+  the field figures, the supervised networks' per-load counts and the
+  spectral readings from these records, and to revise what they bear on: the
+  discussion's "We have not measured the spectral content of the errors",
+  the limitations' list of what is pending, and the introduction's "sparse
+  direct and iterative solvers are fast at the sizes studied here" (in 3D,
+  per instance, the direct solve took a median 20 times the surrogate's
+  time on the validation set and 51 times on the fine set, and the matching
+  CG, a lower bound, 3.9 times on the validation set).
+- No source, script, configuration or generated file changed; one test file
+  added. Suite 515.
