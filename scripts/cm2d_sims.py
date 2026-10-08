@@ -17,12 +17,20 @@ Blow-ups. The log-normal model has no per-instance outliers. In the
 256 validation instances read m_k ~ U(20, 40) times the arm's level instead
 of about one, in one arm only ("ref" or "new") or in both.
 
+July's reference. The new arm against a reference at the seed spread of
+July's labels-only transformer at 1,024 labels: 8.9% in the relative energy
+gap (H1's and H2a's reference; simulated at 9%), and, from cmame-paper
+Stage 5 (PREREG_CM2D r3), 7.1% in the relative L2 von Mises error (H2b's
+reference). The 7.1% cells are drawn after all the others, so that every
+value of the earlier record is unchanged.
+
 Schedule. The 30 supervised units of configs/cm2d_v1.json in the order the
 run submits them (seed, budget, row), each taken by the first free of three
 workers, at a supervised step of 52 ms for the transformers (measured on the
 box with activation checkpointing, records/wp8/posthoc/profile_2d_head.json)
-and a multiple of it for the graph network (not measured), plus one minute
-per unit; the hours until the last unit ends.
+and a multiple of it for the graph network (not measured; from Stage 5 also
+two and a half and three times), plus one minute per unit; the hours until
+the last unit ends.
 
     python scripts/cm2d_sims.py --out records/cmame/cm2d_sims.json
     python scripts/cm2d_sims.py --check records/cmame/cm2d_sims.json
@@ -47,12 +55,14 @@ NOISE = ((0.05, 0.05), (0.10, 0.10), (0.20, 0.20), (0.30, 0.30), (0.05, 0.20), (
 new arm and the reverse."""
 JULY_REF = 0.09
 """The seed spread of July's labels-only transformer at 1,024 labels (8.9%)."""
+JULY_REF_VM = 0.071
+"""Its seed spread in the relative L2 von Mises error (7.1%), H2b's reference."""
 JULY_NEW = (0.05, 0.09, 0.20, 0.30, 0.50)
 JULY_RATIOS = (0.5, 0.8, 1.0)
 BLOWUP = {"c": 0.05, "rate": 1.0, "low": 20.0, "high": 40.0}
 STEP_S = 0.052
 UNIT_OVERHEAD_S = 60.0
-MGN_FACTORS = (0.5, 1.0, 1.5, 2.0)
+MGN_FACTORS = (0.5, 1.0, 1.5, 2.0, 2.5, 3.0)
 BUDGETS, MGN_BUDGETS, EPOCHS, WORKERS = (16, 64, 256, 1024), (64, 1024), 200, 3
 
 
@@ -120,10 +130,14 @@ def simulate(trials: int = TRIALS) -> dict:
         july[f"c_ref={JULY_REF:.2f},c_new={c_new:.2f}"] = {
             f"r={r:g}": cell(rng, r, JULY_REF, c_new, trials) for r in JULY_RATIOS}
     blow = {w: blowup_cell(rng, w, trials) for w in ("ref", "new", "both")}
+    july_vm = {}                                   # drawn last: earlier values unchanged
+    for c_new in JULY_NEW:
+        july_vm[f"c_ref={JULY_REF_VM:.3f},c_new={c_new:.2f}"] = {
+            f"r={r:g}": cell(rng, r, JULY_REF_VM, c_new, trials) for r in JULY_RATIOS}
     return {"what": "PREREG_CM2D operating characteristics (scripts/cm2d_sims.py)",
             "seed": SEED, "trials_per_cell": trials, "seeds_per_arm": N_SEEDS,
             "guard": {"band": BAND, "k": K}, "model": "log-normal per-seed values",
-            "cells": out, "july_reference": july,
+            "cells": out, "july_reference": july, "july_reference_vm": july_vm,
             "blowups": {"model": BLOWUP, "r": 1.0, "cells": blow},
             "schedule": {"step_s": STEP_S, "unit_overhead_s": UNIT_OVERHEAD_S,
                          "workers": WORKERS,

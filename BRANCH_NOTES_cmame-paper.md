@@ -325,3 +325,85 @@ stiffness norm against label-free).
   CG, a lower bound, 3.9 times on the validation set).
 - No source, script, configuration or generated file changed; one test file
   added. Suite 515.
+
+## Stage 5 (8 Oct 2026) -- a last check of the code; PREREG_CM2D r3, stamped
+
+- A last check before the stamp, by three independent reviews (the training
+  and evaluation path the run executes; the adjudicator against the
+  pre-registration and against the report the runner writes; the stamp, the
+  tag, the precheck and the runbook, simulated on a single-branch clone),
+  found no defect in the code. `src` is unchanged since Stage 2.
+- PREREG_CM2D r3, approved by the principal investigator on 8 October 2026,
+  four corrections of text; no question, arm, measurement or criterion
+  changed:
+  - Sec. 4 quoted the guard's operating characteristics "at July's L_D
+    spread (8.9% in the relative energy gap; 7.1% in the von Mises error)"
+    from a simulation at 9% only. It now quotes the 9% simulation for the
+    energy gap (H1's and H2a's reference) and a new one at 7.1% for the von
+    Mises error (H2b's): false support 1.3 / 3.4 / 8.8 / 11.8 / 16.5% and
+    detection of a ratio of 0.8 in 97 / 89 / 57 / 45 / 38% at new-arm
+    spreads of 5 / 9 / 20 / 30 / 50%; the summary "8-16% at new-arm spreads
+    of 20-50%" holds for both.
+  - Sec. 7 says the cost profile (52 ms per step) ran on the host the
+    instance had then (Xeon Platinum 8470Q, 25 CPUs), and that on 8 October
+    the instance ran on another (Xeon Gold 6459C, 16 CPUs; same GPU model,
+    driver and torch) on which no training step has been timed; that the
+    graph network takes the four load cases one after another through its
+    checkpointed layers, where the transformer encodes them as one batch, so
+    its step may take twice the transformer's or longer; the schedule is
+    simulated at two and a half and three times (19.8 and 22.0 h); and the
+    balance is raised from about 20 h to about 30 h.
+  - Sec. 4 discloses the runs on the box before the stamp: the readiness
+    check B0 (E1's states reproduced; the run's transformer trained with L_K
+    for one epoch of two steps on two pool instances, relative energy gap
+    0.995, nothing kept) and Sec. A's 2D timing of E1's label-free state of
+    seed 0 on 32 validation instances (E1's values recomputed there, plus the
+    rescaling by c* and conjugate gradients' iterations and times, none of
+    which the hypotheses read).
+  - Sec. 6 names the r3 draft as the one the stamp script accepts (it named
+    r2).
+- Stamped on 8 October 2026 with `scripts/stamp_prereg_cm2d.py` (which now
+  accepts the r3 draft only): CONFIG_SHA256[cm2d_v1] =
+  `bf1f1143b397331b95954229010bdce7bd9340d1b6e2abeb139337b117784a03`
+  (configuration unchanged), footer
+  `6eaf835fc9cab109d51160e50aec9da8e19ee4c2211c11977ac4b21d76846b7c`; the
+  run's own guard (`verify_prereg`, label `cm2d_v1`) accepts it.
+- `scripts/cm2d_sims.py`: the 7.1% cells, drawn after all the others so that
+  every earlier value of `records/cmame/cm2d_sims.json` is unchanged, and
+  graph-network step factors of 2.5 and 3; the record regenerated.
+- `RUNBOOK_CMAME.md`: the box fetches directly (A0b, B0, B1b): on 8 October,
+  by the operator's report, AutoDL's network route answered HTTP 503 and the
+  direct fetch worked; the tag's refspec is forced, so that a stale local tag is
+  replaced. The run's time is 11-22 h and the balance at least 30 h; the
+  graph network's units at 1,024 labels may take 6-9 h. Before the operator
+  instruction is sent, the repo side checks on the remote that only
+  `prereg-cm2d` points at the stamped commit. B3: after a worker's
+  death the run's own message suggests `--reuse-states`; the runbook's
+  no-restart rule takes precedence. Sec. C fetches the tag by a forced
+  refspec, in a clone of its own, checks that only `prereg-cm2d` points at
+  the stamped commit, and checks out that commit before adjudicating. The
+  box's suite count is now 514 passed, 2 deselected.
+- Tests: the r3 quotes are pinned to their records (the 7.1% cells and the
+  8-16% summary, the schedule's hours and the 30 h balance, B0's log and the
+  precheck's smoke code, Sec. A's 2D timing, the two hosts); the stamp
+  script's r3 markers. Suite 516.
+- Review findings left as they are, for the record: the run records its
+  `git describe` only when it writes the report (5 s timeout; a timeout would
+  make the adjudication refuse; the operator runs no git command during the
+  run, and `src` is not changed before the stamp for it); "no other tag on
+  that commit" (PREREG Sec. 6) is checked on the remote before the run and
+  at the adjudication (Sec. C), not by the precheck; the runbook fetches
+  directly only, as the principal investigator decided on 8 October, with no
+  fall-back to AutoDL's network route; a unit that hangs has
+  no watchdog (the health check B2' shows it); each worker sets its torch
+  threads from the host's CPU count (42 on this host's 128 CPUs, 16 of them
+  allotted), as in E1; E8's built-in summaries use population standard
+  deviations, the verdicts sample ones; the adjudicator flags a medians'
+  disagreement by comparing the guard's outcome on medians with that on
+  means, inside its `robustness` block.
+- An incident in the sandbox, nothing pushed: one review made its scratch
+  copy of this worktree with `cp -r`, which shares the worktree's git
+  directory, and its simulated stamp commit and tag landed in the local
+  repository. On the principal investigator's approval the branch was set
+  back to `16973d3` and the tag deleted; the remote was never touched.
+  Scratch copies are made with `git clone`.

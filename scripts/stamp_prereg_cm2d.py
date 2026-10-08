@@ -32,7 +32,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 LABEL = "cm2d_v1"
-DRAFT_STATUS = ("**Status:** r2 DRAFT (7 October 2026), not stamped; the CONFIG_SHA256 line "
+DRAFT_STATUS = ("**Status:** r3 DRAFT (8 October 2026), not stamped; the CONFIG_SHA256 line "
                 "below is open. Stamping fills it before the run (Sec. 6); post-stamp "
                 "criterion changes are prohibited.")
 FOOTER_OPEN = "PREREG_CM2D_SHA256 = <record after commit>"
@@ -42,7 +42,7 @@ _DATE = re.compile(r"^[1-9]\d? (January|February|March|April|May|June|July|Augus
 
 
 def stamped_status(date: str) -> str:
-    return (f"**Status:** r2, stamped {date} before the run: the CONFIG_SHA256 line below is "
+    return (f"**Status:** r3, stamped {date} before the run: the CONFIG_SHA256 line below is "
             "filled, and the last line is this file's SHA-256 (Sec. 6); post-stamp criterion "
             "changes are prohibited.")
 
@@ -83,7 +83,7 @@ def stamp(prereg: Path, config: Path, date: str, check_generator: bool = True) -
     if entries[0][1] != PREREG_PLACEHOLDER:
         raise SystemExit(f"{prereg}: already stamped -- nothing changed")
     if text.count(DRAFT_STATUS) != 1:
-        raise SystemExit(f"{prereg}: the status line is not the approved r2 draft's")
+        raise SystemExit(f"{prereg}: the status line is not the approved r3 draft's")
     if len(_FOOTER.findall(text)) != 1 or not text.rstrip("\n").endswith(FOOTER_OPEN):
         raise SystemExit(f"{prereg}: the last line is not `{FOOTER_OPEN}`")
     h = stamp_prereg(prereg, cfg, label=LABEL)

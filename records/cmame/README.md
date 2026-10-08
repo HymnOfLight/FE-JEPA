@@ -39,13 +39,17 @@ numpy 2.4.4, scipy 1.17.1).
 every simulated number PREREG_CM2D quotes. The E-series noise guard on three
 seeds per arm with log-normal per-seed values: false and true "lower" and
 "worse" readings at equal and unequal seed spreads (`cells`), with the
-reference at July's labels-only spread of 9% (`july_reference`), and with
-per-instance blow-ups (one validation instance at 20-40 times an arm's level,
-about one per seed) in one arm or both (`blowups`). `schedule`: the 30 units
-of `configs/cm2d_v1.json` in the order the run submits them on three workers,
-at the measured 52 ms per supervised step plus a minute per unit, for the
-graph network's (unmeasured) step at 0.5-2 times the transformer's. The
-script regenerates the file byte for byte (`--check`; tested).
+reference at July's labels-only spread in the relative energy gap, 9%
+(`july_reference`), and with per-instance blow-ups (one validation instance
+at 20-40 times an arm's level, about one per seed) in one arm or both
+(`blowups`); and, from cmame-paper Stage 5 (PREREG_CM2D r3), with the
+reference at that row's spread in the von Mises error, 7.1%
+(`july_reference_vm`), drawn after all the others so that every earlier value
+is unchanged. `schedule`: the 30 units of `configs/cm2d_v1.json` in the order
+the run submits them on three workers, at the measured 52 ms per supervised
+step plus a minute per unit, for the graph network's (unmeasured) step at
+0.5-3 times the transformer's (2.5 and 3 added in Stage 5). The script
+regenerates the file byte for byte (`--check`; tested).
 
 ## A functional check of the stiffness-norm loss (PREREG_CM2D Sec. 4)
 

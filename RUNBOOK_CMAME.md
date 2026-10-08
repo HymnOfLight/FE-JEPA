@@ -7,7 +7,7 @@ the manuscript.
 - Sec. A: timing and field export (read only; ~1.5 h; no pre-registration).
 - Sec. B: CM2D, the two-dimensional supervised networks retrained with the
   current code beside E1's label-free states, with a stiffness-norm control
-  (PREREG_CM2D; ~10-15 h, up to ~18 h; only after PREREG_CM2D is stamped and
+  (PREREG_CM2D; ~11 h, up to ~22 h; only after PREREG_CM2D is stamped and
   tagged `prereg-cm2d`, except its readiness check B0).
 - Sec. C: CM2D's adjudication (repo).
 
@@ -59,12 +59,12 @@ status bar is already showing); after a dropped connection, `tmux attach -t cm`:
 tmux new -A -s cm
 ```
 
-A0b. Fetch the branch (a subshell carries AutoDL's network route, so nothing
-stays set; the box's clone is single-branch, hence the explicit refspec):
+A0b. Fetch the branch (directly: on 8 October 2026, by the operator's
+report, AutoDL's network route answered HTTP 503 and the direct fetch
+worked; the box's clone is single-branch, hence the explicit refspec):
 ```bash
 cd ~/autodl-tmp/FE-JEPA
-( source /etc/network_turbo
-  for i in 1 2 3; do git fetch origin +refs/heads/cmame-paper:refs/remotes/origin/cmame-paper && exit 0; sleep 10; done
+( for i in 1 2 3; do git fetch origin +refs/heads/cmame-paper:refs/remotes/origin/cmame-paper && exit 0; sleep 10; done
   exit 1 ) && echo FETCH-OK || echo FETCH-FAILED
 git rev-parse --short origin/cmame-paper     # the commit the operator instruction names
 ```
@@ -87,7 +87,7 @@ python -m pytest -q --deselect tests/test_cmame_material.py::test_manuscript_com
     --deselect tests/test_w9_session2.py::test_paper_material_compiles \
     2>&1 | tee runs/cmame/timing/pytest.log | tail -n 3
 ```
-The suite's last line reads `513 passed, 2 deselected`, then warnings and the
+The suite's last line reads `514 passed, 2 deselected`, then warnings and the
 time (the two LaTeX builds are left out: they need a TeX installation that
 this section does not use). Anything failed, an error, or another count: stop
 and report. Any other output than the comments describe: stop and report.
@@ -173,7 +173,7 @@ and report's hashes recorded in the JSON files, the exit codes) and committed
 under `records/cmame/timing/`; the manuscript's cost table, field figures and
 per-load counts are then generated from it.
 
-## B. CM2D: the 2D supervised networks retrained, with a stiffness-norm control (box; ~10-15 h)
+## B. CM2D: the 2D supervised networks retrained, with a stiffness-norm control (box; ~11-22 h)
 
 PREREG_CM2D.md governs. One run of the stamped configuration
 `configs/cm2d_v1.json` on E1's corpus, split and seeds: E1's three label-free
@@ -181,11 +181,17 @@ states evaluated (not trained; each checked by SHA-256), and the supervised
 grid trained with the current code -- the labels-only transformer and the same
 transformer trained on the relative stiffness-norm error at 16, 64, 256 and
 1,024 labels, the graph network at 64 and 1,024, and the naive rows.
-2,284,800 supervised steps in 30 units on three workers: about 11 h,
-10-15 h by the graph network's speed (not measured), up to about 18 h if its
-step is twice the transformer's. The instance's balance must cover about
-20 h. Everything is written under `runs/cm2d/`. The branch is frozen from the
-stamp until the return: the checkout must be exactly the tagged commit.
+2,284,800 supervised steps in 30 units on three workers: about 11 h if the
+graph network's step is as long as the transformer's, 18-22 h at two to three
+times as long, which may well be the case (not measured; PREREG_CM2D Sec. 7).
+The instance's balance must cover at least 30 h (more is safer: no training
+step has been timed on the instance's current host). Everything is written
+under `runs/cm2d/`. The branch is frozen from the stamp until the return: the
+checkout must be exactly the tagged commit. Before the operator instruction
+is sent, the repo side checks the remote:
+`git ls-remote origin refs/heads/cmame-paper 'refs/tags/*'` shows the branch
+at the stamped commit and, of all tags, only `refs/tags/prereg-cm2d^{}` at
+that commit (PREREG_CM2D Sec. 6: no other tag on it).
 
 ### B0. Readiness (box; optional, after A2 or on any visit before the stamp; read only; ~10 min)
 The checks of B2 without the tag and the stamp, on the commit the operator
@@ -197,8 +203,7 @@ steps that are not kept, so a FAIL here changes the plan before the stamp
 instead of after it. Nothing else may run meanwhile (not during A1).
 ```bash
 cd ~/autodl-tmp/FE-JEPA
-( source /etc/network_turbo
-  for i in 1 2 3; do git fetch origin +refs/heads/cmame-paper:refs/remotes/origin/cmame-paper && exit 0; sleep 10; done
+( for i in 1 2 3; do git fetch origin +refs/heads/cmame-paper:refs/remotes/origin/cmame-paper && exit 0; sleep 10; done
   exit 1 ) && echo FETCH-OK || echo FETCH-FAILED
 git checkout -B cmame-paper origin/cmame-paper   # "Switched to ..." or "Reset branch ...", maybe "set up to track"
 git rev-parse --short HEAD                   # the commit the operator instruction names for B0
@@ -226,11 +231,11 @@ status bar is already showing); after a dropped connection, `tmux attach -t cm`:
 tmux new -A -s cm
 ```
 
-B1b. Fetch the branch and the tag:
+B1b. Fetch the branch and the tag (directly, as in A0b; the tag's refspec is
+forced, so that a stale local tag of that name is replaced):
 ```bash
 cd ~/autodl-tmp/FE-JEPA
-( source /etc/network_turbo
-  for i in 1 2 3; do git fetch origin +refs/heads/cmame-paper:refs/remotes/origin/cmame-paper +refs/tags/prereg-cm2d:refs/tags/prereg-cm2d && exit 0; sleep 10; done
+( for i in 1 2 3; do git fetch origin +refs/heads/cmame-paper:refs/remotes/origin/cmame-paper +refs/tags/prereg-cm2d:refs/tags/prereg-cm2d && exit 0; sleep 10; done
   exit 1 ) && echo FETCH-OK || echo FETCH-FAILED
 git rev-parse --short origin/cmame-paper     # the commit the operator instruction names
 git rev-parse --short 'prereg-cm2d^{commit}' # the same commit
@@ -255,11 +260,11 @@ python -m pytest -q --deselect tests/test_cmame_material.py::test_manuscript_com
     --deselect tests/test_w9_session2.py::test_paper_material_compiles \
     2>&1 | tee runs/cm2d/pytest.log | tail -n 3
 ```
-The suite's last line reads `513 passed, 2 deselected`, then warnings and the time.
+The suite's last line reads `514 passed, 2 deselected`, then warnings and the time.
 Anything failed, an error, another count, or any other output than the
 comments describe: stop and report.
 
-### B2. Checks and the run (box; ~10-15 h; nothing else on the GPU)
+### B2. Checks and the run (box; ~11-22 h; nothing else on the GPU)
 The checks (~10 min; they evaluate E1's states and train two steps that are
 not kept):
 ```bash
@@ -297,7 +302,8 @@ Normal signs:
   line from its worker (`[sup:none E8 labels b16 s0] step 3200/3200 (100%)
   disp=...`, `... knorm=...` for the stiffness-norm row) and one from the
   run (`[E8 (supervised grid)] k/30 ... | labels b16 s0`); the 1,024-label
-  units take about 3 h each, so hours without a new line are normal;
+  transformer units take about 3 h each and the graph network's possibly
+  6-9 h, so hours without a new line are normal;
 - at the end, in this order: `runs/cm2d/report.json`, `RESULTS.md`, a figure,
   a `gate G1'` line that reads `passed=False` (it always does here: it is not
   a CM2D verdict), and the solve ledger with `'total': 0`;
@@ -334,7 +340,8 @@ instance down without releasing it; do not restart.
   If the log mentions `out of memory` or `a worker process died`, or the
   status file shows `exit=137`, or `oom_kill` rose (it starts again from 0
   after a box restart): do not restart; go to B4 and report. Otherwise
-  restart once as below.
+  restart once as below. (After a worker's death the run's own message ends
+  "restart the run with --reuse-states": this rule takes precedence.)
 - Never delete `runs/cm2d/e8_states/`, the report, a log or `status.txt`.
 
 The restart keeps the finished units (from the unit cache) and the
@@ -392,7 +399,16 @@ Send the tarball with the SHA-256 line (a few MB). The states stay on the box
 without releasing it.
 
 ## C. CM2D's adjudication (repo)
+In a checkout of the branch (a clone of its own, not a copy of a worktree),
+with the tag fetched by a forced refspec, so that a stale local tag of that
+name cannot remain:
 ```bash
+git fetch origin +refs/heads/cmame-paper:refs/remotes/origin/cmame-paper +refs/tags/prereg-cm2d:refs/tags/prereg-cm2d
+git rev-parse 'prereg-cm2d^{commit}'         # the stamped commit
+git tag --points-at 'prereg-cm2d^{commit}'   # exactly one line: prereg-cm2d
+git checkout -B cmame-paper origin/cmame-paper   # frozen at the stamped commit until the return
+git describe --tags --match prereg-cm2d      # exactly: prereg-cm2d
+git status --porcelain --untracked-files=no  # must print nothing
 python scripts/adjudicate_cm2d.py --return <the unpacked cm2d_return> \
     --out records/cmame/cm2d/verdict.json
 ```

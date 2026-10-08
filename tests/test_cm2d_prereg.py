@@ -81,7 +81,7 @@ def test_the_configuration_passes_the_reuse_comparison_with_e1():
 def _draft_text() -> str:
     """PREREG_CM2D.md as its approved draft (a stamped file un-stamped)."""
     text = PREREG.read_text(encoding="utf-8")
-    m = re.search(r"\*\*Status:\*\* r2, stamped (.+?) before the run:", text)
+    m = re.search(r"\*\*Status:\*\* r3, stamped (.+?) before the run:", text)
     if m:
         text = text.replace(st.stamped_status(m.group(1)), st.DRAFT_STATUS)
     text = re.sub(r"^CONFIG_SHA256\[cm2d_v1\] = [0-9a-f]{64}$",
@@ -132,8 +132,8 @@ def test_the_stamp_refuses(tmp_path):
         p.write_text(_draft_text(), encoding="utf-8")
         with pytest.raises(SystemExit, match="--date"):
             st.stamp(p, CONFIG, bad_date)
-    r1 = _draft_text().replace("r2 DRAFT (7 October 2026)", "r1 DRAFT (6 October 2026)")
-    p.write_text(r1, encoding="utf-8")                      # the superseded draft
+    r2 = _draft_text().replace("r3 DRAFT (8 October 2026)", "r2 DRAFT (7 October 2026)")
+    p.write_text(r2, encoding="utf-8")                      # the superseded draft
     with pytest.raises(SystemExit, match="status line"):
         st.stamp(p, CONFIG, "8 October 2026")
     p.write_text(_draft_text() + "\nmore\n", encoding="utf-8")
@@ -197,6 +197,15 @@ def test_the_quoted_operating_characteristics_are_the_records():
             + " of trials at new-arm spreads of 5% / 9% / 20% / 30% / 50%") in text
     assert ("a true ratio of 0.8 is detected in "
             + " / ".join(pct(jr[k]["r=0.8"]["lower"], 0) for k in ks)) in text
+    vm = rec["july_reference_vm"]                    # r3: H2b's reference spread, 7.1%
+    kv = [f"c_ref=0.071,c_new={c:.2f}" for c in (0.05, 0.09, 0.20, 0.30, 0.50)]
+    assert ("with the reference at its spread in the von Mises error (7.1%, H2b's reference), "
+            "at the same new-arm spreads, in "
+            + " / ".join(pct(vm[k]["r=1"]["lower"], 1) for k in kv) + " and "
+            + " / ".join(pct(vm[k]["r=0.8"]["lower"], 0) for k in kv)) in text
+    fs = [x[k]["r=1"]["lower"] for x, kk in ((jr, ks), (vm, kv)) for k in kk[2:]]
+    assert (round(100 * min(fs)), round(100 * max(fs))) == (8, 16)
+    assert "at new-arm spreads of 20-50% H2a's and H2b's false-support rate is 8-16%" in text
     bl = rec["blowups"]["cells"]
     lo, hi = sorted([bl["ref"]["lower"], bl["new"]["worse"]])
     assert f"the other arm reads lower beyond the guard in {100 * lo:.0f}-{100 * hi:.0f}%" in text
@@ -207,8 +216,42 @@ def test_the_quoted_operating_characteristics_are_the_records():
     assert f"by {(m['low'] - 1) / 256 * 100:.0f}-{(m['high'] - 1) / 256 * 100:.0f}%" in text
     hrs = rec["schedule"]["hours_by_mgn_step_factor"]
     assert f"gives {hrs['1']:.1f} h if the graph network's step is as long" in text
-    assert (f"{hrs['0.5']:.1f} / {hrs['1.5']:.1f} / {hrs['2']:.1f} h at a half / one and a half "
-            "/ twice as long") in text
+    assert (f"{hrs['0.5']:.1f} / {hrs['1.5']:.1f} / {hrs['2']:.1f} / {hrs['2.5']:.1f} / "
+            f"{hrs['3']:.1f} h at a half / one and a half / two / two and a half / three times "
+            "as long") in text
+    assert "the instance's balance must cover about 30 h" in text and hrs["3"] < 30 - 0.5
+
+
+def test_the_runs_on_the_box_before_the_stamp_are_disclosed_as_recorded():
+    """r3: Sec. 4 quotes the readiness check B0 and Sec. A of 8 October 2026 from
+    their records, and Sec. 7 the two hosts from theirs."""
+    text = " ".join(PREREG.read_text(encoding="utf-8").split())
+    log = (ROOT / "records/cmame/cm2d_ready.log").read_text()
+    assert "smoke: relative energy gap 0.995 after one epoch on cuda" in log
+    assert "reproduction: largest relative deviation 0 over 3 states on cuda" in log
+    assert ("the readiness check RUNBOOK_CMAME B0 on the box (`records/cmame/cm2d_ready.log`) "
+            "trained the run's transformer with L_K for one epoch of two steps on two pool "
+            "instances (learning rate 1e-4; relative energy gap 0.995 on the first of them; "
+            "nothing kept)") in text
+    assert "reproducing E1's values (largest relative deviation 0)" in text
+    prc = _script("cm2d_precheck")
+    import inspect
+    smoke = inspect.getsource(prc.smoke_check)
+    assert "split.pool_files[:2]" in smoke and "archs[:1]" in smoke
+    assert "epochs=1, lr=1e-4, loss=\"knorm\"" in smoke and '"model": cfg["model"]' in smoke
+    timing = json.loads((ROOT / "records/cmame/timing/timing_2d.json").read_text())
+    assert timing["seed"] == 0 and timing["sets"]["val"]["n"] == 32
+    assert ("RUNBOOK_CMAME Sec. A timed E1's label-free state of seed 0 on 32 validation "
+            "instances (`records/cmame/timing/`)") in text
+    prof = json.loads((ROOT / "records/wp8/posthoc/profile_2d_head.json").read_text())
+    assert "Platinum 8470Q" in prof["cpu"] and prof["cpus"]["cgroup_cpu_max"] == 25.0
+    machine = (ROOT / "records/cmame/timing/machine.txt").read_text()
+    assert "Xeon(R) Gold 6459C" in machine and "nproc 16" in machine
+    assert "1600000 100000" in machine                      # cgroup cpu.max: 16 CPUs
+    assert prof["driver"] in machine and prof["torch"] == timing["machine"]["torch"]
+    assert ("That profile ran on the host the instance had then (a Xeon Platinum 8470Q with 25 "
+            "CPUs); on 8 October 2026 the instance ran on another host (a Xeon Gold 6459C with "
+            "16 CPUs) with the same GPU model, driver and torch") in text
 
 
 def test_the_prereg_names_the_adjudicators_constants():
