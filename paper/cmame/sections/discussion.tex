@@ -43,12 +43,31 @@ ranking by stress, the quantity on which design decisions usually depend.
 \Cref{cor:zero,prop:amp} give every surrogate, however it was trained, a check and a
 repair that need only the assembled $K$ and $F$: the sign of $\Pi_h(u)$ flags a prediction
 worse than the zero field, the difference of energies ranks the predictions of several
-surrogates for the same instance exactly by their energy-norm errors, and the rescaling by
+surrogates for the same load case exactly by their energy-norm errors, and the rescaling by
 $\cstar$, which costs nothing once $\Pi_h(u)$ is known, removes any error of amplitude and
 never increases the error in the energy norm. Every supervised network of
 \cref{tab:2d,tab:3d} returned predictions that the check would have flagged; so, in
 \numTwoFreeWorse{} of its \numTwoPairs{} instance-seed predictions, did the
 two-dimensional label-free network.
+
+\paragraph{The energy as an energy-based model}
+In machine learning, an energy-based model scores the compatibility of an input $X$ and an
+output $Y$ with a scalar energy, lowest for compatible pairs, and is used, among other
+things, to find the $Y$ most compatible with $X$, to rank two candidates $Y_1$ and $Y_2$,
+and to detect whether a given $Y$ is compatible with $X$ at all \cite{LeCun2006EBM}. Its
+energy is learned and measured in arbitrary units, and detection compares it with a
+threshold that is generally unknown when the model is built. For linear elastostatics the
+discrete potential energy is such an energy for the problem $(K,F)$, but assembled rather
+than learned, and, with compatibility measured in the energy norm, it answers the three
+questions exactly. Its minimiser is the finite-element solution, which the label-free
+surrogate learns to approximate for a whole family of problems by minimising the energy
+itself (\cref{cor:training}). The ranking of the preceding paragraph answers the second
+question, and its sign test answers the third if a compatible prediction is one no further
+from the solution than the zero field: the threshold is then the energy of that field,
+zero, and needs no tuning (\cref{cor:zero}). These are the three roles of the energy in this paper. The picture of a
+training loss as an energy landscape over the network's parameters is literal here as well:
+the label-free loss is the mean physical potential energy of the predictions, although,
+unlike $\Pi_h$ as a function of $u$, it is in general not convex in the parameters.
 
 \paragraph{Warm starts}
 The label-free prediction did not shorten conjugate gradients to a relative residual of

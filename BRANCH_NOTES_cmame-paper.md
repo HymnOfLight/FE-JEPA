@@ -203,3 +203,43 @@ stiffness norm against label-free).
   the script runs; every test starts with SIGPIPE ignored, also after a test
   that meshed in the test process. An independent review of this stage
   addressed. Suite 507.
+
+## Stage 4 (8 Oct 2026) -- the three roles of the energy, named in the manuscript
+
+- Introduction: before the list of contributions, two sentences name the
+  three roles of the energy (training objective, evaluation metric, failure
+  detector) and point to the theory section, which derives each from the
+  exactness lemma, and to the first three subsections of the
+  three-dimensional results, which take them in turn.
+- Discussion: a paragraph "The energy as an energy-based model" after "The
+  energy in deployment". An energy-based model in machine learning is used,
+  among other things, to find the output most compatible with an input, to
+  rank two candidates and to detect whether one is compatible at all; its
+  energy is learned and in arbitrary units, and the detection threshold is
+  generally unknown when the model is built. The discrete potential energy
+  is assembled and, with compatibility measured in the energy norm, answers
+  the three exactly: its minimiser is the solution, and the ranking and the
+  sign test of the preceding paragraph answer the other two, a compatible
+  prediction being one no further from the solution than the zero field and
+  the threshold, zero, needing no tuning. The picture of a training loss as
+  an energy landscape is literal here as well; the loss is in general not
+  convex in the parameters. The paragraph does not mention joint-embedding
+  architectures. "The energy in deployment" now scopes its exact ranking to
+  one load case, as the corollary "Zero-field test and ranking" states (it
+  said one instance).
+- References: LeCun, Chopra, Hadsell, Ranzato and Huang, "A tutorial on
+  energy-based learning", cited in the authors' version (v1.0, 19 August
+  2006, with the URL of the PDF read). The book (Predicting Structured Data,
+  MIT Press, 2007) contains the chapter "Energy-Based Models" by LeCun and
+  others; its author list and pages are to be confirmed before the entry is
+  switched to it (comment in `references.bib`, whose header now says how an
+  entry checked against another source is marked).
+- Data and code availability (pending boxes): the repository is to be moved
+  and renamed. The boxes ask for its address, its licence and the tag of the
+  version described; note that the reviewers need the present address if
+  the move comes after submission; and ask that the move be a transfer and
+  rename on the hosting service, because git records the dates given to
+  commits and annotated tags but not when they were pushed, which only the
+  service records. A dated archive taken before the move, with an export of
+  the service's record, is a further safeguard.
+- No code, configuration, record or generated file changed. Suite 507.
