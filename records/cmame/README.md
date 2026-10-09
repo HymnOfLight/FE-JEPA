@@ -163,3 +163,93 @@ with largest relative deviation 0, one epoch of stiffness-norm training on
 two pool instances gave a finite relative energy gap (0.995), and
 PREREG_CM2D was unstamped, as it must be before the stamp. Checked by the
 same test file.
+
+## CM2D: the run of 8-9 October 2026 and its verdict (PREREG_CM2D)
+
+`cm2d/return/` holds RUNBOOK_CMAME Sec. B as it ran on the box on the stamped
+commit `094c804` (tag `prereg-cm2d`, tree
+`cd3ec0c5baada05cf86eb6d12d64153d28930e10`), copied byte for byte from
+`cm2d_return_20261009-1433.tgz` (SHA-256
+`6cd07ef487cfab7c5d12f7d63a8f0d4887f535c495d2c04e444e29aa46ada2b6`, as the
+operator sent it and as recomputed on receipt). The run started at
+2026-10-08T15:24:06Z and exited 0 after one attempt; its supervised grid of
+30 units took 12.8 h on three workers (16 CPUs allotted; RTX 5090, driver
+595.71.05, torch 2.12.1+cu130). The suite there: 514 passed, 2 deselected.
+
+| file | SHA-256 |
+|---|---|
+| `return/RESULTS.md` | `0afd779dd48c422def1cac3059ab588205b5f6deef34e8f0520e0a2419da320e` |
+| `return/figure1_energy_gap.png` | `42274c7a2cc4e5a284ead107fda38a4c1ff2affe0124993bd3dccb659db24a0e` |
+| `return/precheck.json.used` | `f69a8a177c8d6ffdf76679e72a3dab90fd2b8589e9f025e6071380b74b5da377` |
+| `return/precheck.log.20261009-142644` | `7ed83d52a513f85d193c69926e77e1d058b26f9fdff44f4054f08a3480910e30` |
+| `return/provenance.txt` | `cfc46f91c0828f21533a340ee7719462549a6e86e1e57b9640b49e203b6001ff` |
+| `return/pytest.log` | `3c89394354f70ca22b45234465f944446a1d320368580095a414217622ae4a28` |
+| `return/report.json` | `a72c007e1a612986af463084572f1794b574e9861cce233006534c51e1a6e5ec` |
+| `return/run.log` | `75c403a76a8d6d1cdfb2ad26f6d691b85a1d80147af974cec5d86be161f06b16` |
+| `return/status.txt` | `4687ec091e1ad57d59367ee8d7044d4c9742fc46630e1a396c9989cb997e5c11` |
+
+- `report.json`, `RESULTS.md`, `figure1_energy_gap.png`: the run's outputs.
+  `status.txt`: one start, exit 0. `run.log`: the run's console.
+  `provenance.txt`: the commit, the tree, `git describe` (both forms
+  `prereg-cm2d`), torch, the SHA-256 of the report and of the kept states
+  (the states stay on the box), the GPU and the memory events (`oom_kill 0`);
+  its `git status` lists one untracked file at the repository's root, the
+  operator's manual of 3 September (already on the box at E1's run), which
+  `git describe --dirty`, B1c and the precheck ignore by design. The
+  container's hostname differs from E1's (`records/wp8/e1/provenance.txt`):
+  the instance's host changed, as PREREG_CM2D Sec. 7 discloses; the GPU,
+  driver and torch are E1's.
+  `pytest.log`: the suite before the run. `precheck.json.used`: the GO the run
+  used. `precheck.log.20261009-142644`: the log of that precheck (GO), renamed
+  after the run (below).
+- `cm2d/verdict.json` (SHA-256
+  `008b26550dcde4880f5d1baf0e949c4d3909c7e8079807becf7a2f7d648b4db9`):
+  `scripts/adjudicate_cm2d.py`, run on 9 October 2026 at the stamped commit
+  in a clone of its own, with the tag fetched by a forced refspec and only
+  `prereg-cm2d` pointing at that commit (RUNBOOK_CMAME Sec. C), as
+  `python scripts/adjudicate_cm2d.py --return records/cmame/cm2d/return
+  --e1-report records/wp8/e1/e1_2d_base/report.json --prereg PREREG_CM2D.md
+  --july-report records/phase1/report_rec8_v2.json --out
+  records/cmame/cm2d/verdict.json`. Run again on the same inputs, it writes
+  the same file byte for byte. H1, H2a and H2b: SUPPORTED; H3: no difference
+  shown (within the guard). The label-free row passed its reuse checks
+  (largest relative deviation from E1's values 0); the adjudicator recorded
+  no deviation and found its code identical to the stamped version.
+
+Departures from the runbook's operations, recorded under PREREG_CM2D Sec. 8;
+none touches a file the adjudicator reads or a criterion:
+- B1b's direct fetch from GitHub timed out on the box. The branch and the tag
+  were fetched by one of the two routes of the supplement to the operator's
+  instruction of 8 October (AutoDL's network route, or a git bundle of the
+  stamped commit and its annotated tag); which one is not recorded. The
+  precheck (`precheck.json.used`) and the provenance file show the tag, the
+  commit, the tree and a clean checkout.
+- At 14:26:44 China Standard Time (06:26:44 UTC) on 9 October, after the run
+  had ended (its report is dated 04:10:26 UTC), B2's line that sets an
+  earlier precheck log aside ran again at the box's terminal and renamed
+  `precheck.log`. No other line of B2 that writes a file ran: the return
+  holds no new precheck log and no new GO file, and `precheck.json.used` is
+  the GO the run used. Arrow keys had been pressed in the run's window during
+  the run (a screenshot the operator sent shows them), so the line may have
+  been recalled from the shell history; how it came to run is not recorded.
+
+`tests/test_cm2d_records.py` checks that:
+- the files are these, and the verdict's recorded inputs are these files,
+  E1's committed report, the stamped PREREG_CM2D.md and July's report;
+- the run was one attempt on the stamped commit and tree, exited 0, with
+  the GPU idle and the suite green before it, no out-of-memory event, and
+  the GO it used was the precheck of the stamped checkout;
+- the report is the stamped configuration's (its canonical SHA-256 is
+  PREREG_CM2D's CONFIG_SHA256[cm2d_v1]), on E1's corpus and seeds, with a
+  solve ledger of 0 and no restart;
+- the verdicts follow from the report's per-instance arrays by PREREG_CM2D
+  Sec. 4's rule, recomputed in the test, and the label-free row reproduces
+  E1's per-instance values; the secondary readings the manuscript may quote
+  (the 80 comparisons, the label efficiency, the instance-seed pairs, the
+  values worse than the zero field, the graph network's reading) follow from
+  the same arrays, recomputed in the test;
+- everything in `verdict.json` that does not depend on git (the hypotheses
+  with their medians, Welch and resampling intervals, the reuse checks, all
+  secondary readings, the deviations and the run block) is what
+  `scripts/adjudicate_cm2d.py` computes in process from the committed
+  files.

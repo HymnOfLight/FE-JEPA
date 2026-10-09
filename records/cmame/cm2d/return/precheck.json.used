@@ -1,0 +1,80 @@
+{
+ "go": true,
+ "stop": [],
+ "pre_stamp": false,
+ "restart": false,
+ "checks": {
+  "gpu_idle": {
+   "ok": true,
+   "detail": "2, NVIDIA GeForce RTX 5090"
+  },
+  "no_other_run": {
+   "ok": true,
+   "detail": "none"
+  },
+  "torch": {
+   "ok": true,
+   "detail": "2.12.1+cu130 cuda True (E1: 2.12.1+cu130)"
+  },
+  "disk": {
+   "ok": true,
+   "detail": "35.1 GB free (need 7)"
+  },
+  "imports": {
+   "ok": true,
+   "detail": "/root/autodl-tmp/FE-JEPA/src/fejepa/__init__.py (this checkout: /root/autodl-tmp/FE-JEPA/src/fejepa/__init__.py)"
+  },
+  "tag": {
+   "ok": true,
+   "detail": "prereg-cm2d"
+  },
+  "report_git": {
+   "ok": true,
+   "detail": "prereg-cm2d"
+  },
+  "clean": {
+   "ok": true,
+   "detail": "clean"
+  },
+  "head": {
+   "ok": null,
+   "detail": "HEAD 094c8040c828706996173afb5f7a60bd2f5337fd tree cd3ec0c5baada05cf86eb6d12d64153d28930e10"
+  },
+  "config": {
+   "ok": true,
+   "detail": "the generator's"
+  },
+  "fresh": {
+   "ok": true,
+   "detail": "no earlier attempt"
+  },
+  "stamp": {
+   "ok": true,
+   "detail": "verified"
+  },
+  "e1_states": {
+   "ok": true,
+   "detail": "verified"
+  },
+  "plan": {
+   "ok": true,
+   "detail": "steps {'e8': 2284800, 'total': 2284800}, labelled pool prefix 1024"
+  },
+  "corpus": {
+   "ok": true,
+   "detail": "/root/autodl-tmp/FE-JEPA/runs/data2d manifest 3553396d1831..., 30000 instances (E1: 3553396d1831...)"
+  },
+  "labels": {
+   "ok": true,
+   "detail": "1280 of 1280 labelled (validation 256 + pool prefix 1024)"
+  },
+  "reproduction": {
+   "ok": true,
+   "detail": "largest relative deviation 0 over 3 states on cuda (at most 0.0001)"
+  },
+  "smoke": {
+   "ok": true,
+   "detail": "relative energy gap 0.995 after one epoch on cuda"
+  }
+ }
+}

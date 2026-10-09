@@ -87,7 +87,7 @@ python -m pytest -q --deselect tests/test_cmame_material.py::test_manuscript_com
     --deselect tests/test_w9_session2.py::test_paper_material_compiles \
     2>&1 | tee runs/cmame/timing/pytest.log | tail -n 3
 ```
-The suite's last line reads `514 passed, 2 deselected`, then warnings and the
+The suite's last line reads `523 passed, 2 deselected`, then warnings and the
 time (the two LaTeX builds are left out: they need a TeX installation that
 this section does not use). Anything failed, an error, or another count: stop
 and report. Any other output than the comments describe: stop and report.
@@ -191,7 +191,10 @@ checkout must be exactly the tagged commit. Before the operator instruction
 is sent, the repo side checks the remote:
 `git ls-remote origin refs/heads/cmame-paper 'refs/tags/*'` shows the branch
 at the stamped commit and, of all tags, only `refs/tags/prereg-cm2d^{}` at
-that commit (PREREG_CM2D Sec. 6: no other tag on it).
+that commit (PREREG_CM2D Sec. 6: no other tag on it). It ran on 8-9
+October 2026 on the stamped commit `094c804`, one attempt, exit 0, and
+returned complete; the return and the verdict are in `records/cmame/cm2d/`
+(`records/cmame/README.md`).
 
 ### B0. Readiness (box; optional, after A2 or on any visit before the stamp; read only; ~10 min)
 The checks of B2 without the tag and the stamp, on the commit the operator
@@ -260,7 +263,7 @@ python -m pytest -q --deselect tests/test_cmame_material.py::test_manuscript_com
     --deselect tests/test_w9_session2.py::test_paper_material_compiles \
     2>&1 | tee runs/cm2d/pytest.log | tail -n 3
 ```
-The suite's last line reads `514 passed, 2 deselected`, then warnings and the time.
+The suite's last line reads `523 passed, 2 deselected`, then warnings and the time.
 Anything failed, an error, another count, or any other output than the
 comments describe: stop and report.
 

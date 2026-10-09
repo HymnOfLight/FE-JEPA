@@ -1,0 +1,110 @@
+[prereg] verified against PREREG_CM2D.md: bf1f1143b397...
+
+=== fejepa v2 run: configs/cm2d_v1.json | device=cuda | workers=3 | tf32=True ===
+[plan] steps by experiment: {'e8': 2284800, 'total': 2284800}
+
+=== dataset ===
+[dataset] runs/data2d | n_val=256 pool=29744
+
+=== labelling (WP5 economy) ===
+[labelling] policy=asis label_need(pool prefix)=1024 label_workers=8
+[labelling] asis: verified labels on val 256 + pool prefix 1024
+
+=== loading archives (in-memory prefix 0 + val 256; E1'/E8 stream paths) ===
+
+=== E8 ===
+[E8 (AR pretrain)] starting: 3 units
+[E8 (AR pretrain)] 1/3 (33%) elapsed 00:00:03 eta 00:00:07 | AR pool1024 s0
+[E8 (AR pretrain)] 2/3 (67%) elapsed 00:00:03 eta 00:00:01 | AR pool1024 s1
+[E8 (AR pretrain)] 3/3 (100%) elapsed 00:00:03 eta 00:00:00 | AR pool1024 s2
+[E8 (AR pretrain)] done in 00:00:04
+[E8 (supervised grid)] starting: 30 units
+/root/autodl-tmp/FE-JEPA/src/fejepa/anchor/energy.py:70: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape).coalesce()   # CPU
+/root/autodl-tmp/FE-JEPA/src/fejepa/anchor/energy.py:74: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  self.K_t = K_t.to_sparse_csr() if cuda_target else K_t
+/root/autodl-tmp/FE-JEPA/src/fejepa/train/supervised.py:202: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:838.)
+  f"({100.0 * step / total_steps:.0f}%) {cfg.loss}={float(disp):.4f}",
+[sup:none E8 labels b16 s0] step 3200/3200 (100%) disp=0.0597
+[E8 (supervised grid)] 1/30 (3%) elapsed 00:01:56 eta 00:56:08 | labels b16 s0
+/root/autodl-tmp/FE-JEPA/src/fejepa/anchor/energy.py:70: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape).coalesce()   # CPU
+/root/autodl-tmp/FE-JEPA/src/fejepa/anchor/energy.py:74: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  self.K_t = K_t.to_sparse_csr() if cuda_target else K_t
+/root/autodl-tmp/FE-JEPA/src/fejepa/train/supervised.py:202: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:838.)
+  f"({100.0 * step / total_steps:.0f}%) {cfg.loss}={float(disp):.4f}",
+[sup:none E8 labels_knorm b16 s0] step 3200/3200 (100%) knorm=0.0797
+[E8 (supervised grid)] 2/30 (7%) elapsed 00:01:58 eta 00:27:44 | labels_knorm b16 s0
+/root/autodl-tmp/FE-JEPA/src/fejepa/train/supervised.py:202: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:838.)
+  f"({100.0 * step / total_steps:.0f}%) {cfg.loss}={float(disp):.4f}",
+[sup:none E8 labels b64 s0] step 12800/12800 (100%) disp=0.0936
+[E8 (supervised grid)] 3/30 (10%) elapsed 00:07:54 eta 01:11:07 | labels b64 s0
+[sup:none E8 labels_knorm b64 s0] step 12800/12800 (100%) knorm=0.3072
+[E8 (supervised grid)] 4/30 (13%) elapsed 00:09:52 eta 01:04:08 | labels_knorm b64 s0
+[sup:none E8 mgn b64 s0] step 12800/12800 (100%) disp=0.1993
+[E8 (supervised grid)] 5/30 (17%) elapsed 00:17:41 eta 01:28:29 | mgn b64 s0
+[sup:none E8 labels b256 s0] step 51200/51200 (100%) disp=0.0248
+[E8 (supervised grid)] 6/30 (20%) elapsed 00:39:52 eta 02:39:29 | labels b256 s0
+/root/autodl-tmp/FE-JEPA/src/fejepa/anchor/energy.py:70: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape).coalesce()   # CPU
+/root/autodl-tmp/FE-JEPA/src/fejepa/anchor/energy.py:74: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  self.K_t = K_t.to_sparse_csr() if cuda_target else K_t
+[sup:none E8 labels_knorm b256 s0] step 51200/51200 (100%) knorm=0.0256
+[E8 (supervised grid)] 7/30 (23%) elapsed 00:41:47 eta 02:17:19 | labels_knorm b256 s0
+[sup:none E8 labels b1024 s0] step 204800/204800 (100%) disp=0.0404
+[E8 (supervised grid)] 8/30 (27%) elapsed 02:22:38 eta 06:32:15 | labels b1024 s0
+[sup:none E8 labels b16 s1] step 3200/3200 (100%) disp=0.1870
+[E8 (supervised grid)] 9/30 (30%) elapsed 02:24:32 eta 05:37:16 | labels b16 s1
+[sup:none E8 labels_knorm b16 s1] step 3200/3200 (100%) knorm=0.1059
+[E8 (supervised grid)] 10/30 (33%) elapsed 02:26:33 eta 04:53:06 | labels_knorm b16 s1
+[sup:none E8 labels b64 s1] step 12800/12800 (100%) disp=0.0425
+[E8 (supervised grid)] 11/30 (37%) elapsed 02:34:24 eta 04:26:41 | labels b64 s1
+[sup:none E8 labels_knorm b64 s1] step 12800/12800 (100%) knorm=0.0385
+[E8 (supervised grid)] 12/30 (40%) elapsed 02:42:41 eta 04:04:01 | labels_knorm b64 s1
+[sup:none E8 labels_knorm b1024 s0] step 204800/204800 (100%) knorm=0.2404
+[E8 (supervised grid)] 13/30 (43%) elapsed 02:52:47 eta 03:45:58 | labels_knorm b1024 s0
+[sup:none E8 mgn b64 s1] step 12800/12800 (100%) disp=0.2470
+[E8 (supervised grid)] 14/30 (47%) elapsed 02:58:13 eta 03:23:41 | mgn b64 s1
+[sup:none E8 labels b256 s1] step 51200/51200 (100%) disp=0.0448
+[E8 (supervised grid)] 15/30 (50%) elapsed 03:24:25 eta 03:24:25 | labels b256 s1
+[sup:none E8 labels_knorm b256 s1] step 51200/51200 (100%) knorm=0.1081
+[E8 (supervised grid)] 16/30 (53%) elapsed 03:29:27 eta 03:03:16 | labels_knorm b256 s1
+[sup:none E8 mgn b1024 s0] step 204800/204800 (100%) disp=0.0418
+[E8 (supervised grid)] 17/30 (57%) elapsed 04:56:03 eta 03:46:24 | mgn b1024 s0
+[sup:none E8 labels b1024 s1] step 204800/204800 (100%) disp=0.0261
+[E8 (supervised grid)] 18/30 (60%) elapsed 05:41:30 eta 03:47:40 | labels b1024 s1
+[sup:none E8 labels b16 s2] step 3200/3200 (100%) disp=0.0672
+[E8 (supervised grid)] 19/30 (63%) elapsed 05:43:39 eta 03:18:57 | labels b16 s2
+[sup:none E8 labels_knorm b16 s2] step 3200/3200 (100%) knorm=0.2918
+[E8 (supervised grid)] 20/30 (67%) elapsed 05:45:51 eta 02:52:55 | labels_knorm b16 s2
+[sup:none E8 labels_knorm b1024 s1] step 204800/204800 (100%) knorm=0.0675
+[E8 (supervised grid)] 21/30 (70%) elapsed 05:45:57 eta 02:28:16 | labels_knorm b1024 s1
+[sup:none E8 labels b64 s2] step 12800/12800 (100%) disp=0.0945
+[E8 (supervised grid)] 22/30 (73%) elapsed 05:54:01 eta 02:08:44 | labels b64 s2
+[sup:none E8 labels_knorm b64 s2] step 12800/12800 (100%) knorm=0.1284
+[E8 (supervised grid)] 23/30 (77%) elapsed 05:54:10 eta 01:47:47 | labels_knorm b64 s2
+[sup:none E8 mgn b64 s2] step 12800/12800 (100%) disp=0.0942
+[E8 (supervised grid)] 24/30 (80%) elapsed 06:10:35 eta 01:32:38 | mgn b64 s2
+[sup:none E8 labels b256 s2] step 51200/51200 (100%) disp=0.0630
+[E8 (supervised grid)] 25/30 (83%) elapsed 06:25:25 eta 01:17:05 | labels b256 s2
+[sup:none E8 labels_knorm b256 s2] step 51200/51200 (100%) knorm=0.2929
+[E8 (supervised grid)] 26/30 (87%) elapsed 06:44:25 eta 01:02:13 | labels_knorm b256 s2
+[sup:none E8 labels b1024 s2] step 204800/204800 (100%) disp=0.0261
+[E8 (supervised grid)] 27/30 (90%) elapsed 08:29:55 eta 00:56:39 | labels b1024 s2
+[sup:none E8 labels_knorm b1024 s2] step 204800/204800 (100%) knorm=0.0982
+[E8 (supervised grid)] 28/30 (93%) elapsed 09:03:33 eta 00:38:49 | labels_knorm b1024 s2
+[sup:none E8 mgn b1024 s1] step 204800/204800 (100%) disp=0.0171
+[E8 (supervised grid)] 29/30 (97%) elapsed 09:12:20 eta 00:19:02 | mgn b1024 s1
+[sup:none E8 mgn b1024 s2] step 204800/204800 (100%) disp=0.0207
+[E8 (supervised grid)] 30/30 (100%) elapsed 12:45:58 eta 00:00:00 | mgn b1024 s2
+[E8 (supervised grid)] done in 12:45:59
+
+=== gate G1' ===
+[fejepa] report -> runs/cm2d/report.json
+[fejepa] RESULTS.md -> runs/cm2d/RESULTS.md
+[fejepa] figure -> runs/cm2d/figure1_energy_gap.png
+[fejepa] gate G1' passed=False conditions={'a': False, 'b': False, 'c': False}
+[fejepa] solve ledger: {'per_stage': {'asis-preexisting-corpus': 0}, 'total': 0, 'wall_clock_s': 0.0}

@@ -1,0 +1,32 @@
+[prereg] verified against PREREG_CM2D.md: bf1f1143b397...
+
+=== fejepa v2 run: configs/cm2d_v1.json | device=cuda | workers=3 | tf32=True ===
+[plan] steps by experiment: {'e8': 2284800, 'total': 2284800}
+[dry-run] {"dry_run": true, "config": "configs/cm2d_v1.json", "device": "cuda", "model_kind": "fejepa", "prereg_guard": true, "prereg_status": "verified", "prereg_verified": "bf1f1143b397331b95954229010bdce7bd9340d1b6e2abeb139337b117784a03", "plan_steps": {"e8": 2284800, "total": 2284800}, "label_need_pool_prefix": 1024, "experiments_enabled": ["e8"], "ar_only": false, "loss_spec": null, "w9": {"holdouts": {}, "reuse_from": "verified"}}
+/root/autodl-tmp/FE-JEPA/src/fejepa/anchor/energy.py:70: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+  K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape).coalesce()   # CPU
+/root/autodl-tmp/FE-JEPA/src/fejepa/anchor/energy.py:74: UserWarning: Sparse CSR tensor support is in beta state. If you miss a functionality in the sparse tensor support, please submit a feature request to https://github.com/pytorch/pytorch/issues. (Triggered internally at /pytorch/aten/src/ATen/SparseCsrTensorImpl.cpp:49.)
+  self.K_t = K_t.to_sparse_csr() if cuda_target else K_t
+/root/autodl-tmp/FE-JEPA/src/fejepa/train/supervised.py:202: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:838.)
+  f"({100.0 * step / total_steps:.0f}%) {cfg.loss}={float(disp):.4f}",
+[sup:none] step 2/2 (100%) knorm=0.9962
+[precheck] ok   gpu_idle: 2, NVIDIA GeForce RTX 5090
+[precheck] ok   no_other_run: none
+[precheck] ok   torch: 2.12.1+cu130 cuda True (E1: 2.12.1+cu130)
+[precheck] ok   disk: 35.1 GB free (need 7)
+[precheck] ok   imports: /root/autodl-tmp/FE-JEPA/src/fejepa/__init__.py (this checkout: /root/autodl-tmp/FE-JEPA/src/fejepa/__init__.py)
+[precheck] ok   tag: prereg-cm2d
+[precheck] ok   report_git: prereg-cm2d
+[precheck] ok   clean: clean
+[precheck] info head: HEAD 094c8040c828706996173afb5f7a60bd2f5337fd tree cd3ec0c5baada05cf86eb6d12d64153d28930e10
+[precheck] ok   config: the generator's
+[precheck] ok   fresh: no earlier attempt
+[precheck] ok   stamp: verified
+[precheck] ok   e1_states: verified
+[precheck] ok   plan: steps {'e8': 2284800, 'total': 2284800}, labelled pool prefix 1024
+[precheck] ok   corpus: /root/autodl-tmp/FE-JEPA/runs/data2d manifest 3553396d1831..., 30000 instances (E1: 3553396d1831...)
+[precheck] ok   labels: 1280 of 1280 labelled (validation 256 + pool prefix 1024)
+[precheck] ok   reproduction: largest relative deviation 0 over 3 states on cuda (at most 0.0001)
+[precheck] ok   smoke: relative energy gap 0.995 after one epoch on cuda
+GO

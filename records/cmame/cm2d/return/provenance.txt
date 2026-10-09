@@ -1,0 +1,41 @@
+HEAD 094c8040c828706996173afb5f7a60bd2f5337fd
+tree cd3ec0c5baada05cf86eb6d12d64153d28930e10
+describe prereg-cm2d
+describe-all prereg-cm2d
+--- git status --porcelain ---
+?? "\345\256\213\345\215\232\345\243\253\346\223\215\344\275\234\346\211\213\345\206\214_v6_D10\351\207\215\345\220\257\350\265\267\346\255\245_2026-09-03.md"
+torch 2.12.1+cu130 True
+--- report ---
+a72c007e1a612986af463084572f1794b574e9861cce233006534c51e1a6e5ec  runs/cm2d/report.json
+--- states ---
+-rw-r--r-- 1 root root 29303325 2026-10-09 01:46:51.333833101 +0800 runs/cm2d/e8_states/labels_b1024_s0.pt
+-rw-r--r-- 1 root root 29303325 2026-10-09 05:05:42.955477659 +0800 runs/cm2d/e8_states/labels_b1024_s1.pt
+-rw-r--r-- 1 root root 29303325 2026-10-09 07:54:08.282181206 +0800 runs/cm2d/e8_states/labels_b1024_s2.pt
+-rw-r--r-- 1 root root 29304169 2026-10-09 02:17:00.697098083 +0800 runs/cm2d/e8_states/labels_knorm_b1024_s0.pt
+-rw-r--r-- 1 root root 29304169 2026-10-09 05:10:10.325591590 +0800 runs/cm2d/e8_states/labels_knorm_b1024_s1.pt
+-rw-r--r-- 1 root root 29304169 2026-10-09 08:27:45.844137146 +0800 runs/cm2d/e8_states/labels_knorm_b1024_s2.pt
+-rw-r--r-- 1 root root 15603407 2026-10-09 04:20:16.578737047 +0800 runs/cm2d/e8_states/mgn_b1024_s0.pt
+-rw-r--r-- 1 root root 15603407 2026-10-09 08:36:33.244804080 +0800 runs/cm2d/e8_states/mgn_b1024_s1.pt
+-rw-r--r-- 1 root root 15603407 2026-10-09 12:10:10.968961303 +0800 runs/cm2d/e8_states/mgn_b1024_s2.pt
+4091654fca522b94c8b09ee9f27a1514252ce6969047e4013baa14a5d08a8491  runs/cm2d/e8_states/labels_b1024_s0.pt
+8314190a3f4eec98ccacc8bb31d13eacccd7c0b66ce9b4f1e8cce82eb7352ad0  runs/cm2d/e8_states/labels_b1024_s1.pt
+9dc7b376f2bd7e90f31394f6d5a0f0d5e11bfb658cfd9abccfb4c9513a625f88  runs/cm2d/e8_states/labels_b1024_s2.pt
+37564dcaea6ddcaa7b248db7256c983f47357131486f9de1b7d4bf7d8463d249  runs/cm2d/e8_states/labels_knorm_b1024_s0.pt
+bd0dc94e507873a8a0bf57989923e5a2a894380d3ad624632186cbceaf7af39f  runs/cm2d/e8_states/labels_knorm_b1024_s1.pt
+0e48476a9a0958735d1d56b7da546677dbf56e8ff3788c2c7a651881a3f7f2d9  runs/cm2d/e8_states/labels_knorm_b1024_s2.pt
+4f9cc05edc479a75df8a6662c4864d5b825f98a13a9256f59283bc5d19531e12  runs/cm2d/e8_states/mgn_b1024_s0.pt
+40b461d1107dc14bfab171eaaaaa57413348dd39ef9df6e573adc0fa16acbf13  runs/cm2d/e8_states/mgn_b1024_s1.pt
+8d3518359af9235a7de60504feb7b80120d9d02112d0a4732a499dd5af14fafe  runs/cm2d/e8_states/mgn_b1024_s2.pt
+6edff88987ba58dd246118aa8417ba09a0bd53aef4775ddba9a6ad862b6f7906  runs/e1_2d_base/e8_states/ar_p1024_s0.pt
+13afdc95600d5e3edea7f7369e24f43ced0b9c0e889a627063b44db19d84bb46  runs/e1_2d_base/e8_states/ar_p1024_s1.pt
+97caedfd53d80edb9ee335b1a035952cc82d0d498ff6859c0f8910e8493dfeab  runs/e1_2d_base/e8_states/ar_p1024_s2.pt
+NVIDIA GeForce RTX 5090, 595.71.05, 32607 MiB, 2 MiB
+hostname autodl-container-pwr6zxz5jh-5286d5a4
+nproc 16
+low 0
+high 0
+max 0
+oom 0
+oom_kill 0
+/dev/md0        100G   66G   35G  66% /root/autodl-tmp
+overlay          30G  1.4G   29G   5% /

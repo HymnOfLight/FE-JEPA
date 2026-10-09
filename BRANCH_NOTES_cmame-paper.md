@@ -407,3 +407,68 @@ stiffness norm against label-free).
   repository. On the principal investigator's approval the branch was set
   back to `16973d3` and the tag deleted; the remote was never touched.
   Scratch copies are made with `git clone`.
+
+## Stage 6 (9 Oct 2026) -- CM2D's return and verdict, recorded
+
+- `records/cmame/cm2d/return/`: RUNBOOK_CMAME Sec. B as it ran on the box on
+  the stamped commit `094c804` (tag `prereg-cm2d`): started
+  2026-10-08T15:24:06Z, one attempt, exit 0, the supervised grid 12.8 h;
+  nine files copied byte for byte from the operator's tarball, whose SHA-256
+  matched on receipt (`records/cmame/README.md` lists them).
+- `records/cmame/cm2d/verdict.json`: `scripts/adjudicate_cm2d.py` at the
+  stamped commit, in a clone of its own with the tag fetched by a forced
+  refspec (RUNBOOK_CMAME Sec. C), on 9 October; run again on the same inputs
+  it writes the same file byte for byte. The label-free row passed its reuse
+  checks (largest relative deviation from E1's values 0), and the adjudicator
+  recorded no deviation. At 1,024 labels, seed means:
+  - H1 SUPPORTED: relative energy gap 0.0383 (label-free) against 0.1334
+    (labels only, L_D): rel -71.3%, threshold 12.4%.
+  - H2a SUPPORTED: 0.0290 (stiffness norm, L_K) against 0.1334: rel -78.2%,
+    threshold 16.4%.
+  - H2b SUPPORTED: relative L2 von Mises error 0.106 (L_K) against 0.235
+    (L_D): rel -54.9%, threshold 12.3%.
+  - H3, no difference shown: 0.0290 (L_K) against 0.0383 (label-free): rel
+    -24.2%, threshold 38.1%; L_K's seed values 0.0370, 0.0146 and 0.0355.
+- Secondary readings (exploratory, PREREG_CM2D Sec. 5): the graph network
+  has the lowest seed-mean displacement error at 1,024 labels (0.0499,
+  against 0.0505 for L_D) and a relative energy gap of 0.825, above both
+  L_D's and the label-free row's. The label-free row has the lower energy gap
+  and the lower von Mises error than L_D on 767 of 768 instance-seed pairs,
+  and so has L_K. L_K is worse than the label-free row beyond the guard at
+  16 labels in every metric and at 64 in four of five (critical-region recall
+  within), and within the guard at 256 and 1,024 in every metric. Values
+  worse than the zero field: L_D 768, 532, 53 and 0 of 768 at 16, 64, 256 and
+  1,024 labels; L_K 11, 1, 0 and 0; the graph network 766 and 187 at 64 and
+  1,024; the label-free row none.
+- Cost on this host (16 CPUs allotted, three workers), from the completion
+  times in `run.log` (each unit's time includes its setup and evaluation):
+  36-41 ms per transformer step (L_K about 5% slower than L_D overall) and
+  73-78 ms per graph-network step, about twice; the grid took 12.8 h (PREREG_CM2D Sec. 7: 11.4 h at 52 ms with the graph network as fast
+  as the transformer, 17.9 h at twice).
+- Departures from the runbook's operations (`records/cmame/README.md`), none
+  touching a file the adjudicator reads or a criterion: the direct fetch
+  timed out and the operator fetched by one of the two routes of the
+  supplement to his instruction of 8 October (which one is not recorded);
+  after the run, B2's line that sets an earlier precheck log aside ran again
+  at the box's terminal and renamed the precheck log (arrow keys pressed
+  during the run may have recalled it from the shell history; how it came to
+  run is not recorded).
+- `tests/test_cm2d_records.py` (9 tests): the files and their hashes; one
+  attempt on the stamped commit and tree; the report is the stamped
+  configuration's on E1's corpus and seeds, with no restart and a solve
+  ledger of 0; the verdict was made from these files; the verdicts, the 80
+  comparisons, the label efficiency and the secondary counts follow from the
+  report's per-instance arrays by the rule of PREREG_CM2D Sec. 4, recomputed
+  in the test; and everything in the verdict that does not depend on git is
+  what the adjudicator computes in process from the committed files. An
+  independent review forged the hashes and confirmed that 21 corruptions of
+  the return or the verdict each made a test fail.
+- `RUNBOOK_CMAME.md`: Sec. B says that it has returned, and where; the box's
+  suite count is now 523 passed, 2 deselected. The branch is no longer
+  frozen.
+- The manuscript is unchanged. The next stage is to bring this run into it:
+  the two-dimensional comparison with the current code beside July's, and
+  the statements the verdict bears on (the discussion's "we did not train
+  one" and its reading of the stiffness norm, the limitation on the
+  supervised baselines).
+- No source, script, configuration or generated file changed. Suite 525.
