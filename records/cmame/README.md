@@ -219,11 +219,12 @@ operator sent it and as recomputed on receipt). The run started at
 Departures from the runbook's operations, recorded under PREREG_CM2D Sec. 8;
 none touches a file the adjudicator reads or a criterion:
 - B1b's direct fetch from GitHub timed out on the box. The branch and the tag
-  were fetched by one of the two routes of the supplement to the operator's
-  instruction of 8 October (AutoDL's network route, or a git bundle of the
-  stamped commit and its annotated tag); which one is not recorded. The
-  precheck (`precheck.json.used`) and the provenance file show the tag, the
-  commit, the tree and a clean checkout.
+  were fetched from a git bundle of the stamped commit and its annotated tag,
+  one of the two routes of the supplement to the operator's instruction of 8
+  October (the other: AutoDL's network route); the operator's report,
+  relayed on 9 October, recorded at Stage 7. The precheck
+  (`precheck.json.used`) and the provenance file show the tag, the commit,
+  the tree and a clean checkout.
 - At 14:26:44 China Standard Time (06:26:44 UTC) on 9 October, after the run
   had ended (its report is dated 04:10:26 UTC), B2's line that sets an
   earlier precheck log aside ran again at the box's terminal and renamed

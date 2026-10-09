@@ -10,11 +10,15 @@ the manuscript.
   (PREREG_CM2D; ~11 h, up to ~22 h; only after PREREG_CM2D is stamped and
   tagged `prereg-cm2d`, except its readiness check B0).
 - Sec. C: CM2D's adjudication (repo).
+- Sec. D: the error spectra of CM2D's models (read only; ~30 min; post hoc,
+  no pre-registration; after Sec. C).
 
-The sections are independent: each reads E1's or Phase-2b's states and
-corpora; Sec. A and B0 write only under `runs/cmame/`, Sec. B otherwise only
-under `runs/cm2d/`; none writes to a stamped configuration of another
-pre-registration, another run's `e8_states/` or `runs/data2d`.
+No section writes another's files: each reads E1's or Phase-2b's states and
+corpora (Sec. D also CM2D's kept states and its committed return); Sec. A
+and B0 write only under `runs/cmame/`, Sec. B otherwise only under
+`runs/cm2d/`, Sec. D only under `runs/cmame/spectra/`; none writes to a
+stamped configuration of another pre-registration, another run's
+`e8_states/` or `runs/data2d`.
 
 ## A. Timing and field export, standalone (box; ~1.5 h)
 
@@ -87,7 +91,7 @@ python -m pytest -q --deselect tests/test_cmame_material.py::test_manuscript_com
     --deselect tests/test_w9_session2.py::test_paper_material_compiles \
     2>&1 | tee runs/cmame/timing/pytest.log | tail -n 3
 ```
-The suite's last line reads `523 passed, 2 deselected`, then warnings and the
+The suite's last line reads `535 passed, 2 deselected`, then warnings and the
 time (the two LaTeX builds are left out: they need a TeX installation that
 this section does not use). Anything failed, an error, or another count: stop
 and report. Any other output than the comments describe: stop and report.
@@ -263,7 +267,7 @@ python -m pytest -q --deselect tests/test_cmame_material.py::test_manuscript_com
     --deselect tests/test_w9_session2.py::test_paper_material_compiles \
     2>&1 | tee runs/cm2d/pytest.log | tail -n 3
 ```
-The suite's last line reads `523 passed, 2 deselected`, then warnings and the time.
+The suite's last line reads `535 passed, 2 deselected`, then warnings and the time.
 Anything failed, an error, another count, or any other output than the
 comments describe: stop and report.
 
@@ -422,4 +426,153 @@ against the tag `prereg-cm2d`, and writes H1, H2a and H2b per PREREG_CM2D
 Sec. 4, the reading H3, the secondary readings of Sec. 5, the label-free row's
 reuse checks and the deviations, with every input's SHA-256 and the
 adjudicating code's. The return is committed under `records/cmame/cm2d/` with
-the verdict.
+the verdict. It ran on 9 October 2026 (`records/cmame/README.md`).
+
+## D. The error spectra of CM2D's models, post hoc (box; ~30 min)
+
+What it measures. CM2D's H2b changed only the norm of the supervised loss,
+from the relative Euclidean displacement error (L_D, row `labels`) to the
+relative stiffness-norm error (L_K, row `labels_knorm`), and the von Mises
+error halved. By the manuscript's Corollary "Modewise contraction", the
+energy norm weights the error in each eigenmode of the stiffness matrix by
+its eigenvalue and the Euclidean norm weights all modes equally. This section
+measures how each model's error is spread over those modes: the free
+stiffness block of each of the 256 validation instances is diagonalised once
+(at most about 3,600 free dofs), and every model's error on every load case
+is projected on its eigenvectors, for CM2D's kept states at 1,024 labels
+(L_D, L_K and the graph network, seeds 0-2) and E1's three label-free states;
+the spectra are binned by each mode's stiffness relative to the solution's
+own Rayleigh quotient (and, for completeness, by mode rank). Every model
+predicts each instance twice: as in the run, with TF32 products, and once
+more with TF32 off, so that the rounding of TF32, which falls in the stiff
+modes, is measured beside the errors.
+Also recorded per load case: the error's Euclidean and stiffness norms, the
+von Mises errors, the energies and checks of the manuscript's identities.
+Specified after CM2D's verdict: post hoc, reported only; no verdict reads it
+and nothing in PREREG_CM2D does. Read only: every state's SHA-256 is checked
+against CM2D's return (`records/cmame/cm2d/return/provenance.txt`) before
+any model runs, every model is also checked against the report's
+per-instance arrays, and everything goes under `runs/cmame/spectra/`. A
+failure here costs nothing else; report it.
+
+### D0. Preconditions (box)
+
+D0a. The tmux session -- on its own line, outside tmux (skip it if a tmux
+status bar is already showing); after a dropped connection, `tmux attach -t cm`:
+```bash
+tmux new -A -s cm
+```
+
+D0b. Fetch the branch (directly, as in A0b):
+```bash
+cd ~/autodl-tmp/FE-JEPA
+( for i in 1 2 3; do git fetch origin +refs/heads/cmame-paper:refs/remotes/origin/cmame-paper && exit 0; sleep 10; done
+  exit 1 ) && echo FETCH-OK || echo FETCH-FAILED
+git rev-parse --short origin/cmame-paper     # the commit the operator instruction names
+```
+Continue only if `FETCH-OK` is printed and the commit is the named one (an
+error printed by a failed first attempt before `FETCH-OK` is harmless). If
+nothing at all is printed for 10 min, press Ctrl-C (then neither line
+appears) and take the bundle route. On
+`FETCH-FAILED` (later on 8 October 2026, at B1b, the direct fetch timed out
+and CM2D's operator fetched from a git bundle): upload the bundle that the
+operator instruction sends to `~/cmame-paper.bundle` and run, in place of
+the first block:
+```bash
+cd ~/autodl-tmp/FE-JEPA
+sha256sum ~/cmame-paper.bundle               # the SHA-256 the operator instruction names
+git fetch ~/cmame-paper.bundle +refs/heads/cmame-paper:refs/remotes/origin/cmame-paper && echo FETCH-OK || echo FETCH-FAILED
+git rev-parse --short origin/cmame-paper     # the commit the operator instruction names
+```
+Continue only if the SHA-256 is the named one, `FETCH-OK` is printed and the
+commit is the named one; otherwise stop here and report. (Repo side: the
+bundle is made from the pushed branch with
+`git bundle create cmame-paper.bundle 094c804..cmame-paper`, the stamped
+commit being on the box since Sec. B; `git bundle list-heads` shows
+`refs/heads/cmame-paper` at the named commit.)
+
+D0c. Checkout, checks and the suite (~5 min):
+```bash
+cd ~/autodl-tmp/FE-JEPA
+git checkout -B cmame-paper origin/cmame-paper   # "Switched to ..." or "Reset branch ...", maybe "set up to track" or "up to date"
+git rev-parse 'HEAD^{tree}'                  # the tree the operator instruction names
+git status --porcelain --untracked-files=no  # must print nothing
+ls runs/cm2d/e8_states/*_b1024_s*.pt runs/e1_2d_base/e8_states/ar_p1024_s*.pt | wc -l   # 12
+df -h ~/autodl-tmp / | tail -n 2             # >= 5 GB free on the data disk and on / (the suite needs 5)
+pgrep -af "fejepa|spawn_main|scripts/[A-Za-z0-9_]+\.py"   # must print nothing
+nvidia-smi --query-gpu=utilization.gpu,memory.used --format=csv,noheader   # about 0 %, under 1,000 MiB
+python -c "import torch; print(torch.__version__, torch.cuda.is_available())"   # 2.12.1+cu130 True
+mkdir -p runs/cmame/spectra
+python -m pytest -q --deselect tests/test_cmame_material.py::test_manuscript_compiles \
+    --deselect tests/test_w9_session2.py::test_paper_material_compiles \
+    2>&1 | tee runs/cmame/spectra/pytest.log | tail -n 3
+```
+The suite's last line reads `535 passed, 2 deselected`, then warnings and the
+time. Anything failed, an error, another count, or any other output than the
+comments describe: stop and report.
+
+### D1. The export (box; ~10 min; nothing else on the GPU)
+```bash
+cd ~/autodl-tmp/FE-JEPA
+P=runs/cmame/spectra
+[ -s $P/status.txt ] && mv $P/status.txt $P/status.txt.$(date +%Y%m%d-%H%M%S); : > $P/status.txt
+run() { local log=$1; shift; [ -e $P/$log ] && mv $P/$log $P/$log.$(date +%Y%m%d-%H%M%S)
+        "$@" 2>&1 | tee $P/$log; echo "$log exit=${PIPESTATUS[0]}" | tee -a $P/status.txt; }
+[ -d $P/export ] && mv $P/export $P/export.$(date +%Y%m%d-%H%M%S)
+run spectra.log python scripts/cm2d_spectra.py --report records/cmame/cm2d/return/report.json \
+    --provenance records/cmame/cm2d/return/provenance.txt --states-dir runs/cm2d/e8_states \
+    --out $P/export --device cuda
+( echo "HEAD $(git rev-parse HEAD)"; echo "tree $(git rev-parse 'HEAD^{tree}')"
+  git status --porcelain --untracked-files=no
+  nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader
+  lscpu | grep -E "^Model name|^CPU\(s\)|^Thread|^Socket"; echo "nproc $(nproc)"
+  cat /sys/fs/cgroup/cpu.max /sys/fs/cgroup/memory.max 2>/dev/null; free -g | head -n 2
+) > $P/machine.txt 2>&1
+cat $P/status.txt
+```
+What to expect: possibly torch `UserWarning` blocks (harmless), a line every
+16 validation instances (`[spectra] val 16/256 | ... s`), one line for the
+figure instance, `[spectra] fig2d: val #221 instance_27356.npz (... nodes)`,
+and last a summary line with six keys:
+- `content_median_rel_dev` (two numbers per state) about 0 for the `ar_*`,
+  `labels_*` and `labels_knorm_*` states; for the `mgn_*` ones small but not
+  necessarily 0 (the graph network's CUDA reductions are not bitwise
+  reproducible: about 1e-4 in 3D in Sec. A; a median above 1e-3 ends with
+  exit 5); `content_mismatch` empty;
+- `prop1_bound_ratio_max` at most 1 for every row (Proposition "Energy gap
+  and stress error");
+- `rayleigh_ratio_median` and `pairs`: the readings themselves; no range is
+  expected of them;
+- `figures`: `{"fig2d": ["instance_27356.npz", 221]}`.
+
+`status.txt` must show `spectra.log exit=0`. `exit=5`: a model did not
+reproduce the report's arrays (everything else is written). `exit=1` with a
+message naming a file and its SHA-256: a refusal, before anything is
+measured or written under `export/`. Any other exit, or `exit=1` with a
+traceback or another message: send `spectra.log`. Report any of these, and
+any reading outside the ranges above (a `prop1_bound_ratio_max` above 1, a
+transformer's deviation that is not about 0); in every case go on to D2:
+the return carries the logs and whatever was written.
+
+### D2. Return (box; minutes)
+```bash
+cd ~/autodl-tmp/FE-JEPA
+P=runs/cmame/spectra
+T=$(date +%Y%m%d-%H%M)
+OUT=~/cm2d_spectra_return && rm -rf $OUT && mkdir -p $OUT && cp -r $P/* $OUT/
+cd ~ && tar czf cm2d_spectra_return_$T.tgz cm2d_spectra_return \
+    && sha256sum cm2d_spectra_return_$T.tgz && du -h cm2d_spectra_return_$T.tgz
+```
+The tarball is about 35 MB. Send it with the SHA-256 line; then shut the
+instance down without releasing it.
+
+### D3. In the repo
+The return is checked (HEAD and tree against the pushed commit, the states'
+and the report's hashes recorded in `spectra.json`, the exit code, the
+identities on every array, and, end to end, the verdict: the pair
+`labels_vs_labels_knorm`'s ratios of means of the relative gap and of the
+von Mises error agree with `base_mean / new_mean` of H2a and H2b in
+`records/cmame/cm2d/verdict.json`, 4.596 and 2.215, to round-off when both
+rows' content deviations are 0) and committed under
+`records/cmame/spectra/`; the manuscript's reading of the errors' spectral
+content is then generated from it.

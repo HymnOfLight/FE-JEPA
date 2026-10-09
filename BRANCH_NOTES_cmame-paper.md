@@ -472,3 +472,155 @@ stiffness norm against label-free).
   one" and its reading of the stiffness norm, the limitation on the
   supervised baselines).
 - No source, script, configuration or generated file changed. Suite 525.
+
+## Stage 7 (9 Oct 2026) -- the error spectra of CM2D's models: script and runbook (post hoc)
+
+The manuscript explains the label-free network's accurate stresses by the
+norm of its objective (Corollary "Modewise contraction": the energy norm
+weights the error in each eigenmode of K by its eigenvalue, the Euclidean
+displacement norm weights all modes equally), and its discussion says that
+the spectral content of the errors has not been measured. CM2D's H2b changed
+only the norm of the supervised loss and the von Mises error halved; this
+stage measures what the change did to the error itself. Specified after
+CM2D's verdict: post hoc, reported only; nothing in PREREG_CM2D reads it.
+
+- `scripts/cm2d_spectra.py` (new): for CM2D's kept states at 1,024 labels
+  (L_D, L_K and the graph network, seeds 0-2) and E1's three label-free
+  states, on the run's 256 validation instances, per load case:
+  - the error's squared Euclidean and stiffness norms; normalised by the
+    solution's, their ratio is the error's Rayleigh quotient over the
+    solution's, as in Stage 1's 3D export;
+  - the error's spectrum over the eigenmodes of the free stiffness block,
+    diagonalised once per instance (at most about 3,600 free dofs), in both
+    norms and in two binnings: by each mode's eigenvalue over the solution's
+    own Rayleigh quotient RQ*, on fixed 1/8-decade edges from 10^-2 to
+    10^6.5 with a bin below and one above (the axis on which the two losses
+    differ: the Euclidean-weighted mean of lambda / RQ* is the normalised
+    Rayleigh quotient; CM2D's meshes span about 10^-1.62 to 10^5.44 RQ*),
+    and by mode rank in 40 bins of nearly equal count (for completeness:
+    nearly all of a smooth field's Euclidean norm falls in the first rank
+    bin, so the rank spectra cannot separate the rows); the solution's own
+    spectra;
+  - the von Mises errors over the element values (the evaluation's) and
+    area-weighted; the energies and c*;
+  - the rounding: every model also predicts every instance with TF32 off
+    (`fejepa.runtime.setup_torch(tf32=False)`, the attention by the math
+    backend), the run's policy restored after each instance; the error of
+    that prediction (norms, log spectra) and the difference u - u_ieee
+    (norms, stiffness log spectrum) are recorded beside the run's own
+    predictions, so that the stiff end of a spectrum can be told from TF32's
+    rounding, which is rough and falls there (the content check reads the
+    run's own predictions only);
+  - the checks: the spectra of each binning sum to the two norms; Lemma 1
+    (||e||_K^2 = 2 (Pi_h(u) - Pi_h(U*))); the plane-stress form of
+    Proposition "Energy gap and stress error" (the stress-energy identity
+    with the three-dimensional bulk modulus, the bound
+    vm^2 <= (1 + gamma*) g on every prediction, and gamma* itself through
+    (1 + gamma*) ||s_vm(U*)||^2 / (3G) = ||U*||_K^2).
+  Per row the summary gives the quotient (overall, per seed and per load
+  case: the solution's own quotient varies between load cases by up to a
+  decade relative to the smallest eigenvalue), the shares above 10^k RQ*,
+  the IEEE predictions' readings and the rounding's share of the error's
+  stiffness norm, overall and above 10^2, 10^3 and 10^4 RQ*. Per pair of
+  rows it gives the ratios (first / second) of the means of the energy gap
+  and of the von Mises error (the verdict's kind of comparison: for L_D
+  against L_K they are H2a's and H2b's) and, since per load case the
+  relative gap is the normalised Rayleigh quotient times the squared
+  relative displacement error, the geometric-mean ratio of the gaps factored
+  exactly into the ratios of the two (how much of a difference in energy is
+  a difference in the error's spectral content and how much one in its
+  size; the factorisation holds for the geometric means, not for the ratios
+  of means), overall and per seed, with the shares of opposite rankings
+  (Remark "Opposite rankings"). At a given seed the three transformer rows
+  share their initial weights and instance order (PREREG_CM2D Sec. 2), so
+  their pairing is a control; for the graph network's pairs only the ratios
+  of means, the pooled geometric means and the share on the seed geometric
+  means do not depend on the pairing. One figure instance by a rule fixed in
+  the script: the median of L_D's relative energy gap, seed 0 (validation
+  index 221, `instance_27356.npz`), with the mesh, the fields (also the IEEE
+  predictions), the stresses, RQ*, gamma* and every mode's squared
+  coefficient of the reference and of each row's seed-0 error. Before any
+  model runs, the report's SHA-256 and every state's are checked against
+  CM2D's committed provenance file (the label-free ones also against the
+  report's d9_restart record), and a mismatch refuses; every model is also
+  checked against the report's per-instance arrays (all five metrics
+  recorded, the displacement error and the relative energy gap gated at a
+  median relative deviation of 1e-3), and a mismatch ends with exit status
+  5 after everything is written.
+- `tests/test_cm2d_spectra.py` (10 tests): end to end on a CM2D-shaped CPU
+  miniature on coarse gmsh plates (unequal element areas, holes; states,
+  report, provenance file), with every identity on every array, the
+  per-load arrays averaging to the report's per-instance values, the
+  eigenvalues recomputed, every summary (whole tail curves included)
+  recomputed from the arrays, the stored log spectra rebinned from the
+  figure file's per-mode data, what the script prints, and strict JSON; the
+  binning (the rank edges; an eigenmode's spectra one in its own bin of each
+  binning; a mode exactly at 10^k RQ* counted at and above 10^k; the bins
+  below and above); gamma*, the area-weighted von Mises error, the identity
+  and the bound against independent computations on a structured mesh and
+  on a gmsh mesh; a prediction that is not zero on a constrained dof;
+  constructed smooth and rough errors and a rough rounding, which the
+  summary orders the right way round (a wrong gamma* or a wrong spectrum
+  moves the summary's checks of them); the refusals (a supervised state, the
+  report, a label-free state against the d9_restart record and against the
+  provenance file); exit status 5, with one outlying instance not failing a
+  model and the figure instance beyond `--n-val`; the second pass's switch
+  (TF32 off and the math attention backend inside, the run's policy and the
+  default backends after, also when the pass fails); and, in process, with
+  every prediction perturbed only inside that switch, the perturbation
+  recorded as u - u_ieee (the figure's too), the content check reading the
+  run's own predictions. Every one of 15 mutants of the second pass's code
+  is killed by these tests.
+- `RUNBOOK_CMAME.md` Sec. D (new): fetch (directly, as A0b ran on 8
+  October, or from a git bundle of the branch the operator instruction
+  sends, made with `git bundle create cmame-paper.bundle 094c804..cmame-paper`;
+  a fetch that prints nothing for 10 min is abandoned for the bundle),
+  checkout, CUDA and the suite, the export (`--device cuda`; about 10 min;
+  nothing else on the GPU), what to expect, the return after any exit, and
+  in the repo an end-to-end check against the verdict (H2a's and H2b's
+  ratios of means). The header no longer calls the sections independent
+  (Sec. D reads Sec. B's states and Sec. C's records); Sec. C says when it
+  ran. The box's suite count, in A0c, B1c and D0c, is now 535 passed, 2
+  deselected: so the suite reads under the box's Python 3.12.3, numpy 2.4.6,
+  scipy 1.18.0 and torch 2.12.1+cu130, in a fresh clone (CPU); there, a
+  rehearsal of the export at CM2D's model sizes on gmsh plates ended with
+  exit 0, every model reproducing its arrays exactly and the TF32 policy
+  restored. `tests/test_cmame_runbook.py` (two new tests): Sec. D names the
+  script with options it accepts, writes only under `runs/cmame/spectra/`
+  and its own return (every `tee`, redirection, `mkdir` and `OUT`), uses
+  Sec. A's `run` helper, A0b's fetch and B1c's process check, pins its
+  bundle route, checkout, rotations and the return line by line, exports
+  from CM2D's committed return, and names the figure instance that the
+  script's rule selects from the committed report and the summary line's
+  keys; the suite count and both `--deselect` options are checked in each
+  of the three sections.
+- Three independent reviews, each reviewer in a clone of its own:
+  - Code and science (three rounds, the third re-running every mutant on
+    the candidate): no blocking defect; the identities, the log binning,
+    the pair statistics and the gamma* check verified on the real
+    validation meshes, rebuilt from the generator; the binning by mode rank
+    alone could not have separated the rows and was supplemented, before
+    any box run, by the binning by lambda / RQ*, whose edges were then
+    widened to 10^-2 (seven instances put one mode of the axial load case
+    just below 10^-1.5 RQ*). Of the reviewer's mutants of the script, all
+    are killed by the tests above except two that are equivalent in
+    practice (`>=` for `>` in a share; a padded bin count).
+  - Operations (three rounds): no blocking defect; the runbook's blocks
+    were run as pasted in a simulated box (both fetch routes, exit 0, exit
+    5, a refusal, a crash, second pastes); the bundle block made pasteable,
+    the return named once per paste, a CUDA check added; all of the
+    reviewer's 31 mutants of Sec. D are killed by the tests above.
+  - A fresh review before the push, of the run on the box itself: no
+    blocking defect; one important point, answered by the second pass with
+    TF32 off: TF32's rounding is rough and the stiffness norm weights it
+    heavily, so on the most accurate rows it could account for part of the
+    stiff end of a spectrum, and the states exist only on the box. Also from
+    it: a guard against a non-positive eigenvalue, the pairing-free share,
+    the per-load quotients, the runbook's rules for a fetch that hangs and
+    for going on to the return after any exit, and a test assertion on
+    element areas made robust to the gmsh version.
+- Stage 6's record completed (`records/cmame/README.md`): the operator
+  fetched the branch and the tag from the git bundle, one of the two routes
+  of the supplement to his instruction of 8 October (his report, relayed on
+  9 October).
+- No source, configuration, pre-registration or manuscript change. Suite 537.

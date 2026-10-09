@@ -2,8 +2,11 @@
 they accept; Sec. A runs exactly the commands of RUNBOOK_W9.md Sec. 4 apart
 from the F5 timing and writes only under runs/cmame/timing/; Sec. B runs
 CM2D's stamped configuration on the tag and writes only under runs/cm2d/
-(its readiness check under runs/cmame/); the runbook states the suite's
-current test count with the two LaTeX builds left out."""
+(its readiness check under runs/cmame/); Sec. D runs the spectral export on
+CM2D's committed return and writes only under runs/cmame/spectra/, and the
+figure instance it names is the script's rule applied to the committed
+report; the runbook states the suite's current test count with the two LaTeX
+builds left out."""
 
 import re
 import subprocess
@@ -16,7 +19,8 @@ LATEX = ("tests/test_cmame_material.py::test_manuscript_compiles",
          "tests/test_w9_session2.py::test_paper_material_compiles")
 SCRIPTS = {"A": {"scripts/time_inference_vs_solve.py", "scripts/export_fields.py"},
            "B": {"scripts/cm2d_precheck.py"},
-           "C": {"scripts/adjudicate_cm2d.py"}}
+           "C": {"scripts/adjudicate_cm2d.py"},
+           "D": {"scripts/cm2d_spectra.py"}}
 ENV = {"PYTHONPATH": str(ROOT / "src"), "PATH": "/usr/bin:/bin"}
 
 
@@ -77,13 +81,26 @@ def test_the_runbook_names_existing_scripts_and_options():
 
 
 def test_sections_write_under_their_own_directories():
-    for letter, prefixes in (("A", ("runs/cmame/timing",)), ("B", ("runs/cm2d", "runs/cmame"))):
+    for letter, prefixes in (("A", ("runs/cmame/timing",)), ("B", ("runs/cm2d", "runs/cmame")),
+                             ("D", ("runs/cmame/spectra",))):
         text = _section(letter).replace("\\\n", " ")
         ps = re.findall(r"\bP=([^\s;]+)", text)
         assert ps and all(p in prefixes for p in ps), (letter, ps)
         for m in re.finditer(r"--out (\S+)", text):
             assert m.group(1).startswith("$P/"), (letter, m.group(0))
         assert "runs/w9/" not in text, letter
+    # Sec. D: every file it writes is under its directory or its own return
+    d = _section("D").replace("\\\n", " ")
+    for m in re.finditer(r"\btee (?:-a )?(\S+)|> (\S+)", d):
+        target = m.group(1) or m.group(2)
+        assert target.startswith(("$P/", "runs/cmame/spectra/")), m.group(0)
+    assert re.findall(r"mkdir -p (\S+)", d) == ["runs/cmame/spectra", "$OUT"]
+    assert re.findall(r"\bOUT=(\S+)", d) == ["~/cm2d_spectra_return"]
+    helper = re.search(r"\nrun\(\) \{.*?; \}\n", _section("A"), re.S).group(0)
+    assert helper in _section("D") and 'exit=${PIPESTATUS[0]}' in helper
+    other = re.search(r'OTHER_RUNS = r"([^"]+)"',
+                      (ROOT / "scripts" / "cm2d_precheck.py").read_text()).group(1)
+    assert 'pgrep -af "' + other + '"' in d                 # the same check as B1c's
 
 
 def test_section_b_runs_the_stamped_configuration_on_the_tag():
@@ -111,6 +128,71 @@ def test_section_b_runs_the_stamped_configuration_on_the_tag():
     assert "--workers" not in b and "--activation-checkpointing" not in b
 
 
+def test_section_d_exports_from_cm2ds_committed_return():
+    import importlib.util
+    import json
+
+    import numpy as np
+
+    d = _section("D")
+    assert _lines(d) == [
+        "python scripts/cm2d_spectra.py --report records/cmame/cm2d/return/report.json "
+        "--provenance records/cmame/cm2d/return/provenance.txt --states-dir runs/cm2d/e8_states "
+        "--out $P/export --device cuda"]
+    ret = ROOT / "records" / "cmame" / "cm2d" / "return"
+    assert (ret / "report.json").is_file() and (ret / "provenance.txt").is_file()
+    # the states it reads are the ones the return lists, twelve of them
+    prov = (ret / "provenance.txt").read_text()
+    states = re.findall(r"^[0-9a-f]{64}  (runs/\S+\.pt)$", prov, re.M)
+    assert len(states) == 12 and all(s.startswith(("runs/cm2d/e8_states/",
+                                                   "runs/e1_2d_base/e8_states/")) for s in states)
+    assert "| wc -l   # 12" in d
+    # the figure instance it names: the script's rule on the committed report,
+    # and the file the run's split puts at that index (the split of the 2D
+    # timing's records, whose 32 files follow the same permutation)
+    spec = importlib.util.spec_from_file_location("cm2d_spectra",
+                                                  ROOT / "scripts" / "cm2d_spectra.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    report = json.loads((ret / "report.json").read_text())
+    i = mod.select(report)["fig2d"]["index"]
+    split = report["config"]["split"]
+    perm = np.random.default_rng(int(split["seed"])).permutation(int(report["config"]["data"]["n"]))
+    timing = json.loads((ROOT / "records" / "cmame" / "timing" / "timing_2d.json").read_text())
+    assert timing["report_sha256"] == report["reuse_from"]["report_sha256"]   # E1's corpus, split
+    files = [r["file"] for r in timing["results"]["val"]["per_instance"]]
+    assert files == [f"instance_{perm[k]:05d}.npz" for k in range(len(files))]
+    assert f"`[spectra] fig2d: val #{i} instance_{perm[i]:05d}.npz (... nodes)`" in d
+    assert f'`{{"fig2d": ["instance_{perm[i]:05d}.npz", {i}]}}`' in d
+    # the summary line's keys, as the script prints them (tests/test_cm2d_spectra.py)
+    for k in ("content_median_rel_dev", "content_mismatch", "rayleigh_ratio_median", "pairs",
+              "prop1_bound_ratio_max", "figures"):
+        assert f"`{k}`" in d, k
+
+
+def test_section_d_reuses_the_blocks_that_ran():
+    """Sec. D's fetch is A0b's, as it ran on 8 October; its bundle route, its
+    checkout and checks, the rotation of earlier outputs, the run helper and
+    the return named once per paste are pinned line by line."""
+    blocks = lambda s: re.findall(r"```bash\n(.*?)```", s, re.S)          # noqa: E731
+    a, d = blocks(_section("A")), blocks(_section("D"))
+    cmd = lambda line: line.split("#")[0].rstrip()                        # noqa: E731
+    assert len(d) == 6 and d[1] == a[1]                    # tmux; A0b's fetch; bundle; D0c; D1; D2
+    assert [cmd(x) for x in d[2].splitlines()] == [
+        "cd ~/autodl-tmp/FE-JEPA", "sha256sum ~/cmame-paper.bundle",
+        "git fetch ~/cmame-paper.bundle +refs/heads/cmame-paper:refs/remotes/origin/cmame-paper"
+        " && echo FETCH-OK || echo FETCH-FAILED", "git rev-parse --short origin/cmame-paper"]
+    d0c, a0c = [cmd(x) for x in d[3].splitlines()], [cmd(x) for x in a[2].splitlines()]
+    assert d0c[:4] == a0c[:4]                              # cd, checkout, tree, status
+    assert 'python -c "import torch; print(torch.__version__, torch.cuda.is_available())"' in d0c
+    for line in ("[ -s $P/status.txt ] && mv $P/status.txt $P/status.txt.$(date +%Y%m%d-%H%M%S);"
+                 " : > $P/status.txt",
+                 "[ -d $P/export ] && mv $P/export $P/export.$(date +%Y%m%d-%H%M%S)",
+                 "run spectra.log python scripts/cm2d_spectra.py"):
+        assert line in d[4], line
+    assert "T=$(date +%Y%m%d-%H%M)" in d[5] and "*" not in d[5].split("tar czf", 1)[1]
+
+
 def test_the_runbook_states_the_suite_count():
     res = subprocess.run([sys.executable, "-m", "pytest", "--collect-only", "-q",
                           "-p", "no:cacheprovider"], capture_output=True, text=True, cwd=ROOT)
@@ -119,10 +201,10 @@ def test_the_runbook_states_the_suite_count():
     n = int(m.group(1))
     for t in LATEX:                                         # the deselected tests exist
         assert t in res.stdout, t
-    text = RUNBOOK.read_text(encoding="utf-8")
-    assert text.count(f"`{n - len(LATEX)} passed, {len(LATEX)} deselected`") == 2   # A0c, B1c
-    assert text.count(f"--deselect {LATEX[0]}") == 2         # A0c and B1c
-    assert all(f"--deselect {t}" in text for t in LATEX)
+    for letter in "ABD":                                    # A0c, B1c, D0c
+        sec = _section(letter)
+        assert sec.count(f"`{n - len(LATEX)} passed, {len(LATEX)} deselected`") == 1, letter
+        assert all(sec.count(f"--deselect {t}") == 1 for t in LATEX), letter
 
 
 # ---- the suite the runbook runs on the box ends with its summary line ------
