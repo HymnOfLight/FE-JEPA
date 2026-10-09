@@ -624,3 +624,99 @@ CM2D's verdict: post hoc, reported only; nothing in PREREG_CM2D reads it.
   of the supplement to his instruction of 8 October (his report, relayed on
   9 October).
 - No source, configuration, pre-registration or manuscript change. Suite 537.
+
+## Stage 8 (9 Oct 2026) -- the error spectra of CM2D's models, returned and recorded
+
+- `records/cmame/spectra/`: RUNBOOK_CMAME Sec. D as it ran on the box on
+  Stage 7's commit `8b5d443` on 9 October (16:23 UTC at the return): the
+  suite 535 passed, 2 deselected; the export exited 0, its timed part 70 s
+  (the eigendecompositions 31 s, the second pass with TF32 off 14 s); seven
+  files copied byte for byte from the operator's tarball, whose SHA-256
+  matched on receipt (`records/cmame/README.md` lists them). Every state
+  matched CM2D's provenance file; every transformer reproduced the report's
+  per-instance arrays exactly, the graph network within 1.4e-4 in median on
+  the displacement error and the energy gap, the two the export gates
+  (5.2e-4 on the peak von Mises error; its CUDA scatter reductions are not
+  bitwise reproducible); the TF32 policy was in force after the second pass
+  as before it.
+- End to end (RUNBOOK_CMAME D3): the export's seed means of the relative
+  energy gap and of the von Mises error are the verdict's, seed by seed, for
+  H1, H2a, H2b and H3 (largest relative deviation 2.2e-13); L_D's over L_K's
+  ratios of means are 4.596 (energy gap) and 2.215 (von Mises error), H2a's
+  and H2b's.
+- Readings (post hoc, reported only; medians over a row's 3,072
+  seed-instance-load-case triples, pair readings on the same seed, instance
+  and load case; the solution's own Rayleigh quotient is a median 1.27 times
+  the smallest eigenvalue):
+  - the error's normalised Rayleigh quotient (its Rayleigh quotient over the
+    solution's): label-free 10.3, L_K 11.3, L_D 115, graph network 553;
+  - L_D against L_K: L_D's quotient the larger on 94.9% of the triples
+    (98.8% on the seed geometric means, which do not depend on the pairing),
+    geometric-mean ratio 7.80 (per seed 8.26, 9.46 and 6.07); the squared
+    relative displacement error's geometric-mean ratio 1.26 (per seed 0.96,
+    1.65 and 1.26; L_D's the smaller on 50.0% of the triples); so the
+    relative energy gap's ratio is 9.85 (= 7.800 x 1.262). The change of
+    norm changed the error's spectral content, and its Euclidean size much
+    less: on the log scale about 90% of the gap ratio is spectral (per seed
+    102%, 82% and 88%);
+  - L_K against the label-free row: quotient ratio 1.04 (L_K's the larger on
+    49.1%), squared displacement ratio 0.64 (per seed 0.81, 0.39 and 0.81):
+    in the geometric mean the same spectral content and a smaller error;
+    H3, on the seed means of the gap, showed no difference (L_K's seeds
+    vary widely);
+  - the graph network against L_D: quotient ratio 4.33, squared displacement
+    ratio 1.00;
+  - the share of the error's squared stiffness norm in the modes at or above
+    100 RQ*: label-free 69%, L_K 73%, L_D 95%, graph network 99% (the
+    solution's own 1.5%); of its squared Euclidean norm at or above 10 RQ*:
+    7.2%, 6.6%, 24% and 49% (the solution's 0.2%);
+  - the bound of Proposition "Energy gap and stress error" holds on every
+    load case (largest ratio 0.90);
+  - TF32's rounding (u - u_ieee): a median 2.7% (label-free), 2.9% (L_K),
+    0.7% (L_D) and 0.05% (graph network) of the error's squared stiffness
+    norm, and, in the modes at or above 10^4 RQ*, 41% (label-free) and 36%
+    (L_K) of the error's squared stiffness norm there (on the 2,010 of 3,072
+    load cases whose modes reach that far); with TF32 off the quotients are
+    9.1, 9.4, 114 and 558, and L_D's over L_K's geometric-mean quotient
+    ratio 9.30 and gap ratio 11.9. The rounding makes the two smooth rows
+    look rougher, so the readings as run understate the difference.
+- `tests/test_cm2d_spectra_records.py` (11 tests): the files and their
+  hashes; one export on Stage 7's commit and tree, exit 0 after a green
+  suite, the TF32 policy kept, the machine, texts and timings quoted, and
+  the log's summary line that of the JSON; the inputs (CM2D's committed
+  report and provenance file, the stamped configuration, the twelve states,
+  the run's validation split); every model's agreement with the report, also
+  recomputed from the per-load arrays (the graph network's recorded
+  deviations too); Lemma "Exactness", the zero-field test and ranking, the
+  energy-optimal amplitude (the gap of c* u from the stored energies), the
+  plane-stress stress identity and bound (gamma* from the stored integrals),
+  the spectra's sums and the Rayleigh quotients' range on every array; bin
+  by bin, every spectrum's stiffness-weighted over Euclidean mass within the
+  bin's eigenvalue range and the outer bins empty, and the rounding of
+  TF32's size on every prediction (so the second pass was not the first
+  again); the summaries, counts and eigenvalue ranges recomputed with the
+  script's functions, and the readings the manuscript may quote written out
+  again from their definitions (overall, per seed and with TF32 off); the
+  verdict's seed means for every hypothesis and H2a's and H2b's ratios; and
+  the figure file, the rule's instance, with its stiffness matrix
+  reassembled from its mesh by the generator's assembly (the eigenvalues, U*
+  solving the stored loads, every row's seed-0 coefficients, norms,
+  energies, gaps, c*, spectra and stresses).
+- An independent review, in a clone of its own: no blocking defect; one
+  statement corrected (the graph network's median deviation, which is within
+  1.4e-4 on the gated metrics only), two readings worded more cautiously (L_D
+  against L_K's displacement errors; L_K against the label-free row, beside
+  H3), and the checks above added where its mutation run found gaps. Of its
+  113 corruptions of the records (each with the README's hash forged), 105
+  now fail a test; the other 8 touch nothing the records claim or quote (a
+  shift of the rounding's mass between two low bins, the largest eigenvalue
+  or the dof count of an instance that is not an extreme, two graph-network
+  deviations that the records cannot recompute, one model's inference time,
+  the suite's warning count and its time).
+- `RUNBOOK_CMAME.md`: Sec. D says that it has returned, and where; the box's
+  suite count, in A0c, B1c and D0c, is now 546 passed, 2 deselected.
+- The manuscript is unchanged: its discussion still says that the spectral
+  content of the errors has not been measured. The next stage brings CM2D
+  and these readings into it.
+- No source, script, configuration, pre-registration or manuscript change.
+  Suite 548.

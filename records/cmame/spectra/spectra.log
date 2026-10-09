@@ -1,0 +1,18 @@
+[spectra] val 16/256 | 5 s
+[spectra] val 32/256 | 9 s
+[spectra] val 48/256 | 13 s
+[spectra] val 64/256 | 17 s
+[spectra] val 80/256 | 21 s
+[spectra] val 96/256 | 25 s
+[spectra] val 112/256 | 30 s
+[spectra] val 128/256 | 34 s
+[spectra] val 144/256 | 38 s
+[spectra] val 160/256 | 42 s
+[spectra] val 176/256 | 46 s
+[spectra] val 192/256 | 50 s
+[spectra] val 208/256 | 55 s
+[spectra] val 224/256 | 58 s
+[spectra] val 240/256 | 62 s
+[spectra] val 256/256 | 69 s
+[spectra] fig2d: val #221 instance_27356.npz (547 nodes)
+{"content_median_rel_dev": {"ar_s0": [0.0, 0.0], "ar_s1": [0.0, 0.0], "ar_s2": [0.0, 0.0], "labels_s0": [0.0, 0.0], "labels_s1": [0.0, 0.0], "labels_s2": [0.0, 0.0], "labels_knorm_s0": [0.0, 0.0], "labels_knorm_s1": [0.0, 0.0], "labels_knorm_s2": [0.0, 0.0], "mgn_s0": [1.515282996961269e-05, 0.00011331140234358006], "mgn_s1": [1.5384369678240687e-05, 0.0001369151109179018], "mgn_s2": [1.676155348822652e-05, 0.0001437025817872267]}, "content_mismatch": [], "rayleigh_ratio_median": {"ar": 10.296992179827612, "labels": 114.61411057563801, "labels_knorm": 11.268872146571876, "mgn": 553.4855249668465}, "pairs": {"labels_vs_labels_knorm": 0.94921875, "labels_vs_ar": 0.94921875, "labels_knorm_vs_ar": 0.4905598958333333, "mgn_vs_labels": 0.93359375, "mgn_vs_ar": 0.9993489583333334}, "prop1_bound_ratio_max": {"ar": 0.9040976604630812, "labels": 0.6402362210051494, "labels_knorm": 0.8816716576250423, "mgn": 0.8182478464435035}, "figures": {"fig2d": ["instance_27356.npz", 221]}}

@@ -91,7 +91,7 @@ python -m pytest -q --deselect tests/test_cmame_material.py::test_manuscript_com
     --deselect tests/test_w9_session2.py::test_paper_material_compiles \
     2>&1 | tee runs/cmame/timing/pytest.log | tail -n 3
 ```
-The suite's last line reads `535 passed, 2 deselected`, then warnings and the
+The suite's last line reads `546 passed, 2 deselected`, then warnings and the
 time (the two LaTeX builds are left out: they need a TeX installation that
 this section does not use). Anything failed, an error, or another count: stop
 and report. Any other output than the comments describe: stop and report.
@@ -267,7 +267,7 @@ python -m pytest -q --deselect tests/test_cmame_material.py::test_manuscript_com
     --deselect tests/test_w9_session2.py::test_paper_material_compiles \
     2>&1 | tee runs/cm2d/pytest.log | tail -n 3
 ```
-The suite's last line reads `535 passed, 2 deselected`, then warnings and the time.
+The suite's last line reads `546 passed, 2 deselected`, then warnings and the time.
 Anything failed, an error, another count, or any other output than the
 comments describe: stop and report.
 
@@ -453,7 +453,10 @@ and nothing in PREREG_CM2D does. Read only: every state's SHA-256 is checked
 against CM2D's return (`records/cmame/cm2d/return/provenance.txt`) before
 any model runs, every model is also checked against the report's
 per-instance arrays, and everything goes under `runs/cmame/spectra/`. A
-failure here costs nothing else; report it.
+failure here costs nothing else; report it. It ran on 9 October 2026 on
+commit `8b5d443`, exit 0 (the export's timed part 70 s, the tarball 22.7 MB),
+and returned complete; the return is in `records/cmame/spectra/`
+(`records/cmame/README.md`).
 
 ### D0. Preconditions (box)
 
@@ -507,7 +510,7 @@ python -m pytest -q --deselect tests/test_cmame_material.py::test_manuscript_com
     --deselect tests/test_w9_session2.py::test_paper_material_compiles \
     2>&1 | tee runs/cmame/spectra/pytest.log | tail -n 3
 ```
-The suite's last line reads `535 passed, 2 deselected`, then warnings and the
+The suite's last line reads `546 passed, 2 deselected`, then warnings and the
 time. Anything failed, an error, another count, or any other output than the
 comments describe: stop and report.
 

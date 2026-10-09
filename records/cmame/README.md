@@ -254,3 +254,89 @@ none touches a file the adjudicator reads or a criterion:
   secondary readings, the deviations and the run block) is what
   `scripts/adjudicate_cm2d.py` computes in process from the committed
   files.
+
+## CM2D's error spectra: the export of 9 October 2026 (RUNBOOK_CMAME Sec. D)
+
+`spectra/` holds RUNBOOK_CMAME Sec. D as it ran on the box on Stage 7's
+commit `8b5d443` (tree `e288619b0338a6fa497dfabba6c953e8b3a4e553`, clean),
+copied byte for byte from `cm2d_spectra_return_20261010-0023.tgz` (SHA-256
+`8c9a4c1f3830607579d3fd6d6f08aa62e2c76f223db8885074f0973dfe263b63`, as the
+operator sent it and as recomputed on receipt; the name carries the box's
+China Standard Time, 16:23 UTC on 9 October). The suite there: 535 passed, 2
+deselected. The export exited 0; its timed part (the 256 instances, the
+summaries and the figure file) took 70 s, of which 31 s went to the
+eigendecompositions and 14 s to the second pass with TF32 off (RTX 5090,
+driver 595.71.05, torch 2.12.1+cu130; 16 CPUs allotted). Post hoc: specified
+after CM2D's verdict and reported only; no verdict reads it.
+
+| file | SHA-256 |
+|---|---|
+| `export/fig2d.npz` | `1444977bceba4466b37a3b0f96b2eed78869826b499618e63ee24b349a7b4084` |
+| `export/spectra.json` | `a494aa49c299a83f614d3b8e8bd3aaf81d6e3cf76181e66f6abbb7fff863dc85` |
+| `export/spectra_val.npz` | `fed09ab55afbf2866427e54920ee7655df565a9704e6c5f098615e4f935116ac` |
+| `machine.txt` | `adb55605b33d8c5569390244d1cf9c67c1204d94c256cf21b7126bc32ae03f9c` |
+| `pytest.log` | `ad78a837322b7120785b0c73b829010fb8ba5a5efe47786a24ac00f03cfb5a37` |
+| `spectra.log` | `26c1e419d8e806e16860686a828dc2722e35458cc63090b56cc108bc04f6a780` |
+| `status.txt` | `fe4aefe67ea7930edbd135c51a60065bd5d4cbf7258a14bc67925de5a7da1b6b` |
+
+- `export/`: `scripts/cm2d_spectra.py` on CM2D's kept states at 1,024 labels
+  (L_D, row `labels`; L_K, row `labels_knorm`; the graph network, row `mgn`;
+  seeds 0-2) and E1's three label-free states (row `ar`), on the run's 256
+  validation instances: the per-load arrays (`spectra_val.npz`), the inputs
+  and their hashes, the content checks, the counts and the summaries
+  (`spectra.json`), and the figure instance chosen by the script's rule
+  (`fig2d.npz`: validation index 221, `instance_27356.npz`, 547 nodes).
+  Every state matched CM2D's provenance file, the label-free ones also the
+  report's d9_restart record. Every transformer reproduced the report's five
+  per-instance arrays exactly, the graph network with median relative
+  deviations up to 1.7e-5 in the displacement error and 1.4e-4 in the energy
+  gap, the two the export gates (up to 5.2e-4 in the peak von Mises error):
+  its CUDA scatter reductions are not bitwise reproducible. The TF32 policy
+  was in force after the second pass as before it.
+- `status.txt` (exit 0), `machine.txt` (the commit, the tree, a clean
+  checkout, the GPU and the CPU allotment), `spectra.log` (the export's
+  console, ending with its summary line) and `pytest.log` (the suite before
+  the export).
+
+`tests/test_cm2d_spectra_records.py` checks that:
+- the files are these; the export ran once on Stage 7's commit and tree,
+  exited 0 after a green suite, kept the TF32 policy, and printed the summary
+  of the JSON it wrote; the machine, the texts and the timings are those
+  quoted here;
+- its inputs were CM2D's committed report and provenance file, the stamped
+  configuration, the twelve states the provenance file lists (the label-free
+  ones also those of the report's d9_restart record) and the run's own
+  validation split;
+- every model reproduced the report's per-instance arrays (the export's
+  content check, and the same comparison recomputed from the per-load
+  arrays: the transformers' to 1e-12, and the graph network's recorded
+  median and largest deviations);
+- on every load case of every row and seed, Lemma "Exactness", Corollary
+  "Zero-field test and ranking", Proposition "Energy-optimal amplitude"
+  (with the gap of c* u from the stored energies) and the plane-stress
+  identity and bound of Proposition "Energy gap and stress error" (with
+  gamma* from the stored integrals) hold; the spectra sum to the norms (the
+  errors' and the solution's in both binnings, the IEEE predictions' errors'
+  and the rounding's in the log binning); in every occupied bin the
+  stiffness-weighted mass over the Euclidean mass lies within the bin's
+  eigenvalue range, and the outermost log bins are empty; every Rayleigh
+  quotient (the errors', the IEEE predictions' errors', the rounding's and
+  the solution's) lies between the extreme eigenvalues; and the rounding is
+  of TF32's size on every prediction (the second pass was not the first
+  again);
+- the summaries, the counts and the eigenvalue ranges are what the script's
+  functions compute from the committed arrays, and the readings the
+  manuscript may quote follow from their definitions, written out again (per
+  row the quotients, the shares above 10^k RQ*, the IEEE quotients and the
+  rounding's shares; the solution's shares and quotient; per pair of rows
+  the shares, the ratios of means and the geometric-mean ratios, overall,
+  per seed and with TF32 off);
+- end to end, the export's seed means of the relative energy gap and of the
+  von Mises error are the verdict's, seed by seed, for H1, H2a, H2b and H3,
+  and L_D's over L_K's ratios of means are H2a's and H2b's 4.596 and 2.215;
+- the figure file is the instance the rule selects from the report and
+  carries that instance's per-load arrays; with its stiffness matrix
+  reassembled from its mesh and material by the generator's assembly, it has
+  the stored eigenvalues, a U* that solves the stored loads, and every row's
+  stored seed-0 coefficients, norms, energies, gaps, c*, spectra and von
+  Mises stresses.
