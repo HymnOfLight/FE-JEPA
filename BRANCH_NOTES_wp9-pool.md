@@ -688,3 +688,94 @@ needs to be as accurate as the surrogate.
 
 Suite: 439 (Stage 0d 431 + 8) passed. On the box: 439 passed, or 438 passed
 and 1 skipped where pdflatex is missing.
+
+## Stage 0f (9 Oct 2026) -- PREREG_W9 r3 stamped; the runbook brought up to date
+
+Between Stage 0e and this stage wp9-pool did not move, and the box ran
+cmame-paper's RUNBOOK_CMAME (branched from Stage 0e), all of it on a new host:
+on 8 October its Sec. A, this runbook's Sec. 4 run on its own without the F5
+family (the paper's timing and field export, on cmame-paper's `61f018f`),
+then CM2D, and on 9 October CM2D's spectral export. E1 ran on a Xeon
+Platinum 8470Q host with 25 CPUs allotted (`os.cpu_count()` 208: E1's worker
+set-up gave each of three workers 69 torch threads); the instance now runs on
+a Xeon Gold 6459C host with 16 CPUs allotted (`os.cpu_count()` 128: 42
+threads per worker) and a 92 GiB memory limit; the GPU, its driver and torch
+are E1's (the adjudication records a stack or GPU other than E1's as a
+deviation; the returns' provenance files record the hostname, the CPUs and
+the memory limit, and Sec. 4's machine.txt the CPU model). This stage stamps
+PREREG_W9 r3 as reviewed on 2 October, with no change to src, scripts other
+than one new read-only script, configurations or the pre-registration's
+text, and brings the runbook up to date.
+
+- `PREREG_W9.md`: r3 stamped on 9 October 2026 by
+  `scripts/stamp_prereg_w9.py` (the six CONFIG_SHA256 lines, the status line
+  and the file's own SHA-256; the configurations are the generator's output,
+  unchanged since Stage 0c). CONFIG_SHA256: `w9_c1_n1024` `acccf57e...`,
+  `w9_c1_n4096` `0bae42a4...`, `w9_c1_n25600` `91e6ecd7...`,
+  `w9_c1_n12800` `15a14602...`, `w9_b_n1024` `49574ab0...`, `w9_s_n1024`
+  `b3cbf33c...`; PREREG_W9_SHA256 `0f61e286...` (full values in the file).
+- `RUNBOOK_W9.md`:
+  - Sec. 0b: the direct fetch in one line, with explicit refspecs for the
+    branch and the tag (on 8 October AutoDL's network route returned HTTP 503
+    while the direct fetch worked), and a bundle route for the same refs
+    (later that day the direct fetch timed out and CM2D's operator fetched
+    from a bundle); a fetch that prints nothing for 10 min, or has not ended
+    after 20, is abandoned for the bundle; the repo-side check of the remote
+    branch and tag before the operator instruction is sent.
+  - Sec. 0c: 5 GB free on / (the session-2 plan's tests check the disk of
+    their temporary directory); the suite count.
+  - Sec. 2a: the plan's memory reading X must be the container's limit
+    (`/sys/fs/cgroup/memory.max`, now printed in 2a) over 1e9, with the
+    source `cgroup_limit`: here `98.8 GB (cgroup_limit)` (98,784,247,808
+    bytes, 92 GiB); otherwise STOP; another limit is reported as a change of
+    host. The earlier rule (X larger than the instance's memory in the AutoDL
+    console) could have stopped a healthy session 2 if the console gives the
+    limit in GiB.
+  - Sec. 4: the paper's timing and field export ran as RUNBOOK_CMAME Sec. A;
+    Sec. 4 now times the paper's CPU solvers (direct and CG) in the box's
+    environment and with one thread, in 2D (E1, 8 validation instances) and
+    3D (Phase-2b, 8 validation and 2 fine instances; 3D once more in the
+    environment after the one-thread run, so that drift can be told from a
+    thread effect), and reads the thread pools of the BLAS libraries numpy
+    and SciPy's SuperLU load (`scripts/blas_threads.py`, new): how many
+    threads the cost table's solvers used was not recorded (threadpoolctl is
+    not installed on the box). About 25 min, after 2d, read only; nothing in
+    PREREG_W9 reads it.
+  - Sec. 5 withdrawn (it needed AutoDL's network route and a 3-4 GB
+    download, and nothing reads it).
+  - The header: Stage 0f, Sec. 4's time, both hosts.
+- `scripts/blas_threads.py` (new, read only): per loaded BLAS or OpenMP
+  library, its thread count from the library's own query (as threadpoolctl
+  reads it), with the environment's thread variables, the CPU affinity and
+  torch's threads (read after the pools).
+- `tests/conftest.py`: every test starts with SIGPIPE ignored (found on
+  cmame-paper at its Stage 3: gmsh.initialize() restores the signal's
+  default action in the test process, and a later test that stops a worker
+  pool could end the whole run without a summary line; this suite also
+  meshes with gmsh in process and stops pools in its tests).
+- `tests/test_w9_runbook.py` (6 tests): every script the runbook names exists
+  and accepts its options; the fetch and bundle blocks line by line; Sec. 4's
+  seven steps and its precheck; the timing script with Sec. 4's 3D options
+  on a Phase-2b-shaped CPU run, in the test's environment and with one
+  thread (only the direct solve and CG, both complete, the threads
+  recorded); the BLAS readout in both settings; the suite count in Sec. 0c.
+- Checks: the suite (444 before the readout was added, 445 after) in a
+  fresh clone, in the sandbox's environment and under the box's Python,
+  numpy, scipy and torch versions, with the stamp committed and tagged in a
+  scratch clone; Sec. 0b's bundle route and 0c's git checks run as pasted on
+  a single-branch clone of cmame-paper at `8b5d443` (the box's checkout),
+  from a bundle made as the runbook says: `FETCH-OK`, both lines at the
+  commit, `describe` printing `prereg-w9`, a clean status.
+- An independent review, in clones of its own: src, scripts (but the new
+  one) and configurations unchanged since 414a372; the stamp reproduced byte
+  for byte from r3's draft, every CONFIG_SHA256 and the self-hash verified;
+  nothing in r3 contradicted by current facts. One blocking finding, the
+  memory STOP rule of Sec. 2a above; the BLAS readout, the drift check, the
+  host details, the fetch cap and the clarifications above; all addressed. A
+  second round found nothing blocking and tied the memory rule to the
+  container's own limit, so that another change of host does not stop a
+  healthy session 2. A later note: cmame-paper's
+  `tests/test_cmame_runbook.py` pins this runbook's former Sec. 4
+  (`test_section_a_is_wp9s_section_4_without_f5`) and must change if the two
+  branches are ever merged.
+- Suite 445 (on the box 444 passed and 1 skipped where pdflatex is missing).

@@ -9,7 +9,15 @@ if rule 1 admits it, S), the adjudication, and the optional torch-stack timing
 (Sec. 1e of Stage 0a, moved after session 2). Stage 0d (2 Oct 2026) added
 Sec. 4: the paper's cost table, surrogate inference against the direct solve
 (nothing in PREREG_W9 reads it); Stage 0e (2 Oct 2026) added to it the CG
-stopped at the surrogate's accuracy and the paper's field figures. PREREG_W9.md is stamped and tagged
+stopped at the surrogate's accuracy and the paper's field figures. Stage 0f
+(9 Oct 2026, with the stamp): Sec. 4's timing (without the F5 family, which
+session 1 makes) and field export ran on 8 October as RUNBOOK_CMAME Sec. A
+(branch cmame-paper, records in its `records/cmame/timing/`), so Sec. 4 now
+measures only what the paper's cost table still lacks, the threads its CPU
+solvers used; Sec. 5 is withdrawn; Sec. 0b fetches directly, in one line,
+with a git bundle as the other route; Sec. 2a states the memory reading
+expected on the current host.
+PREREG_W9.md is stamped and tagged
 (`prereg-w9`) BEFORE session 1, covering every arm the rules can select, so
 the box runs session 1 and session 2 in one visit: Sec. 0, session 1, its
 return, the plan (it refuses to plan unless session 1 passed its gate), the
@@ -17,8 +25,8 @@ arms, their return. In the sandbox, a miniature laid out like the box (sizes
 scaled down, CPU) ran Sec. 0's git checks, Sec. 1a-1d, 1f, 2a, 2b with a
 worker killed mid-arm and the restart, 2d and Sec. 3 from the two returns
 (the rules' inputs edited so that every arm runs; 1f and 2d with shorter
-provenance blocks and no tarball; the suite, the GPU checks and Sec. 4-5 not
-run there; Sec. 4's scripts ran on small CPU runs in the tests).
+provenance blocks and no tarball; the suite, the GPU checks and Stage 0e's
+Sec. 4-5 not run there; Sec. 4's scripts ran on small CPU runs in the tests).
 
 Roles: **box** = the GPU machine; **repo** = code, records, pre-registration,
 adjudication.
@@ -26,15 +34,21 @@ adjudication.
 Governance: nothing here touches a stamped configuration of another
 pre-registration, a run's `e8_states/` other than wp9's own, or `runs/data2d`;
 session 1 writes under `runs/w9/`, session 2 writes under `runs/w9/` and reads
-E1's states; Sec. 4 writes under `runs/w9/timing/` and reads E1's and
-Phase-2b's states and corpora; Sec. 5 adds a virtual environment and a
-worktree next to the repository. The branch is frozen from the stamp until
+E1's states; Sec. 4 writes under `runs/w9/threads/` and reads E1's and
+Phase-2b's states and corpora. The branch is frozen from the stamp until
 session 2 has returned: the box checks that HEAD is exactly the tagged commit,
 the plan checks it again, and the command script checks it before every arm.
 
 Time and money: session 1 about 1 h; session 2 about 10 h without S,
 about 13 h with S, 2-6 h more if N_max runs one seed at a time; Sec. 4 about
-1.5 h; Sec. 5 about 30 min. The instance's balance must cover about 24 h.
+25 min. The instance's balance must cover about 24 h. The instance's host
+changed after E1 and before RUNBOOK_CMAME's runs of 8-9 October: E1 ran on a
+Xeon Platinum 8470Q host with 25 CPUs allotted (`os.cpu_count()` 208, so
+E1's worker set-up gave each of three workers 69 torch threads); the
+instance now runs on a Xeon Gold 6459C host with 16 CPUs allotted
+(`os.cpu_count()` 128: 42 threads per worker) and 92 GiB of memory; the GPU,
+its driver and torch are E1's. CM2D's 2D transformer steps ran there at
+36-41 ms with three workers.
 Everything runs in ONE tmux session; nothing else may use the GPU meanwhile.
 
 ## 0. Preconditions (box, once)
@@ -45,20 +59,39 @@ status bar is already showing); after a dropped connection, `tmux attach -t w9`:
 tmux new -A -s w9
 ```
 
-0b. Fetch (a subshell carries AutoDL's network route, so nothing stays set):
+0b. Fetch the branch and the tag, directly:
 ```bash
 cd ~/autodl-tmp/FE-JEPA
-( source /etc/network_turbo
-  for i in 1 2 3; do git fetch origin +refs/heads/wp9-pool:refs/remotes/origin/wp9-pool --tags && exit 0; sleep 10; done
-  exit 1 ) && echo FETCH-OK || echo FETCH-FAILED
+git fetch origin +refs/heads/wp9-pool:refs/remotes/origin/wp9-pool +refs/tags/prereg-w9:refs/tags/prereg-w9 && echo FETCH-OK || echo FETCH-FAILED
 git rev-parse --short origin/wp9-pool        # the commit the operator instruction names
 git rev-parse --short 'prereg-w9^{commit}'   # the same commit
 ```
-Continue only if `FETCH-OK` is printed and both lines are the named commit
-(an error printed by a failed first attempt before `FETCH-OK` is harmless);
-otherwise stop here and report. The explicit refspec matters: the box's clone
-is single-branch, so a plain `git fetch` or `git pull` does not see a new
-branch.
+Continue only if `FETCH-OK` is printed and both lines are the named commit.
+If nothing at all is printed for 10 min, or the fetch has not ended after 20
+min, press Ctrl-C (then neither line appears) and take the bundle route. The explicit refspecs matter: the box's
+clone is single-branch, so a plain `git fetch` or `git pull` does not see a
+new branch or tag. (On 8 October AutoDL's network route returned HTTP 503
+while the direct fetch worked; later that day the direct fetch timed out and
+a git bundle served.) On `FETCH-FAILED`, or after a Ctrl-C: upload the bundle
+that the operator instruction sends to `~/wp9-pool.bundle` and run, in place
+of the first block:
+```bash
+cd ~/autodl-tmp/FE-JEPA
+sha256sum ~/wp9-pool.bundle                  # the SHA-256 the operator instruction names
+git fetch ~/wp9-pool.bundle +refs/heads/wp9-pool:refs/remotes/origin/wp9-pool +refs/tags/prereg-w9:refs/tags/prereg-w9 && echo FETCH-OK || echo FETCH-FAILED
+git rev-parse --short origin/wp9-pool        # the commit the operator instruction names
+git rev-parse --short 'prereg-w9^{commit}'   # the same commit
+```
+Continue only if the SHA-256 is the named one, `FETCH-OK` is printed and both
+lines are the named commit; otherwise stop here and report. (Repo side,
+before the operator instruction is sent: `git ls-remote origin
+refs/heads/wp9-pool 'refs/tags/prereg-w9^{}'` shows the branch and the
+annotated tag at the named commit; the bundle is made from the pushed branch
+and tag with `git bundle create wp9-pool.bundle 414a372..wp9-pool prereg-w9`,
+Stage 0e being on the box since cmame-paper, whose history holds it, was
+fetched there; `git bundle list-heads` shows the branch at the named commit
+and the tag's own object, and a clone fetched from the bundle resolves
+`prereg-w9^{commit}` to the named commit.)
 
 0c. Checkout, checks and the suite (~5 min):
 ```bash
@@ -67,15 +100,15 @@ git checkout -B wp9-pool origin/wp9-pool     # "Switched to ..." or "Reset branc
 git describe --tags --match prereg-w9        # must print exactly: prereg-w9
 git rev-parse 'HEAD^{tree}'                  # the tree the operator instruction names
 git status --porcelain --untracked-files=no  # must print nothing
-df -h ~/autodl-tmp / | tail -n 2             # >= 10 GB free on the data disk (15 GB with Sec. 5), >= 3 GB on /
+df -h ~/autodl-tmp / | tail -n 2             # >= 10 GB free on the data disk, >= 5 GB on / (the suite needs 5)
 pgrep -af "fejepa|spawn_main"                # must print nothing
 nvidia-smi --query-gpu=utilization.gpu,memory.used --format=csv,noheader   # about 0 %, under 1,000 MiB
 python -c "import torch; print(torch.__version__, torch.cuda.is_available())"   # 2.12.1+cu130 True
 mkdir -p runs/w9/session1
-python -m pytest -q 2>&1 | tee runs/w9/session1/pytest.log | tail -n 3   # "439 passed" (BRANCH_NOTES' count)
+python -m pytest -q 2>&1 | tee runs/w9/session1/pytest.log | tail -n 3   # "445 passed" (BRANCH_NOTES' count)
 ```
 Any output other than the comments describe: stop and report. The suite's last
-line reads `439 passed`, then warnings and the time; `438 passed, 1 skipped`
+line reads `445 passed`, then warnings and the time; `444 passed, 1 skipped`
 is also correct where `pdflatex` is missing (the paper tables' LaTeX build is
 then not compiled). Anything failed, an error, or another count: stop and
 report.
@@ -167,6 +200,7 @@ cat runs/w9/session1/status.txt
 pgrep -af "fejepa|spawn_main"                # must print nothing
 nvidia-smi --query-gpu=utilization.gpu,memory.used --format=csv,noheader   # about 0 %, under 1,000 MiB
 grep oom_kill /sys/fs/cgroup/memory.events 2>/dev/null   # note the number: 2b' compares with it
+cat /sys/fs/cgroup/memory.max                # the container's memory limit in bytes (see below)
 df -h ~/autodl-tmp / | tail -n 2
 python scripts/w9_session2_plan.py --session1 runs/w9/session1 --out-dir runs/w9/session2 \
     2>&1 | tee runs/w9/session2_plan.log
@@ -190,8 +224,13 @@ writes `runs/w9/session2/plan.json` and `commands.sh`.
 
 The summary line reads `S admitted: yes|no | N_max ... with k worker(s) at a
 time | checkpointing on|off | usable host memory X GB (source) | E1
-reproduction d`. If X is larger than the instance's memory shown in the AutoDL
-console, treat it as STOP. On STOP: send the STOP lines and
+reproduction d`. X must be the number `cat /sys/fs/cgroup/memory.max` printed
+above, divided by 1e9 and given to one decimal, with the source
+`cgroup_limit` (on the host of 8-9 October 98,784,247,808 bytes, 92 GiB, so
+`98.8 GB (cgroup_limit)`); otherwise treat it as STOP (the memory audit
+would have measured against something other than the container's limit). A
+limit other than 98,784,247,808 bytes means the instance changed host
+again: report it with the plan's output. On STOP: send the STOP lines and
 `runs/w9/session2_plan.log`; then Sec. 4 (its own checks decide whether it
 can run); then shut the instance down without releasing it.
 
@@ -273,8 +312,8 @@ cd ~ && tar czf wp9_session2_return_$(date +%Y%m%d).tgz wp9_session2_return \
 ```
 Send the tarball. The states stay on the box (their SHA-256 are in the
 provenance file and in each report); so do the evaluation sets. Then Sec. 4
-(the paper's timing), then Sec. 5 if the operator instruction asks for it;
-then shut the instance down without releasing it.
+(the threads of the paper's solvers); then shut the instance down without
+releasing it.
 
 ## 3. Adjudication (repo)
 ```bash
@@ -292,120 +331,90 @@ PREREG_W9 Sec. 6, the secondary readings of Sec. 7, refused reports and
 deviations; the inputs' SHA-256 and the adjudicating code's are recorded in
 the verdict file.
 
-## 4. After 2d (also after a STOP in 2a): timing and field export for the paper (box; ~1.5 h)
-The CMAME paper's cost table: per instance, on the same instances and this
-machine, the surrogate's inference (GPU, batch of one, every load case in one
-pass; its accuracy on those instances recorded too) against exact solves of
-the same system: the direct solve that bought every label (SuperLU on the
-free block, one process), unpreconditioned conjugate gradients to a relative
-residual of 1e-10 from zero, the same CG started from the surrogate's
-prediction, and (Stage 0e) the same CG from zero stopped as soon as it is as
-accurate as the surrogate in energy, for the raw prediction and for the
-prediction rescaled by the label-free amplitude c*. 2D: E1's states on 32
-validation instances and 32 of F5 (a few minutes). 3D: Phase-2b's states on
-32 in-band validation instances (about 10 min) and 8 of the fine set, whose
-direct solves take several minutes and an estimated 7-10 GB of host memory
-each (attempt 6 of Phase-2 factorised all fine instances in one process on
-this box); each solver stops starting new solves after 15 min per set (the
-one in progress completes), and the surrogate is timed on every instance.
-Then (Stage 0e) the paper's field figures and per-load energies: Phase-2b's
-label-free, labels-only and graph-network states (seeds 0-2; the AR ones
-checked against the report, the supervised ones against
-`records/wp9/phase2_supervised_states.json`, all of them also by content) on
-all 256 validation instances, and three instances chosen by rules fixed in
-the script (about 10-20 min, estimated). Read only: no state, corpus or
-report is written. A failure here costs nothing else; report it.
-
+## 4. After 2d (also after a STOP in 2a): the threads of the paper's solvers (box; ~25 min)
+The CMAME paper's cost table (RUNBOOK_CMAME Sec. A, run on 8 October,
+recorded in cmame-paper's `records/cmame/timing/`) timed the direct solve
+(SuperLU) and conjugate gradients on the CPU in the box's environment
+(`OMP_NUM_THREADS` and `MKL_NUM_THREADS` 16, `OPENBLAS_NUM_THREADS` unset; 16
+CPUs allotted); how many threads the solvers used was not recorded
+(threadpoolctl is not installed there). This section times the same solvers
+on the same first instances twice, in that environment and with one thread
+(`OMP_NUM_THREADS`, `MKL_NUM_THREADS` and `OPENBLAS_NUM_THREADS` 1): in 2D on
+E1's first 8 validation instances, in 3D on Phase-2b's first 8 validation and
+first 2 fine-mesh instances (the direct solve of a fine instance takes about
+two minutes and 7-10 GB of host memory); and it records the BLAS libraries
+numpy and scipy load, with their thread pools read at run time
+(`scripts/blas_threads.py`). The 3D set is timed once more in the box's
+environment after the one-thread run, so that a difference between the two
+settings can be told from drift. Nothing in PREREG_W9 reads it. Read only: no
+state, corpus or report is written. A failure here costs nothing else; report
+it.
 First the checks, on their own:
 ```bash
 cd ~/autodl-tmp/FE-JEPA
-P=runs/w9/timing; mkdir -p $P
+P=runs/w9/threads; mkdir -p $P
 ( date; pgrep -af "fejepa|spawn_main"
-  nvidia-smi --query-gpu=utilization.gpu,memory.used --format=csv,noheader ) 2>&1 | tee $P/precheck.txt
+  nvidia-smi --query-gpu=utilization.gpu,memory.used --format=csv,noheader
+  env | grep -E "^(OMP|MKL|OPENBLAS|GOTO)_" | sort ) 2>&1 | tee $P/precheck.txt
 ```
 `pgrep` must print nothing and the GPU line must read about 0 % and under
-1,000 MiB; otherwise stop here and report (the timings would be wrong). Then:
+1,000 MiB; otherwise stop here and report (the timings would be wrong). The
+lines after them include `MKL_NUM_THREADS=16` and `OMP_NUM_THREADS=16`, and
+no `OPENBLAS_` or `GOTO_` line: the environment of the cost table; if they
+differ, note them for the report and go on. Then:
 ```bash
 cd ~/autodl-tmp/FE-JEPA
-P=runs/w9/timing
+P=runs/w9/threads
 [ -s $P/status.txt ] && mv $P/status.txt $P/status.txt.$(date +%Y%m%d-%H%M%S); : > $P/status.txt
 run() { local log=$1; shift; [ -e $P/$log ] && mv $P/$log $P/$log.$(date +%Y%m%d-%H%M%S)
         "$@" 2>&1 | tee $P/$log; echo "$log exit=${PIPESTATUS[0]}" | tee -a $P/status.txt; }
-run timing_2d.log python scripts/time_inference_vs_solve.py \
+run timing_2d_env.log python scripts/time_inference_vs_solve.py \
     --report records/wp8/e1/e1_2d_base/report.json --states-dir runs/e1_2d_base/e8_states \
-    --family F5=runs/w9/ood2d/F5 --out $P/timing_2d.json
-run timing_3d.log python scripts/time_inference_vs_solve.py \
+    --n-val 8 --solvers direct cg --out $P/timing_2d_env.json
+run timing_2d_one.log env OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 \
+    python scripts/time_inference_vs_solve.py \
+    --report records/wp8/e1/e1_2d_base/report.json --states-dir runs/e1_2d_base/e8_states \
+    --n-val 8 --solvers direct cg --out $P/timing_2d_one.json
+run timing_3d_env.log python scripts/time_inference_vs_solve.py \
     --report records/wp8/e2/baseline/report_phase2b.json --states-dir runs/phase2/e8_states \
-    --out $P/timing_3d.json
-[ -d $P/fields ] && mv $P/fields $P/fields.$(date +%Y%m%d-%H%M%S)
-run fields_3d.log python scripts/export_fields.py \
+    --n-val 8 --n-fine 2 --solvers direct cg --out $P/timing_3d_env.json
+run timing_3d_one.log env OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 \
+    python scripts/time_inference_vs_solve.py \
     --report records/wp8/e2/baseline/report_phase2b.json --states-dir runs/phase2/e8_states \
-    --out $P/fields
+    --n-val 8 --n-fine 2 --solvers direct cg --out $P/timing_3d_one.json
+run timing_3d_env2.log python scripts/time_inference_vs_solve.py \
+    --report records/wp8/e2/baseline/report_phase2b.json --states-dir runs/phase2/e8_states \
+    --n-val 8 --n-fine 2 --solvers direct cg --out $P/timing_3d_env2.json
+run blas_env.log python scripts/blas_threads.py
+run blas_one.log env OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 \
+    python scripts/blas_threads.py
+python -c "import numpy, scipy; numpy.show_config(); scipy.show_config()" > $P/blas.txt 2>&1
 ( echo "HEAD $(git rev-parse HEAD)"; echo "describe $(git describe --tags --match prereg-w9)"
+  env | grep -E "^(OMP|MKL|OPENBLAS|GOTO)_" | sort
   nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader
   lscpu | grep -E "^Model name|^CPU\(s\)|^Thread|^Socket"; echo "nproc $(nproc)"
   cat /sys/fs/cgroup/cpu.max /sys/fs/cgroup/memory.max 2>/dev/null; free -g | head -n 2
 ) > $P/machine.txt 2>&1
-OUT=~/wp9_timing_return && rm -rf $OUT && mkdir -p $OUT && cp -r $P/* $OUT/
-cd ~ && tar czf wp9_timing_return_$(date +%Y%m%d).tgz wp9_timing_return \
-    && sha256sum wp9_timing_return_*.tgz && du -h wp9_timing_return_*.tgz
+cat $P/status.txt
+OUT=~/wp9_threads_return && rm -rf $OUT && mkdir -p $OUT && cp $P/* $OUT/
+cd ~ && tar czf wp9_threads_return_$(date +%Y%m%d).tgz wp9_threads_return \
+    && sha256sum wp9_threads_return_*.tgz && du -h wp9_threads_return_*.tgz
 ```
 Each timing step prints one line per instance (on the 3D fine set one every
-few minutes: long silences there are normal), then one line per set with the
-medians and the largest deviation of each solver's solution from the stored
-labels (`direct_label_max_rel_dev`: round-off, below 1e-12; `cg` and
-`cg_warm` below about 1e-8; the two matching kinds print `null`, they stop
-short of a full solution), and last the check of the timed model against the
-report's own arrays (`disp_rel_l2_max_rel_dev` and
-`energy_gap_rel_max_rel_dev`, 0 or round-off). In the JSON,
-`cg_match_unreached`, `cg_match_cstar_unreached` and both `*_iters_mismatch`
-are 0. The field export prints a line every 16 validation instances, one
-line per figure and last a summary line: `content_median_rel_dev` about 0 for
-the `ar_*` and `labels_*` states and about 1e-4 for the `mgn_*` ones (the
-graph network's CUDA reductions are not bitwise reproducible); `left_out` and
-`content_mismatch` empty; the figures' files `instance_00485.npz` (fig5,
-validation index 107), `instance_00130.npz` (fig6, validation index 154) and
-`instance_00077.npz` (fig7, fine-set index 77). `status.txt` must show the
-three steps with `exit=0`. `exit=3` from a timing step: a family was skipped,
-the rest timed. `exit=4` from the field export: a supervised state failed
-both its hash and its content check and was left out, the rest exported;
-`exit=5`: a state used on its hash did not reproduce the report's arrays.
-Report any of these. The tarball is a few tens of MB with the fields. Send
-it.
+minute or two, longer with one thread: long silences there are normal), then
+one line per set with the medians and the largest deviation of each solver's
+solution from the stored labels (`direct_label_max_rel_dev` below 1e-12, `cg`
+below about 1e-8), and last the check of the timed model against the
+report's own arrays (0 or round-off). A per-instance line that reads
+`skipped` for a solver means that solver ran out of its 900 s budget: report
+it. `blas_threads.py` prints one JSON object; in the box's environment its
+`pools` should list the BLAS that numpy loads and the one SciPy's SuperLU
+links, each with 16 threads, and with one thread 1. `status.txt` must show
+the seven steps with `exit=0`. Send the tarball (well under 1 MB) with the
+SHA-256 line.
 
-## 5. Optional, after Sec. 4: the torch stack against the host (box; ~30 min)
-wp8's post-hoc timing could not separate the box's torch stack (2.12.1+cu130)
-from its host as the cause of the ~3x slower 2D step of the v2.1.5 code
-(WP2's run of 31 July 2026 used torch 2.11.0+cu128 on the same GPU model). This
-times the v2.1.5 code in-process under both stacks. The torch wheels are
-~3-4 GB from download.pytorch.org (the network decides the time). A failure
-here is reported and costs nothing else. The virtual environment's python is
-only ever called by its path: never activate it, never `pip install` into the
-system environment.
-```bash
-cd ~/autodl-tmp/FE-JEPA
-P=runs/w9/torchstack; mkdir -p $P
-run() { local log=$1; shift; "$@" 2>&1 | tee $P/$log; echo "$log exit=${PIPESTATUS[0]}" | tee -a $P/status.txt; }
-[ -d ../FE-JEPA-v215/src ] || git worktree add ../FE-JEPA-v215 v2.1.5
-run profile_v215_t212.log python scripts/posthoc_profile_2d.py --src ../FE-JEPA-v215/src \
-    --variants default threads_w3 --no-sup --no-profile --out $P/profile_2d_v215_t212.json
-mkdir -p ~/autodl-tmp/tmp
-[ -x ~/autodl-tmp/venv-t211/bin/python ] || python -m venv --system-site-packages ~/autodl-tmp/venv-t211
-( source /etc/network_turbo
-  TMPDIR=~/autodl-tmp/tmp ~/autodl-tmp/venv-t211/bin/pip install --no-cache-dir torch==2.11.0 \
-      --index-url https://download.pytorch.org/whl/cu128 ) 2>&1 | tee $P/venv_t211.log
-if ~/autodl-tmp/venv-t211/bin/python -c "import sys, torch; sys.exit(torch.__version__ != '2.11.0+cu128' or not torch.cuda.is_available())"; then
-  run profile_v215_t211.log ~/autodl-tmp/venv-t211/bin/python scripts/posthoc_profile_2d.py \
-      --src ../FE-JEPA-v215/src --variants default threads_w3 --no-sup --no-profile \
-      --out $P/profile_2d_v215_t211.json
-else echo "profile_v215_t211.log skipped: the venv's torch is not 2.11.0+cu128 with CUDA" | tee -a $P/status.txt; fi
-python -c "import torch; print('system torch', torch.__version__)"     # must still print 2.12.1+cu130
-OUT=~/wp9_torchstack_return && rm -rf $OUT && mkdir -p $OUT && cp $P/* $OUT/
-cd ~ && tar czf wp9_torchstack_return_$(date +%Y%m%d).tgz wp9_torchstack_return \
-    && sha256sum wp9_torchstack_return_*.tgz
-```
-pip may print a `dependency resolver` message saying torchvision or torchaudio
-want another torch: expected, harmless. The environment shares the box's other
-packages and shadows only torch and its CUDA libraries (~5-7 GB on the data
-disk; keep it for later timings). Both outputs record the torch version they
-ran. Then send the tarball and shut the instance down without releasing it.
+## 5. Withdrawn: the torch stack against the host
+Stage 0b scheduled an optional timing of the v2.1.5 code under torch
+2.11.0+cu128 (wp8's post-hoc question why the v2.1.5 2D step ran about three
+times slower on this box). It needed AutoDL's network route and a 3-4 GB
+download, and neither wp9 nor the paper reads it; it is not run.

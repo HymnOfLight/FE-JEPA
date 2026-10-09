@@ -21,6 +21,23 @@ from fejepa.fe.solve import SolveLedger  # noqa: E402
 from fejepa.fe.synthetic import synthetic_instance  # noqa: E402
 
 
+@pytest.fixture(autouse=True)
+def _sigpipe_ignored():
+    """Python ignores SIGPIPE, and a write to a closed pipe raises
+    BrokenPipeError; but gmsh.initialize() restores the signal's default
+    action (ending the process), and gmsh stays initialised in the test
+    process once a test has meshed in it. A later test whose worker pool is
+    stopped while the pool still writes to its workers' queue (a failed
+    map_units) could then end the whole test run without a summary line.
+    Every test starts with SIGPIPE ignored again (from cmame-paper Stage 3,
+    where it was found; wp9-pool Stage 0f)."""
+    import signal
+
+    if hasattr(signal, "SIGPIPE"):                       # POSIX
+        signal.signal(signal.SIGPIPE, signal.SIG_IGN)
+    yield
+
+
 @pytest.fixture(scope="session")
 def rng():
     return np.random.default_rng(0)

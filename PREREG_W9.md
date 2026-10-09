@@ -1,6 +1,6 @@
 # PRE-REGISTRATION W9 -- unlabelled pool size (C1) and a mesh-independent scale (S)
 
-**Branch:** wp9-pool. **Status:** r3 DRAFT (2 October 2026), not stamped; the six CONFIG_SHA256 lines below are open. Stamping fills them all at once, before session 1 (Sec. 8); post-stamp criterion changes are prohibited. **Authority:** this English file governs. **Publication:** every outcome below is publishable.
+**Branch:** wp9-pool. **Status:** r3, stamped 9 October 2026 before session 1: the six CONFIG_SHA256 lines below are filled, and the last line is this file's SHA-256 (Sec. 8); post-stamp criterion changes are prohibited. **Authority:** this English file governs. **Publication:** every outcome below is publishable.
 
 ## 1. Questions
 - **Q1 (C1).** At a fixed budget of 204,800 label-free AR steps per seed, does training on a larger unlabelled pool lower the relative energy gap in band (and, secondarily, in the tail and on held-out families)? Every deciding run so far trained on 1,024 instances. The theory note observes that, because the AR objective needs no reference solution, a surrogate can be trained on arbitrarily many unlabelled instances at assembly cost -- a statement about cost, with generalisation explicitly outside its scope; whether a larger pool lowers the error at a fixed step budget has not been measured, and neither verdict below bears on the note's statement. A larger pool is a larger sample of the same training family; H1 concerns that family's in-band distribution.
@@ -74,10 +74,10 @@ Anything that departs from this file or the runbook (a crash, an out-of-memory e
 
 Revision: r3 (2 Oct) pre-stamp review: H1's properties restated on E1's per-instance values (one validation instance carries the reference's seed spread; the effective threshold stated); what a verdict licenses; Q1's reading of the theory note and Q2's wording corrected; H2's properties, its remaining instance selection, the bundle's scope, the two ratio definitions and the uninformative case stated; the 1/64 measurement committed (its numbers are the committed draw's); the reuse chain from E1's commit; the CPU pilot recorded; H1's in-band set extended by IB (2,048 fresh training-family instances) so that one instance moves H1's arm means by about 0.2-0.3% instead of about 2.6%; the evaluation sets' sizes and seeds checked by the plan and the adjudication; the fresh baseline runs in every session 2; robustness readings (medians, Welch and instance-resampling intervals); an R growth reading; adjudicating code compared with the stamp. No threshold changed. r2 (2 Oct) pre-run reviews: H2's reference is a fresh baseline on fresh seeds (`w9_b_n1024`, seeds 3-5; S on the same seeds) instead of E1's states, which rule 1 selected on F5; H2 adds the F5 / in-band ratio (the growth) and K1's in-band displacement; S's decode scale carries the factor 1/64 so that its output level matches E1's at training mesh sizes; a report that fails its checks is refused alone, and a primary arm without a valid report, or a non-finite reference, voids only its own hypothesis; the decisions are recomputed (by the plan and by the adjudication) and their inputs, rules and commit checked; every report is checked against its own stamped line and commit, and the return against its status and provenance files; rule 3 undecided keeps checkpointing on; the simulation restated at E1's sample noise; costs include the sequential branch and S's two arms; exactness claims scoped to CPU. r1 (1 Oct) initial draft (Stage 0b).
 
-CONFIG_SHA256[w9_c1_n1024] = <fill before tagging>
-CONFIG_SHA256[w9_c1_n4096] = <fill before tagging>
-CONFIG_SHA256[w9_c1_n25600] = <fill before tagging>
-CONFIG_SHA256[w9_c1_n12800] = <fill before tagging>
-CONFIG_SHA256[w9_b_n1024] = <fill before tagging>
-CONFIG_SHA256[w9_s_n1024] = <fill before tagging>
-PREREG_W9_SHA256 = <record after commit>
+CONFIG_SHA256[w9_c1_n1024] = acccf57ec50e0fddd518f2a4eecfcb664c4b8f6556e5977dec7f25b659cae78a
+CONFIG_SHA256[w9_c1_n4096] = 0bae42a420f41cdcadfb9fb2531ff2fd7bf11c99c6a8694971021cce34a125f4
+CONFIG_SHA256[w9_c1_n25600] = 91e6ecd71bca35ab73e6f0448a27602ae6110cbb01a25bc59b7b3b4cf9d7bd08
+CONFIG_SHA256[w9_c1_n12800] = 15a14602d6908f9c523288ec643fea8d57f2df8ed6ee4bbff6d7bd738efb95eb
+CONFIG_SHA256[w9_b_n1024] = 49574ab0f0086d5e8ce0f5fdf0c3872ceb00bb176e9d2039857de0fa1603d566
+CONFIG_SHA256[w9_s_n1024] = b3cbf33c8df3e8a30d1723c7bcea01e40b636b7d24fc3c1adb2aa3048216cece
+PREREG_W9_SHA256 = 0f61e286f27b41df8a8d047aaaa37c3e9e520f21df66fbd57cf6401aa9c5bf20
