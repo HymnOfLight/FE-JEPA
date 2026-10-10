@@ -113,7 +113,13 @@ training evaluates the assembled discrete potential energy of the prediction $u$
 \Cref{fig:schematic} contrasts the two routes. The label-free transformer minimises
 \eqref{eq:training} with $L=4$: at each step one training instance is drawn, without
 replacement within an epoch, its four load cases are predicted, and the mean of their
-energies is the loss; no reference solution is read. The supervised transformer, the same
+energies is the loss; no reference solution is read. We call this training label-free. In
+the terms of machine learning it is unsupervised, although by \cref{cor:training} it is
+exactly supervised regression in the stiffness norm, with the solution implied by $K$ and
+$F$. It is not self-supervised learning in the usual sense, which learns representations
+through pretext tasks such as predicting masked parts of the input; the terms from
+self-supervised learning that \ref{app:prereg} and \ref{app:e1} examine belong to
+separate experiments. The supervised transformer, the same
 network, minimises on labelled instances the mean over the load cases of the relative
 displacement error,
 \begin{equation}

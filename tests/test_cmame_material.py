@@ -737,9 +737,13 @@ def test_the_functional_check_is_described_as_recorded():
 def test_highlights_match_the_numbers(built):
     lines = (PAPER / "highlights.txt").read_text(encoding="utf-8").splitlines()
     assert len(lines) == 5 and all(0 < len(x) <= 85 for x in lines)
-    assert f"{built['numbers']['numThreeMgnOverFreeVm']} times the label-free stress error" \
-        in lines[2]
-    assert "zero labels beat 1,024 labels on all five metrics" in lines[1]
+    num = built["numbers"]
+    assert "zero labels beat 1,024 on all five metrics" in lines[1]
+    assert f"{num['numThreeMgnOverFreeVm']} times the label-free stress error" in lines[2]
+    # "halved": in 2D the stiffness-norm transformer's von Mises error is about half the
+    # supervised transformer's (H2b, the run of 9 October 2026)
+    assert "a stiffness-norm loss halved the stress error" in lines[3]
+    assert 0.4 <= float(num["numCmKnormVm"]) / float(num["numCmLabVm"]) <= 0.55
 
 
 def test_abstract_has_no_numbers_and_at_most_250_words():
@@ -764,12 +768,19 @@ def _prose(tex: str) -> str:
 ALLOWED_DECIMALS = {"0.05", "0.5", "1.5", "0.25", "0.38", "0.8", "0.06", "0.16", "0.12", "0.6",
                     "1.2", "0.08", "0.0579", "0.0906", "0.0374", "1.8", "2.5"}
 ALLOWED_PERCENT = {"5", "10", "20", "30", "40", "95"}
+# names that contain version numbers, not results: the AI models named in the
+# generative-AI declaration and in Appendix C, and the licences named in the Data
+# availability statement
+NAMES_WITH_VERSIONS = ("Claude Fable 5.1", "Claude Opus 5.5",
+                       "PolyForm Noncommercial License 1.0.0", "CC BY 4.0")
 
 
 def test_the_text_carries_no_hand_typed_result():
     bad = []
     for f in sorted((PAPER / "sections").glob("*.tex")):
         prose = _prose(f.read_text(encoding="utf-8"))
+        for name in NAMES_WITH_VERSIONS:
+            prose = prose.replace(name, "")
         for m in re.finditer(r"(?<![\w.])(\d+\.\d+)(?![\w.])", prose):
             if m.group(1) not in ALLOWED_DECIMALS:
                 bad.append(f"{f.name}: {m.group(1)}")

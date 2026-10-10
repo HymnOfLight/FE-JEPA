@@ -949,3 +949,61 @@ Changes:
   before this commit, which names it.
 - No source file, configuration, pre-registration or run record changed.
   Suite 569.
+
+## Stage 10b (10 Oct 2026) -- authors, affiliations, declarations and licences
+
+The authors' decisions of 10 October 2026, entered in the manuscript:
+
+- Both authors are corresponding authors, Cao submitting the manuscript and
+  handling the correspondence with the journal (`main.tex`: one footnote,
+  "Corresponding authors.", and Song's address). Elsevier's submission system
+  holds one corresponding author, the one who submits; its journals may show
+  further corresponding authors in the published article at the authors'
+  request, and this journal has published articles that show two.
+- Affiliations as in the authors' joint preprint arXiv:2608.14695: School of
+  Engineering, The University of Manchester, Oxford Road, Manchester M13 9PL;
+  School of Computer Science, Wuhan University, 299 Bayi Road, Wuchang
+  District, Wuhan 430072.
+- `sections/declarations.tex`: the CRediT statement (Cao: Conceptualization,
+  Data curation, Formal analysis, Methodology, Project administration,
+  Software, Validation, Visualization, Writing -- original draft, Writing --
+  review & editing; Song: Data curation, Investigation, Resources, Validation,
+  Writing -- review & editing); no competing interests; no specific funding;
+  the generative-AI declaration under the heading of Elsevier's policy of
+  June 2026 ("... in the manuscript preparation process"), naming Claude
+  Fable 5, Claude Fable 5.1 and Claude Opus 5.5 (Anthropic).
+- Licences (the author's decision of 10 October 2026): `LICENSE` holds the
+  PolyForm Noncommercial License 1.0.0, verbatim from the PolyForm Project's
+  repository, after the line "Required Notice: Copyright 2026 Ruifeng Cao";
+  `LICENSE-CC-BY-4.0` holds the legal code of CC BY 4.0 (SPDX's text) for the
+  records, the console record `wp2_e2_console.txt`, the pre-registration
+  documents, the deviations ledger, the provenance note and `paper/`. The
+  README's new section "Licence" states what each covers and that the terms
+  apply to every version in the repository. The Data availability statement
+  names both licences; its first sentence (the address, the tag and the
+  Zenodo DOI) stays pending until the repository's move, and Appendix C's
+  pending box no longer lists the licence.
+- Appendix C: the code was written with the assistance of the same models.
+- Section 3.3 (the author's decision of 10 October 2026 to keep the term
+  "label-free"): the training is defined as label-free; in the terms of
+  machine learning it is unsupervised, though by Corollary 1 it is exactly
+  stiffness-norm regression; it is not self-supervised learning, and the
+  terms from self-supervised learning in Appendices A and B belong to
+  separate experiments.
+- `highlights.txt` (the author's choice of 10 October 2026): the 3D result
+  carries "pre-registered"; the graph network's line says 3D; a 2D line, "In
+  2D, with the same labels, a stiffness-norm loss halved the stress error",
+  replaces the line on unmet criteria, which the text and Table A.1 still
+  report. Five lines of at most 84 characters.
+- `tests/test_cmame_material.py`: the highlights test follows the new lines
+  and checks that the 2D stiffness-norm transformer's von Mises error is
+  between 0.4 and 0.55 times the supervised transformer's ("halved"; the
+  record gives 0.106 against 0.235); the test for hand-typed numbers skips the
+  two model names and the two licence names that contain version numbers.
+- `tests/test_licences.py` (4 new): both licence texts are verbatim (SHA-256 of
+  the official texts), the README names each path it licenses and each
+  exists, and the Data availability statement names both licences.
+- RUNBOOK_CMAME: the suite count in A0c, B1c and D0c reads 571 passed, 2 deselected.
+- The manuscript compiles without undefined references.
+- No source file, configuration, pre-registration or run record changed.
+  Suite 573.
