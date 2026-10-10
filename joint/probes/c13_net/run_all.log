@@ -1,0 +1,18 @@
+relu s1 step 750: loss -0.76420  gap median 7.27e-01  stiffness err median +206.577%  IoU=1 share 0.13  false contact 0.000  265s
+relu s1 step 1500: loss -1.56055  gap median 3.87e-01  stiffness err median +80.104%  IoU=1 share 0.14  false contact 0.002  528s
+relu s1 step 3000: loss -2.10146  gap median 3.75e-02  stiffness err median +4.892%  IoU=1 share 0.66  false contact 0.001  1145s
+softplus3 s1 step 750: loss -0.83849  gap median 6.19e-01  stiffness err median +183.138%  IoU=1 share 0.13  false contact 0.000  270s
+softplus3 s1 step 1500: loss -0.92794  gap median 5.75e-01  stiffness err median +179.490%  IoU=1 share 0.14  false contact 0.001  529s
+softplus3 s1 step 3000: loss -2.11608  gap median 3.18e-02  stiffness err median +3.694%  IoU=1 share 0.63  false contact 0.002  1056s
+square s1 step 750: loss -0.07970  gap median 8.54e-01  stiffness err median +632.711%  IoU=1 share 0.13  false contact 0.000  269s
+square s1 step 1500: loss -1.05863  gap median 6.04e-01  stiffness err median +186.994%  IoU=1 share 0.13  false contact 0.000  527s
+square s1 step 3000: loss -1.94755  gap median 1.07e-01  stiffness err median +15.361%  IoU=1 share 0.13  false contact 0.000  1033s
+identity s1 step 750: loss -0.72177  gap median 7.04e-01  stiffness err median +162.080%  IoU=1 share 0.13  false contact 0.000  263s
+identity s1 step 1500: loss -0.54723  gap median 1.08e+00  stiffness err median +33.134%  IoU=1 share 0.19  false contact 0.016  524s
+identity s1 step 3000: loss -2.73685  gap median -1.60e-01  stiffness err median -12.384%  IoU=1 share 0.13  false contact 0.204  1042s
+softplus2 skipped to save time
+Terminated
+supervised s1 step 750: loss 0.00012  gap median 1.04e+00  stiffness err median -0.354%  IoU=1 share 0.13  false contact 0.002  257s
+supervised s1 step 1500: loss 0.00005  gap median 3.73e-01  stiffness err median +0.145%  IoU=1 share 0.13  false contact 0.002  510s
+supervised s1 step 3000: loss 0.00002  gap median 2.03e-01  stiffness err median +0.128%  IoU=1 share 0.13  false contact 0.002  1014s
+all done

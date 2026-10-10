@@ -1,0 +1,16 @@
+FS1 h10_tp1                S  37.709  /fine 1.0120  {'h': 10.0, 'n_tp': 1, 'n_tf': 1, 'n_tw': 1, 'nodes': 4064, 'hexes': 1946, 'dof_reduced': 11091}  5.7 s
+FS1 h10_tp2                S  37.845  /fine 1.0157  {'h': 10.0, 'n_tp': 2, 'n_tf': 2, 'n_tw': 1, 'nodes': 5260, 'hexes': 3000, 'dof_reduced': 14566}  6.3 s
+FS1 h7.5_tp2               S  37.140  /fine 0.9968  {'h': 7.5, 'n_tp': 2, 'n_tf': 2, 'n_tw': 1, 'nodes': 7366, 'hexes': 4234, 'dof_reduced': 20434}  13.6 s
+FS1 h5_tp2 (G-C1a medium)  S  37.156  /fine 0.9972  {'h': 5.0, 'n_tp': 2, 'n_tf': 2, 'n_tw': 1, 'nodes': 12379, 'hexes': 7249, 'dof_reduced': 34603}  28.3 s
+FS2 h10_tp1                S  53.829  /fine 1.0114  {'h': 10.0, 'n_tp': 1, 'n_tf': 1, 'n_tw': 1, 'nodes': 4168, 'hexes': 1996, 'dof_reduced': 11367}  5.5 s
+FS2 h10_tp2                S  54.014  /fine 1.0149  {'h': 10.0, 'n_tp': 2, 'n_tf': 2, 'n_tw': 1, 'nodes': 5384, 'hexes': 3068, 'dof_reduced': 14900}  5.9 s
+FS2 h7.5_tp2               S  53.335  /fine 1.0022  {'h': 7.5, 'n_tp': 2, 'n_tf': 2, 'n_tw': 1, 'nodes': 7402, 'hexes': 4256, 'dof_reduced': 20539}  10.5 s
+FS2 h5_tp2 (G-C1a medium)  S  53.561  /fine 1.0064  {'h': 5.0, 'n_tp': 2, 'n_tf': 2, 'n_tw': 1, 'nodes': 12333, 'hexes': 7224, 'dof_reduced': 34485}  20.2 s
+FS3 h10_tp1                S  65.184  /fine 1.0122  {'h': 10.0, 'n_tp': 1, 'n_tf': 1, 'n_tw': 1, 'nodes': 4104, 'hexes': 1966, 'dof_reduced': 11177}  5.9 s
+FS3 h10_tp2                S  65.394  /fine 1.0155  {'h': 10.0, 'n_tp': 2, 'n_tf': 2, 'n_tw': 1, 'nodes': 5294, 'hexes': 3012, 'dof_reduced': 14633}  9.1 s
+FS3 h7.5_tp2               S  64.702  /fine 1.0047  {'h': 7.5, 'n_tp': 2, 'n_tf': 2, 'n_tw': 1, 'nodes': 7333, 'hexes': 4214, 'dof_reduced': 20335}  10.4 s
+FS3 h5_tp2 (G-C1a medium)  S  64.823  /fine 1.0066  {'h': 5.0, 'n_tp': 2, 'n_tf': 2, 'n_tw': 1, 'nodes': 12312, 'hexes': 7214, 'dof_reduced': 34425}  26.9 s
+FS4 h10_tp1                S  35.679  /fine 1.0074  {'h': 10.0, 'n_tp': 1, 'n_tf': 1, 'n_tw': 1, 'nodes': 4040, 'hexes': 1934, 'dof_reduced': 11017}  6.9 s
+FS4 h10_tp2                S  35.822  /fine 1.0114  {'h': 10.0, 'n_tp': 2, 'n_tf': 2, 'n_tw': 1, 'nodes': 5230, 'hexes': 2980, 'dof_reduced': 14473}  10.1 s
+FS4 h7.5_tp2               S  35.129  /fine 0.9919  {'h': 7.5, 'n_tp': 2, 'n_tf': 2, 'n_tw': 1, 'nodes': 7333, 'hexes': 4214, 'dof_reduced': 20335}  16.0 s
+FS4 h5_tp2 (G-C1a medium)  S  35.400  /fine 0.9995  {'h': 5.0, 'n_tp': 2, 'n_tf': 2, 'n_tw': 1, 'nodes': 12454, 'hexes': 7299, 'dof_reduced': 34825}  28.5 s

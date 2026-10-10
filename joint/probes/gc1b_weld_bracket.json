@@ -1,0 +1,906 @@
+{
+ "runs": [
+  {
+   "variant": "kept",
+   "series": "WT1",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 154.28379992572866,
+   "weld": {
+    "volume_over_exact": 1.1250000000428053,
+    "reach_on_flange_mm": 7.071067812000001,
+    "reach_on_web_mm": 7.071067811999999
+   },
+   "pdas_iterations": 16,
+   "equilibrium_rel": 3.45062289852649e-13,
+   "seconds": 34.2,
+   "maxrss_MB": 942
+  },
+  {
+   "variant": "kept",
+   "series": "WT1f",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 187.77781059409318,
+   "weld": {
+    "volume_over_exact": 1.0833333333436173,
+    "reach_on_flange_mm": 11.313708499,
+    "reach_on_web_mm": 11.313708499
+   },
+   "pdas_iterations": 15,
+   "equilibrium_rel": 6.810296326875687e-13,
+   "seconds": 42.7,
+   "maxrss_MB": 1114
+  },
+  {
+   "variant": "kept",
+   "series": "WT2A",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 136.5518830408255,
+   "weld": {
+    "volume_over_exact": 1.1999999999325217,
+    "reach_on_flange_mm": 4.242640687,
+    "reach_on_web_mm": 4.242640687
+   },
+   "pdas_iterations": 16,
+   "equilibrium_rel": 7.867129170335829e-13,
+   "seconds": 30.6,
+   "maxrss_MB": 1114
+  },
+  {
+   "variant": "kept",
+   "series": "WT2B",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 174.33971470527572,
+   "weld": {
+    "volume_over_exact": 1.1000000000761994,
+    "reach_on_flange_mm": 9.899494937,
+    "reach_on_web_mm": 9.899494937
+   },
+   "pdas_iterations": 15,
+   "equilibrium_rel": 8.607457857578993e-13,
+   "seconds": 38.2,
+   "maxrss_MB": 1114
+  },
+  {
+   "variant": "kept",
+   "series": "WT4A",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 197.9238830884971,
+   "weld": {
+    "volume_over_exact": 1.1250000000428053,
+    "reach_on_flange_mm": 7.071067812000001,
+    "reach_on_web_mm": 7.071067811999999
+   },
+   "pdas_iterations": 18,
+   "equilibrium_rel": -2.8794602258130907e-13,
+   "seconds": 76.6,
+   "maxrss_MB": 1205
+  },
+  {
+   "variant": "kept",
+   "series": "WT51",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 149.60157160705066,
+   "weld": {
+    "volume_over_exact": 1.1250000000428055,
+    "reach_on_flange_mm": 7.071067812000001,
+    "reach_on_web_mm": 7.071067811999999
+   },
+   "pdas_iterations": 16,
+   "equilibrium_rel": 1.3897079043090343e-13,
+   "seconds": 56.4,
+   "maxrss_MB": 1205
+  },
+  {
+   "variant": "kept",
+   "series": "WT53C",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 149.14097845189647,
+   "weld": {
+    "volume_over_exact": 1.1250000000428053,
+    "reach_on_flange_mm": 7.071067812000001,
+    "reach_on_web_mm": 7.071067811999999
+   },
+   "pdas_iterations": 16,
+   "equilibrium_rel": -2.1718733478337527e-13,
+   "seconds": 37.8,
+   "maxrss_MB": 1205
+  },
+  {
+   "variant": "kept",
+   "series": "WT53D",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 149.56755587798838,
+   "weld": {
+    "volume_over_exact": 1.1250000000428055,
+    "reach_on_flange_mm": 7.071067812000001,
+    "reach_on_web_mm": 7.071067811999999
+   },
+   "pdas_iterations": 16,
+   "equilibrium_rel": -5.846231942996383e-13,
+   "seconds": 33.4,
+   "maxrss_MB": 1205
+  },
+  {
+   "variant": "kept",
+   "series": "WT53E",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 148.70415808972243,
+   "weld": {
+    "volume_over_exact": 1.1250000000428053,
+    "reach_on_flange_mm": 7.071067812000001,
+    "reach_on_web_mm": 7.071067811999999
+   },
+   "pdas_iterations": 16,
+   "equilibrium_rel": -7.930793799459934e-13,
+   "seconds": 34.4,
+   "maxrss_MB": 1205
+  },
+  {
+   "variant": "kept",
+   "series": "WT7_M12",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 83.48652926540007,
+   "weld": {
+    "volume_over_exact": 1.1250000000428055,
+    "reach_on_flange_mm": 7.071067812000001,
+    "reach_on_web_mm": 7.071067811999999
+   },
+   "pdas_iterations": 22,
+   "equilibrium_rel": -4.647517926059663e-13,
+   "seconds": 61.8,
+   "maxrss_MB": 1269
+  },
+  {
+   "variant": "kept",
+   "series": "WT7_M16",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 101.47268835400506,
+   "weld": {
+    "volume_over_exact": 1.1250000000428055,
+    "reach_on_flange_mm": 7.071067812000001,
+    "reach_on_web_mm": 7.071067811999999
+   },
+   "pdas_iterations": 21,
+   "equilibrium_rel": -6.331902113743127e-13,
+   "seconds": 64.6,
+   "maxrss_MB": 1269
+  },
+  {
+   "variant": "kept",
+   "series": "WT7_M20",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 125.66140846194813,
+   "weld": {
+    "volume_over_exact": 1.1250000000428055,
+    "reach_on_flange_mm": 7.071067812000001,
+    "reach_on_web_mm": 7.071067811999999
+   },
+   "pdas_iterations": 21,
+   "equilibrium_rel": -2.7430360205471514e-13,
+   "seconds": 49.9,
+   "maxrss_MB": 1269
+  },
+  {
+   "variant": "kept",
+   "series": "WT57_M12",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 82.7066783413133,
+   "weld": {
+    "volume_over_exact": 1.1250000000428053,
+    "reach_on_flange_mm": 7.071067812000001,
+    "reach_on_web_mm": 7.071067811999999
+   },
+   "pdas_iterations": 21,
+   "equilibrium_rel": -6.686605047434568e-13,
+   "seconds": 61.8,
+   "maxrss_MB": 1269
+  },
+  {
+   "variant": "kept",
+   "series": "WT57_M16",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 99.04013130190286,
+   "weld": {
+    "volume_over_exact": 1.1250000000428053,
+    "reach_on_flange_mm": 7.071067812000001,
+    "reach_on_web_mm": 7.071067811999999
+   },
+   "pdas_iterations": 22,
+   "equilibrium_rel": -8.89849616214633e-13,
+   "seconds": 61.7,
+   "maxrss_MB": 1269
+  },
+  {
+   "variant": "kept",
+   "series": "WT57_M20",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 123.55688010543507,
+   "weld": {
+    "volume_over_exact": 1.1250000000428055,
+    "reach_on_flange_mm": 7.071067812000001,
+    "reach_on_web_mm": 7.071067811999999
+   },
+   "pdas_iterations": 21,
+   "equilibrium_rel": 2.0954757928848266e-13,
+   "seconds": 46.4,
+   "maxrss_MB": 1269
+  },
+  {
+   "variant": "dropped",
+   "series": "WT1",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 148.51604281880245,
+   "weld": {
+    "volume_over_exact": 0.8750000000332934,
+    "reach_on_flange_mm": 6.1871843355,
+    "reach_on_web_mm": 6.187184336000001
+   },
+   "pdas_iterations": 16,
+   "equilibrium_rel": 2.002707333303988e-13,
+   "seconds": 41.1,
+   "maxrss_MB": 1269
+  },
+  {
+   "variant": "dropped",
+   "series": "WT1f",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 179.35541584700954,
+   "weld": {
+    "volume_over_exact": 0.9166666666765015,
+    "reach_on_flange_mm": 10.370899457416666,
+    "reach_on_web_mm": 10.370899457
+   },
+   "pdas_iterations": 16,
+   "equilibrium_rel": 5.77711034566164e-13,
+   "seconds": 63.3,
+   "maxrss_MB": 1269
+  },
+  {
+   "variant": "dropped",
+   "series": "WT2A",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 132.2754775604577,
+   "weld": {
+    "volume_over_exact": 0.7999999999550145,
+    "reach_on_flange_mm": 3.394112549599999,
+    "reach_on_web_mm": 3.394112549999999
+   },
+   "pdas_iterations": 16,
+   "equilibrium_rel": 5.793481250293553e-13,
+   "seconds": 44.7,
+   "maxrss_MB": 1269
+  },
+  {
+   "variant": "dropped",
+   "series": "WT2B",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 166.4222016441865,
+   "weld": {
+    "volume_over_exact": 0.9000000000605084,
+    "reach_on_flange_mm": 8.909545443299999,
+    "reach_on_web_mm": 8.909545442999999
+   },
+   "pdas_iterations": 15,
+   "equilibrium_rel": 8.549250196665525e-13,
+   "seconds": 55.9,
+   "maxrss_MB": 1269
+  },
+  {
+   "variant": "dropped",
+   "series": "WT4A",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 191.29981166288735,
+   "weld": {
+    "volume_over_exact": 0.8750000000332931,
+    "reach_on_flange_mm": 6.1871843355,
+    "reach_on_web_mm": 6.187184336000001
+   },
+   "pdas_iterations": 18,
+   "equilibrium_rel": -1.4006218407303095e-14,
+   "seconds": 68.0,
+   "maxrss_MB": 1269
+  },
+  {
+   "variant": "dropped",
+   "series": "WT51",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 143.97833710334402,
+   "weld": {
+    "volume_over_exact": 0.8750000000332931,
+    "reach_on_flange_mm": 6.1871843355,
+    "reach_on_web_mm": 6.187184336000001
+   },
+   "pdas_iterations": 17,
+   "equilibrium_rel": 1.9808794604614376e-13,
+   "seconds": 34.4,
+   "maxrss_MB": 1269
+  },
+  {
+   "variant": "dropped",
+   "series": "WT53C",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 143.54751546307594,
+   "weld": {
+    "volume_over_exact": 0.8750000000332934,
+    "reach_on_flange_mm": 6.1871843355,
+    "reach_on_web_mm": 6.187184336000001
+   },
+   "pdas_iterations": 16,
+   "equilibrium_rel": -3.103195922449231e-13,
+   "seconds": 32.9,
+   "maxrss_MB": 1269
+  },
+  {
+   "variant": "dropped",
+   "series": "WT53D",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 143.95219821053658,
+   "weld": {
+    "volume_over_exact": 0.8750000000332931,
+    "reach_on_flange_mm": 6.1871843355,
+    "reach_on_web_mm": 6.187184336000001
+   },
+   "pdas_iterations": 16,
+   "equilibrium_rel": -4.436515155248344e-13,
+   "seconds": 50.4,
+   "maxrss_MB": 1269
+  },
+  {
+   "variant": "dropped",
+   "series": "WT53E",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 143.11526102664254,
+   "weld": {
+    "volume_over_exact": 0.8750000000332933,
+    "reach_on_flange_mm": 6.1871843355,
+    "reach_on_web_mm": 6.187184336000001
+   },
+   "pdas_iterations": 16,
+   "equilibrium_rel": -7.081325748004019e-13,
+   "seconds": 52.9,
+   "maxrss_MB": 1269
+  },
+  {
+   "variant": "dropped",
+   "series": "WT7_M12",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 81.08134557016722,
+   "weld": {
+    "volume_over_exact": 0.8750000000332931,
+    "reach_on_flange_mm": 6.1871843355,
+    "reach_on_web_mm": 6.187184336000001
+   },
+   "pdas_iterations": 22,
+   "equilibrium_rel": -2.4665496312081814e-13,
+   "seconds": 92.7,
+   "maxrss_MB": 1269
+  },
+  {
+   "variant": "dropped",
+   "series": "WT7_M16",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 98.24813607144573,
+   "weld": {
+    "volume_over_exact": 0.8750000000332931,
+    "reach_on_flange_mm": 6.1871843355,
+    "reach_on_web_mm": 6.187184336000001
+   },
+   "pdas_iterations": 22,
+   "equilibrium_rel": -5.897163646295666e-13,
+   "seconds": 91.5,
+   "maxrss_MB": 1269
+  },
+  {
+   "variant": "dropped",
+   "series": "WT7_M20",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 121.34139415373336,
+   "weld": {
+    "volume_over_exact": 0.8750000000332933,
+    "reach_on_flange_mm": 6.1871843355,
+    "reach_on_web_mm": 6.187184336000001
+   },
+   "pdas_iterations": 21,
+   "equilibrium_rel": -4.4383341446518897e-13,
+   "seconds": 72.9,
+   "maxrss_MB": 1269
+  },
+  {
+   "variant": "dropped",
+   "series": "WT57_M12",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 80.28366823737112,
+   "weld": {
+    "volume_over_exact": 0.8750000000332933,
+    "reach_on_flange_mm": 6.1871843355,
+    "reach_on_web_mm": 6.187184336000001
+   },
+   "pdas_iterations": 22,
+   "equilibrium_rel": -7.687049219384789e-13,
+   "seconds": 88.9,
+   "maxrss_MB": 1269
+  },
+  {
+   "variant": "dropped",
+   "series": "WT57_M16",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 95.89037491273233,
+   "weld": {
+    "volume_over_exact": 0.8750000000332931,
+    "reach_on_flange_mm": 6.1871843355,
+    "reach_on_web_mm": 6.187184336000001
+   },
+   "pdas_iterations": 22,
+   "equilibrium_rel": -1.1110387276858092e-12,
+   "seconds": 86.6,
+   "maxrss_MB": 1269
+  },
+  {
+   "variant": "dropped",
+   "series": "WT57_M20",
+   "mesh_level": "medium",
+   "K_kN_per_mm": 119.26120935745507,
+   "weld": {
+    "volume_over_exact": 0.8750000000332933,
+    "reach_on_flange_mm": 6.1871843355,
+    "reach_on_web_mm": 6.187184336000001
+   },
+   "pdas_iterations": 21,
+   "equilibrium_rel": 2.582964953035116e-13,
+   "seconds": 67.6,
+   "maxrss_MB": 1269
+  },
+  {
+   "variant": "kept",
+   "series": "WT1",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 152.49747169054706,
+   "weld": {
+    "volume_over_exact": 1.0909090909505992,
+    "reach_on_flange_mm": 7.071067812000001,
+    "reach_on_web_mm": 7.071067811999999
+   },
+   "pdas_iterations": 17,
+   "equilibrium_rel": -7.597918738611043e-13,
+   "seconds": 209.7,
+   "maxrss_MB": 2757
+  },
+  {
+   "variant": "kept",
+   "series": "WT1f",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 185.21139392000697,
+   "weld": {
+    "volume_over_exact": 1.0555555555633094,
+    "reach_on_flange_mm": 11.313708499,
+    "reach_on_web_mm": 11.313708499
+   },
+   "pdas_iterations": 17,
+   "equilibrium_rel": -2.4914697860367595e-12,
+   "seconds": 363.4,
+   "maxrss_MB": 3387
+  },
+  {
+   "variant": "kept",
+   "series": "WT2A",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 135.08651265963982,
+   "weld": {
+    "volume_over_exact": 1.1428571427928782,
+    "reach_on_flange_mm": 4.242640687,
+    "reach_on_web_mm": 4.242640687
+   },
+   "pdas_iterations": 17,
+   "equilibrium_rel": -2.239721652586013e-12,
+   "seconds": 187.6,
+   "maxrss_MB": 3387
+  },
+  {
+   "variant": "kept",
+   "series": "WT2B",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 171.97816693410732,
+   "weld": {
+    "volume_over_exact": 1.0666666667503524,
+    "reach_on_flange_mm": 9.899494937,
+    "reach_on_web_mm": 9.899494937
+   },
+   "pdas_iterations": 17,
+   "equilibrium_rel": -2.8430804377421736e-12,
+   "seconds": 309.9,
+   "maxrss_MB": 3387
+  },
+  {
+   "variant": "kept",
+   "series": "WT4A",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 195.6999363048201,
+   "weld": {
+    "volume_over_exact": 1.0909090909505992,
+    "reach_on_flange_mm": 7.071067812000001,
+    "reach_on_web_mm": 7.071067811999999
+   },
+   "pdas_iterations": 19,
+   "equilibrium_rel": -9.729774319566787e-13,
+   "seconds": 431.2,
+   "maxrss_MB": 3651
+  },
+  {
+   "variant": "kept",
+   "series": "WT51",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 147.84089889065947,
+   "weld": {
+    "volume_over_exact": 1.0909090909505992,
+    "reach_on_flange_mm": 7.071067812000001,
+    "reach_on_web_mm": 7.071067811999999
+   },
+   "pdas_iterations": 17,
+   "equilibrium_rel": 1.9783328752964733e-12,
+   "seconds": 232.9,
+   "maxrss_MB": 3651
+  },
+  {
+   "variant": "kept",
+   "series": "WT53C",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 147.39343027144062,
+   "weld": {
+    "volume_over_exact": 1.0909090909505992,
+    "reach_on_flange_mm": 7.071067812000001,
+    "reach_on_web_mm": 7.071067811999999
+   },
+   "pdas_iterations": 18,
+   "equilibrium_rel": 1.8291757442057134e-12,
+   "seconds": 250.5,
+   "maxrss_MB": 3651
+  },
+  {
+   "variant": "kept",
+   "series": "WT53D",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 147.8255731263745,
+   "weld": {
+    "volume_over_exact": 1.0909090909505992,
+    "reach_on_flange_mm": 7.071067812000001,
+    "reach_on_web_mm": 7.071067811999999
+   },
+   "pdas_iterations": 17,
+   "equilibrium_rel": 1.4661054592579604e-12,
+   "seconds": 233.0,
+   "maxrss_MB": 3651
+  },
+  {
+   "variant": "kept",
+   "series": "WT53E",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 146.97362324849615,
+   "weld": {
+    "volume_over_exact": 1.0909090909505994,
+    "reach_on_flange_mm": 7.071067812000001,
+    "reach_on_web_mm": 7.071067811999999
+   },
+   "pdas_iterations": 17,
+   "equilibrium_rel": 1.5117620932869612e-12,
+   "seconds": 237.9,
+   "maxrss_MB": 3651
+  },
+  {
+   "variant": "kept",
+   "series": "WT7_M12",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 82.58549174400682,
+   "weld": {
+    "volume_over_exact": 1.090909090950599,
+    "reach_on_flange_mm": 7.071067812000001,
+    "reach_on_web_mm": 7.071067811999999
+   },
+   "pdas_iterations": 23,
+   "equilibrium_rel": -2.373781171627343e-13,
+   "seconds": 434.7,
+   "maxrss_MB": 3651
+  },
+  {
+   "variant": "kept",
+   "series": "WT7_M16",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 100.40358149394062,
+   "weld": {
+    "volume_over_exact": 1.0909090909505992,
+    "reach_on_flange_mm": 7.071067812000001,
+    "reach_on_web_mm": 7.071067811999999
+   },
+   "pdas_iterations": 22,
+   "equilibrium_rel": -2.4612745619378983e-12,
+   "seconds": 408.7,
+   "maxrss_MB": 3651
+  },
+  {
+   "variant": "kept",
+   "series": "WT7_M20",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 123.8847090678097,
+   "weld": {
+    "volume_over_exact": 1.0909090909505994,
+    "reach_on_flange_mm": 7.071067812000001,
+    "reach_on_web_mm": 7.071067811999999
+   },
+   "pdas_iterations": 22,
+   "equilibrium_rel": 7.406924851238728e-13,
+   "seconds": 337.2,
+   "maxrss_MB": 3651
+  },
+  {
+   "variant": "kept",
+   "series": "WT57_M12",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 81.80554334609222,
+   "weld": {
+    "volume_over_exact": 1.0909090909505992,
+    "reach_on_flange_mm": 7.071067812000001,
+    "reach_on_web_mm": 7.071067811999999
+   },
+   "pdas_iterations": 23,
+   "equilibrium_rel": 4.3382897274568675e-13,
+   "seconds": 420.7,
+   "maxrss_MB": 3651
+  },
+  {
+   "variant": "kept",
+   "series": "WT57_M16",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 97.9855609019262,
+   "weld": {
+    "volume_over_exact": 1.0909090909505992,
+    "reach_on_flange_mm": 7.071067812000001,
+    "reach_on_web_mm": 7.071067811999999
+   },
+   "pdas_iterations": 24,
+   "equilibrium_rel": 5.817128112539649e-13,
+   "seconds": 442.3,
+   "maxrss_MB": 3713
+  },
+  {
+   "variant": "kept",
+   "series": "WT57_M20",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 121.78202615558774,
+   "weld": {
+    "volume_over_exact": 1.0909090909505992,
+    "reach_on_flange_mm": 7.071067812000001,
+    "reach_on_web_mm": 7.071067811999999
+   },
+   "pdas_iterations": 22,
+   "equilibrium_rel": -8.865754352882504e-13,
+   "seconds": 347.0,
+   "maxrss_MB": 3713
+  },
+  {
+   "variant": "dropped",
+   "series": "WT1",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 148.348771121819,
+   "weld": {
+    "volume_over_exact": 0.9090909091254995,
+    "reach_on_flange_mm": 6.428243465454546,
+    "reach_on_web_mm": 6.428243465000001
+   },
+   "pdas_iterations": 17,
+   "equilibrium_rel": -7.026756065897643e-13,
+   "seconds": 211.1,
+   "maxrss_MB": 3713
+  },
+  {
+   "variant": "dropped",
+   "series": "WT1f",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 179.6428191152468,
+   "weld": {
+    "volume_over_exact": 0.9444444444518992,
+    "reach_on_flange_mm": 10.685169137944445,
+    "reach_on_web_mm": 10.685169138
+   },
+   "pdas_iterations": 16,
+   "equilibrium_rel": -2.8063368517905473e-12,
+   "seconds": 321.5,
+   "maxrss_MB": 3713
+  },
+  {
+   "variant": "dropped",
+   "series": "WT2A",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 132.0666717482139,
+   "weld": {
+    "volume_over_exact": 0.8571428570946585,
+    "reach_on_flange_mm": 3.636549160285714,
+    "reach_on_web_mm": 3.6365491599999995
+   },
+   "pdas_iterations": 18,
+   "equilibrium_rel": -2.2213498596102e-12,
+   "seconds": 171.9,
+   "maxrss_MB": 3713
+  },
+  {
+   "variant": "dropped",
+   "series": "WT2B",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 166.74012761634683,
+   "weld": {
+    "volume_over_exact": 0.9333333334065586,
+    "reach_on_flange_mm": 9.239528607866667,
+    "reach_on_web_mm": 9.239528608
+   },
+   "pdas_iterations": 17,
+   "equilibrium_rel": -2.9163857107050716e-12,
+   "seconds": 145.3,
+   "maxrss_MB": 3713
+  },
+  {
+   "variant": "dropped",
+   "series": "WT4A",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 190.93853639699077,
+   "weld": {
+    "volume_over_exact": 0.9090909091254994,
+    "reach_on_flange_mm": 6.428243465454546,
+    "reach_on_web_mm": 6.428243465000001
+   },
+   "pdas_iterations": 20,
+   "equilibrium_rel": -7.63429852668196e-13,
+   "seconds": 183.6,
+   "maxrss_MB": 3713
+  },
+  {
+   "variant": "dropped",
+   "series": "WT51",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 143.8014539188878,
+   "weld": {
+    "volume_over_exact": 0.9090909091254994,
+    "reach_on_flange_mm": 6.428243465454546,
+    "reach_on_web_mm": 6.428243465000001
+   },
+   "pdas_iterations": 18,
+   "equilibrium_rel": 2.1318555809557437e-12,
+   "seconds": 129.2,
+   "maxrss_MB": 3713
+  },
+  {
+   "variant": "dropped",
+   "series": "WT53C",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 143.375113190989,
+   "weld": {
+    "volume_over_exact": 0.9090909091254996,
+    "reach_on_flange_mm": 6.428243465454546,
+    "reach_on_web_mm": 6.428243465000001
+   },
+   "pdas_iterations": 18,
+   "equilibrium_rel": 1.7829734133556484e-12,
+   "seconds": 132.2,
+   "maxrss_MB": 3713
+  },
+  {
+   "variant": "dropped",
+   "series": "WT53D",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 143.78702548574674,
+   "weld": {
+    "volume_over_exact": 0.9090909091254994,
+    "reach_on_flange_mm": 6.428243465454546,
+    "reach_on_web_mm": 6.428243465000001
+   },
+   "pdas_iterations": 17,
+   "equilibrium_rel": 1.6505509847775101e-12,
+   "seconds": 120.9,
+   "maxrss_MB": 3713
+  },
+  {
+   "variant": "dropped",
+   "series": "WT53E",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 142.95404048394929,
+   "weld": {
+    "volume_over_exact": 0.9090909091254994,
+    "reach_on_flange_mm": 6.428243465454546,
+    "reach_on_web_mm": 6.428243465000001
+   },
+   "pdas_iterations": 17,
+   "equilibrium_rel": 1.7864294932223856e-12,
+   "seconds": 121.5,
+   "maxrss_MB": 3713
+  },
+  {
+   "variant": "dropped",
+   "series": "WT7_M12",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 80.85682193164813,
+   "weld": {
+    "volume_over_exact": 0.9090909091254993,
+    "reach_on_flange_mm": 6.428243465454546,
+    "reach_on_web_mm": 6.428243465000001
+   },
+   "pdas_iterations": 23,
+   "equilibrium_rel": 3.6561687011271715e-14,
+   "seconds": 216.8,
+   "maxrss_MB": 3713
+  },
+  {
+   "variant": "dropped",
+   "series": "WT7_M16",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 98.07953890277007,
+   "weld": {
+    "volume_over_exact": 0.9090909091254994,
+    "reach_on_flange_mm": 6.428243465454546,
+    "reach_on_web_mm": 6.428243465000001
+   },
+   "pdas_iterations": 23,
+   "equilibrium_rel": -2.23008100874722e-12,
+   "seconds": 221.5,
+   "maxrss_MB": 3713
+  },
+  {
+   "variant": "dropped",
+   "series": "WT7_M20",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 120.78647775686115,
+   "weld": {
+    "volume_over_exact": 0.9090909091254995,
+    "reach_on_flange_mm": 6.428243465454546,
+    "reach_on_web_mm": 6.428243465000001
+   },
+   "pdas_iterations": 22,
+   "equilibrium_rel": 6.832124199718237e-13,
+   "seconds": 178.4,
+   "maxrss_MB": 3713
+  },
+  {
+   "variant": "dropped",
+   "series": "WT57_M12",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 80.06423900847317,
+   "weld": {
+    "volume_over_exact": 0.9090909091254994,
+    "reach_on_flange_mm": 6.428243465454546,
+    "reach_on_web_mm": 6.428243465000001
+   },
+   "pdas_iterations": 23,
+   "equilibrium_rel": 3.41970007866621e-13,
+   "seconds": 214.6,
+   "maxrss_MB": 3713
+  },
+  {
+   "variant": "dropped",
+   "series": "WT57_M16",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 95.71585636779794,
+   "weld": {
+    "volume_over_exact": 0.9090909091254994,
+    "reach_on_flange_mm": 6.428243465454546,
+    "reach_on_web_mm": 6.428243465000001
+   },
+   "pdas_iterations": 23,
+   "equilibrium_rel": 5.584297468885779e-13,
+   "seconds": 222.2,
+   "maxrss_MB": 3713
+  },
+  {
+   "variant": "dropped",
+   "series": "WT57_M20",
+   "mesh_level": "fine",
+   "K_kN_per_mm": 118.70216899132458,
+   "weld": {
+    "volume_over_exact": 0.9090909091254994,
+    "reach_on_flange_mm": 6.428243465454546,
+    "reach_on_web_mm": 6.428243465000001
+   },
+   "pdas_iterations": 23,
+   "equilibrium_rel": -8.534698281437159e-13,
+   "seconds": 185.0,
+   "maxrss_MB": 3713
+  }
+ ],
+ "started": "2026-10-10 15:05:40 BST",
+ "finished": "2026-10-10 17:40:37 BST"
+}

@@ -1,0 +1,10 @@
+softplus3 s2 step 750: loss -0.96122  gap median 7.66e-01  stiffness err median +264.957%  IoU=1 share 0.13  false contact 0.012  171s
+softplus3 s2 step 1500: loss -1.11107  gap median 6.06e-01  stiffness err median +186.694%  IoU=1 share 0.13  false contact 0.001  333s
+softplus3 s2 step 3000: loss -2.33651  gap median 4.22e-02  stiffness err median +4.969%  IoU=1 share 0.66  false contact 0.002  684s
+relu s2 step 750: loss -1.07001  gap median 6.70e-01  stiffness err median +193.073%  IoU=1 share 0.13  false contact 0.000  176s
+relu s2 step 1500: loss -0.95151  gap median 6.30e-01  stiffness err median +165.780%  IoU=1 share 0.13  false contact 0.000  363s
+relu s2 step 3000: loss -2.27157  gap median 6.12e-02  stiffness err median +7.836%  IoU=1 share 0.58  false contact 0.005  787s
+square s2 step 750: loss 0.23014  gap median 1.13e+00  stiffness err median +545615.486%  IoU=1 share 0.00  false contact 1.000  240s
+square s2 step 1500: loss -0.83514  gap median 6.97e-01  stiffness err median +220.233%  IoU=1 share 0.13  false contact 0.000  467s
+square s2 step 3000: loss -1.99507  gap median 1.78e-01  stiffness err median +28.783%  IoU=1 share 0.13  false contact 0.000  951s
+all done

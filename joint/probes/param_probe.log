@@ -1,0 +1,10 @@
+project   lr 0.001  gap +1.81e-04 err 1.35e-02 pen 0.0e+00 agree 1.000 dead None 11s
+project   lr 0.01   gap +1.67e-02 err 1.29e-01 pen 0.0e+00 agree 1.000 dead None 12s
+relu      lr 0.001  gap +9.82e-01 err 9.91e-01 pen 0.0e+00 agree 0.154 dead 0.8445839874411303 12s
+relu      lr 0.01   gap +9.88e-01 err 9.94e-01 pen 0.0e+00 agree 0.122 dead 0.8775510204081632 12s
+softplus  lr 0.001  gap +7.83e-05 err 8.85e-03 pen 0.0e+00 agree 1.000 dead None 12s
+softplus  lr 0.01   gap +9.99e-01 err 1.00e+00 pen 0.0e+00 agree 0.124 dead None 11s
+square    lr 0.001  gap +8.31e-05 err 9.12e-03 pen 0.0e+00 agree 1.000 dead None 11s
+square    lr 0.01   gap +1.46e-02 err 1.21e-01 pen 0.0e+00 agree 1.000 dead None 12s
+free      lr 0.001  gap -5.45e-01 err 7.38e-01 pen 1.1e+00 agree 0.727 dead None 10s
+free      lr 0.01   gap -5.43e-01 err 7.40e-01 pen 1.1e+00 agree 0.727 dead None 11s

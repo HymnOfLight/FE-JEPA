@@ -1,0 +1,294 @@
+{
+ "idealised": {
+  "FS1 h10_tp1": {
+   "S_paper": 37.708657034922815,
+   "over_fine": 1.0120444896633005,
+   "mesh": {
+    "h": 10.0,
+    "n_tp": 1,
+    "n_tf": 1,
+    "n_tw": 1,
+    "nodes": 4064,
+    "hexes": 1946,
+    "dof_reduced": 11091
+   },
+   "seconds": 5.7
+  },
+  "FS1 h10_tp2": {
+   "S_paper": 37.84499289743625,
+   "over_fine": 1.015703542232381,
+   "mesh": {
+    "h": 10.0,
+    "n_tp": 2,
+    "n_tf": 2,
+    "n_tw": 1,
+    "nodes": 5260,
+    "hexes": 3000,
+    "dof_reduced": 14566
+   },
+   "seconds": 6.3
+  },
+  "FS1 h7.5_tp2": {
+   "S_paper": 37.139931463359865,
+   "over_fine": 0.9967807378861464,
+   "mesh": {
+    "h": 7.5,
+    "n_tp": 2,
+    "n_tf": 2,
+    "n_tw": 1,
+    "nodes": 7366,
+    "hexes": 4234,
+    "dof_reduced": 20434
+   },
+   "seconds": 13.6
+  },
+  "FS1 h5_tp2 (G-C1a medium)": {
+   "S_paper": 37.15619387962325,
+   "over_fine": 0.9972171970459816,
+   "mesh": {
+    "h": 5.0,
+    "n_tp": 2,
+    "n_tf": 2,
+    "n_tw": 1,
+    "nodes": 12379,
+    "hexes": 7249,
+    "dof_reduced": 34603
+   },
+   "seconds": 28.3
+  },
+  "FS2 h10_tp1": {
+   "S_paper": 53.82850593006502,
+   "over_fine": 1.0114220805490464,
+   "mesh": {
+    "h": 10.0,
+    "n_tp": 1,
+    "n_tf": 1,
+    "n_tw": 1,
+    "nodes": 4168,
+    "hexes": 1996,
+    "dof_reduced": 11367
+   },
+   "seconds": 5.5
+  },
+  "FS2 h10_tp2": {
+   "S_paper": 54.01386270328771,
+   "over_fine": 1.0149048807861607,
+   "mesh": {
+    "h": 10.0,
+    "n_tp": 2,
+    "n_tf": 2,
+    "n_tw": 1,
+    "nodes": 5384,
+    "hexes": 3068,
+    "dof_reduced": 14900
+   },
+   "seconds": 5.9
+  },
+  "FS2 h7.5_tp2": {
+   "S_paper": 53.33516382251795,
+   "over_fine": 1.0021523248273105,
+   "mesh": {
+    "h": 7.5,
+    "n_tp": 2,
+    "n_tf": 2,
+    "n_tw": 1,
+    "nodes": 7402,
+    "hexes": 4256,
+    "dof_reduced": 20539
+   },
+   "seconds": 10.5
+  },
+  "FS2 h5_tp2 (G-C1a medium)": {
+   "S_paper": 53.561494100060344,
+   "over_fine": 1.0064050053772886,
+   "mesh": {
+    "h": 5.0,
+    "n_tp": 2,
+    "n_tf": 2,
+    "n_tw": 1,
+    "nodes": 12333,
+    "hexes": 7224,
+    "dof_reduced": 34485
+   },
+   "seconds": 20.2
+  },
+  "FS3 h10_tp1": {
+   "S_paper": 65.18393862021065,
+   "over_fine": 1.0122382948783246,
+   "mesh": {
+    "h": 10.0,
+    "n_tp": 1,
+    "n_tf": 1,
+    "n_tw": 1,
+    "nodes": 4104,
+    "hexes": 1966,
+    "dof_reduced": 11177
+   },
+   "seconds": 5.9
+  },
+  "FS3 h10_tp2": {
+   "S_paper": 65.39393247555788,
+   "over_fine": 1.0154992795099849,
+   "mesh": {
+    "h": 10.0,
+    "n_tp": 2,
+    "n_tf": 2,
+    "n_tw": 1,
+    "nodes": 5294,
+    "hexes": 3012,
+    "dof_reduced": 14633
+   },
+   "seconds": 9.1
+  },
+  "FS3 h7.5_tp2": {
+   "S_paper": 64.70171943503632,
+   "over_fine": 1.0047499359958938,
+   "mesh": {
+    "h": 7.5,
+    "n_tp": 2,
+    "n_tf": 2,
+    "n_tw": 1,
+    "nodes": 7333,
+    "hexes": 4214,
+    "dof_reduced": 20335
+   },
+   "seconds": 10.4
+  },
+  "FS3 h5_tp2 (G-C1a medium)": {
+   "S_paper": 64.82328484594792,
+   "over_fine": 1.006637719503029,
+   "mesh": {
+    "h": 5.0,
+    "n_tp": 2,
+    "n_tf": 2,
+    "n_tw": 1,
+    "nodes": 12312,
+    "hexes": 7214,
+    "dof_reduced": 34425
+   },
+   "seconds": 26.9
+  },
+  "FS4 h10_tp1": {
+   "S_paper": 35.67881956951312,
+   "over_fine": 1.0073925670515098,
+   "mesh": {
+    "h": 10.0,
+    "n_tp": 1,
+    "n_tf": 1,
+    "n_tw": 1,
+    "nodes": 4040,
+    "hexes": 1934,
+    "dof_reduced": 11017
+   },
+   "seconds": 6.9
+  },
+  "FS4 h10_tp2": {
+   "S_paper": 35.82211444985481,
+   "over_fine": 1.0114385024017956,
+   "mesh": {
+    "h": 10.0,
+    "n_tp": 2,
+    "n_tf": 2,
+    "n_tw": 1,
+    "nodes": 5230,
+    "hexes": 2980,
+    "dof_reduced": 14473
+   },
+   "seconds": 10.1
+  },
+  "FS4 h7.5_tp2": {
+   "S_paper": 35.12894563622636,
+   "over_fine": 0.99186685964605,
+   "mesh": {
+    "h": 7.5,
+    "n_tp": 2,
+    "n_tf": 2,
+    "n_tw": 1,
+    "nodes": 7333,
+    "hexes": 4214,
+    "dof_reduced": 20335
+   },
+   "seconds": 16.0
+  },
+  "FS4 h5_tp2 (G-C1a medium)": {
+   "S_paper": 35.4001784258931,
+   "over_fine": 0.9995251257980052,
+   "mesh": {
+    "h": 5.0,
+    "n_tp": 2,
+    "n_tf": 2,
+    "n_tw": 1,
+    "nodes": 12454,
+    "hexes": 7299,
+    "dof_reduced": 34825
+   },
+   "seconds": 28.5
+  }
+ },
+ "higher_fidelity_counts": {
+  "FS1 coarse": {
+   "nodes": 38469,
+   "hexes": 24864
+  },
+  "FS1 medium": {
+   "nodes": 76847,
+   "hexes": 52590
+  },
+  "FS1 fine": {
+   "nodes": 274257,
+   "hexes": 219693
+  },
+  "FS1 coarsest tried (h 10, n_b 1, one layer in plate, flange and head)": {
+   "nodes": 23822,
+   "hexes": 14521
+  },
+  "FS2 coarse": {
+   "nodes": 38469,
+   "hexes": 24864
+  },
+  "FS2 medium": {
+   "nodes": 76988,
+   "hexes": 52682
+  },
+  "FS2 fine": {
+   "nodes": 274257,
+   "hexes": 219693
+  },
+  "FS2 coarsest tried (h 10, n_b 1, one layer in plate, flange and head)": {
+   "nodes": 23822,
+   "hexes": 14521
+  },
+  "FS3 coarse": {
+   "nodes": 38511,
+   "hexes": 24894
+  },
+  "FS3 medium": {
+   "nodes": 76700,
+   "hexes": 52474
+  },
+  "FS3 fine": {
+   "nodes": 274445,
+   "hexes": 219844
+  },
+  "FS3 coarsest tried (h 10, n_b 1, one layer in plate, flange and head)": {
+   "nodes": 23690,
+   "hexes": 14402
+  },
+  "FS4 coarse": {
+   "nodes": 38511,
+   "hexes": 24894
+  },
+  "FS4 medium": {
+   "nodes": 76700,
+   "hexes": 52474
+  },
+  "FS4 fine": {
+   "nodes": 275960,
+   "hexes": 220996
+  },
+  "FS4 coarsest tried (h 10, n_b 1, one layer in plate, flange and head)": {
+   "nodes": 23690,
+   "hexes": 14402
+  }
+ }
+}

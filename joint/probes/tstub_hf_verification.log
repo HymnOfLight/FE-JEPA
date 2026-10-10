@@ -1,0 +1,15 @@
+VT2 hifi coarse 18416 185.479 4.0 s
+VT2 hifi medium 75819 183.326 27.1 s
+VT2 hifi fine 221809 181.563 126.6 s
+VT2 baseline 5.0 4508 211.484 0.6 s
+VT2 baseline 2.5 18718 208.667 4.3 s
+VT2 baseline 1.25 83149 209.207 34.2 s
+VT2 hifi ec3 length medium 184.187
+VT1 hifi coarse 22118 125.803 6.4 s
+VT1 hifi medium 78345 123.44 34.6 s
+VT1 hifi fine 243582 122.041 189.5 s
+VT1 baseline 5.0 6273 141.271 1.2 s
+VT1 baseline 2.5 29739 141.327 10.3 s
+VT1 baseline 1.25 132535 142.513 81.7 s
+VT1 hifi ec3 length medium 123.622
+done

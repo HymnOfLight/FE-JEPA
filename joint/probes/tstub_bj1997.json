@@ -1,0 +1,278 @@
+[
+ {
+  "geometry": {
+   "t_f": 10.7,
+   "t_w": 7.1,
+   "b": 150.0,
+   "L": 80.0,
+   "w": 90.0,
+   "bolt_y": [
+    20.0
+   ],
+   "H": 220.0,
+   "corner": "root",
+   "r": 15.0,
+   "d": 12.0,
+   "As": 84.3,
+   "head": 7.5,
+   "nut": 10.8,
+   "bearing_r": 12.0,
+   "n_washers": 2,
+   "washer_t": 2.5,
+   "E": 210000.0,
+   "nu": 0.3,
+   "x_meas": 150.0
+  },
+  "mesh": {
+   "h": 5.0,
+   "n_tf": 2,
+   "nodes": 1540,
+   "dof": 4208
+  },
+  "K_kN_per_mm": 138.57772843472847,
+  "u_meas_mm": 0.03608083388634164,
+  "F_N": 10000.0,
+  "bolt_force_total_N": 15998.54778184016,
+  "contact_fraction": 0.1487603305785124,
+  "pdas_iterations": 10,
+  "kkt": {
+   "min_gap": 0.0,
+   "min_lambda": -3.0712187546363194e-13,
+   "max_complementarity": 8.50867418248276e-14,
+   "max_lambda_inactive": 5.038600647822021e-13,
+   "max_residual_unconstrained": 2.1191226551309225e-12
+  },
+  "name": "T1",
+  "seconds": 1.0
+ },
+ {
+  "geometry": {
+   "t_f": 10.7,
+   "t_w": 7.1,
+   "b": 150.0,
+   "L": 80.0,
+   "w": 90.0,
+   "bolt_y": [
+    20.0
+   ],
+   "H": 220.0,
+   "corner": "root",
+   "r": 15.0,
+   "d": 12.0,
+   "As": 84.3,
+   "head": 7.5,
+   "nut": 10.8,
+   "bearing_r": 12.0,
+   "n_washers": 2,
+   "washer_t": 2.5,
+   "E": 210000.0,
+   "nu": 0.3,
+   "x_meas": 150.0
+  },
+  "mesh": {
+   "h": 2.5,
+   "n_tf": 4,
+   "nodes": 6194,
+   "dof": 17537
+  },
+  "K_kN_per_mm": 139.39957436194743,
+  "u_meas_mm": 0.03586811525706404,
+  "F_N": 10000.0,
+  "bolt_force_total_N": 16035.129300825867,
+  "contact_fraction": 0.14709851551956815,
+  "pdas_iterations": 12,
+  "kkt": {
+   "min_gap": 0.0,
+   "min_lambda": -1.4068401541181106e-12,
+   "max_complementarity": 1.6791120966497677e-13,
+   "max_lambda_inactive": 2.268198443606226e-12,
+   "max_residual_unconstrained": 9.313225746154784e-12
+  },
+  "name": "T1",
+  "seconds": 23.8
+ },
+ {
+  "geometry": {
+   "t_f": 16.0,
+   "t_w": 9.5,
+   "b": 150.0,
+   "L": 80.0,
+   "w": 90.0,
+   "bolt_y": [
+    20.0
+   ],
+   "H": 220.0,
+   "corner": "root",
+   "r": 18.0,
+   "d": 12.0,
+   "As": 84.3,
+   "head": 7.5,
+   "nut": 10.8,
+   "bearing_r": 8.3,
+   "n_washers": 1,
+   "washer_t": 2.5,
+   "E": 210000.0,
+   "nu": 0.3,
+   "x_meas": 35.0
+  },
+  "mesh": {
+   "h": 5.0,
+   "n_tf": 2,
+   "nodes": 1683,
+   "dof": 4602
+  },
+  "K_kN_per_mm": 325.82236223342977,
+  "u_meas_mm": 0.015345785248520899,
+  "F_N": 10000.0,
+  "bolt_force_total_N": 13484.043465426705,
+  "contact_fraction": 0.043478260869565216,
+  "pdas_iterations": 8,
+  "kkt": {
+   "min_gap": 0.0,
+   "min_lambda": -1.1294718841595732e-13,
+   "max_complementarity": 7.703725313480117e-14,
+   "max_lambda_inactive": 1.5041590463131643e-13,
+   "max_residual_unconstrained": 4.510456800558296e-13
+  },
+  "name": "T2 (r 8.3)",
+  "seconds": 1.1
+ },
+ {
+  "geometry": {
+   "t_f": 16.0,
+   "t_w": 9.5,
+   "b": 150.0,
+   "L": 80.0,
+   "w": 90.0,
+   "bolt_y": [
+    20.0
+   ],
+   "H": 220.0,
+   "corner": "root",
+   "r": 18.0,
+   "d": 12.0,
+   "As": 84.3,
+   "head": 7.5,
+   "nut": 10.8,
+   "bearing_r": 8.3,
+   "n_washers": 1,
+   "washer_t": 2.5,
+   "E": 210000.0,
+   "nu": 0.3,
+   "x_meas": 35.0
+  },
+  "mesh": {
+   "h": 2.5,
+   "n_tf": 4,
+   "nodes": 7866,
+   "dof": 22427
+  },
+  "K_kN_per_mm": 330.18363336379565,
+  "u_meas_mm": 0.015143088556697208,
+  "F_N": 10000.0,
+  "bolt_force_total_N": 13416.472784827203,
+  "contact_fraction": 0.03728070175438596,
+  "pdas_iterations": 11,
+  "kkt": {
+   "min_gap": 0.0,
+   "min_lambda": -8.167233271449687e-13,
+   "max_complementarity": 4.348394642588612e-13,
+   "max_lambda_inactive": 8.167233271449687e-13,
+   "max_residual_unconstrained": 2.5769502391419818e-12
+  },
+  "name": "T2 (r 8.3)",
+  "seconds": 45.5
+ },
+ {
+  "geometry": {
+   "t_f": 16.0,
+   "t_w": 9.5,
+   "b": 150.0,
+   "L": 80.0,
+   "w": 90.0,
+   "bolt_y": [
+    20.0
+   ],
+   "H": 220.0,
+   "corner": "root",
+   "r": 18.0,
+   "d": 12.0,
+   "As": 84.3,
+   "head": 7.5,
+   "nut": 10.8,
+   "bearing_r": 12.0,
+   "n_washers": 1,
+   "washer_t": 2.5,
+   "E": 210000.0,
+   "nu": 0.3,
+   "x_meas": 35.0
+  },
+  "mesh": {
+   "h": 5.0,
+   "n_tf": 2,
+   "nodes": 1716,
+   "dof": 4698
+  },
+  "K_kN_per_mm": 341.869036321479,
+  "u_meas_mm": 0.014625483646603828,
+  "F_N": 10000.0,
+  "bolt_force_total_N": 13733.960442185718,
+  "contact_fraction": 0.041666666666666664,
+  "pdas_iterations": 8,
+  "kkt": {
+   "min_gap": 0.0,
+   "min_lambda": -1.7634249616094167e-13,
+   "max_complementarity": 8.417288631894456e-14,
+   "max_lambda_inactive": 1.7634249616094167e-13,
+   "max_residual_unconstrained": 9.331415640190244e-13
+  },
+  "name": "T2 (r 12)",
+  "seconds": 1.0
+ },
+ {
+  "geometry": {
+   "t_f": 16.0,
+   "t_w": 9.5,
+   "b": 150.0,
+   "L": 80.0,
+   "w": 90.0,
+   "bolt_y": [
+    20.0
+   ],
+   "H": 220.0,
+   "corner": "root",
+   "r": 18.0,
+   "d": 12.0,
+   "As": 84.3,
+   "head": 7.5,
+   "nut": 10.8,
+   "bearing_r": 12.0,
+   "n_washers": 1,
+   "washer_t": 2.5,
+   "E": 210000.0,
+   "nu": 0.3,
+   "x_meas": 35.0
+  },
+  "mesh": {
+   "h": 2.5,
+   "n_tf": 4,
+   "nodes": 7866,
+   "dof": 22427
+  },
+  "K_kN_per_mm": 347.1245393218399,
+  "u_meas_mm": 0.014404052245249654,
+  "F_N": 10000.0,
+  "bolt_force_total_N": 13728.898711759713,
+  "contact_fraction": 0.041666666666666664,
+  "pdas_iterations": 9,
+  "kkt": {
+   "min_gap": 0.0,
+   "min_lambda": -5.998875470443938e-13,
+   "max_complementarity": 3.018916570390408e-13,
+   "max_lambda_inactive": 7.202061169664374e-13,
+   "max_residual_unconstrained": 1.086543003718058e-11
+  },
+  "name": "T2 (r 12)",
+  "seconds": 31.4
+ }
+]

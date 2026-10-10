@@ -1,0 +1,46 @@
+{
+ "model": {
+  "dim": 64,
+  "depth": 2,
+  "heads": 4
+ },
+ "device": "cpu",
+ "torch": "2.12.1+cu130",
+ "python": "3.11.15",
+ "gpu": null,
+ "threads": 2,
+ "steps_timed": 3,
+ "warmup": 1,
+ "meshes": {
+  "h10_one_layer": {
+   "nodes": [
+    3932,
+    4148
+   ],
+   "nnz": [
+    664492,
+    697830
+   ],
+   "in_dim": 23,
+   "seconds_per_step_mean": 2.0747084950000194,
+   "seconds_per_step_median": 2.0922091830000227,
+   "seconds_per_step_max": 2.103930807000097,
+   "peak_memory_GiB": null
+  },
+  "h7.5_two_layers": {
+   "nodes": [
+    7391,
+    7442
+   ],
+   "nnz": [
+    1378269,
+    1357708
+   ],
+   "in_dim": 23,
+   "seconds_per_step_mean": 3.8945695933333204,
+   "seconds_per_step_median": 3.885469652999973,
+   "seconds_per_step_max": 4.023885751999842,
+   "peak_memory_GiB": null
+  }
+ }
+}
