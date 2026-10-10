@@ -1,7 +1,8 @@
 # PROVENANCE NOTE -- FE-JEPA 2D phase (frozen record)
 
 Compiled 1 August 2026; terminal-log status finalised 6 August 2026;
-arXiv ID recorded 7 August 2026.
+arXiv ID recorded 7 August 2026; addendum on the repository's first
+history 10 October 2026.
 This note attests the code state, data lineage, and
 artefact fingerprints of the three executed runs of the 2D phase. All SHA-256
 digests below were computed independently from the received archives.
@@ -101,3 +102,32 @@ digests below were computed independently from the received archives.
 - The stamped PREREG.md / PREREG_WP2.md and their configs are frozen.
 - The retracted preprint arXiv:2604.01349 must not appear in any
   external-facing material.
+
+## Addendum, 10 October 2026: the repository's first history
+- The repository was created on 14 July 2026. Its first commit,
+  b365af58b5135c6d079b377c26af419bdfe5fcaa ("Add files via upload",
+  03:25 UTC), was made through GitHub's web interface, which created and
+  signed it (signature verified; GitHub's web-flow key B5690EEEBB952194,
+  signed 03:25:10 UTC). It held the code of v2.1.4, which differs from
+  v2.1.5 only in the files listed in FIX_NOTES_v2_1_5.md; PREREG.md as
+  shipped, with its CONFIG_SHA256 line blank ("<fill before tagging>"),
+  otherwise identical to the stamped copy of Run 1; and
+  configs/phase1_rec8_v2.json byte-identical to the file in this
+  repository (canonical SHA-256 62b26ad8..., the stamped hash).
+  PREREG_WP2.md was not in it.
+- On 2 August 2026 at 17:29 UTC that history, which consisted of that
+  commit alone, was replaced by a force push with the history that begins
+  at a548825da6d02c91c7ccc4b6fcd6814116b2117e ("v2.1.5", dated
+  2026-08-03 01:26 +0800, that is, 2 August 17:26 UTC), which holds both
+  stamped documents and this note as compiled on 1 August 2026.
+- The first commit is kept under the tag provenance-2026-07-14, created in
+  October 2026. The hosting service's activity record, which logs the
+  creation of main at b365af5 on 14 July 2026 at 03:25 UTC and the force
+  push, but no tag creations, was exported on 10 October 2026 to
+  records/provenance/.
+- The owner account's security log, exported the same day (its entries for
+  this repository and for its deleted namesake are in records/provenance/),
+  records that this repository was created, public, on 14 July 2026 at
+  03:23 UTC, with no later change of visibility, and that a public
+  repository of the same name, created on 13 June 2026, was deleted at
+  03:23:17 UTC that day.

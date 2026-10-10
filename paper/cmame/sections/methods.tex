@@ -201,11 +201,18 @@ identified by its SHA-256 hash, and the code refused to start a run whose config
 not match the registered hash. Each run was carried out once. The documents of the
 three-dimensional runs, of the runs of \ref{app:e1} and \cref{sec:cost:training} and of
 the two-dimensional comparison of \cref{sec:results2d} were committed and pushed to the
-project's public repository before their runs; tags mark the commits. Those of the
-two-dimensional runs of July 2026 carried their configuration hashes, which the code checked
-at start-up, but were committed to the repository only on 3 August 2026, after the runs;
-their content at the time of the runs rests on the authors' archives, whose hashes the
-repository's provenance note records (\ref{app:prereg}). The initial
+project's public repository before their runs; tags mark the commits. The document and the
+configuration of the two-dimensional run of 16 July 2026 were uploaded on 14 July 2026 to
+the repository, public since its creation that day, in a commit that the hosting service
+created and signed. The document there
+was the template shipped with the code, whose hash line was blank; the copy that the run
+checked at start-up differed from it only in that line, which held the hash of the
+configuration uploaded then. A first attempt of that run stopped before any training. The
+document of the run of 31 July 2026, which also carried its configuration's hash for the
+code to check at start-up, was committed only on 2 August 2026, after the run; its content
+at the time of the run rests on the authors' archives, whose hashes the repository's
+provenance note records. On 2 August 2026 the repository's history was replaced by a new
+one, which holds both documents with their hash lines filled (\ref{app:prereg}). The initial
 three-dimensional run needed eight attempts because of memory and process faults; each
 restart reused the networks already trained under the same registered configuration, and
 the engineering changes the restarts needed are recorded as leaving every value unchanged.

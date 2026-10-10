@@ -853,3 +853,99 @@ waits for the thread measurement of RUNBOOK_W9 Sec. 4.
 - One source file changed (the mesh fix above), and the two regression
   summaries with it; no configuration, pre-registration or run record. Suite
   564.
+
+## Stage 10a (10 Oct 2026) -- the provenance of the July 2026 documents, corrected
+
+The manuscript said that the pre-registration documents of the two-dimensional
+runs of July 2026 were committed on 3 August 2026, after the runs. For the run
+of 16 July 2026 that was inaccurate, and to the paper's disadvantage; and it
+did not mention that the repository's history had been replaced. Checked on
+10 October 2026 against the hosting service and the commits themselves:
+
+- The repository was created on 14 July 2026. Its first commit, `b365af5`
+  ("Add files via upload", 03:25 UTC), was made through GitHub's web
+  interface, which created it (committer GitHub) and signed it (verified; the
+  packet names GitHub's web-flow key B5690EEEBB952194 and 03:25:10 UTC). It
+  held the code of v2.1.4, which differs from v2.1.5 only in the four files
+  that FIX_NOTES_v2_1_5.md lists; `PREREG.md` as shipped with that release, a
+  template whose hash line was blank and which otherwise equals the stamped
+  document that the run of 16 July checked (SHA-256 `b9470e68...`, as
+  PROVENANCE_NOTE.md records); and `configs/phase1_rec8_v2.json` byte for byte
+  as now (canonical SHA-256 `62b26ad8...`, the stamped hash, recomputed). It
+  did not hold `PREREG_WP2.md`. The service still serves `b365af5` by its hash.
+- The activity record logs nothing on the repository between that commit and
+  a force push on 2 August 2026 at 17:29 UTC, which replaced the history (that
+  commit alone) with the one that begins at the root commit `a548825`
+  ("v2.1.5", dated 2026-08-03 01:26 +0800, 17:26 UTC on 2 August). That commit
+  holds both stamped documents and PROVENANCE_NOTE.md as compiled on 1 August,
+  which records their hashes. The record logs no tag creations and does not
+  show visibility.
+- The owner account's security log (exported by the account holder on
+  10 October 2026; 643 entries from 13 April) records that the present
+  repository (id 1299960094) was created, public, on 14 July 2026 at
+  03:23:30 UTC, and that a public repository of the same name (id
+  1268189576), created on 13 June 2026, had been deleted 13 seconds before
+  (03:23:17 UTC). No entry of the export has the action `repo.access` (a
+  change of visibility).
+- FIX_NOTES_v2_1_5.md records a first attempt of the run of 16 July, on
+  14 July, which stopped before any training (the corpus it had generated
+  carried no labels); PROVENANCE_NOTE.md records the offline labelling of
+  15 July. The manuscript did not mention the attempt.
+
+Changes:
+- Methods (pre-registration): the run of 16 July (document and configuration
+  uploaded on 14 July in a commit that the service created and signed; the
+  document there the template, differing from the checked copy only in the
+  hash line, which held the hash of the configuration uploaded then; a first
+  attempt stopped before any training) is separated from the run of 31 July
+  (document committed on 2 August, after the run, its content resting on the
+  archives and the provenance note); the replaced history is stated, with a
+  pointer to Appendix A.
+- Discussion (limitations): the same correction in one sentence.
+- Appendix A, "Provenance of the two-dimensional runs of July 2026": the facts
+  above, times in UTC (the committer's time zone, UTC+8, named for the date of
+  3 August), the first attempt and the offline labelling, the tag
+  `provenance-2026-07-14` (created in October 2026) that keeps `b365af5`, the
+  exported activity record, and the security log's record that the
+  repository was public from its creation. The deleted namesake of 13 June,
+  which held nothing that the paper relies on (the author), is stated in the
+  records and in the provenance note's addendum, not in the text, at the
+  author's decision.
+- Methods: the repository named public since its creation on 14 July.
+- Appendix C: the activity record, exported on 10 October 2026, is committed
+  in `records/provenance/` with a README on how it was obtained
+  (`gh api ... /activity --paginate`; pages joined and sorted, events as
+  returned; 103 events) and on the two commits; beside it, the security
+  log's 15 entries that name FE-JEPA, with user agents, request identifiers
+  and request headers removed (no other entry of the export committed).
+- PROVENANCE_NOTE.md: a dated addendum (10 October 2026) on the first history,
+  the force push and the tag; its header names the addendum.
+- `tests/test_provenance_records.py` (5 tests): the export is the committed one;
+  its counts, its two events before 6 August and the absence of logged tag
+  creations, and the times, commits and tag quoted by Appendix A and the
+  addendum; `a548825` a root commit with that date, holding the two stamped
+  documents and the note as compiled on 1 August, which records their hashes,
+  unchanged since (skipped without the history); `b365af5`, where present (the
+  tag fetched), a root commit made and signed by the service at that time,
+  whose `PREREG.md` differs from the stamped one only in the blank hash line,
+  whose configuration is the registered one by blob and canonical hash, without
+  `PREREG_WP2.md`, and whose code differs from v2.1.5 only in the four files,
+  with the tag on it if the tag is present (without the commit, the README's
+  statements are checked); the security log's entries: the committed ones,
+  the three creation and deletion times, public throughout, no visibility
+  change, nothing private kept, and the text and the note agreeing.
+- Review: an independent review verified every statement against the API and
+  the commit objects; its findings were applied: the stale limitation
+  sentence; "the hash entered later" (the box's copy was stamped by
+  14 July, as the fix notes record; the uploaded document was the release's
+  template); "pushed" for a web upload, with the service's signature; the
+  public status on 14 July stated only from the owner account's security
+  log; the tag's creation date; the first
+  attempt disclosed; tests for the first commit and for the note as
+  committed; "today" removed; the replaced history named as one commit.
+  RUNBOOK_CMAME's suite count (A0c, B1c, D0c): 567 passed, 2 deselected.
+- The tag `provenance-2026-07-14` on `b365af5` is created and pushed by the
+  author from a terminal (an annotated tag on a commit that no branch holds),
+  before this commit, which names it.
+- No source file, configuration, pre-registration or run record changed.
+  Suite 569.

@@ -129,11 +129,32 @@ The two-dimensional runs of July 2026 were executed outside a version-controlled
 their reports record no commit. The code checked their configuration hashes against the
 pre-registration documents at start-up, and the code version was established afterwards
 from the runs' console output and by comparing the source trees of the released packages.
-The pre-registration documents of these runs were committed to the repository on 3 August
-2026, after the runs; the repository's provenance note, compiled on 1 August 2026, records
-the hashes of the documents that the runs checked, and those of the reports and of the
-archives that contained them. The three reports used here are committed with their
-hashes (\ref{app:repro}).
+The repository was created, public, on 14 July 2026 at 03:23 UTC, and its visibility has
+not changed since, as the security log of its owner account records. The pre-registration
+document and the configuration of the run of 16 July 2026 were first committed to it at
+03:25 UTC that day, by an upload through the hosting service's web interface, which created
+and signed that commit (\texttt{b365af5}), the repository's first. The commit holds the code release that
+the run used, version 2.1.4, which differs from the next release, \texttt{v2.1.5}, only in
+the files that the latter's notes list, and the document as shipped with that release: a
+template, whose hash line was blank. The copy that the run checked differed from it only in
+that line; the configuration file was byte for byte \path{configs/phase1_rec8_v2.json} of
+the version described here, whose canonical hash is the one in that line of the copy that
+the run checked. A first attempt of the run, on 14 July 2026, stopped before any training,
+because the corpus that it had generated carried no labels; the labels were computed
+separately on 15 July 2026, and the run was started again, with the same code and
+configuration, on 16 July. The document of the run of 31 July 2026 was not in the
+repository before that run. On 2 August 2026 at 17:29 UTC the repository's history, which
+until then consisted of the first commit alone, was replaced, by a force push, with a new
+history whose first commit (\texttt{a548825}, tagged \texttt{v2.1.5}), dated 17:26 UTC that
+day (3 August in the committer's time zone, UTC+8), contains both documents with their hash
+lines filled and the repository's provenance note. The note, compiled on 1 August 2026,
+records the hashes of the documents that the runs checked, which are those of the committed
+documents, and the hashes of the reports and of the archives that contained them. The first
+commit of the replaced history is kept under the tag \texttt{provenance-2026-07-14}, created
+in October 2026. An export of the hosting service's record of the repository's activity,
+which logs the creation of the branch at that commit on 14 July and the force push of
+2 August, and the security log's entries that name the repository are committed with the
+records, as are the three reports used here, with their hashes (\ref{app:repro}).
 
 \paragraph{Audit}
 An independent script recomputed the three-dimensional verdict from the report and agreed
