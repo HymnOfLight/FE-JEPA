@@ -8,14 +8,19 @@
 \resizebox{\ifdim\width>\textwidth\textwidth\else\width\fi}{!}{%
 \begin{tabular}{llcccc}
 \toprule
-Dimension & Model & 16 & 64 & 256 & 1,024 \\
+Run & Model & 16 & 64 & 256 & 1,024 \\
 \midrule
-2D & Supervised & 0.272 / 6.26 & 0.193 / 2.72 & 0.176 / 1.26 & 0.160 / 0.418 \\
-2D & Supervised + energy term & 0.410 / 2.56 & 0.184 / 0.579 & 0.182 / 0.154 & 0.161 / 0.166 \\
-2D & Label-free, then supervised & 0.207 / 1.32 & 0.189 / 0.201 & 0.181 / 0.302 & 0.166 / 0.236 \\
-2D & Graph network, supervised & 0.684 / 92.6 & 0.425 / 80.6 & 0.181 / 7.55 & 0.167 / 2.57 \\
+2D & Supervised & 0.459 / 20.8 & 0.165 / 3.06 & 0.0712 / 0.430 & 0.0505 / 0.133 \\
+2D & Supervised, stiffness norm & 0.362 / 0.254 & 0.0889 / 0.0505 & 0.0667 / 0.0383 & 0.0547 / 0.0290 \\
+2D & Graph network, supervised & -- & 0.370 / 149 & -- & 0.0499 / 0.825 \\
 2D & Nearest-neighbour field & 0.687 / 6.50 & 0.466 / 1.65 & 0.408 / 1.03 & 0.404 / 0.959 \\
-2D & Label-free (no labels) & 0.166 / 0.0817 & 0.166 / 0.0817 & 0.166 / 0.0817 & 0.166 / 0.0817 \\
+2D & Label-free (no labels) & 0.0634 / 0.0383 & 0.0634 / 0.0383 & 0.0634 / 0.0383 & 0.0634 / 0.0383 \\
+\midrule
+2D, July & Supervised & 0.272 / 6.26 & 0.193 / 2.72 & 0.176 / 1.26 & 0.160 / 0.418 \\
+2D, July & Supervised + energy term & 0.410 / 2.56 & 0.184 / 0.579 & 0.182 / 0.154 & 0.161 / 0.166 \\
+2D, July & Label-free, then supervised & 0.207 / 1.32 & 0.189 / 0.201 & 0.181 / 0.302 & 0.166 / 0.236 \\
+2D, July & Graph network, supervised & 0.684 / 92.6 & 0.425 / 80.6 & 0.181 / 7.55 & 0.167 / 2.57 \\
+2D, July & Label-free (no labels) & 0.166 / 0.0817 & 0.166 / 0.0817 & 0.166 / 0.0817 & 0.166 / 0.0817 \\
 \midrule
 3D & Supervised & 0.395 / 18.5 & 0.288 / 5.95 & 0.0726 / 0.799 & 0.0470 / 31.2 \\
 3D & Supervised + energy term & 0.369 / 0.621 & 0.256 / 0.854 & 0.0833 / 0.964 & 0.0470 / 0.116 \\
@@ -27,6 +32,6 @@ Dimension & Model & 16 & 64 & 256 & 1,024 \\
 
 \smallskip
 \begin{minipage}{\linewidth}\footnotesize\raggedright
-Seed means over 3 seeds (the nearest-neighbour field is deterministic). '--': a budget at which the model was not trained (in 3D the graph network was trained at 64 and 1,024 labels only). The label-free row repeats its single value, which uses the same 1,024 instances without labels.
+Seed means over 3 seeds (the nearest-neighbour field is deterministic, and the same in both 2D runs). A dash marks a budget at which the model was not trained (the graph network was trained at 64 and 1,024 labels only, except in the 2D run of July 2026). 2D: the run of 9 October 2026 (\cref{tab:2d}); 2D, July: the run of 16 July 2026, with the earlier code (\cref{tab:2djuly}). The label-free row repeats its single value, which uses the same 1,024 instances without labels.
 \end{minipage}
 \end{table}

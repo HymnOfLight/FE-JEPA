@@ -146,10 +146,11 @@ and $B$.
 
 \begin{proof}
 For a conforming discretisation with exactly integrated stiffness,
-\begin{equation*}
+\begin{equation}
 v^{\top}Kv=\int_\Omega\varepsilon(v_h):\mathbb{C}:\varepsilon(v_h)\,\mathrm{d}\Omega
 =\int_\Omega\sigma(v_h):\mathbb{C}^{-1}:\sigma(v_h)\,\mathrm{d}\Omega .
-\end{equation*}
+\label{eq:kcompliance}
+\end{equation}
 For an isotropic
 material $\mathbb{C}^{-1}:\sigma=s/(2G)+\operatorname{tr}\sigma\,I/(9B)$, so
 $\sigma:\mathbb{C}^{-1}:\sigma=s:s/(2G)+(\operatorname{tr}\sigma)^2/(9B)
@@ -171,9 +172,19 @@ Equation \eqref{eq:gapstress} is the sense in which a network trained on the ene
 from a weighted mean-square stress error: by \cref{cor:training}, $\mathcal{L}_\Pi$ is,
 up to a constant, the mean over the training set of half the integral of the
 compliance-weighted squared stress error. The bounds \eqref{eq:vmbound} and
-\eqref{eq:vmboundrel} concern the volume-weighted von Mises error, whereas the metric
-reported in \cref{sec:methods:metrics} weights elements equally, as pre-registered; on
-graded meshes the two differ, so the bounds explain rather than bound the reported numbers.
+\eqref{eq:vmboundrel} concern the area- or volume-weighted von Mises error, whereas the
+metric reported in \cref{sec:methods:metrics} weights elements equally, as pre-registered;
+on graded meshes the two differ, so the bounds explain rather than bound the reported
+numbers. For the networks with 1,024 labelled instances, measured after the runs, the two
+differed little. In two dimensions the median area-weighted errors over the validation load
+cases were \numSpecVmAreaFree{}, \numSpecVmAreaKnorm{}, \numSpecVmAreaLab{} and
+\numSpecVmAreaMgn{} for the label-free, the stiffness-norm and the supervised transformers
+and the graph network of \cref{sec:results2d}, against element-wise medians of
+\numSpecVmElemFree{}, \numSpecVmElemKnorm{}, \numSpecVmElemLab{} and \numSpecVmElemMgn{}; in
+three dimensions the median volume-weighted errors were \numFieldVmVolFree{},
+\numFieldVmVolLab{} and \numFieldVmVolMgn{} for the label-free transformer, the supervised
+transformer and the graph network of \cref{sec:results3d}, against element-wise medians of
+\numFieldVmElemFree{}, \numFieldVmElemLab{} and \numFieldVmElemMgn{}.
 
 \subsection{Displacement error and energy-norm error}\label{sec:theory:metrics}
 
@@ -215,13 +226,36 @@ large ones, so an error made of low-frequency modes is large in displacement and
 energy, and one made of high-frequency modes the reverse; by \cref{prop:stress} it is the
 energy that follows the stresses.
 
+\begin{remark}[Size and spectral position of an error]\label{rem:factor}
+For $v\neq0$ let $R(v)=v^{\top}Kv/v^{\top}v$ be the Rayleigh quotient of $K$, so that
+$\lambda_{\min}\le R(v)\le\lambda_{\max}$ and, in the eigenbasis of \cref{cor:modes},
+$R(e)=\sum_m\lambda_m\hat e_m^2/\sum_m\hat e_m^2$ is the mean eigenvalue of $K$ weighted by
+the squared modal coefficients of $e$. For a prediction $u\neq\Ustar$, dividing and
+multiplying \eqref{eq:relgap} by $\norm{u-\Ustar}_2^2$ and by $\norm{\Ustar}_2^2$ gives
+\begin{equation}
+g(u)=\rho(u)\,\delta(u)^{2},
+\qquad
+\rho(u)=\frac{R(u-\Ustar)}{R(\Ustar)},
+\qquad
+\delta(u)=\frac{\norm{u-\Ustar}_2}{\norm{\Ustar}_2}:
+\label{eq:factor}
+\end{equation}
+the relative energy gap is the squared relative displacement error $\delta^2$ times the
+normalised Rayleigh quotient $\rho$, which measures how far up the spectrum of $K$ the error
+lies compared with the solution. For two predictions $u_a$ and $u_b$ of the same load case,
+$g(u_a)/g(u_b)=(\rho(u_a)/\rho(u_b))\,(\delta(u_a)/\delta(u_b))^2$, so that a difference
+in relative energy gap is a difference in the size of the errors, in their spectral position,
+or in both.
+\end{remark}
+
 \begin{remark}[Opposite rankings]\label{rem:rank}
 For two predictions with errors $e_a,e_b\neq0$,
 \begin{equation}
 \kappa^{-1/2} \le \frac{\norm{e_a}_K/\norm{e_b}_K}{\norm{e_a}_2/\norm{e_b}_2} \le \kappa^{1/2},
 \label{eq:rank}
 \end{equation}
-by $\lambda_{\min}\norm{e}_2^2\le\norm{e}_K^2\le\lambda_{\max}\norm{e}_2^2$, and both bounds
+by $\lambda_{\min}\norm{e}_2^2\le\norm{e}_K^2\le\lambda_{\max}\norm{e}_2^2$, that is,
+$\kappa^{-1}\le R(e_a)/R(e_b)\le\kappa$ in the notation of \cref{rem:factor}, and both bounds
 are attained by eigenvectors of $\lambda_{\max}$ and $\lambda_{\min}$. Hence two
 predictions can be ranked in opposite orders by the displacement error and by the
 energy-norm error only if their displacement errors differ by less than a factor
@@ -282,10 +316,11 @@ Apply \cref{lem:exact} at $u$ and at $0$, and use $\Pi_h(0)=0$.
 
 Ranking candidate fields by their energy is the Ritz minimum principle itself; what
 \cref{cor:zero} adds for surrogates is a test against a fixed reference, the zero field,
-that each prediction passes or fails on its own. The counts of predictions worse than the
-zero field in \cref{sec:results2d,sec:results3d} use the mean of $g$ over the four load
-cases of an instance, as the evaluation records it; for a single load case the count and
-the sign test of \cref{cor:zero} coincide exactly. Together, \cref{cor:zero} and
+that each prediction passes or fails on its own. The counts of instance-seed predictions
+worse than the zero field in the tables of \cref{sec:results2d,sec:results3d} use the mean
+of $g$ over the four load cases of an instance, as the evaluation records it; the counts of
+single load cases in \cref{sec:results2d:accuracy,sec:results3d:detection} coincide exactly
+with the sign test of \cref{cor:zero}. Together, \cref{cor:zero} and
 \cref{prop:amp} give a deployment guard: compute $\Pi_h(u)$, flag the prediction if it is
 positive, and rescale it by $\cstar$, which never makes it worse in the energy norm and
 makes it no worse than the zero field.
@@ -297,17 +332,17 @@ A prediction can serve as the initial iterate of the conjugate gradient method
 $k$ iterations and $\gap_k=\gap(u^k)$, so that $\gap_0$ is the energy gap of the initial
 iterate. For $\kappa>1$ the classical bound \cite{Saad2003} is
 \begin{equation}
-\frac{\gap_k}{\gap_0} \le 4\rho^{2k},
+\frac{\gap_k}{\gap_0} \le 4q^{2k},
 \qquad
-\rho = \frac{\kappa^{1/2}-1}{\kappa^{1/2}+1}.
+q = \frac{\kappa^{1/2}-1}{\kappa^{1/2}+1}.
 \label{eq:cheb}
 \end{equation}
 
 \begin{corollary}[Iteration bound of a warm start]\label{cor:warm}
 Let $\bar g\in(0,1)$ be a target relative energy gap and $g_0\in(\bar g,1]$ the relative
-energy gap of the initial iterate. Under \eqref{eq:cheb}, $k\ge\ln(4g_0/\bar g)/(2\ln\rho^{-1})$
+energy gap of the initial iterate. Under \eqref{eq:cheb}, $k\ge\ln(4g_0/\bar g)/(2\ln q^{-1})$
 iterations suffice to reach $\bar g$, and $g_0=1$ for the zero field. The warm start
-therefore lowers this iteration bound by $\ln(1/g_0)/(2\ln\rho^{-1})$ iterations, a fraction
+therefore lowers this iteration bound by $\ln(1/g_0)/(2\ln q^{-1})$ iterations, a fraction
 \begin{equation}
 \frac{\ln(1/g_0)}{\ln(4/\bar g)}
 \label{eq:warm}
@@ -316,7 +351,7 @@ of the bound for the zero field; the fraction does not depend on $\kappa$.
 \end{corollary}
 
 \begin{proof}
-By \eqref{eq:cheb}, $g(u^k)=g_0\gap_k/\gap_0\le4g_0\rho^{2k}$, which is at most $\bar g$
+By \eqref{eq:cheb}, $g(u^k)=g_0\gap_k/\gap_0\le4g_0q^{2k}$, which is at most $\bar g$
 once $k$ reaches the stated value; subtract the two iteration counts.
 \end{proof}
 
@@ -325,7 +360,7 @@ actually saves depends on the spectral content of its error and can even be nega
 it shows is that a prediction of given accuracy lowers the iteration bound by a fixed number
 of iterations, while the bound grows with $\ln(1/\bar g)$, so that its share shrinks as the
 tolerance tightens. For $g_0=\numKfiveStartGap$, the initialiser tested in
-\cref{sec:results2d}, the fraction \eqref{eq:warm} is \numWarmFractionSeven{} for
+\cref{sec:results2d:decisions}, the fraction \eqref{eq:warm} is \numWarmFractionSeven{} for
 $\bar g=10^{-7}$, \numWarmFractionTwelve{} for $\bar g=10^{-12}$ and
 \numWarmFractionSeventeen{} for $\bar g=10^{-17}$. The residual test of that section,
 $\norm{r_k}_2\le\tau\norm{F}_2$ with $\tau=10^{-6}$, corresponds to targets in this
@@ -365,4 +400,13 @@ dimensions and from \numKappaThreeLow{} to \numKappaThreeHigh{} in three.
 checked on assembled two- and three-dimensional instances by the repository's test suite
 (\ref{app:repro}). On the \numAmpRows{} instance-seed evaluations of the post hoc readings of
 \cref{sec:transfer}, the relative energy gap after rescaling, computed from the energies,
-agreed with $1-\cos^2\psi$ to within \numAmpIdentity{}.
+agreed with $1-\cos^2\psi$ to within \numAmpIdentity{}. On every validation load case of the
+networks measured after the runs, all with 1,024 labelled instances (the four trained
+two-dimensional networks of \cref{sec:results2d}, and the label-free transformer, the
+supervised transformer and the graph network in three dimensions), the energy was positive
+exactly when the error's stiffness norm exceeded the solution's, that is, when the
+prediction was further from the solution than the zero field in the energy norm
+(\cref{cor:zero}), the rescaling by $\cstar$ never increased the relative energy gap
+(\cref{prop:amp}), and the area- or volume-weighted von Mises error obeyed
+\eqref{eq:vmboundrel}, with largest ratios of its left side to its right side of
+\numSpecBoundMax{} in two dimensions and \numFieldBoundMax{} in three.

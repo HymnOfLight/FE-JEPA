@@ -2,6 +2,7 @@
  "generator": "scripts/make_cmame_material.py",
  "inputs_sha256": {
   "DEVIATIONS_PHASE2.md": "f9c649e839504055f644a30da0e220be987b3c3caedff68deea026d1619800ae",
+  "configs/cm2d_v1.json": "26a332c7936ef9654c9448af8fcd94250685ba9c6713915920e3fbb9d23caef9",
   "configs/diag_anchor_b16.json": "b75c582e252ffa72e253abfec06c86e53eb9578aaead078a5471d28b5bbdb777",
   "configs/e1_2d_base.json": "6f85c9573af43d27dd3b832a1f9aec2a227e726d9571c39666b225b5971d870e",
   "configs/e1_2d_raw_s0.json": "653fd4bf6a99aab487081a66d63fbc03b8650c7d912f88713e8e8737fb334427",
@@ -11,6 +12,16 @@
   "configs/phase1_rec8_v2.json": "7e6c0ef7ec7150c7393e8d70e9ae8827755fa1aeef1383d389184e934a8e5adf",
   "configs/phase2b_v1.json": "92ee8d466b4e397d29275bcbc71229b60dc84c1938d64a98a3af4a558e5f128f",
   "configs/wp2_e2_v2.json": "fef75971527728881f8fbcf20b755536d38245db18f31cff30aabc166bb372c4",
+  "records/cmame/cm2d/return/report.json": "a72c007e1a612986af463084572f1794b574e9861cce233006534c51e1a6e5ec",
+  "records/cmame/cm2d/verdict.json": "008b26550dcde4880f5d1baf0e949c4d3909c7e8079807becf7a2f7d648b4db9",
+  "records/cmame/spectra/export/fig2d.npz": "1444977bceba4466b37a3b0f96b2eed78869826b499618e63ee24b349a7b4084",
+  "records/cmame/spectra/export/spectra.json": "a494aa49c299a83f614d3b8e8bd3aaf81d6e3cf76181e66f6abbb7fff863dc85",
+  "records/cmame/spectra/export/spectra_val.npz": "fed09ab55afbf2866427e54920ee7655df565a9704e6c5f098615e4f935116ac",
+  "records/cmame/timing/fields/energies_val.npz": "504498e4030ef2645166baf2cf7cc12633272245bd638ed97dcd4d8a954c5297",
+  "records/cmame/timing/fields/fields.json": "c25bc4507639ced8158cf327b248a29a82c4078cfe2dd51a639b3e0ec65f1583",
+  "records/cmame/timing/fields/fig5.npz": "594556cc327987e17083a1fb967a53dbe3b6736679f7746d032385d852c5a4a5",
+  "records/cmame/timing/fields/fig6.npz": "b4ffede43f0029882da911d3da102e225e468679f20c9700fbdd4255a646771e",
+  "records/cmame/timing/fields/fig7.npz": "241fd0d22dc2b2040661d84227d952bfdad027ccd2cc3a785c641504107c484c",
   "records/phase1/report_diag.json": "dbd7e13dc28dea4b727716e7acd8531200bb1a5e84b4e614681dba248343aa9d",
   "records/phase1/report_rec8_v2.json": "c6ea5934ff7fee4db63007ca1924b2973be63390d730f311e9bc29840633df51",
   "records/phase1/report_wp2_e2.json": "1a868e9ca6b72d58d682a6c286a804ad4147b9942b19d110d621a1b0fe3c2286",
@@ -38,6 +49,7 @@
   "records/wp8/posthoc/amp_e2_m1024.json": "15610965586d24d7e95cb50e6c9ae5570f331c61798bc15b58f73ac9cd0e82d7",
   "records/wp8/posthoc/amp_e2_m512.json": "5b998badf952aa2fc33c9ba7d3c72ba30cf54a9782c672e8bfae0678b43f451b",
   "records/wp8/posthoc/amp_phase2b.json": "4d4e0d4a9956c166b6decd4ace6fca029e6fec74926277e5e11ff3223f301566",
-  "records/wp8/posthoc/probe_random_init.json": "0137974647a9961d8754f0ff6f809df0b189c2bdf8088b9f21b3ba75817a6609"
+  "records/wp8/posthoc/probe_random_init.json": "0137974647a9961d8754f0ff6f809df0b189c2bdf8088b9f21b3ba75817a6609",
+  "scripts/adjudicate_cm2d.py": "f6208e9ab3ce743480d5954b5be10fc190a634053505bf1e5a3fd9ce1cb3bf48"
  }
 }

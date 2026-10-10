@@ -16,7 +16,7 @@ representation of one part of an input from that of another.
 
 Under a separate pre-registration we added SIGReg, applied to a learned projection of the
 latent vectors (a projection head), to the label-free objective of the two-dimensional
-transformer, with the later code of \cref{sec:results2d:other}, and asked whether it kept
+transformer, with the later code of \cref{sec:methods:networks}, and asked whether it kept
 the accuracy and separated the geometries better in latent space (\cref{tab:e1}). The
 separation was measured by the silhouette $S\in[-1,1]$ of the instance-mean latent vectors
 of the 256 validation instances, grouped into four bins by the quartiles of the first
@@ -48,10 +48,10 @@ of all nodes stacked, and let the decoder $D$ be Lipschitz from the latent space
 Euclidean norm, to $(\R^{n},\norm{\cdot}_K)$, with constant $\Lambda$.
 
 \begin{proposition}[Separation on a shared operator \cite{CaoSong2026}]\label{prop:sep}
-If $\norm{D(z_j)-\Ustar_j}_K\le\delta$ for every $j$, that is, by \cref{lem:exact},
-$\gap(D(z_j);F_j)\le\delta^2/2$, then for all $i\neq j$
+If $\norm{D(z_j)-\Ustar_j}_K\le\beta$ for every $j$, that is, by \cref{lem:exact},
+$\gap(D(z_j);F_j)\le\beta^2/2$, then for all $i\neq j$
 \begin{equation}
-\norm{z_i-z_j} \ge \frac{\norm{\Ustar_i-\Ustar_j}_K-2\delta}{\Lambda}.
+\norm{z_i-z_j} \ge \frac{\norm{\Ustar_i-\Ustar_j}_K-2\beta}{\Lambda}.
 \label{eq:sep}
 \end{equation}
 \end{proposition}
@@ -59,7 +59,7 @@ $\gap(D(z_j);F_j)\le\delta^2/2$, then for all $i\neq j$
 \begin{proof}
 By the triangle inequality,
 $\norm{\Ustar_i-\Ustar_j}_K\le\norm{\Ustar_i-D(z_i)}_K+\norm{D(z_i)-D(z_j)}_K
-+\norm{D(z_j)-\Ustar_j}_K\le2\delta+\Lambda\norm{z_i-z_j}$.
++\norm{D(z_j)-\Ustar_j}_K\le2\beta+\Lambda\norm{z_i-z_j}$.
 \end{proof}
 
 The bound is informative when the solutions themselves are separated; on sixteen

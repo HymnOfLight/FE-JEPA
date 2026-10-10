@@ -5,14 +5,16 @@
 
 \Cref{tab:criteria} lists every criterion fixed in advance for the runs reported in this
 paper, with the value measured and the outcome as recorded by the code at the time. The
-two-dimensional pre-registration also retired, before its run, an earlier criterion (a
+pre-registration of the two-dimensional run of 16 July 2026 also retired, before its run, an
+earlier criterion (a
 displacement improvement of at least 10\% from the energy term with 64 labels) that an
 earlier run had already answered in the negative; the run of 16 July 2026 measured
 \numGOneRetired{} with the fixed-weight form of the energy term, and the criterion played no
 part in its decisions. The following departures from the plans bear on the results. They
 are recorded in the repository's list of deviations and its provenance note, except the
 remark at the end of the paragraph on the energy term, which was noticed while this paper
-was written.
+was written, and the paragraph on the two-dimensional comparison of October 2026, whose
+content is recorded with that comparison's pre-registration and records.
 
 \paragraph{Deviation D14}
 The initial three-dimensional run (21 September 2026) completed its registered protocol and
@@ -48,8 +50,9 @@ rationale is that the factor of three had been calibrated on the two-dimensional
 and that on the three-dimensional family the supervised network itself sits below it with
 16 labels and above it from 64 labels on. In two dimensions the condition had read the
 networks of the energy-term sub-experiment, which met it at every budget; the networks of
-\cref{tab:labeleff} would not have met it with 16 labels (\numGOneSanityTableSixteen{}
-times), because of the scatter described in \cref{sec:results2d:labels}. The amendment
+\cref{tab:labeleff} (2D, July) would not have met it with 16 labels
+(\numGOneSanityTableSixteen{} times), because of the scatter described in
+\cref{sec:results2d:julyaccuracy}. The amendment
 declared the change as made after the fact and required the original form to be computed
 and reported beside it; both readings are in \cref{tab:criteria}. The change affects only
 the gate's verdict, not any measurement reported in this paper.
@@ -65,9 +68,9 @@ the text promised, and it leaves the cleaner comparison: the same instances, wit
 without their solutions.
 
 \paragraph{The energy term with 16 labels}
-In the networks of \cref{tab:2d,tab:labeleff}, the two-dimensional supervised transformer
+In the networks of \cref{tab:2djuly,tab:labeleff}, the two-dimensional supervised transformer
 with the energy term used the gradient-scaled form at every budget, and with 16 labels its
-displacement errors scattered across seeds (\cref{sec:results2d:labels}); the energy-term
+displacement errors scattered across seeds (\cref{sec:results2d:julyaccuracy}); the energy-term
 sub-experiment of the same run trained both the gradient-scaled and the fixed-weight form.
 An exploratory run (30 July 2026), with six seeds in two separate experiments, gave
 displacement errors from \numDiagScaledMin{} to \numDiagScaledMax{} for the gradient-scaled
@@ -79,7 +82,7 @@ gradient-scaled form for every budget; the registered code applied the pre-regis
 policy.
 
 \paragraph{The joint-embedding term (criterion K3)}
-Criterion K3 of the two-dimensional pre-registration concerned a separate run
+Criterion K3 of the two-dimensional pre-registration of July 2026 concerned a separate run
 (31 July 2026, \ref{app:repro}). That run pretrained the transformer without labels for 200
 epochs, once on the energy alone and once on the energy together with a self-supervised
 joint-embedding term (\ref{app:e1}), which predicts the latent vectors of masked regions of
@@ -96,9 +99,34 @@ same configuration in the run of 16 July 2026). This paper reports the energy ob
 without the term. That scope was chosen after the result was known, and it departs from
 the version of the paper that the rule selected.
 
-\paragraph{Provenance of the two-dimensional runs}
-The two-dimensional runs were executed outside a version-controlled checkout, so their
-reports record no commit. The code checked their configuration hashes against the
+\paragraph{The two-dimensional comparison of October 2026}
+The comparison of \cref{sec:results2d} was registered on 8 October 2026 and run once,
+starting on 8 October and completing on 9 October 2026; its adjudication, by a script fixed
+with the registration, recorded no deviation, and two operational departures recorded with
+the run, the route by which its return was fetched and a log file renamed after the run,
+touched no file that the adjudication reads. \Cref{tab:cm2d} gives its hypotheses with the
+readings that the pre-registration required beside each verdict. Its label-free row reused
+the three label-free networks of the run of 29 September 2026 (\ref{app:e1}): each was
+checked against the SHA-256 hash that run had recorded, and evaluated again they reproduced
+that run's per-instance validation values exactly. Three things were known when the
+comparison was registered: the label-free networks' values on the validation instances,
+recorded with the earlier run; the results of July 2026 that motivated the comparison,
+measured on the same validation instances, so that the comparison has no fresh evaluation
+set; and the outcome of a functional check of the stiffness-norm loss, run before the
+registration was stamped, which had trained a transformer of width 32 and depth 2 for 25
+epochs on 48 instances of another two-dimensional corpus, with two seeds. At that far
+smaller scale the check had shown both reductions that H2a and H2b test, and a label-free
+relative energy gap below that of supervised training on the displacement error, the
+comparison of H1, with the stiffness-norm loss and the label-free objective ranked
+differently in its two seeds, the comparison of H3. The registration disclosed the check.
+The readings of \cref{sec:results2d:spectrum}, and the rule that chose the instance of
+\cref{fig:field2d}, were specified after the verdict and bear on no criterion.
+
+\input{generated/table_cm2d}
+
+\paragraph{Provenance of the two-dimensional runs of July 2026}
+The two-dimensional runs of July 2026 were executed outside a version-controlled checkout, so
+their reports record no commit. The code checked their configuration hashes against the
 pre-registration documents at start-up, and the code version was established afterwards
 from the runs' console output and by comparing the source trees of the released packages.
 The pre-registration documents of these runs were committed to the repository on 3 August

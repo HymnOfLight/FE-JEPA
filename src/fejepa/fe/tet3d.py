@@ -9,7 +9,7 @@ what de-risks WP7.
 
 This module therefore provides exactly the contract proof and nothing more:
 
-  * structured tetrahedral box meshes (5 tets per hex cell);
+  * structured tetrahedral box meshes (6 tets per hex cell, Kuhn split);
   * P1 linear-tetrahedron stiffness assembly, node-major dofs ``3*i + c``;
   * face tractions + gravity load battery, one clamped face;
   * 3D strain / stress / von-Mises / strain-energy recovery with the same Lame
@@ -36,9 +36,13 @@ from .stress import lame
 
 LOAD_NAMES_3D = ["face_down", "face_axial", "top_shear", "gravity"]
 
-# 5-tet decomposition of the unit hex (corner ordering: x fastest, then y, then z)
-_HEX_TO_TETS = np.array([[0, 1, 3, 7], [0, 1, 7, 5], [0, 5, 7, 4],
-                         [1, 3, 7, 2], [1, 2, 7, 6]], dtype=np.int64)
+# 6-tet (Kuhn) decomposition of a hex cell along its diagonal c0-c6, for the corner ordering used in
+# structured_tet_mesh: c0..c3 counter-clockwise on the lower face (k), c4..c7 above them (k + 1).
+# Every cell uses the same diagonal direction, so neighbouring cells share face diagonals (conforming).
+# The 5-tet table used before this fix (five tetrahedra sharing one corner) tiles a cell under no
+# corner ordering; with this one it covered only 5/6 of each cell. See tests/test_tet3d_mesh.py.
+_HEX_TO_TETS = np.array([[0, 1, 2, 6], [0, 1, 5, 6], [0, 3, 2, 6],
+                         [0, 3, 7, 6], [0, 4, 5, 6], [0, 4, 7, 6]], dtype=np.int64)
 
 
 def structured_tet_mesh(w: float, h: float, d: float, nx: int, ny: int, nz: int):

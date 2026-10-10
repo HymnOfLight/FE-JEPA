@@ -11,9 +11,13 @@ on the energy alone was more accurate on every metric than the same transformer 
 the solutions of the same instances, and a supervised graph network with lower
 displacement errors had several times larger stress errors, so that displacement error
 ranked the two in the opposite order to stress error. In two dimensions the label-free
-network was slightly less accurate in displacement and more accurate in energy and stress,
-and warm starts from a label-free prediction did not shorten conjugate gradients to
-a tight tolerance. In three dimensions no network transferred to a substantially finer mesh without
+network had a larger displacement error than the supervised one and smaller energy and stress
+errors. Trained on the stiffness-norm error instead of the displacement error, with the same
+labels, the supervised network halved its von Mises error, as pre-registered, and its errors
+lay lower in the spectrum of the stiffness matrix, as measured afterwards: with the labels
+fixed, the norm of the loss decided the accuracy of the stresses. In two dimensions, warm
+starts from a label-free prediction did not shorten conjugate gradients to a tight
+tolerance. In three dimensions no network transferred to a substantially finer mesh without
 retraining, although a label-free rescaling removed most of the label-free network's error
 there.
 These limits, and the criteria that were not met, are reported with the results.

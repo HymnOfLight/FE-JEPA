@@ -2,10 +2,12 @@
 
 \subsection{Labels}\label{sec:cost:labels}
 
-In two dimensions the comparison consumed \numTwoSolves{} solves:
-\numTwoSolvesOffline{} for the 256 validation and 1,024 training instances, four load cases
-each, and \numTwoSolvesRun{} for the coarsened validation sets of
-\cref{sec:results2d:other}. In three dimensions it consumed \numThreeSolves{}:
+In two dimensions the comparison of \cref{sec:results2d} used \numCmSolves{} solves,
+\numCmSolvesVal{} for the 256 validation instances and \numCmSolvesTrain{} for the 1,024
+labelled training instances, four load cases each; the run of 16 July 2026 used the same
+labelled instances and a further \numTwoSolvesRun{} solves for the coarsened validation sets
+of \cref{sec:results2d:other}. In three dimensions the comparison consumed
+\numThreeSolves{}:
 \numThreeTrainSolves{} for the 1,024 labelled training instances, \numThreeFewSolves{} for
 the 64 fine-mesh instances reserved for few-shot training and \numThreeEvalSolves{} for the in-band and fine-mesh
 validation sets. The validation solves are needed to evaluate any method; the training
@@ -18,7 +20,7 @@ seed on one NVIDIA GeForce RTX 5090, for 204,800 steps; the supervised transform
 the same per step, plus its labels. Full self-attention over all nodes dominates this cost
 and grows with the square of the number of nodes: one training step took
 \numEtwoTransformerFineStep{} s on a fine-mesh instance of \numEtwoNodesFine{} nodes. In
-two dimensions, with the later code of \cref{sec:results2d:other}, three label-free seeds
+two dimensions, with the later code (\cref{sec:methods:networks}), three label-free seeds
 trained in parallel on one GPU of the same type took \numTimeTwoParallel{}.
 
 To reduce the cost of attention we tested, under a separate pre-registration, a

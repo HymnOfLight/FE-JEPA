@@ -54,11 +54,12 @@ sequence; the four sequences of an instance are processed as one batch. The enco
 decoder have \numParamsTransformer{} million parameters; the implementation also holds two
 auxiliary heads, \numParamsAux{} million parameters, which only the secondary objectives of
 criteria K3, K4 and K6 use (\ref{app:prereg}).
-In three dimensions the decoded field is multiplied by $F_{\max}$, so that the prediction is
-proportional to the load amplitude. The two-dimensional runs of \cref{sec:results2d} used
-an earlier version of the code that did not multiply $F_{\max}$ back; since the load features are normalised by
-$F_{\max}$, no network in those runs could know the absolute amplitude of an instance's
-loads (\cref{sec:results2d:other}).
+The decoded field is multiplied by $F_{\max}$, so that the prediction is proportional to the
+load amplitude. The two-dimensional runs of July 2026 (\cref{sec:results2d:july},
+\ref{app:prereg}) used an earlier version of the code that did not multiply $F_{\max}$ back;
+since the load features are normalised by $F_{\max}$, no network in those runs could know the
+absolute amplitude of an instance's loads. The runs of September and October 2026 used the
+later code.
 
 \paragraph{Graph network}
 As a supervised baseline of the most widely used kind we used a MeshGraphNets-style
@@ -113,33 +114,63 @@ training evaluates the assembled discrete potential energy of the prediction $u$
 \eqref{eq:training} with $L=4$: at each step one training instance is drawn, without
 replacement within an epoch, its four load cases are predicted, and the mean of their
 energies is the loss; no reference solution is read. The supervised transformer, the same
-network, minimises the mean over load cases of the relative displacement error
-$\norm{u-\Ustar}_2/\norm{\Ustar}_2$ on labelled instances; we write $\mathcal{L}_D$ for
-this loss. The supervised transformer with an energy term adds the mean energy of the four
-load cases to it, with the gradient of the energy scaled to at most the norm of the
+network, minimises on labelled instances the mean over the load cases of the relative
+displacement error,
+\begin{equation}
+\mathcal{L}_D=\frac{1}{L}\sum_{j=1}^{L}\frac{\norm{u_j-\Ustar_j}_2}{\norm{\Ustar_j}_2},
+\label{eq:ld}
+\end{equation}
+where $u_j$ is the prediction and $\Ustar_j$ the reference solution for load case $j$ of an
+instance, and $F_j$ its load vector. In two dimensions the same network was also trained on
+the relative stiffness-norm error,
+\begin{equation}
+\mathcal{L}_K=\frac{1}{L}\sum_{j=1}^{L}\frac{\norm{u_j-\Ustar_j}_K}{\norm{\Ustar_j}_K}
+=\frac{1}{L}\sum_{j=1}^{L}g(u_j)^{1/2},
+\label{eq:lk}
+\end{equation}
+which replaces the norm of \eqref{eq:ld} and nothing else; we call this network the
+stiffness-norm transformer. Since
+$\norm{u_j-\Ustar_j}_K^2=u_j^{\top}Ku_j-2F_j^{\top}u_j+F_j^{\top}\Ustar_j$, the loss
+$\mathcal{L}_K$ uses each reference solution only through the number
+$\norm{\Ustar_j}_K^2=F_j^{\top}\Ustar_j$, and its gradient with respect to $u_j$,
+\begin{equation}
+\nabla_{u_j}\mathcal{L}_K=\frac{Ku_j-F_j}{L\,\norm{u_j-\Ustar_j}_K\,\norm{\Ustar_j}_K},
+\label{eq:lkgrad}
+\end{equation}
+is that of the label-free objective of one instance, $(Ku_j-F_j)/L$, weighted per load case.
+The supervised transformer with an energy term adds the mean energy of the four load cases
+to $\mathcal{L}_D$, with the gradient of the energy scaled to at most the norm of the
 gradient of $\mathcal{L}_D$: the update direction is
 $\nabla_\theta\mathcal{L}_D+\min\{1,\norm{\nabla_\theta\mathcal{L}_D}/\norm{\nabla_\theta\bar\Pi}\}\nabla_\theta\bar\Pi$,
 with $\bar\Pi$ the mean energy. In three dimensions with 16 labelled instances the energy
 term was instead $\bar\Pi$ divided by the mean of $\lvert\Pi_h(\Ustar)\rvert$ over the load
 cases, with weight one, a policy fixed in the three-dimensional pre-registration after an
 exploratory two-dimensional run had shown the scaled form to scatter widely across seeds
-with 16 labels (\ref{app:prereg}). In two dimensions a fourth variant trains the supervised
-objective from the label-free network's parameters. The graph network is trained on
-$\mathcal{L}_D$.
+with 16 labels (\ref{app:prereg}). The two-dimensional run of July 2026 also trained the
+supervised objective from the label-free network's parameters. The graph network is trained
+on $\mathcal{L}_D$.
 
 All networks were trained with AdamW \cite{Loshchilov2019} (weight decay $10^{-4}$,
 gradient norm clipped at 1) for 200 epochs, with a cosine learning-rate schedule after a
 linear warm-up over the first 5\% of the steps, at a peak learning rate of $10^{-3}$
 (label-free) or $1.5\times10^{-3}$ (supervised), in single precision with TF32 matrix
-products, each with three seeds (0, 1, 2). The learning rates were fixed before the runs
-and not tuned on them. The supervised networks were trained with 16, 64, 256 and 1,024
-labelled instances, the first 16, 64, 256 and 1,024 instances of the training pool. The label-free network was
-trained on the same 1,024 instances without their solutions, for 204,800 steps; its
-training set is thus the supervised networks' largest one with the labels removed. In
-three dimensions the graph network was trained with 64 and 1,024 labelled instances only, a
-saving of machine time fixed in the pre-registration. The networks of the secondary checks
-of \cref{sec:results2d:decisions,sec:results2d:other} were trained with the settings given
-where they are reported.
+products (TensorFloat-32: the inputs of each product rounded to a 10-bit mantissa, the
+products accumulated in single precision), each with three seeds (0, 1, 2). The learning rates were fixed before the runs
+and not tuned on them; the stiffness-norm transformer used the supervised settings
+unchanged. The supervised networks were trained with 16, 64, 256 and 1,024 labelled
+instances, the first 16, 64, 256 and 1,024 instances of the training pool. The label-free
+network was trained on the same 1,024 instances without their solutions, for 204,800 steps;
+its training set is thus the supervised networks' largest one with the labels removed. In
+the two-dimensional comparison of \cref{sec:results2d}, the label-free networks are those
+trained in the run of 29 September 2026 (\ref{app:e1}) with these settings and the later
+code, evaluated without retraining; at a given seed the transformers start from the same
+initial weights and, with 1,024 instances, see them in the same sequence of per-epoch
+permutations, so that the supervised and the stiffness-norm transformers differ only in the
+loss. Except in
+the two-dimensional run of July 2026, the graph network was trained with 64 and 1,024
+labelled instances only, a saving of machine time fixed in the pre-registrations. The
+networks of the secondary checks of \cref{sec:results2d:decisions,sec:results2d:other} were
+trained with the settings given where they are reported.
 
 \subsection{Metrics}\label{sec:methods:metrics}
 
@@ -168,9 +199,9 @@ gates and the kill conditions, which withdraw a claim when they are triggered; b
 outcomes of every such run were declared publishable in advance. The configuration is
 identified by its SHA-256 hash, and the code refused to start a run whose configuration did
 not match the registered hash. Each run was carried out once. The documents of the
-three-dimensional runs and of the runs of \ref{app:e1} and \cref{sec:cost:training} were
-committed and pushed to the project's public repository before their runs; tags mark the
-commits. Those of the
+three-dimensional runs, of the runs of \ref{app:e1} and \cref{sec:cost:training} and of
+the two-dimensional comparison of \cref{sec:results2d} were committed and pushed to the
+project's public repository before their runs; tags mark the commits. Those of the
 two-dimensional runs of July 2026 carried their configuration hashes, which the code checked
 at start-up, but were committed to the repository only on 3 August 2026, after the runs;
 their content at the time of the runs rests on the authors' archives, whose hashes the
@@ -179,7 +210,8 @@ three-dimensional run needed eight attempts because of memory and process faults
 restart reused the networks already trained under the same registered configuration, and
 the engineering changes the restarts needed are recorded as leaving every value unchanged.
 Results that were not pre-registered, an exploratory replication (\cref{sec:results2d:other})
-and readings taken after the runs (\cref{sec:transfer:amplitude}), are labelled as such.
+and readings taken after the runs (\cref{sec:results2d:spectrum,sec:results3d:reverse,%
+sec:results3d:detection,sec:transfer:amplitude}), are labelled as such.
 \Cref{tab:criteria} in \ref{app:prereg} lists every pre-registered criterion of these runs
 with its outcome, met or not, under the labels of the pre-registration documents, which
 the table explains. An independent script recomputed the three-dimensional verdict from the
@@ -203,10 +235,19 @@ self-supervised term in the pretraining objective; this paper reports the energy
 without it, a scope chosen after that result was known.
 
 \paragraph{Field plots}
-The instances shown in the field plots of \cref{sec:results3d,sec:transfer} were chosen
-by rules fixed in code before any field was drawn: the validation instance with the largest
-relative energy gap of the supervised transformer (the same instance in all three seeds),
-the validation instance with the median relative energy gap of the label-free transformer,
-and the fine-mesh instance with the median displacement error of the label-free
-transformer, each in seed 0. The first rule was chosen after the per-instance records had
-been examined, but before any field had been plotted.
+The instances shown in the field plots of \cref{sec:results2d,sec:results3d,sec:transfer}
+were chosen by rules fixed in code before any field was drawn: in two dimensions, the
+validation instance with the median relative energy gap of the supervised transformer; in
+three dimensions, the validation instance with the largest relative energy gap of the
+supervised transformer (the same instance in all three seeds), the validation instance with
+the median relative energy gap of the label-free transformer, and the fine-mesh instance
+with the median displacement error of the label-free transformer; each in seed 0, the median
+of $n$ values being the lower one, of rank $\lfloor(n-1)/2\rfloor$ counted from zero in
+ascending order. The first three-dimensional rule, and the two-dimensional rule, which was
+written after the verdict of the run of 9 October 2026, were chosen after the per-instance
+records had been examined, but before any field had been plotted. Each plot shows one load case of its instance, chosen by
+the same rule applied to the instance's four load cases (the largest value, or the second
+smallest); this was fixed when the plots were made, after the per-load-case values had been
+examined but before any field had been drawn. The three-dimensional plots show the three
+faces of the box seen in an oblique projection, the free end on the right; the clamped face
+and the cavities are hidden.

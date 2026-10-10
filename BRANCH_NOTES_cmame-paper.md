@@ -720,3 +720,136 @@ CM2D's verdict: post hoc, reported only; nothing in PREREG_CM2D reads it.
   and these readings into it.
 - No source, script, configuration, pre-registration or manuscript change.
   Suite 548.
+
+## Stage 9 (9 Oct 2026) -- CM2D, the error spectra and the field export in the manuscript
+
+The manuscript reads the records of Stages 4b, 6 and 8. Every new number is
+generated from them by `scripts/make_cmame_material.py`, which checks each
+statement the text makes about them and stops otherwise; the cost table
+waits for the thread measurement of RUNBOOK_W9 Sec. 4.
+
+- Section 5 (two dimensions) now reports CM2D, the run of 9 October 2026, as
+  the comparison. Its opening says what was retrained (L_D at every budget,
+  the graph network at 64 and 1,024) and what was reused (E1's label-free
+  states). Table 1 (`table_2d.tex`) is CM2D at 1,024 labels (label-free,
+  supervised L_D, supervised in the stiffness norm L_K, graph network, the
+  naive rows). 5.1: accuracy, H1, the guard defined in the text ("no
+  difference shown" is not equivalence), the readings beside the verdicts
+  (Table A.2), the graph network against L_D (lowest displacement error, 1%
+  below L_D and within the guard; lower gap or von Mises error on no pair).
+  5.2: H2a and H2b (the area-weighted ratio of von Mises errors, 2.26 against
+  2.22 element-wise); H3 on its own (within the guard; seed 1 makes most of
+  the difference, seeds 0 and 2 alone 2.7%; L_K lower on 87.6% of the pairs;
+  instance resampling 21.9% to 28.0% lower, the seed-level guard does not
+  separate). 5.3: the spectra (post hoc; Figure 2 `fig_spectra.pdf`; Figure 3
+  `fig_field2d.pdf`, the rule's instance, 221, seed 0); the 90% is the
+  log-share of the geometric-mean ratio 9.85, not of H2a's 4.60; TF32's
+  rounding (2,010 triples = 670 load cases x 3 seeds) understates the
+  differences between the networks trained in the two norms. 5.4: label
+  efficiency; the budget comparisons named as 80 exploratory secondary readings
+  without multiplicity correction; at 256 labels L_K's seed means are within
+  the guard of the label-free ones although the label-free network has the
+  lower gap on 72.4% of the pairs. 5.5: the run of 16 July 2026 (its table
+  `table_2djuly.tex`, the former Table 1; decisions; observations).
+- Theory: Remark "Size and spectral position of an error" (g = rho delta^2,
+  eq:factor); the conjugate-gradient factor renamed q (rho is the quotient);
+  Sec. 3.3 gains the area- against element-weighted von Mises medians in 2D
+  and the volume-weighted ones in 3D (three significant digits); the counts
+  of single load cases and the exported networks named in Sec. 3.4 and 3.7.
+- Methods: L_D and L_K as numbered equations, L_K's dependence on each
+  solution through ||U*_j||_K^2 only and its gradient (eq:lkgrad); TF32
+  defined; the code versions by run; CM2D's reuse of E1's states, shared
+  initial weights and the same sequence of per-epoch permutations; the
+  field-plot rules, with the 2D rule disclosed as written after CM2D's verdict.
+- Section 6: Figures 6 and 7 (`fig_field_worst.pdf`, `fig_field_median.pdf`)
+  and Section 7's Figure 9 (`fig_field_fine.pdf`): the three visible faces of
+  the box in a right-handed oblique view (front face z = max; the candidate's
+  view was a mirror image); on the worst instance's load case the label-free
+  displacement has the reference's shape and too large an amplitude (delta
+  0.22, 0.045 after c* = 0.78); the 3D quotients and per-load counts; the
+  stale F_max attribution of the 2D/3D displacement difference replaced.
+- Abstract (250 words, no digits), introduction and conclusion: the 2D
+  label-free against supervised result restored in the abstract; "with the
+  labels fixed, the norm of the loss decided the stress accuracy"; the
+  spectral reading flagged as post hoc; the 3D failure sentences scoped.
+  Discussion: H3 as "no difference shown, which is not equivalence", the
+  spectral share stated as a log-share of the geometric-mean ratio,
+  Limitations (what was known at registration; exploratory budget readings).
+- Appendix A: CM2D's criteria rows with network names; the guard note without
+  tau (tau is the CG tolerance); Table A.2 (`table_cm2d.tex`): per-seed
+  values, rel, SE_rel, guard, the guard on medians, Welch's and the
+  instance-resampling 95% intervals for H1-H3 and H3 with the roles exchanged;
+  "Three things were known" (the functional check also showed H1's direction
+  and H3's split between its two seeds); the operational departures named; the
+  run dated 8-9 October. The provenance sentences of Sec. 4.5 and the body of
+  Appendix A's July paragraph, whose correction awaits the principal
+  investigator, are unchanged apart from the paragraph title. Appendix B:
+  Proposition B.1's bound renamed beta (delta is the displacement error).
+- Generator: CM2D (report and verdict), the spectra and the field export are
+  read and hashed into `sources.json`, with `scripts/adjudicate_cm2d.py`
+  (checked against the hash the verdict records; the reuse bound 10^-4 is read
+  from it). Every spectral reading the text quotes is recomputed from the
+  per-load arrays and checked against the export's summary (TF32 off, the
+  stiff-mode rounding and its count, per seed, seed geometric means, the
+  2,010/670 count, the log bins). New checks: opposite rankings in either
+  order; one count for label-free and L_D per load case; the gap and von
+  Mises shares on the same pairs; the label-free gap below the graph
+  network's at 64; L_K's errors the smaller in every seed, by far in seed 1;
+  the medians and intervals beside the verdicts; the fig5 and fig6 load-case
+  statements; Pi_h(u) > 0 against the error norms (not against g > 1, which is
+  computed from the same energies). The field plots' load case "max" is
+  np.argmax; each panel's sign is the stored energy's. Legends use the tables'
+  names. Five new figures; colours follow the entity (L_K green, marker X; the
+  five series validate all-pairs in light mode); single-hue ramps for fields.
+- Tests (`tests/test_cmame_material.py`, 13 new): CM2D's numbers against the
+  verdict and the report's arrays; every quoted spectral and CM2D reading
+  recomputed independently; the criteria table against the verdict and the
+  adjudicator's bound; every cell of Table A.2 recomputed from the report alone
+  (seeds, rel, SE_rel, guard, reading, the guard on medians, Welch's interval,
+  an independent resampling of the instances, the exchanged roles); the
+  spectral and 3D readings from the per-load arrays; each field plot's
+  instance and load case by its rule; the figure files tied to the energies
+  and to Phase-2b's P3 arrays; the faces of the oblique view (right-handed,
+  owner tetrahedra, exact tiling); each panel's annotation and colour scale;
+  Appendix A's description of the functional check against its record.
+  RUNBOOK_CMAME's suite count (A0c, B1c, D0c): 562 passed, 2 deselected.
+- Review: three independent reviews of the candidate (science, code,
+  editorial). No number was wrong. Two blocking findings, both fixed: "could
+  not be told apart" (now: seed means within the noise guard, which is not
+  equivalence) and Figure 4's caption (the 2D panels are CM2D's; July trained
+  the energy-term transformer in 2D and the graph network at every budget).
+  The important and minor findings were applied as listed above; the
+  reviewers' proposed tests were adapted and added. A second, fresh review of
+  the fixed candidate (with the mesh fix) found nothing blocking; its findings
+  were applied: Table A.2 pinned cell by cell, Appendix C's description of the
+  tests scoped ("the main numbers"), "the later code" in Sec. 6.1, the mesh
+  wording; the proof of Proposition 1's display is numbered. Correction to
+  Stage 8's note: seed 2's spectral log-share is 88.5% (written there as 88%).
+- The structured tetrahedral mesh (`src/fejepa/fe/tet3d.py`; the patch
+  `tet3d_kuhn_fix.patch` from another session, with two corrections from the
+  second review: the code comment, and the coverage test asserting exactly
+  once): `structured_tet_mesh` split each hexahedral cell into five tetrahedra
+  that all share one corner, a table that tiles a cell under no corner
+  ordering; with the ordering used, they covered 5/6 of the cell (no overlaps,
+  one void per cell), and neighbouring cells did not conform. It now uses the
+  six-tetrahedron Kuhn split along each cell's c0-c6 diagonal, the same in
+  every cell, which is conforming. `tests/test_tet3d_mesh.py` (3 tests): exact
+  and conforming tiling, every point covered exactly once, the P1 energy of a
+  linear field exact. No record and no run reported in the manuscript used
+  this mesh: every configuration of the reported runs and of wp9 uses gmsh
+  (2D) or gmsh3d (3D); only the WP7-S1 smoke configurations,
+  `scripts/bench3d_scale.py`, `scripts/amp_compile_check.py` and tests did.
+  The tests' three-dimensional instances, on which the manuscript's theory
+  checks also run, are now proper meshes of their boxes; every check passes,
+  as it did on the defective meshes (the identities and bounds hold for any
+  assembled system). No experiment is re-run. Because `src` changed, the
+  cross-branch regression against wp8-lejepa ran again in the sandbox (both
+  miniatures identical: 162 and 2,590 numbers, every state file
+  byte-identical; 43 s and 100 s), and `records/cmame/`'s two summaries and its
+  README name the new `src` tree, `7cc8ac1b...`, as `tests/test_w9_records.py`
+  requires. wp9-pool, which noted the split as an observation in its own Stage
+  notes, is frozen until session 2 returns; the fix goes there afterwards, with
+  its regression record and its runbook's suite count.
+- One source file changed (the mesh fix above), and the two regression
+  summaries with it; no configuration, pre-registration or run record. Suite
+  564.

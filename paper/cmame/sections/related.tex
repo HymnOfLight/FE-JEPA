@@ -59,8 +59,8 @@ order to their stress errors.
 Neural predictions have been used as initial iterates of iterative solvers
 \cite{Wang2026PretrainFEM,Eshaghi2026NOWS} and inside hybrid iterative schemes
 \cite{Lee2025MetaSolver}. \Cref{cor:warm} bounds how far a warm start can lower the
-iteration bound of conjugate gradients, and \cref{sec:results2d} reports a pre-registered
-test in which a warm start saved nothing at a tight tolerance. The training difficulty of
+iteration bound of conjugate gradients, and \cref{sec:results2d:decisions} reports a
+pre-registered test in which a warm start saved nothing at a tight tolerance. The training difficulty of
 residual-based physics losses has been traced to operator conditioning: descent on a
 squared residual is governed by an operator whose condition number is the square of the
 original one \cite{DeRyck2024}; the energy objective avoids the squaring

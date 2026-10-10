@@ -62,18 +62,22 @@ asks the network for a larger output than any it produced in training. We have n
 this explanation causally. It agrees with the two-dimensional observation of
 \cref{sec:results2d:other}, where the output was not multiplied by $F_{\max}$ and networks
 trained on meshes \numCoarsenLow{} and \numCoarsenHigh{} times coarser lost little accuracy
-on the original meshes; but the two-dimensional errors were probably dominated by the
-missing load amplitude (\cref{sec:results2d:other}), so the contrast is suggestive only. A separate pre-registered
+on the original meshes; but the errors of those networks were probably dominated by the
+missing load amplitude (\cref{sec:results2d:julyaccuracy}), so the contrast is suggestive
+only. A separate pre-registered
 study, outside the scope of this paper, tests an output scale that does not depend on the
 mesh. \Cref{fig:field-fine} shows a typical fine-mesh prediction before and after the
-rescaling.
+rescaling: the prediction has the shape of the solution and too small an amplitude.
 
 \begin{figure}[tbp]
 \centering
-\pending{Field plot of the fine-mesh instance with the median displacement error of the
-label-free transformer, seed 0: reference solution, label-free prediction and the
-prediction rescaled by $\cstar$.}
-\caption{A typical fine-mesh instance, seed 0 (selection rule in
-\cref{sec:methods:prereg}).}
+\includegraphics[width=\linewidth]{generated/fig_field_fine.pdf}
+\caption{A typical fine-mesh instance, the one with the median displacement error of the
+label-free transformer, seed 0, under the \numFigFineLoad{} (selection rules in
+\cref{sec:methods:prereg}). Magnitude of the displacement of the reference solution, of the
+label-free prediction and of that prediction rescaled by $\cstar$ \eqref{eq:cstar}, on one
+colour scale set by the reference and displayed as in \cref{fig:field-worst}; above each
+prediction, its relative displacement error $\delta$ on this load case and, for the rescaled
+one, $\cstar$.}
 \label{fig:field-fine}
 \end{figure}

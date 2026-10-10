@@ -39,10 +39,12 @@ worse than the zero field, and a closed-form rescaling that guarantees it is not
 is a controlled test of what label-free training buys: the same network trained on the same
 instances with and without their solutions, under criteria fixed before the runs, with the
 criteria that failed reported alongside those that were met. By the identity above, the
-test compares two losses, the stiffness-norm error, which needs no solve, and the usual
-relative displacement error, which does; the labels add no information that $K$ and $F$ do
-not already carry. The paper extends a companion note \cite{CaoSong2026}, which stated the
-exactness identity, the conditioning bounds and their executable checks.
+test compares two losses, the squared stiffness-norm error, which the energy gives without
+a solve, and the usual relative displacement error, which needs the solutions; the labels
+add no information that $K$ and $F$ do not already carry. In two dimensions, a third
+network, supervised in the stiffness norm, separates the norm of the loss from the labels.
+The paper extends a companion note \cite{CaoSong2026}, which stated the exactness identity,
+the conditioning bounds and their executable checks.
 
 The energy has three roles in this paper: training objective, evaluation metric and failure
 detector. \Cref{sec:theory} derives each from \cref{lem:exact}, and the first three
@@ -51,10 +53,11 @@ subsections of \cref{sec:results3d} examine them in turn. The contributions are 
 \item Theory (\cref{sec:theory}). The label-free energy objective is supervised
 stiffness-norm regression (\cref{lem:exact,cor:training}); for isotropic elasticity the
 energy gap is a compliance-weighted mean-square error of the stress field and bounds the
-error of the von Mises field (\cref{prop:stress}). Displacement and energy-norm errors can
-rank two predictions in opposite orders only when their displacement errors differ by less
-than the square root of the condition number of $K$, and then they can
-(\cref{rem:rank}). The sign of $\Pi_h(u)$ tells, for each load case, whether a prediction is
+error of the von Mises field (\cref{prop:stress}). The relative energy gap is the squared
+relative displacement error times a factor that measures where the error lies in the
+spectrum of $K$ (\cref{rem:factor}), and displacement and energy-norm errors can rank two
+predictions in opposite orders only when their displacement errors differ by less than the
+square root of the condition number of $K$, and then they can (\cref{rem:rank}). The sign of $\Pi_h(u)$ tells, for each load case, whether a prediction is
 worse than the zero field (\cref{cor:zero}), and the two terms of $\Pi_h(u)$ give a
 rescaling after which it is not (\cref{prop:amp}). Under the classical Chebyshev bound, a
 warm start lowers the iteration bound of conjugate gradients by a fraction that depends
@@ -65,11 +68,15 @@ in every seed, than the same transformer trained on the solutions of the same 1,
 instances. A graph network trained on those solutions had lower displacement errors than
 the label-free transformer on most instances but higher stress errors on almost all of
 them, so that displacement error ranked the two in the opposite order to stress error.
-Every supervised network returned some in-band predictions worse than the zero field; the
-label-free network returned none, averaged over each instance's load cases, and
-\numThreeFreeLoadWorse{} in \numThreeFreeLoads{} load cases taken singly. In two dimensions, the label-free network's
-displacement error was \numTwoFreeDispExcessAbs{} larger than the supervised network's, and
-it was more accurate on every other metric.
+Every three-dimensional supervised network returned some in-band predictions worse than the
+zero field; the label-free network returned none, averaged over each instance's load cases,
+and \numThreeFreeLoadWorse{} in \numThreeFreeLoads{} load cases taken singly. In two
+dimensions, the label-free transformer's displacement error was \numCmFreeDispExcessAbs{}
+larger than the supervised transformer's, and it was more accurate on every other metric.
+Trained on the stiffness-norm error instead of the displacement error, with the same labels,
+the supervised transformer lowered its von Mises error by \numHTwoBRel{} (pre-registered
+hypothesis H2b, supported), and its errors lay lower in the spectrum of the stiffness
+matrix, as measured afterwards.
 \item Negative results (\cref{sec:results2d,sec:transfer,sec:cost}). In two dimensions,
 conjugate gradients started from a label-free prediction did not need fewer iterations to a
 tight residual tolerance than from zero. No network transferred to a three-dimensional mesh

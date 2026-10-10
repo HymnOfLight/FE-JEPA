@@ -1,19 +1,28 @@
 # records/cmame -- cmame-paper records
 
-## Default path against wp8-lejepa (Stage 2)
+## Default path against wp8-lejepa (Stage 2, run again at Stage 9)
 
 Stage 2 changed `src` (opt-in additions only: the stiffness-norm loss of the
 supervised trainer, its E8 row, an E8 run that trains a supervised grid beside
-reused label-free states, and their step count). `regression_wp8_e1_2d_base.json`
-and `regression_wp8_phase2b.json` are the summaries
-`scripts/regress_against_branch.py` wrote in the sandbox on 6 October 2026
-(CPU, one thread, each side in its own process importing its own source tree;
-a fresh pass and a restart pass), on the same two miniatures as
-`records/wp9/`:
+reused label-free states, and their step count), and
+`scripts/regress_against_branch.py` ran in the sandbox on 6 October 2026 (CPU,
+one thread, each side in its own process importing its own source tree; a
+fresh pass and a restart pass) with this side's `src` = tree
+`2da09d0593669f50149f4fb546c01861ac0d5149`, the code CM2D ran.
+
+Stage 9 changed `src` again: `fe/tet3d.py`'s structured tetrahedral mesh, which
+split each hexahedral cell into five tetrahedra covering 5/6 of it, now uses
+the conforming six-tetrahedron Kuhn split (no run reported in the manuscript
+and no record here used this mesh; only the three WP7-S1 smoke configurations,
+`scripts/bench3d_scale.py` and `scripts/amp_compile_check.py` did). The
+regression ran again in the sandbox on 10 October 2026, with the same library
+versions, on the same two miniatures as `records/wp9/`;
+`regression_wp8_e1_2d_base.json` and `regression_wp8_phase2b.json` are now its
+summaries, identical to Stage 2's apart from this side's tree:
 
 | | source tree (`git rev-parse <commit>:src`) |
 |---|---|
-| this side | the Stage 2 code: `src` = tree `2da09d0593669f50149f4fb546c01861ac0d5149` |
+| this side | the Stage 9 code: `src` = tree `7cc8ac1b6b16673f14609a422f7e95479d968df0` |
 | the other side | `wp8-lejepa` at `5f8e2df`: `src` = tree `5be6357b912cad058121092f274e6a322169b9f6` |
 
 - `regression_wp8_e1_2d_base.json`: a miniature of `configs/e1_2d_base.json`
@@ -24,7 +33,8 @@ a fresh pass and a restart pass), on the same two miniatures as
   numbers and 6 state files, identical.
 
 The two summaries equal `records/wp9/`'s except for this side's tree (wp9's
-ran the Stage 0c code, tree `710ccb32...`). `tests/test_w9_records.py` checks
+ran the Stage 0c code, tree `710ccb32...`). Each run took a few minutes (Stage
+9: 43 s and 100 s). `tests/test_w9_records.py` checks
 that a committed `src` without local changes is the tree named by the newest
 regression record (this file on this branch): a change to `src` needs the
 regression run again and this table updated. The miniatures exercise the
