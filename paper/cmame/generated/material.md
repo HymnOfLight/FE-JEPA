@@ -13,11 +13,11 @@
 | Zero field | 1.00 | 1.00 | 1.00 | 1.00 | – | – |
 
 - 256 validation instances, never trained on; four load cases each. Errors are relative to the reference finite-element solution, per load case, then averaged over the load cases; the relative energy gap of the zero field is 1. Trained networks: mean ± sample standard deviation over 3 seeds; the nearest-neighbour field and the scaled polynomial are deterministic.
-- Worse than zero field: instance-seed pairs whose relative energy gap exceeds 1, that is, predictions further from the solution in the energy norm than the zero field.
+- Worse than zero field: instance-seed pairs whose relative energy gap, the mean over the four load cases as the evaluation records it, exceeds 1, that is, predictions further from the solution in the stiffness norm than the zero field on average; the count uses the reference solutions. The test of \cref{cor:zero} needs none and applies to single load cases (\cref{sec:methods:metrics}).
 - Critical-region recall: the share of the 10% most stressed elements of the reference solution that are also among the 10% most stressed of the prediction (higher is better; in every other column lower is better).
-- Run of 9 October 2026, with the later code (\cref{sec:methods:networks}), whose decoder multiplies the output by $F_{\max}$ as in the three-dimensional runs. The label-free row evaluates, without retraining them, the networks trained on the same 1,024 instances in the run of 29 September 2026 (\ref{app:e1}). Supervised, stiffness norm: the supervised transformer trained on $\mathcal{L}_K$ \eqref{eq:lk} instead of $\mathcal{L}_D$ \eqref{eq:ld}, with everything else unchanged.
+- The two-dimensional comparison (\cref{tab:runs}), with the later code. The label-free row evaluates, without retraining them, the label-free networks of the latent-regularisation run (\ref{app:e1}), trained on the same 1,024 instances. Supervised, stiffness norm: the supervised transformer trained on $\mathcal{L}_K$ \eqref{eq:lk} instead of $\mathcal{L}_D$ \eqref{eq:ld}, with everything else unchanged.
 
-### Two-dimensional plates, the run of 16 July 2026 with the earlier code (\cref{sec:results2d:july}): every metric at the largest label budget, on the instances of \cref{tab:2d}.
+### Two-dimensional plates, the July run with the earlier code: every metric at the largest label budget, on the instances of \cref{tab:2d}.
 
 | Model | Displacement error | Relative energy gap | von Mises error | Peak stress error | Critical-region recall | Worse than zero field |
 |---|---|---|---|---|---|---|
@@ -31,9 +31,9 @@
 | Zero field | 1.00 | 1.00 | 1.00 | 1.00 | – | – |
 
 - 256 validation instances, never trained on; four load cases each. Errors are relative to the reference finite-element solution, per load case, then averaged over the load cases; the relative energy gap of the zero field is 1. Trained networks: mean ± sample standard deviation over 3 seeds; the nearest-neighbour field and the scaled polynomial are deterministic.
-- Worse than zero field: instance-seed pairs whose relative energy gap exceeds 1, that is, predictions further from the solution in the energy norm than the zero field.
+- Worse than zero field: instance-seed pairs whose relative energy gap, the mean over the four load cases as the evaluation records it, exceeds 1, that is, predictions further from the solution in the stiffness norm than the zero field on average; the count uses the reference solutions. The test of \cref{cor:zero} needs none and applies to single load cases (\cref{sec:methods:metrics}).
 - Critical-region recall: the share of the 10% most stressed elements of the reference solution that are also among the 10% most stressed of the prediction (higher is better; in every other column lower is better).
-- Run of 16 July 2026. Its code did not multiply the load scale back onto the output (\cref{sec:methods:networks}); we attribute the narrow spread of the displacement errors to this; no experiment isolated it (\cref{sec:results2d:julyaccuracy}).
+- The July run (16 July 2026). Its code did not multiply the load scale back onto the output (\cref{sec:methods:networks}); we attribute the narrow spread of the displacement errors to this; no experiment isolated it.
 
 ### Three-dimensional solids, every metric at the largest label budget. The supervised networks were trained on 1,024 labelled instances; the label-free network on the same 1,024 instances without their solutions.
 
@@ -48,31 +48,39 @@
 | Zero field | 1.00 | 1.00 | 1.00 | 1.00 | – | – |
 
 - 256 validation instances, never trained on; four load cases each. Errors are relative to the reference finite-element solution, per load case, then averaged over the load cases; the relative energy gap of the zero field is 1. Trained networks: mean ± sample standard deviation over 3 seeds; the nearest-neighbour field and the scaled polynomial are deterministic.
-- Worse than zero field: instance-seed pairs whose relative energy gap exceeds 1, that is, predictions further from the solution in the energy norm than the zero field.
+- Worse than zero field: instance-seed pairs whose relative energy gap, the mean over the four load cases as the evaluation records it, exceeds 1, that is, predictions further from the solution in the stiffness norm than the zero field on average; the count uses the reference solutions. The test of \cref{cor:zero} needs none and applies to single load cases (\cref{sec:methods:metrics}).
 - Critical-region recall: the share of the 10% most stressed elements of the reference solution that are also among the 10% most stressed of the prediction (higher is better; in every other column lower is better).
-- Run of 28 September 2026.
+- The three-dimensional comparison (\cref{tab:runs}).
 
 ### Label efficiency: relative displacement error / relative energy gap against the number of labelled training instances (seed means).
 
 | Run | Model | 16 | 64 | 256 | 1,024 |
 |---|---|---|---|---|---|
-| 2D | Supervised | 0.459 / 20.8 | 0.165 / 3.06 | 0.0712 / 0.430 | 0.0505 / 0.133 |
-| 2D | Supervised, stiffness norm | 0.362 / 0.254 | 0.0889 / 0.0505 | 0.0667 / 0.0383 | 0.0547 / 0.0290 |
-| 2D | Graph network, supervised | – | 0.370 / 149 | – | 0.0499 / 0.825 |
-| 2D | Nearest-neighbour field | 0.687 / 6.50 | 0.466 / 1.65 | 0.408 / 1.03 | 0.404 / 0.959 |
-| 2D | Label-free (no labels) | 0.0634 / 0.0383 | 0.0634 / 0.0383 | 0.0634 / 0.0383 | 0.0634 / 0.0383 |
-| 2D, July | Supervised | 0.272 / 6.26 | 0.193 / 2.72 | 0.176 / 1.26 | 0.160 / 0.418 |
-| 2D, July | Supervised + energy term | 0.410 / 2.56 | 0.184 / 0.579 | 0.182 / 0.154 | 0.161 / 0.166 |
-| 2D, July | Label-free, then supervised | 0.207 / 1.32 | 0.189 / 0.201 | 0.181 / 0.302 | 0.166 / 0.236 |
-| 2D, July | Graph network, supervised | 0.684 / 92.6 | 0.425 / 80.6 | 0.181 / 7.55 | 0.167 / 2.57 |
-| 2D, July | Label-free (no labels) | 0.166 / 0.0817 | 0.166 / 0.0817 | 0.166 / 0.0817 | 0.166 / 0.0817 |
 | 3D | Supervised | 0.395 / 18.5 | 0.288 / 5.95 | 0.0726 / 0.799 | 0.0470 / 31.2 |
 | 3D | Supervised + energy term | 0.369 / 0.621 | 0.256 / 0.854 | 0.0833 / 0.964 | 0.0470 / 0.116 |
 | 3D | Graph network, supervised | – | 0.149 / 18.3 | – | 0.0168 / 0.447 |
 | 3D | Nearest-neighbour field | 0.648 / 5.74 | 0.477 / 2.24 | 0.400 / 1.20 | 0.382 / 1.22 |
 | 3D | Label-free (no labels) | 0.0300 / 0.00912 | 0.0300 / 0.00912 | 0.0300 / 0.00912 | 0.0300 / 0.00912 |
+| 2D | Supervised | 0.459 / 20.8 | 0.165 / 3.06 | 0.0712 / 0.430 | 0.0505 / 0.133 |
+| 2D | Supervised, stiffness norm | 0.362 / 0.254 | 0.0889 / 0.0505 | 0.0667 / 0.0383 | 0.0547 / 0.0290 |
+| 2D | Graph network, supervised | – | 0.370 / 149 | – | 0.0499 / 0.825 |
+| 2D | Nearest-neighbour field | 0.687 / 6.50 | 0.466 / 1.65 | 0.408 / 1.03 | 0.404 / 0.959 |
+| 2D | Label-free (no labels) | 0.0634 / 0.0383 | 0.0634 / 0.0383 | 0.0634 / 0.0383 | 0.0634 / 0.0383 |
 
-- Seed means over 3 seeds (the nearest-neighbour field is deterministic, and the same in both 2D runs). A dash marks a budget at which the model was not trained (the graph network was trained at 64 and 1,024 labels only, except in the 2D run of July 2026). 2D: the run of 9 October 2026 (\cref{tab:2d}); 2D, July: the run of 16 July 2026, with the earlier code (\cref{tab:2djuly}). The label-free row repeats its single value, which uses the same 1,024 instances without labels.
+- Seed means over 3 seeds; the nearest-neighbour field is deterministic. A dash marks a budget at which the model was not trained (the graph network was trained at 64 and 1,024 labels only). 3D: the three-dimensional comparison (\cref{tab:3d}); 2D: the two-dimensional comparison (\cref{tab:2d}). The label-free row repeats its single value, which uses the same 1,024 instances without labels.
+
+### The July run (two dimensions, earlier code): relative displacement error / relative energy gap against the number of labelled training instances (seed means).
+
+| Model | 16 | 64 | 256 | 1,024 |
+|---|---|---|---|---|
+| Supervised | 0.272 / 6.26 | 0.193 / 2.72 | 0.176 / 1.26 | 0.160 / 0.418 |
+| Supervised + energy term | 0.410 / 2.56 | 0.184 / 0.579 | 0.182 / 0.154 | 0.161 / 0.166 |
+| Label-free, then supervised | 0.207 / 1.32 | 0.189 / 0.201 | 0.181 / 0.302 | 0.166 / 0.236 |
+| Graph network, supervised | 0.684 / 92.6 | 0.425 / 80.6 | 0.181 / 7.55 | 0.167 / 2.57 |
+| Nearest-neighbour field | 0.687 / 6.50 | 0.466 / 1.65 | 0.408 / 1.03 | 0.404 / 0.959 |
+| Label-free (no labels) | 0.166 / 0.0817 | 0.166 / 0.0817 | 0.166 / 0.0817 | 0.166 / 0.0817 |
+
+- Seed means over 3 seeds; the nearest-neighbour field is deterministic, and the same as in \cref{tab:labeleff}. The graph network was trained at every budget in this run. The label-free row repeats its single value, which uses the same 1,024 instances without labels.
 
 ### Three-dimensional solids on the finer mesh (lc = 0.0374), never trained on. Zero-shot rows use the networks trained in-band; few-shot rows train, with labels, on the first 16 or on all of the 64 fine-mesh instances reserved for few-shot training.
 
@@ -90,28 +98,28 @@
 
 - 256 fine-mesh evaluation instances (median 36,216 nodes), disjoint from the 64 instances reserved for few-shot training. Mean ± sample standard deviation over 3 seeds; the naive baselines are deterministic and built from the 1,024 in-band labelled instances.
 - In-band, the label-free network's displacement error is 0.0300; the zero-shot ratio is therefore 8.62.
-- Few-shot training runs 50 epochs at learning rate 1.5 × 10⁻³ from the trained label-free network of the same seed, or from random initialisation (scratch); the few-shot comparison was pre-registered as reported only.
+- Few-shot training minimises the relative displacement error $\mathcal{L}_D$ \eqref{eq:ld}, without the energy term, for 50 epochs at learning rate 1.5 × 10⁻³, from the trained label-free network of the same seed or from random initialisation (scratch); the few-shot comparison was pre-registered as reported only.
 
 ### Every pre-registered criterion of the runs reported here, with its outcome.
 
 | Run | Criterion | Measured | Outcome |
 |---|---|---|---|
-| 2D, 16 July 2026 | G1′ (a), energy-term sub-experiment (separately trained networks): supervised + energy term at least 3 times better than the zero field in displacement, and better than the 3 naive baselines fitted on 1,024 labelled instances, at every budget | 4.5–6.1 times; naive baselines beaten at every budget | met |
-|  | G1′ (b), \cref{tab:2djuly,tab:labeleff}, 64 labels: the energy term lowers the relative energy gap by ≥ 50% and the von Mises error by ≥ 25% | 78.7%, 65.4% | met |
-|  | G1′ (c), \cref{tab:2djuly,tab:labeleff}, 64 labels: label-free, then supervised beats supervised by ≥ 10% in relative energy gap or ≥ 5% in displacement | 92.6%, 2.0% | met |
+| July run (2D), 16 July 2026 | G1′ (a), energy-term sub-experiment (separately trained networks): supervised + energy term at least 3 times better than the zero field in displacement, and better than the two naive baselines and the plain polynomial, fitted on 1,024 labelled instances, at every budget | 4.5–6.1 times; baselines beaten at every budget | met |
+|  | G1′ (b), \cref{tab:2djuly,tab:labeleffjuly}, 64 labels: the energy term lowers the relative energy gap by ≥ 50% and the von Mises error by ≥ 25% | 78.7%, 65.4% | met |
+|  | G1′ (c), \cref{tab:2djuly,tab:labeleffjuly}, 64 labels: label-free, then supervised beats supervised by ≥ 10% in relative energy gap or ≥ 5% in displacement | 92.6%, 2.0% | met |
 |  | Gate G1′ = (a) and (b) and (c) |  | GO |
 |  | K1, energy-term sub-experiment: the better of the fixed and the gradient-scaled energy term lowers the relative energy gap by < 25% at every budget | 98.0% / 94.4% / 90.6% / 74.0% | not triggered |
 |  | K2, \cref{tab:2djuly}: label-free displacement error > 30% above supervised, 1,024 labels | +3.6% | not triggered |
-|  | C1-advantage, \cref{tab:labeleff}: label-free relative energy-gap advantage over supervised < 40% at every budget | 98.7% / 97.0% / 93.5% / 80.4% | not triggered |
+|  | C1-advantage, \cref{tab:labeleffjuly}: label-free relative energy-gap advantage over supervised < 40% at every budget | 98.7% / 97.0% / 93.5% / 80.4% | not triggered |
 |  | K4: a latent-space regulariser raises the standardised effective rank of the latent vectors by ≤ 1.5 times | 1.70 times | not triggered |
 |  | K5: conjugate gradients from the prediction of a label-free network (64 validation instances) save < 20% of the iterations from zero | −0.9% | triggered |
 |  | K6: a cross-resolution invariance term shrinks the transfer gap by < 10% at coarsening 2.5 | −23.7% | triggered |
 |  | E6 (alignment): within-geometry rank correlation of latent and solution distances < 0.3 | 0.730 | not triggered |
 |  | C5: any pre-registered check of the conditioning bound, the modewise identity or the conjugate-gradient bound violated | none | not triggered |
-| 2D, 31 July 2026 | K3: a self-supervised joint-embedding term added to label-free pretraining changes the displacement error and the relative energy gap of the transformer, fine-tuned with 16, 64 and 256 labels, by less than 3% at every budget (if triggered, the term is dropped) | change with the term, 16 / 64 / 256 labels: displacement −13.5% / −0.5% / +2.6%; relative energy gap −48.4% / +92.5% / −16.4% (positive: more accurate) | not triggered |
-| 3D, 21 September 2026 | Initial run: gate G2 and kill conditions as registered; the label-free objective was defective (deviation D14) | (a), (b), (c) not met; KP1, KP2, KP4 triggered | NO-GO |
-| 3D, 22 September 2026 | Pilot of the amendment: label-free displacement error after 20 epochs < 0.90 | 0.309 | met |
-| 3D, 28 September 2026 | G2 (a), budgets ≥ 64 (amendment), \cref{tab:labeleff}: supervised + energy term at least 3 times better than the zero field in displacement, and better than both naive baselines | 3.9 / 12.0 / 21.3 times; naive beaten | met |
+| Joint-embedding run (2D), 31 July 2026 | K3: a self-supervised joint-embedding term added to label-free pretraining changes the displacement error and the relative energy gap of the transformer, fine-tuned with 16, 64 and 256 labels, by less than 3% at every budget (if triggered, the term is dropped) | change with the term, 16 / 64 / 256 labels: displacement −13.5% / −0.5% / +2.6%; relative energy gap −48.4% / +92.5% / −16.4% (positive: more accurate) | not triggered |
+| Initial three-dimensional run, 21 September 2026 | Gate G2 and kill conditions as registered; the label-free objective was defective (deviation D14) | (a), (b), (c) not met; KP1, KP2, KP4 triggered | NO-GO |
+| Pilot of the amendment (3D), 22 September 2026 | Label-free displacement error after 20 epochs < 0.90 | 0.309 | met |
+| Three-dimensional comparison, 28 September 2026 | G2 (a), budgets ≥ 64 (amendment), \cref{tab:labeleff}: supervised + energy term at least 3 times better than the zero field in displacement, and better than both naive baselines | 3.9 / 12.0 / 21.3 times; naive beaten | met |
 |  | G2 (a), every budget (the registered form, reported for reference) | 2.71 times at 16 labels | not met |
 |  | G2 (b), \cref{tab:labeleff,tab:3d}: label-free displacement error within +10% of supervised at 1,024 labels, and relative energy-gap advantage ≥ 40% at every budget | −36.3%; 99.95% / 99.85% / 98.86% / 99.97% | met |
 |  | G2 (c), \cref{tab:transfer}: finer mesh, zero-shot displacement error ≤ 1.25 times in-band, and better than both naive baselines | 8.62 times; best naive 0.401 against 0.258 | not met |
@@ -123,24 +131,25 @@
 |  | KP4: finer mesh, zero-shot displacement error > 1.5 times in-band, or a naive baseline better | 8.62 times | triggered |
 |  | KP5: any pre-registered check of the conditioning bound, the modewise identity or the conjugate-gradient bound violated | none | not triggered |
 |  | KP6 (alignment): within-geometry rank correlation of latent and solution distances < 0.3 | 0.827 | not triggered |
-| 2D, 29 September 2026 | Latent regularisation, K1: relative change of the displacement error or of the relative energy gap beyond the resolution | within the resolution | not triggered |
+| Latent-\hspace{0pt}regularisation run (2D), 29 September 2026 | Latent regularisation, K1: relative change of the displacement error or of the relative energy gap beyond the noise guard | within the guard | not triggered |
 |  | Latent regularisation, K2: the separation does not rise in any seed | rose in every seed | not triggered |
 |  | Latent regularisation, GO: separation raised by ≥ 0.02 in every seed | +0.009 / +0.014 / +0.002 | NO-GO |
-| 3D, 30 September 2026 | Token bottleneck, M = 512, K1: in-band relative energy gap or finer-mesh displacement error worse than the transformer's by more than the resolution | +280.9% (resolution 287.2%), +79.1% (resolution 41.9%) | triggered |
+| Bottleneck run (3D), 30 September 2026 | Token bottleneck, M = 512, K1: in-band relative energy gap or finer-mesh displacement error worse than the label-free transformer's beyond the noise guard | +280.9% (guard 287.2%), +79.1% (guard 41.9%) | triggered |
 |  | Token bottleneck, M = 512, K2: finer-mesh training step longer than 2 s | 0.049 s | not triggered |
 |  | Token bottleneck, M = 512: outcome |  | dropped |
-|  | Token bottleneck, M = 1,024, K1: in-band relative energy gap or finer-mesh displacement error worse than the transformer's by more than the resolution | +183.3% (resolution 70.5%), +122.0% (resolution 33.3%) | triggered |
+|  | Token bottleneck, M = 1,024, K1: in-band relative energy gap or finer-mesh displacement error worse than the label-free transformer's beyond the noise guard | +183.3% (guard 70.5%), +122.0% (guard 33.3%) | triggered |
 |  | Token bottleneck, M = 1,024, K2: finer-mesh training step longer than 2 s | 0.047 s | not triggered |
 |  | Token bottleneck, M = 1,024: outcome |  | dropped |
-| 2D, 9 October 2026 | H1, \cref{tab:2d,tab:cm2d}: label-free transformer lower than the supervised transformer ($\mathcal{L}_D$) in relative energy gap beyond the noise guard, 1,024 labels | −71.3% (guard 12.4%) | supported |
+| Two-dimensional comparison, 9 October 2026 | H1, \cref{tab:2d,tab:cm2d}: label-free transformer lower than the supervised transformer ($\mathcal{L}_D$) in relative energy gap beyond the noise guard, 1,024 labels | −71.3% (guard 12.4%) | supported |
 |  | H2a: stiffness-norm transformer ($\mathcal{L}_K$) lower than the supervised transformer ($\mathcal{L}_D$) in relative energy gap beyond the guard | −78.2% (guard 16.4%) | supported |
 |  | H2b: stiffness-norm transformer lower than the supervised transformer in von Mises error beyond the guard | −54.9% (guard 12.3%) | supported |
 |  | H3 (a reading, no criterion): stiffness-norm transformer against the label-free transformer in relative energy gap | −24.2% (guard 38.1%) | no difference shown |
-|  | Reuse: the label-free networks of the run of 29 September 2026 reproduce that run's per-instance relative energy gaps and displacement errors (largest relative deviation at most $10^{-4}$) | largest relative deviation 0 | passed |
+|  | Reuse: the label-free networks of the latent-regularisation run reproduce that run's per-instance relative energy gaps and displacement errors (largest relative deviation at most $10^{-4}$) | largest relative deviation 0 | passed |
 
-- Labels are those of the pre-registration documents, each of which numbers its own criteria. Gates (G1′, G2) decide whether the study proceeds to its next stage. Kill conditions withdraw a claim, or abandon a component, when triggered: in two dimensions K1–K6, C1-advantage (the claimed advantage in relative energy gap), C5 (the pre-registered checks of \cref{sec:theory:checks}) and E6 (latent alignment); in three dimensions KP1–KP6, with KP5 the counterpart of C5. The latent-regularisation and token-bottleneck runs number their criteria afresh, with the meanings given here. A criterion reads the trained networks of the tables it names; the energy-term sub-experiment of the 2D run of 16 July 2026 trained its own supervised networks with and without the energy term, with the same configuration. K4, E6 and KP6 concern latent representations, which this paper does not use. Standardised effective rank: the participation ratio of the eigenvalues of the covariance of the latent vectors, each dimension standardised. The 3D amendment, the deviations and the joint-embedding term are described below, the latent regularisation in \ref{app:e1} and the token bottleneck in \cref{sec:cost:training}. The hypotheses H1–H3 of the run of 9 October 2026 compare a network A with a reference B over three seeds each by a noise guard: with rel = mean(A)/mean(B) − 1 and SE_rel = $(s_A^2/3 + s_B^2/3)^{1/2}$ divided by mean(B), where $s_A$ and $s_B$ are the sample standard deviations over the seeds, A is lower beyond the guard when rel is below minus the guard, max(10%, 2 SE_rel), and higher beyond it when rel exceeds the guard; within it no difference is shown, which is not equivalence (\cref{tab:cm2d}). $\mathcal{L}_D$ and $\mathcal{L}_K$ are the losses \eqref{eq:ld} and \eqref{eq:lk}.
+- Runs are named as in \cref{tab:runs} and dated by their records; the pilot of the amendment is the short run that the amendment required before the three-dimensional comparison (\ref{app:prereg}). Labels are those of the pre-registration documents, each of which numbers its own criteria. Gates (G1′, G2) decide whether the study proceeds to its next stage. Kill conditions withdraw a claim, or abandon a component, when triggered: in two dimensions K1–K6, C1-advantage (the claimed advantage in relative energy gap), C5 (the pre-registered checks of \ref{app:repro:checks}) and E6 (latent alignment); in three dimensions KP1–KP6, with KP5 the counterpart of C5. The latent-regularisation and bottleneck runs number their criteria afresh, with the meanings given here. A criterion reads the trained networks of the tables it names; the energy-term sub-experiment of the July run trained its own supervised networks with and without the energy term, with the same configuration. K4, E6 and KP6 concern latent representations, which this paper does not use. Standardised effective rank: the participation ratio of the eigenvalues of the covariance of the latent vectors, each dimension standardised. The 3D amendment, the deviations and the joint-embedding term are described below, the latent regularisation and the token bottleneck in \ref{app:e1}, the July run in \ref{app:july}.
+- Noise guard: a comparison of a network A with a reference B over three seeds each, with rel = mean(A)/mean(B) − 1 and SE_rel = $(s_A^2/3 + s_B^2/3)^{1/2}$ divided by mean(B), where $s_A$ and $s_B$ are the sample standard deviations over the seeds, finds A lower beyond the guard when rel is below minus the guard, max(10%, 2 SE_rel), and higher beyond it when rel exceeds the guard; within it no difference is shown, which is not equivalence. The hypotheses H1–H3 of the 2D comparison use it (\cref{tab:cm2d}), and so do the latent-regularisation and bottleneck runs, with the label-free network as B; their pre-registrations call it the resolution. $\mathcal{L}_D$ and $\mathcal{L}_K$ are the losses \eqref{eq:ld} and \eqref{eq:lk}.
 
-### The pre-registered comparisons of the two-dimensional run of 9 October 2026, with 1,024 labelled instances, as its adjudicator recorded them, and the readings its pre-registration required beside each.
+### The pre-registered hypotheses of the two-dimensional comparison, with 1,024 labelled instances, as its adjudicator recorded them, and the readings its pre-registration required beside each.
 
 |  | H1 | H2a | H2b | H3 |
 |---|---|---|---|---|
@@ -157,7 +166,7 @@
 | Welch 95% interval | −97% to −45% | −101% to −55% | −73% to −37% | −103% to +54% |
 | Instance resampling 95% | −74.3% to −68.3% | −80.3% to −76.3% | −57.2% to −52.8% | −28.0% to −21.9% |
 
-- rel = mean(A)/mean(B) − 1 over the three seeds' values, each the mean over the 256 validation instances and their four load cases; SE_rel = $(s_A^2/3 + s_B^2/3)^{1/2}$ divided by mean(B), where $s_A$ and $s_B$ are the sample standard deviations over the seeds; the guard is max(10%, 2 SE_rel). A is lower beyond the guard when rel is below minus the guard; within the guard no difference is shown, which is not equivalence.
+- rel, SE_rel and the noise guard as defined in the note to \cref{tab:criteria}, over the three seeds' values, each the mean over the 256 validation instances and their four load cases.
 - Medians: the same reading on each seed's median over the instances instead of its mean. Welch: rel ± t × SE_rel, with t the 97.5% quantile of Student's distribution at the Welch–Satterthwaite degrees of freedom, a symmetric interval that can extend below −100%. Instance resampling: the 2.5% and 97.5% percentiles of rel over 2,000 resamplings of the 256 validation instances, the same instances drawn for both networks and every seed, the seeds kept.
 - H3 is a reading without a criterion. With the roles of A and B exchanged, rel was +31.9% against a guard of 50.2%.
 
@@ -214,6 +223,7 @@
 - `numCmLabGapMedian`: 0.117
 - `numCmLabGapSixteen`: 20.8
 - `numCmLabOverFreeGap`: 3.5
+- `numCmLabOverFreeGapRoot`: 1.9
 - `numCmLabOverFreeVm`: 1.9
 - `numCmLabOverKnormGap`: 4.60
 - `numCmLabPeak`: 0.141
@@ -358,6 +368,7 @@
 - `numHThreeSeedsZeroTwo`: 2.7%
 - `numHThreeTau`: 38.1%
 - `numHTwoARel`: 78.2%
+- `numHTwoARootRel`: 53.4%
 - `numHTwoATau`: 16.4%
 - `numHTwoBRel`: 54.9%
 - `numHTwoBTau`: 12.3%
@@ -531,6 +542,7 @@
 - `numThreeAncGap`: 0.116
 - `numThreeAncGapMedian`: 0.108
 - `numThreeAncOverFreeGap`: 12.7
+- `numThreeAncOverFreeGapRoot`: 3.6
 - `numThreeAncPeak`: 0.115
 - `numThreeAncRecall`: 0.730
 - `numThreeAncVm`: 0.128
@@ -550,6 +562,8 @@
 - `numThreeFreeRecall`: 0.793
 - `numThreeFreeVm`: 0.0554
 - `numThreeFreeWorse`: 0
+- `numThreeGuardTotal`: ten
+- `numThreeGuardWithin`: three
 - `numThreeLabDisp`: 0.0470
 - `numThreeLabDispFour`: 0.0470
 - `numThreeLabGap`: 31.2

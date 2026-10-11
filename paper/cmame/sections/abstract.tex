@@ -1,19 +1,18 @@
-Supervised training of a finite-element surrogate requires a full solve for every training
-example, the very cost the surrogate should remove. For linear elastostatics we train on
-the assembled discrete potential energy instead. Minimising it is exactly supervised
-regression in the stiffness norm, which measures the strain energy of the error, so the
-surrogate learns from a weighted mean-square stress error without solving any example. In pre-registered comparisons on three-dimensional tetrahedral
-meshes, a transformer trained on the energy alone was more accurate, on every metric,
-than the same network trained on the solutions of the same instances. A supervised graph
-network had smaller displacement errors on most instances but larger stress-field errors
-on almost all: displacement error ranked the two in the opposite order to stress error.
-Every supervised network there returned some predictions worse than the zero field in the
-energy norm, failures the energy detects without reference solutions. In two dimensions
-the label-free transformer had a larger displacement error than its supervised
-counterpart but smaller stress errors; trained on the stiffness-norm error instead, with
-the same labels, the counterpart halved its von Mises error, as pre-registered, and its
-errors lay in softer stiffness eigenmodes, as measured afterwards: with the labels fixed,
-the norm of the loss decided the stress accuracy. No network transferred to a
-substantially finer three-dimensional mesh without retraining; a post hoc, closed-form,
-label-free rescaling removed most of the label-free network's error there. The discrete
-energy thus serves as training objective, evaluation metric and failure detector.
+Supervised training of a finite-element surrogate needs a solve per training example, the
+cost the surrogate should remove. For linear elastostatics we train on the assembled
+discrete potential energy instead. Minimising it is exactly supervised regression in the
+stiffness norm, which measures the strain energy of the stress error, yet no example is
+solved. The identity also makes the energy, without reference solutions, a metric that ranks
+predictions of one load case by this error and a failure detector whose sign flags
+predictions worse than the zero field. In a pre-registered three-dimensional comparison, a
+transformer trained on the energy alone was more accurate on every metric, in each of three
+seeds, than the same network trained on the solutions of the same instances. In the same
+run, a supervised graph network had the smaller displacement error on most instances and the
+larger von Mises error on almost all, a post hoc reading. Every supervised network was worse
+than the zero field on some load cases, all flagged by the sign of the energy. In two
+dimensions the label-free transformer had a larger displacement error than its supervised
+counterpart but smaller errors on every other metric. Trained on the stiffness-norm error
+with the same labels, the counterpart more than halved its von Mises error, supporting a
+pre-registered hypothesis. No network transferred to a substantially finer mesh without
+retraining; a post hoc, label-free rescaling removed most of the label-free network's error
+there.

@@ -1,0 +1,110 @@
+\section{The July run}\label{app:july}
+\setcounter{table}{0}\setcounter{figure}{0}\setcounter{equation}{0}
+
+The July run (\cref{tab:runs}), pre-registered before it was executed, with the weaker
+public record of \cref{sec:methods:prereg} (\ref{app:prereg}), trained the same kinds of
+network as \cref{sec:results2d} on the same corpus, split and seeds, with the earlier code,
+which did not multiply the output by $F_{\max}$ (\cref{sec:methods:networks}). Its main
+results were first reported in the companion note \cite{CaoSong2026}. It also trained what
+the two-dimensional comparison did not:
+the supervised transformer with the energy term of \cref{sec:methods:training}, the
+supervised transformer trained on $\mathcal{L}_D$ from the label-free transformer's
+parameters, and the graph network with every number of labelled instances. It trained no
+stiffness-norm transformer.
+
+\subsection{Accuracy and label efficiency}\label{app:july:accuracy}
+
+\input{generated/table_2djuly}
+
+\Cref{tab:2djuly} gives every metric with 1,024 labelled instances. The supervised
+transformer had the lowest displacement error, \numTwoLabDispFour{} against
+\numTwoFreeDispFour{} for the label-free transformer, which was \numTwoFreeDispExcessAbs{}
+higher, and higher in each of the three seeds. On every other metric the label-free
+transformer was the most accurate network in the table: its relative energy gap,
+\numTwoFreeGap{}, was \numTwoLabOverFreeGap{} times lower than the supervised transformer's,
+and its von Mises error (\numTwoFreeVm{} against \numTwoLabVm{}), peak stress error
+(\numTwoFreePeak{} against \numTwoLabPeak{}) and critical-region recall (\numTwoFreeRecall{}
+against \numTwoLabRecall{}) were better. Compared instance by instance within each seed, the
+label-free transformer had the lower relative energy gap on \numPairTwoLabGap{} of the
+\numTwoPairs{} instance-seed pairs and the lower von Mises error on \numPairTwoLabVm{}, but
+the lower displacement error on only \numPairTwoLabDisp{}. The energy term lowered the
+supervised transformer's relative energy gap to \numTwoAncGap{} and its von Mises error to
+\numTwoAncVm{}, both still above the label-free values. The graph network matched the others
+in displacement (\numTwoMgnDisp{}) but had a relative energy gap of \numTwoMgnGap{} and a
+von
+Mises error of \numTwoMgnVm{}: \numTwoMgnWorse{} of its \numTwoPairs{} instance-seed
+predictions had a mean relative energy gap above one. The supervised transformer had
+\numTwoLabWorse{} such predictions, the supervised transformer with the energy term
+\numTwoAncWorse{}, and the label-free transformer \numTwoFreeWorse{}, one per seed.
+
+The displacement errors of the five trained networks lay between \numTwoLabDisp{} and
+\numTwoMgnDisp{}, a narrow band, while their relative energy gaps spanned a factor of
+\numTwoGapSpread{}. We attribute the narrow band to the code: no network could know the
+absolute amplitude of an instance's loads, which adds an error common to every displacement
+and compresses their differences. With the later code, the displacement errors of the
+label-free transformer, the supervised transformer and the graph network on the same
+instances were \numJulyOverCmDispMin{} to \numJulyOverCmDispMax{} times lower
+(\cref{tab:2d}), and those of the trained networks spanned a factor of \numCmDispSpread{}
+rather than \numTwoDispSpread{}. This agrees with the attribution, but the two runs also
+differ in their software versions, and no experiment isolated the output scaling.
+
+\input{generated/table_label_efficiency_july}
+
+With no labels, the label-free transformer's relative energy gap was lower than every
+supervised network's at every budget (\cref{tab:labeleffjuly}); its advantage over the
+supervised transformer fell from \numTwoAdvMax{} with 16 labels to \numTwoAdvMin{} with
+1,024. In displacement, the supervised transformer needed 1,024 labels to pass it. With 16
+labels, the supervised transformer with the energy term was less accurate in displacement
+than without it, and its per-seed errors scattered widely (\numTwoAncSixteenSeeds{}); the
+diagnostic run later traced this to the instability of the gradient-scaled energy term with
+very few labels (\ref{app:prereg}). With 16 labels the supervised transformer of the later
+code was less accurate than that of the July run, with a relative energy gap of
+\numCmLabGapSixteen{} against \numTwoLabGapSixteen{}.
+
+\subsection{Pre-registered decisions}\label{app:july:decisions}
+
+The gate of this run concerned the energy term and pretraining rather than the label-free
+network alone, and all three of its conditions were met (\cref{tab:criteria}). Its first
+condition read a separate energy-term sub-experiment of the same run, which trained its own
+supervised transformers with and without the energy term in the same configuration: there,
+the supervised transformer with the energy term was \numGOneSanityMin{} to
+\numGOneSanityMax{} times more accurate in displacement than the zero field and beat the two
+naive baselines and the plain polynomial (\cref{sec:methods:networks}), all fitted on 1,024
+labelled instances, at every budget. The other two conditions read the networks of
+\cref{tab:2djuly,tab:labeleffjuly}: with 64 labels, the energy term lowered the relative
+energy gap by \numGOneGapReduction{} and the von Mises error by \numGOneVmReduction{}, and
+label-free training followed by supervised training beat supervised training alone by
+\numGOneFtGap{} in relative energy gap. The kill conditions on the label-free network were
+not triggered: its displacement error was within the 30\% allowed by K2, and its relative
+energy-gap advantage stayed above the 40\% floor at every budget. Two kill conditions were
+triggered, and both claims were withdrawn: K5, on warm starts, which \cref{sec:cost:warm}
+reports, and K6.
+
+\paragraph{Cross-resolution regulariser (K6)}
+A term that penalised differences between the latent representations of the same instance
+meshed at two resolutions did not shrink the transfer gap, the increase of the
+displacement error from the training resolution to a finer one; it widened it, by
+\numCoarsenHighWiden{} for meshes coarsened by a factor of \numCoarsenHigh{} and by
+\numCoarsenLowWiden{} for \numCoarsenLow{}. The regulariser plays no further part in this
+paper.
+
+\subsection{Further observations}\label{app:july:other}
+
+\paragraph{Replication}
+The diagnostic run (30 July 2026), which was not pre-registered, trained the label-free
+transformer \numDiagSeeds{} more times with the same configuration, with seeds 0 to 5. The
+first three repeat the seed numbers of the July run but did not reproduce its values
+exactly; the diagnostic run ran on a different GPU model and a later release of the code
+whose training path is unchanged. Over all \numTwoRuns{} trainings the displacement error
+was \numTwoRunsDisp{} and the relative energy gap \numTwoRunsGap{} (mean and sample standard
+deviation).
+
+\paragraph{Cross-resolution transfer}
+In the test of K6, label-free transformers trained for 100 epochs, with seed 0, on 512
+coarsened meshes and without the regulariser were evaluated on the coarsened and on the
+original meshes of 128 held-out instances. The displacement error rose from
+\numCoarsenLowCoarse{} to \numCoarsenLowFine{} for meshes \numCoarsenLow{} times finer
+than in training and from \numCoarsenHighCoarse{} to \numCoarsenHighFine{} for meshes
+\numCoarsenHigh{} times finer. In this code version the output did not depend on the mesh
+through $F_{\max}$; the contrast with three dimensions is taken up in
+\cref{sec:transfer:amplitude}.

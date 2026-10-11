@@ -14,6 +14,10 @@
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,positioning,fit}
 \usepackage{microtype}
+% line numbers for reviewers (the Guide for Authors does not require them);
+% \linenumbersfalse removes them, for the preprint
+\newif\iflinenumbers \linenumberstrue
+\usepackage{lineno}
 \usepackage[hidelinks,hypertexnames=false]{hyperref}
 \usepackage[capitalise,nameinlink]{cleveref}
 \biboptions{sort&compress}
@@ -67,7 +71,7 @@ energy as exact objective, metric and failure detector}
 \ead{ruifeng.cao@manchester.ac.uk}
 \author[whu]{Xidan Song\corref{cor1}}
 \ead{liuqingdamafen@whu.edu.cn}
-\cortext[cor1]{Corresponding authors.}
+\cortext[cor1]{Corresponding authors. Ruifeng Cao handles correspondence.}
 
 \affiliation[man]{organization={School of Engineering, The University of Manchester},
   addressline={Oxford Road}, city={Manchester}, postcode={M13~9PL},
@@ -87,12 +91,15 @@ minimum total potential energy \sep energy norm \sep pre-registration
 
 \end{frontmatter}
 
+% after the front matter, as in Elsevier's template
+\iflinenumbers\linenumbers\fi
+
 \input{sections/introduction}
 \input{sections/related}
 \input{sections/theory}
 \input{sections/methods}
-\input{sections/results2d}
 \input{sections/results3d}
+\input{sections/results2d}
 \input{sections/transfer}
 \input{sections/cost}
 \input{sections/discussion}
@@ -102,6 +109,7 @@ minimum total potential energy \sep energy norm \sep pre-registration
 \input{sections/appendix_prereg}
 \input{sections/appendix_e1}
 \input{sections/appendix_repro}
+\input{sections/appendix_july}
 
 \input{sections/declarations}
 

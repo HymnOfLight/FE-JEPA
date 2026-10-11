@@ -5,39 +5,41 @@
 
 \Cref{tab:criteria} lists every criterion fixed in advance for the runs reported in this
 paper, with the value measured and the outcome as recorded by the code at the time. The
-pre-registration of the two-dimensional run of 16 July 2026 also retired, before its run, an
-earlier criterion (a
+pre-registration of the July run also retired, before its run, an earlier criterion (a
 displacement improvement of at least 10\% from the energy term with 64 labels) that an
-earlier run had already answered in the negative; the run of 16 July 2026 measured
-\numGOneRetired{} with the fixed-weight form of the energy term, and the criterion played no
-part in its decisions. The following departures from the plans bear on the results. They
-are recorded in the repository's list of deviations and its provenance note, except the
-remark at the end of the paragraph on the energy term, which was noticed while this paper
-was written, and the paragraph on the two-dimensional comparison of October 2026, whose
-content is recorded with that comparison's pre-registration and records.
+earlier run had already answered in the negative; the July run measured \numGOneRetired{}
+with the fixed-weight form of the energy term, and the criterion played no part in its
+decisions. The following departures from the plans bear on the results. They are recorded
+in the repository's list of deviations and its provenance note, except the remark at the
+end of the paragraph on the energy term, which was noticed while this paper was written,
+and the paragraph on the two-dimensional comparison, whose content is recorded with that
+comparison's pre-registration and records.
 
 \paragraph{Deviation D14}
-The initial three-dimensional run (21 September 2026) completed its registered protocol and
-read NO-GO, with conditions (a), (b) and (c) of its gate unmet and kill conditions KP1,
-KP2 and KP4 triggered. After the verdict, its label-free networks were found to have a
-displacement error of \numDfourteenDisp{} and a relative energy gap of
-\numDfourteenGap{}, identical to five decimals across seeds and consistent with predicting
-the solution scaled by $\alpha=\numDfourteenAlpha{}$ (displacement error $1-\alpha$,
-relative energy gap $(1-\alpha)^2$). The cause was in the code: inference multiplied the
-decoded field by $F_{\max}$, the label-free objective scored it without that factor, and on
-this corpus $F_{\max}\approx\alpha$. The fix gives the network one decoding path, used by
-the objective and by inference, with a test that fails on the registered code. The
-supervised networks, which are trained and evaluated through the inference path, were not
-affected. The verdict of the initial run stands as recorded. A pre-registered amendment then
-repeated everything that depended on the label-free objective: the label-free networks,
-their fine-tuning on the finer mesh and the latent-alignment criterion read from them. It
-reused the 30 trained supervised networks and the 6 networks trained from scratch on the
-fine mesh, each checked against its recorded SHA-256 hash, and it required a short pilot
-run first: one seed, 20 epochs, which had to bring the displacement error below
-\numPilotLimit{} and reached \numPilotDisp{}. A first version of the amendment was
-registered and withdrawn on the same day, before any run, because the audit of its
-execution path had not been completed; the second version was registered after the audit.
-The amended run (28 September 2026) was executed once, without interruption.
+The initial three-dimensional run (21 September 2026) needed eight attempts because of
+memory and process faults; each restart reused the networks already trained under the same
+registered configuration, and the engineering changes the restarts needed are recorded as
+leaving every value unchanged. It completed its registered protocol and read NO-GO, with
+conditions (a), (b) and (c) of its gate unmet and kill conditions KP1, KP2 and KP4
+triggered. After the verdict, its label-free networks were found to have a displacement
+error of \numDfourteenDisp{} and a relative energy gap of \numDfourteenGap{}, identical to
+five decimals across seeds and consistent with predicting the solution scaled by
+$\alpha=\numDfourteenAlpha{}$ (displacement error $1-\alpha$, relative energy gap
+$(1-\alpha)^2$). The cause was in the code: inference multiplied the decoded field by
+$F_{\max}$, the label-free objective scored it without that factor, and on this corpus
+$F_{\max}\approx\alpha$. The fix gives the network one decoding path, used by the objective
+and by inference, with a test that fails on the registered code. The supervised networks,
+which are trained and evaluated through the inference path, were not affected. The verdict
+of the initial run stands as recorded. A pre-registered amendment then repeated everything
+that depended on the label-free objective: the label-free networks, their fine-tuning on
+the finer mesh and the latent-alignment criterion read from them. It reused the 30 trained
+supervised networks and the 6 networks trained from scratch on the fine mesh, each checked
+against its recorded SHA-256 hash, and it required a short pilot run first: one seed, 20
+epochs, which had to bring the displacement error below \numPilotLimit{} and reached
+\numPilotDisp{}. A first version of the amendment was registered and withdrawn on the same
+day, before any run, because the audit of its execution path had not been completed; the
+second version was registered after the audit. The amended run, the three-dimensional
+comparison (28 September 2026), was executed once, without interruption.
 
 \paragraph{The sanity condition of the three-dimensional gate}
 Condition (a) of the three-dimensional gate required the supervised transformer with the
@@ -49,13 +51,14 @@ it was met by factors of \numGTwoSanitySixtyFour{} to \numGTwoSanityMax{}. Its s
 rationale is that the factor of three had been calibrated on the two-dimensional family,
 and that on the three-dimensional family the supervised network itself sits below it with
 16 labels and above it from 64 labels on. In two dimensions the condition had read the
-networks of the energy-term sub-experiment, which met it at every budget; the networks of
-\cref{tab:labeleff} (2D, July) would not have met it with 16 labels
-(\numGOneSanityTableSixteen{} times), because of the scatter described in
-\cref{sec:results2d:julyaccuracy}. The amendment
-declared the change as made after the fact and required the original form to be computed
-and reported beside it; both readings are in \cref{tab:criteria}. The change affects only
-the gate's verdict, not any measurement reported in this paper.
+networks of the energy-term sub-experiment of the July run, which met it at every budget;
+the networks of \cref{tab:labeleffjuly} would not have met it with 16 labels
+(\numGOneSanityTableSixteen{} times), because of the scatter described in \ref{app:july}.
+The amendment declared the change as made after the fact and required the original form to
+be computed and reported beside it. Under the amendment the gate read GO; under the
+registered form, which assesses every budget, it read NO-GO. Both readings are in
+\cref{tab:criteria}. The change affects only the gate's verdict, not any measurement
+reported in this paper.
 
 \paragraph{Deviation D16}
 The text of the three-dimensional pre-registration states that the label-free network
@@ -68,11 +71,11 @@ the text promised, and it leaves the cleaner comparison: the same instances, wit
 without their solutions.
 
 \paragraph{The energy term with 16 labels}
-In the networks of \cref{tab:2djuly,tab:labeleff}, the two-dimensional supervised transformer
-with the energy term used the gradient-scaled form at every budget, and with 16 labels its
-displacement errors scattered across seeds (\cref{sec:results2d:julyaccuracy}); the energy-term
+In the networks of \cref{tab:2djuly,tab:labeleffjuly}, the two-dimensional supervised
+transformer with the energy term used the gradient-scaled form at every budget, and with 16
+labels its displacement errors scattered across seeds (\ref{app:july}); the energy-term
 sub-experiment of the same run trained both the gradient-scaled and the fixed-weight form.
-An exploratory run (30 July 2026), with six seeds in two separate experiments, gave
+The diagnostic run (30 July 2026), with six seeds in two separate experiments, gave
 displacement errors from \numDiagScaledMin{} to \numDiagScaledMax{} for the gradient-scaled
 form, against \numDiagFixedMin{} to \numDiagFixedMax{} in all \numDiagFixedSeeds{} seeds for
 a fixed weight of one on the normalised energy. The three-dimensional pre-registration
@@ -82,35 +85,36 @@ gradient-scaled form for every budget; the registered code applied the pre-regis
 policy.
 
 \paragraph{The joint-embedding term (criterion K3)}
-Criterion K3 of the two-dimensional pre-registration of July 2026 concerned a separate run
-(31 July 2026, \ref{app:repro}). That run pretrained the transformer without labels for 200
-epochs, once on the energy alone and once on the energy together with a self-supervised
-joint-embedding term (\ref{app:e1}), which predicts the latent vectors of masked regions of
-the mesh from those of the rest, with a regulariser on the mean latent vectors; it then
-fine-tuned both with 16, 64 and 256 labels for 200 epochs, with three seeds. K3 would have dropped the term, and with it the version of the
-planned paper that used it, had the term changed neither the displacement error nor the
-relative energy gap by more than \numKthreeBand{} at any budget. K3 was not triggered, and
-the registered rule therefore kept the term (\cref{tab:criteria}). The criterion did not
-state a direction. Of the \numKthreeOutside{} changes outside the band, \numKthreeWorse{}
-made the fine-tuned network less accurate; the remaining one, a relative energy gap
-\numKthreeGain{} lower with 64 labels, compares with a baseline whose seeds scattered
-widely (relative energy gaps of \numKthreeBaseSeeds{}, against \numKthreeBaseRef{} for the
-same configuration in the run of 16 July 2026). This paper reports the energy objective
-without the term. That scope was chosen after the result was known, and it departs from
-the version of the paper that the rule selected.
+Criterion K3 of the July run's pre-registration concerned a separate run, the
+joint-embedding run (31 July 2026). That run pretrained the transformer without labels for
+200 epochs, once on the energy alone and once on the energy together with a self-supervised
+joint-embedding term, which predicts the latent vectors of masked regions of the mesh from
+those of the rest, with a regulariser on the mean latent vectors; it then fine-tuned both
+with 16, 64 and 256 labels for 200 epochs, with three seeds. K3 would have dropped the term,
+and with it the version of the planned paper that used it, had the term changed neither the
+displacement error nor the relative energy gap by more than \numKthreeBand{} at any budget.
+K3 was not triggered, and the registered rule therefore kept the term (\cref{tab:criteria}).
+The criterion did not state a direction. Of the \numKthreeOutside{} changes outside the
+band, \numKthreeWorse{} made the fine-tuned network less accurate; the remaining one, a
+relative energy gap \numKthreeGain{} lower with 64 labels, compares with a baseline whose
+seeds scattered widely (relative energy gaps of \numKthreeBaseSeeds{}, against
+\numKthreeBaseRef{} for the same configuration in the July run). This paper reports the
+energy objective without the term. That scope was chosen after the result was known, and it
+departs from the version of the paper that the rule selected.
 
-\paragraph{The two-dimensional comparison of October 2026}
+\paragraph{The two-dimensional comparison}
 The comparison of \cref{sec:results2d} was registered on 8 October 2026 and run once,
 starting on 8 October and completing on 9 October 2026; its adjudication, by a script fixed
 with the registration, recorded no deviation, and two operational departures recorded with
 the run, the route by which its return was fetched and a log file renamed after the run,
 touched no file that the adjudication reads. \Cref{tab:cm2d} gives its hypotheses with the
 readings that the pre-registration required beside each verdict. Its label-free row reused
-the three label-free networks of the run of 29 September 2026 (\ref{app:e1}): each was
+the three label-free networks of the latent-regularisation run (\ref{app:e1}): each was
 checked against the SHA-256 hash that run had recorded, and evaluated again they reproduced
 that run's per-instance validation values exactly. Three things were known when the
 comparison was registered: the label-free networks' values on the validation instances,
-recorded with the earlier run; the results of July 2026 that motivated the comparison,
+recorded with the latent-regularisation run; the results of the July run that motivated the
+comparison,
 measured on the same validation instances, so that the comparison has no fresh evaluation
 set; and the outcome of a functional check of the stiffness-norm loss, run before the
 registration was stamped, which had trained a transformer of width 32 and depth 2 for 25
@@ -125,36 +129,38 @@ The readings of \cref{sec:results2d:spectrum}, and the rule that chose the insta
 \input{generated/table_cm2d}
 
 \paragraph{Provenance of the two-dimensional runs of July 2026}
-The two-dimensional runs of July 2026 were executed outside a version-controlled checkout, so
+The two-dimensional runs of July 2026 were executed outside a version-controlled checkout,
+so
 their reports record no commit. The code checked their configuration hashes against the
 pre-registration documents at start-up, and the code version was established afterwards
 from the runs' console output and by comparing the source trees of the released packages.
 The repository was created, public, on 14 July 2026 at 03:23 UTC, and its visibility has
 not changed since, as the security log of its owner account records. The pre-registration
-document and the configuration of the run of 16 July 2026 were first committed to it at
-03:25 UTC that day, by an upload through the hosting service's web interface, which created
-and signed that commit (\texttt{b365af5}), the repository's first. The commit holds the code release that
-the run used, version 2.1.4, which differs from the next release, \texttt{v2.1.5}, only in
-the files that the latter's notes list, and the document as shipped with that release: a
-template, whose hash line was blank. The copy that the run checked differed from it only in
-that line; the configuration file was byte for byte \path{configs/phase1_rec8_v2.json} of
-the version described here, whose canonical hash is the one in that line of the copy that
-the run checked. A first attempt of the run, on 14 July 2026, stopped before any training,
-because the corpus that it had generated carried no labels; the labels were computed
-separately on 15 July 2026, and the run was started again, with the same code and
-configuration, on 16 July. The document of the run of 31 July 2026 was not in the
-repository before that run. On 2 August 2026 at 17:29 UTC the repository's history, which
-until then consisted of the first commit alone, was replaced, by a force push, with a new
-history whose first commit (\texttt{a548825}, tagged \texttt{v2.1.5}), dated 17:26 UTC that
-day (3 August in the committer's time zone, UTC+8), contains both documents with their hash
-lines filled and the repository's provenance note. The note, compiled on 1 August 2026,
-records the hashes of the documents that the runs checked, which are those of the committed
-documents, and the hashes of the reports and of the archives that contained them. The first
-commit of the replaced history is kept under the tag \texttt{provenance-2026-07-14}, created
-in October 2026. An export of the hosting service's record of the repository's activity,
-which logs the creation of the branch at that commit on 14 July and the force push of
-2 August, and the security log's entries that name the repository are committed with the
-records, as are the three reports used here, with their hashes (\ref{app:repro}).
+document and the configuration of the July run were first committed to it at 03:25 UTC
+that day, by an upload through the hosting service's web interface, which created and
+signed that commit (\texttt{b365af5}), the repository's first. The commit holds the code
+release that the run used, version 2.1.4, which differs from the next release,
+\texttt{v2.1.5}, only in the files that the latter's notes list, and the document as
+shipped with that release: a template, whose hash line was blank. The copy that the run
+checked differed from it only in that line; the configuration file was byte for byte
+\path{configs/phase1_rec8_v2.json} of the version described here, whose canonical hash is
+the one in that line of the copy that the run checked. A first attempt of the run, on 14
+July 2026, stopped before any training, because the corpus that it had generated carried no
+labels; the labels were computed separately on 15 July 2026, and the run was started again,
+with the same code and configuration, on 16 July. The document of the joint-embedding run
+was not in the repository before that run. On 2 August 2026 at 17:29 UTC the repository's
+history, which until then consisted of the first commit alone, was replaced, by a force
+push, with a new history whose first commit (\texttt{a548825}, tagged \texttt{v2.1.5}),
+dated 17:26 UTC that day (3 August in the committer's time zone, UTC+8), contains both
+documents with their hash lines filled and the repository's provenance note. The note,
+compiled on 1 August 2026, records the hashes of the documents that the runs checked, which
+are those of the committed documents, and the hashes of the reports and of the archives
+that contained them. The first commit of the replaced history is kept under the tag
+\texttt{provenance-2026-07-14}, created in October 2026. An export of the hosting service's
+record of the repository's activity, which logs the creation of the branch at that commit
+on 14 July and the force push of 2 August, and the security log's entries that name the
+repository are committed with the records, as are the three reports used here, with their
+hashes (\ref{app:repro}).
 
 \paragraph{Audit}
 An independent script recomputed the three-dimensional verdict from the report and agreed

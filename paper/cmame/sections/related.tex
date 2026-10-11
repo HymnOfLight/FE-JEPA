@@ -1,8 +1,5 @@
 \section{Related work}\label{sec:related}
 
-% DRAFT: every characterisation below is to be checked against the full text of the cited
-% work before submission; three works are flagged in the text.
-
 \paragraph{Energy and variational training of neural solvers}
 The deep Ritz method \cite{EYu2018} minimises the continuous energy of a variational
 problem over neural trial functions, and the deep energy method \cite{Samaniego2020}
@@ -14,35 +11,43 @@ continuous functional contributes an error of its own, which enters the objectiv
 Kolmogorov--Arnold-informed networks \cite{Wang2025KINN} and energy-based phase-field
 fracture \cite{Manav2024}. Robust variational physics-informed networks \cite{Rojas2024}
 and the deep Fourier residual method \cite{Taylor2023DFR,Taylor2024} construct losses
-equivalent to the energy norm of the error by measuring the residual in a dual norm.
-\Cref{lem:exact} and \cref{rem:dual} below are the exact algebraic counterpart of that
-equivalence on the assembled system: no quadrature error and no equivalence constants,
-because the inverse in the dual norm cancels.
+equivalent to the energy norm of the error, whose discrete form is the stiffness norm used
+below, by measuring the residual in a dual norm. \Cref{lem:exact} and \cref{rem:dual} below
+are the exact algebraic counterpart of that equivalence on the assembled system: no
+quadrature error and no equivalence constants, because the inverse in the dual norm cancels.
 
 \paragraph{Label-free surrogates and operators}
 Variational operator learning \cite{Xu2024VOL} trains operators on the finite-element
-system, evaluated matrix-free, and uses the gradient identity of
-\cref{lem:exact} as a computational device; its loss is the Euclidean norm of the
-residual, or a regression on provisional labels produced by a few conjugate-gradient
-iterations. The variational physics-informed neural operator \cite{Eshaghi2025VINO}
-evaluates the continuous functional analytically on its own bilinear discretisation over
-uniform grids. Other label-free approaches build on the finite-element residual or weak
-form \cite{Lee2025FEONet,Uriarte2022,Gao2022,Goswami2022}. Closest to the present work are
-graph networks on finite-element meshes trained by minimising the potential energy
+system, evaluated matrix-free, and uses the gradient identity of \cref{lem:exact} as a
+computational device; its loss is the Euclidean norm of the residual, or a regression on
+provisional labels produced by a few conjugate-gradient iterations. The variational
+physics-informed neural operator \cite{Eshaghi2025VINO} evaluates the continuous functional
+analytically on its own bilinear discretisation over uniform grids. Other label-free
+approaches build on the finite-element residual or weak form
+\cite{Lee2025FEONet,Uriarte2022,Gao2022,Goswami2022}. Closest to the present work are graph
+networks on finite-element meshes trained by minimising the potential energy
 \cite{Dalton2023}, physics-informed MeshGraphNets trained without data for non-stationary
-and nonlinear problems \cite{Wurth2024}, a physics-informed three-dimensional surrogate for
-elastic fields in polycrystals \cite{MonteiroFernandes2025}, and the pretrain finite
-element method \cite{Wang2026PretrainFEM}, which pretrains a physics-informed neural
-operator without labels and uses its prediction to warm-start the finite-element solver;
-its authors report speed-ups of up to an order of magnitude in the warm-start stage. A
-follow-up applies that approach to three-dimensional pressure vessels
-\cite{Sun2026FEVessel}. Some of these works compare label-free with data-driven training
-\cite{Wurth2024,MonteiroFernandes2025}. We are not aware of a comparison of the same
-network trained on the same instances with and without their solutions under criteria
-fixed in advance, nor of the use of the energy to evaluate and screen surrogate predictions;
-both statements, and the characterisations of this paragraph, are to be confirmed against
-the full texts of \cite{MonteiroFernandes2025,Wang2026PretrainFEM,Sun2026FEVessel} before
-submission.
+and nonlinear problems \cite{Wurth2024}, a three-dimensional convolutional network for
+elastic fields in periodic polycrystals, trained without reference solutions on the
+divergence of its predicted stress \cite{MonteiroFernandes2025}, and the pretrain finite
+element method \cite{Wang2026PretrainFEM}, which trains a point-cloud transformer operator
+on the potential energy, with derivatives from finite-element shape functions, and uses its
+prediction to warm-start the finite-element solver; its authors report up to about nine
+times fewer iterations than from a zero initial guess, with conjugate gradients to a
+tolerance of $10^{-3}$. A follow-up applies that approach to three-dimensional pressure
+vessels \cite{Sun2026FEVessel}. Some of these works compare label-free with data-driven
+training \cite{Wurth2024,MonteiroFernandes2025,Sun2026FEVessel}. Two train the same network
+on the same instances with and without reference solutions, in single runs: in
+polycrystals the label-free network was slightly more accurate \cite{MonteiroFernandes2025},
+and in pressure vessels the supervised one was more accurate in displacement and in the
+$H^1$ norm \cite{Sun2026FEVessel} (\cref{sec:discussion}). We are not aware of such a comparison
+repeated over several seeds under criteria fixed in advance, nor of the use of the discrete
+energy to rank the predictions of one load case by their stiffness-norm errors and to flag
+those worse than the zero field, both without a reference solution. The nearest uses we
+found are a residual-norm test that
+decides whether a warm-started solve is needed \cite{Wang2026PretrainFEM} and an energetic
+upper bound on the effective stiffness computed from predicted fields
+\cite{MonteiroFernandes2025}.
 
 \paragraph{Supervised mesh surrogates}
 MeshGraphNets \cite{Pfaff2021} learn mesh-based simulation by message passing; operator
@@ -52,19 +57,20 @@ geometry-aware operators handle variable three-dimensional geometries
 \cite{He2024GeomDeepONet,Zeng2025PCNO,Liu2026GINOT}. Graph networks have also emulated
 cardiac mechanics \cite{Dalton2022}. These surrogates are typically trained and evaluated
 with relative $L^2$ errors of the predicted fields. \Cref{rem:rank} and
-\cref{sec:results3d} show that the displacement error can rank surrogates in the opposite
-order to their stress errors.
+\cref{sec:results3d:reverse} show that the displacement error can rank surrogates in the
+opposite order to their stress errors.
 
 \paragraph{Solvers, warm starts and conditioning}
 Neural predictions have been used as initial iterates of iterative solvers
-\cite{Wang2026PretrainFEM,Eshaghi2026NOWS} and inside hybrid iterative schemes
-\cite{Lee2025MetaSolver}. \Cref{cor:warm} bounds how far a warm start can lower the
-iteration bound of conjugate gradients, and \cref{sec:results2d:decisions} reports a
-pre-registered test in which a warm start saved nothing at a tight tolerance. The training difficulty of
-residual-based physics losses has been traced to operator conditioning: descent on a
-squared residual is governed by an operator whose condition number is the square of the
-original one \cite{DeRyck2024}; the energy objective avoids the squaring
-(\cref{rem:dual}).
+\cite{Wang2026PretrainFEM,Eshaghi2026NOWS,Sun2026FEVessel} and inside hybrid iterative
+schemes \cite{Lee2025MetaSolver}. Two of these studies report that the saving shrinks as the
+tolerance tightens \cite{Wang2026PretrainFEM,Sun2026FEVessel}; \cref{cor:warm} bounds it for
+conjugate gradients in terms of the prediction's relative energy gap, and
+\cref{sec:cost:warm} reports a pre-registered test in which a warm start saved nothing at a
+tight tolerance. The training difficulty of residual-based physics losses has been traced
+to operator conditioning: descent on a squared residual is governed by an operator whose
+condition number is the square of the original one \cite{DeRyck2024}; the energy objective
+avoids the squaring (\cref{rem:dual}).
 
 \paragraph{Fair comparison and pre-registration}
 Weak baselines and selective reporting have led to over-optimism in machine learning for

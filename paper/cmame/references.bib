@@ -3,12 +3,19 @@
 % still to be checked against their DOI before submission. An entry whose comment names
 % another source and date (for example the authors' version) was checked against that
 % source on that date.
+% On 10 October 2026 the issue numbers, OpenReview and proceedings addresses, DOIs and
+% ISBNs of EYu2018, Pfaff2021, Lu2021DeepONet, Li2021FNO, Vaswani2017, Loshchilov2019,
+% HestenesStiefel1952, Saad2003, Ciarlet1978, the three arXiv preprints and DeRyck2024
+% were added from their publishers' and indexes' records. Still to be checked in a
+% browser: the DOI and issue of OrtizStainier1999, the DOI of Taylor2023DFR, the SIAM
+% DOI of Saad2003, and the chapter authors and pages of LeCun2006EBM.
 
 @article{EYu2018,
   author  = {E, Weinan and Yu, Bing},
   title   = {The {Deep Ritz} method: a deep learning-based numerical algorithm for solving variational problems},
   journal = {Communications in Mathematics and Statistics},
   volume  = {6},
+  number  = {1},
   pages   = {1--12},
   year    = {2018},
   doi     = {10.1007/s40304-018-0127-z}
@@ -235,19 +242,21 @@
   doi     = {10.1016/j.jmps.2026.106682}
 }
 
-% verified (preprint; full text still to be read)
+% verified (preprint, read in full on 10 October 2026)
 @misc{Sun2026FEVessel,
   author  = {Sun, Yipin and Wang, Yizheng and Lin, Yuzhou and Zheng, Baiyang and Zhuang, Xiaoying and Rabczuk, Timon},
   title   = {{FEVessel}: mesh-independent analysis of {3D} pressure vessels with the label-free pretrained finite element method},
   year    = {2026},
-  note    = {arXiv:2607.17318 [math.NA]}
+  note    = {arXiv:2607.17318 [math.NA]},
+  doi     = {10.48550/arXiv.2607.17318}
 }
 
 @inproceedings{Pfaff2021,
   author    = {Pfaff, Tobias and Fortunato, Meire and Sanchez-Gonzalez, Alvaro and Battaglia, Peter W.},
   title     = {Learning mesh-based simulation with graph networks},
   booktitle = {International Conference on Learning Representations (ICLR)},
-  year      = {2021}
+  year      = {2021},
+  url       = {https://openreview.net/forum?id=roNqYL0_XP}
 }
 
 % verified
@@ -322,7 +331,8 @@
   title     = {An operator preconditioning perspective on training in physics-informed machine learning},
   booktitle = {International Conference on Learning Representations (ICLR)},
   year      = {2024},
-  note      = {arXiv:2310.05801}
+  pages     = {54886--54914},
+  url       = {https://openreview.net/forum?id=WWlxFtR5sV}
 }
 
 % verified
@@ -365,6 +375,7 @@
   title   = {Learning nonlinear operators via {DeepONet} based on the universal approximation theorem of operators},
   journal = {Nature Machine Intelligence},
   volume  = {3},
+  number  = {3},
   pages   = {218--229},
   year    = {2021},
   doi     = {10.1038/s42256-021-00302-5}
@@ -374,7 +385,8 @@
   author    = {Li, Zongyi and Kovachki, Nikola and Azizzadenesheli, Kamyar and Liu, Burigede and Bhattacharya, Kaushik and Stuart, Andrew and Anandkumar, Anima},
   title     = {Fourier neural operator for parametric partial differential equations},
   booktitle = {International Conference on Learning Representations (ICLR)},
-  year      = {2021}
+  year      = {2021},
+  url       = {https://openreview.net/forum?id=c8P9NQVtmnO}
 }
 
 @inproceedings{Vaswani2017,
@@ -382,14 +394,17 @@
   title     = {Attention is all you need},
   booktitle = {Advances in Neural Information Processing Systems},
   volume    = {30},
-  year      = {2017}
+  pages     = {5998--6008},
+  year      = {2017},
+  url       = {https://proceedings.neurips.cc/paper_files/paper/2017/hash/3f5ee243547dee91fbd053c1c4a845aa-Abstract.html}
 }
 
 @inproceedings{Loshchilov2019,
   author    = {Loshchilov, Ilya and Hutter, Frank},
   title     = {Decoupled weight decay regularization},
   booktitle = {International Conference on Learning Representations (ICLR)},
-  year      = {2019}
+  year      = {2019},
+  url       = {https://openreview.net/forum?id=Bkg6RiCqY7}
 }
 
 @article{Geuzaine2009,
@@ -421,7 +436,8 @@
   volume  = {49},
   number  = {6},
   pages   = {409--436},
-  year    = {1952}
+  year    = {1952},
+  doi     = {10.6028/jres.049.044}
 }
 
 @book{Saad2003,
@@ -430,15 +446,19 @@
   edition   = {2nd},
   publisher = {SIAM},
   address   = {Philadelphia},
-  year      = {2003}
+  year      = {2003},
+  isbn      = {0-89871-534-2}
 }
 
 @book{Ciarlet1978,
   author    = {Ciarlet, Philippe G.},
   title     = {The Finite Element Method for Elliptic Problems},
   publisher = {North-Holland},
+  series    = {Studies in Mathematics and its Applications},
+  volume    = {4},
   address   = {Amsterdam},
-  year      = {1978}
+  year      = {1978},
+  isbn      = {0-444-85028-7}
 }
 
 @article{OrtizStainier1999,
@@ -466,7 +486,8 @@
   author = {Balestriero, Randall and LeCun, Yann},
   title  = {{LeJEPA}: provable and scalable self-supervised learning without the heuristics},
   year   = {2025},
-  note   = {arXiv:2511.08544 [cs.LG]}
+  note   = {arXiv:2511.08544 [cs.LG]},
+  doi    = {10.48550/arXiv.2511.08544}
 }
 
 % verified (title and authors against arXiv:2608.05437v1)
@@ -474,7 +495,8 @@
   author = {Cao, Ruifeng and Song, Xidan},
   title  = {Discrete energy as an exact label-free training objective for finite-element surrogates},
   year   = {2026},
-  note   = {arXiv:2608.05437 [cs.CE]}
+  note   = {arXiv:2608.05437 [cs.CE]},
+  doi    = {10.48550/arXiv.2608.05437}
 }
 
 % standard reference (Biometrika 70(3), 1983)

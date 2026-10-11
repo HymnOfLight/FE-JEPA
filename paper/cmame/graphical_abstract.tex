@@ -1,0 +1,70 @@
+% Graphical abstract of the CMAME manuscript (Elsevier: 531 x 1328 pixels, h x w, or
+% proportionally more; readable at 5 x 13 cm). The quoted results come from
+% generated/numbers.tex, like the manuscript's. Build from paper/cmame with
+%   pdflatex graphical_abstract.tex
+\documentclass[border=0pt]{standalone}
+\usepackage{amsmath,amssymb}
+\usepackage[scaled=0.95]{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc}
+\input{generated/numbers}
+
+% Okabe-Ito colours, which stay distinct under the common colour-vision deficiencies
+\definecolor{cobj}{HTML}{0072B2}
+\definecolor{cmet}{HTML}{E69F00}
+\definecolor{cdet}{HTML}{D55E00}
+\definecolor{ink}{HTML}{222222}
+\definecolor{muted}{HTML}{555555}
+\definecolor{rule}{HTML}{BBBBBB}
+
+\newcommand{\norm}[1]{\lVert #1\rVert}
+
+\begin{document}
+\hyphenpenalty=10000\exhyphenpenalty=10000
+\begin{tikzpicture}[x=1cm, y=1cm, font=\fontsize{7}{8.4}\selectfont, text=ink,
+  arr/.style={-{Stealth[length=1.6mm]}, semithick, draw=muted},
+  role/.style={draw=#1, line width=0.6pt, fill=#1!8, rounded corners=1.5pt,
+               text width=3.55cm, inner sep=2.2pt, align=left, minimum height=0.92cm},
+  stepbox/.style={draw=rule, rounded corners=1.5pt, fill=white, align=center,
+               inner sep=2pt, text width=3.15cm}]
+
+% canvas: 13 cm x 5.2 cm
+\path[use as bounding box] (0,0) rectangle (13,5.2);
+
+% left: what the loss needs
+\node[stepbox] (inst) at (1.68,4.45) {Instance\\[-1pt]{\color{muted}mesh, material, loads}};
+\node[stepbox, below=0.38cm of inst] (asm) {Assemble $K$ and $F$\\[-1pt]{\color{muted}as every FE code does}};
+\node[stepbox, below=0.38cm of asm, draw=cobj, line width=0.6pt] (loss)
+  {Loss\\[-1pt]\mbox{$\Pi_h(u)=\tfrac12u^{\top}Ku-F^{\top}u$}\\[-1pt]{\color{muted}no solve, no labels}};
+\draw[arr] (inst) -- (asm);
+\draw[arr] (asm) -- (loss);
+
+% centre: the identity
+\node[draw=ink, line width=0.7pt, rounded corners=2pt, fill=white, align=center,
+      inner sep=3.5pt, text width=4.05cm] (id) at (5.85,3.15)
+  {\textbf{One identity}\\[3pt]
+   $\Pi_h(u)-\Pi_h(U^{\ast})=\tfrac12\norm{u-U^{\ast}}_K^2$\\[3pt]
+   {\color{muted}the strain energy of the error,\\ that is, of its stress field}};
+\draw[arr] (loss.east) -- ++(0.35,0) |- (id.west);
+
+% right: three roles
+\node[role=cobj, anchor=north west] (r1) at (9.25,4.95)
+  {\textbf{\color{cobj}Training objective}\\ exactly supervised regression in the stiffness norm, without solving any example};
+\node[role=cmet, below=0.12cm of r1] (r2)
+  {\textbf{\color{cmet!80!black}Evaluation metric}\\ follows the stress error, which the displacement error can rank in reverse};
+\node[role=cdet, below=0.12cm of r2] (r3)
+  {\textbf{\color{cdet}Failure detector}\\ $\Pi_h(u)>0$: the prediction is worse than the zero field};
+\foreach \r in {r1,r2,r3}{\draw[arr] (id.east) -- ($(\r.west)+(-0.05,0)$);}
+
+% bottom: pre-registered results
+\draw[rule, line width=0.4pt] (0.15,1.12) -- (12.85,1.12);
+\node[anchor=north west, text width=12.6cm, align=left, inner sep=0pt] at (0.2,0.98)
+  {\textbf{Pre-registered tests.}\enspace
+   \textbf{3D}, same transformer: trained on the energy alone, it was more accurate on all
+   five metrics than when trained on 1,024 labelled instances.\enspace
+   \textbf{2D}, same labels: a stiffness-norm loss instead of the displacement loss
+   lowered the von Mises error by {\numHTwoBRel}.};
+\end{tikzpicture}
+\end{document}

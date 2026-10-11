@@ -1,8 +1,5 @@
 \section{Introduction}\label{sec:intro}
 
-% DRAFT: to be revised after the full texts of [Wang2026PretrainFEM], [Sun2026FEVessel]
-% and [MonteiroFernandes2025] have been read (outline v3, Sec. 7).
-
 Neural surrogates of finite-element analyses are trained to return, in one network
 evaluation, the field that an assembly and solve would return, so that design studies,
 optimisation and uncertainty quantification can query many configurations cheaply
@@ -19,12 +16,17 @@ $\Pi_h(u)=\tfrac12u^{\top}Ku-F^{\top}u$, whose stiffness matrix $K$ and load vec
 every finite-element code assembles before it solves; evaluating $\Pi_h$ at a prediction
 $u$ costs one sparse matrix-vector product. The energy of a prediction exceeds that of
 the solution $\Ustar$ by half the squared stiffness-norm error,
-$\Pi_h(u)-\Pi_h(\Ustar)=\tfrac12\norm{u-\Ustar}_K^2$, a classical identity of the
-energy-norm theory of finite elements \cite{Ciarlet1978}, and this half squared norm is the
-strain energy of the error's stress field. Minimising the energy over a set of training
-instances is therefore exactly supervised regression in the stiffness norm, with the same
-gradients at every point: a surrogate trained on the energy learns from a weighted
-mean-square stress error, and no training instance is ever solved.
+$\Pi_h(u)-\Pi_h(\Ustar)=\tfrac12\norm{u-\Ustar}_K^2$, a classical identity of
+finite-element analysis \cite{Ciarlet1978}, and this half squared norm is the strain energy
+of the error's stress field. Minimising the energy over a set of training instances is
+therefore exactly supervised regression in the stiffness norm, with the same gradients at
+every point: a surrogate trained on the energy learns from a weighted mean-square stress
+error, and no training instance is ever solved. We call such training label-free. In the
+terms of machine learning it is unsupervised, although, with the solution implied by $K$ and
+$F$, it is exactly the supervised regression just described. It is
+not self-supervised learning in the usual sense, which learns representations through
+pretext tasks such as predicting masked parts of the input; the self-supervised terms that
+\ref{app:prereg} and \ref{app:e1} examine belong to separate experiments.
 
 Energy minimisation as a training principle is not new. The deep Ritz method
 \cite{EYu2018} and the deep energy method \cite{Samaniego2020} minimise a continuous energy
@@ -32,75 +34,98 @@ over neural trial functions, and later work trains operators and mesh-based netw
 without labels, with residual or energy losses
 \cite{Xu2024VOL,Eshaghi2025VINO,Lee2025FEONet,Dalton2023,Wurth2024,Wang2026PretrainFEM}
 (\cref{sec:related}). That the energy ranks candidate fields is the Ritz minimum principle
-itself. This paper adds two things for neural surrogates. The first is the systematic use
-of that principle to evaluate and screen their predictions without reference solutions: an
-exact link from the energy to the stress error, a test that tells whether a prediction is
-worse than the zero field, and a closed-form rescaling that guarantees it is not. The second
-is a controlled test of what label-free training buys: the same network trained on the same
-instances with and without their solutions, under criteria fixed before the runs, with the
-criteria that failed reported alongside those that were met. By the identity above, the
-test compares two losses, the squared stiffness-norm error, which the energy gives without
-a solve, and the usual relative displacement error, which needs the solutions; the labels
-add no information that $K$ and $F$ do not already carry. In two dimensions, a third
-network, supervised in the stiffness norm, separates the norm of the loss from the labels.
-The paper extends a companion note \cite{CaoSong2026}, which stated the exactness identity,
-the conditioning bounds and their executable checks.
+itself. This paper puts the one identity to three uses for neural surrogates, the three
+roles of the energy. As training objective, the energy gives supervised stiffness-norm
+regression without a solve. As evaluation metric, the stiffness-norm error is a
+compliance-weighted mean-square stress error that bounds the error of the von Mises stress,
+and for one load case differences of energy rank predictions by it exactly, without
+reference solutions; its normalised form, the relative energy gap of our tables, needs the
+solution's energy and is computed on validation instances only. As failure detector, the
+sign of the energy shows whether a prediction is worse than the zero field, and a
+closed-form rescaling ensures that it is not.
 
-The energy has three roles in this paper: training objective, evaluation metric and failure
-detector. \Cref{sec:theory} derives each from \cref{lem:exact}, and the first three
-subsections of \cref{sec:results3d} examine them in turn. The contributions are as follows.
+What label-free training buys is tested against supervision. Single runs of the same
+network trained with and without reference solutions have given opposite outcomes
+\cite{MonteiroFernandes2025,Sun2026FEVessel}; here the same network is trained on the same
+instances with and without their solutions, over three seeds, under criteria fixed before
+the runs, with the criteria that failed reported alongside those that were met. By the
+identity above, the comparison is between two losses: the squared stiffness-norm error,
+which the energy gives without a solve, and the usual relative displacement error, which
+needs the solutions; the labels add no information that $K$ and $F$ do not already carry.
+In two dimensions, a third network, supervised in the stiffness norm, separates the norm of
+the loss from the labels. The claim of this paper is therefore not that labels are
+uninformative, but that the norm in which one can train without labels is the one that
+controls the stresses, and that supervised training in the usual displacement norm controls
+them less well. The paper extends a companion note \cite{CaoSong2026}, which stated the
+exactness identity, the conditioning bounds and their executable checks, and first reported
+the main results of the July run (\ref{app:july}).
+
+\Cref{sec:theory} derives the three roles from \cref{lem:exact}; \cref{sec:results3d}
+examines them in turn on three-dimensional meshes, and \cref{sec:results2d} tests, in two
+dimensions, the explanation that \cref{sec:theory} gives for what \cref{sec:results3d}
+finds. The contributions are as follows.
 \begin{enumerate}
-\item Theory (\cref{sec:theory}). The label-free energy objective is supervised
-stiffness-norm regression (\cref{lem:exact,cor:training}); for isotropic elasticity the
-energy gap is a compliance-weighted mean-square error of the stress field and bounds the
+\item Theory (\cref{sec:theory}). \Cref{lem:exact}, the identity of the squared stiffness
+norm with the compliance-weighted stress norm and the Chebyshev bound of conjugate
+gradients are classical \cite{Ciarlet1978,Saad2003}; we derive from them the following
+statements for surrogates. The label-free objective is supervised stiffness-norm regression
+(\cref{cor:training}), and for a homogeneous isotropic material the energy gap bounds the
 error of the von Mises field (\cref{prop:stress}). The relative energy gap is the squared
 relative displacement error times a factor that measures where the error lies in the
-spectrum of $K$ (\cref{rem:factor}), and displacement and energy-norm errors can rank two
+spectrum of $K$ (\cref{rem:factor}); displacement and stiffness-norm errors can rank two
 predictions in opposite orders only when their displacement errors differ by less than the
-square root of the condition number of $K$, and then they can (\cref{rem:rank}). The sign of $\Pi_h(u)$ tells, for each load case, whether a prediction is
-worse than the zero field (\cref{cor:zero}), and the two terms of $\Pi_h(u)$ give a
-rescaling after which it is not (\cref{prop:amp}). Under the classical Chebyshev bound, a
-warm start lowers the iteration bound of conjugate gradients by a fraction that depends
-only on the prediction's relative energy gap and the target tolerance (\cref{cor:warm}).
-\item Experiments (\cref{sec:results2d,sec:results3d}). On three-dimensional tetrahedral
-meshes, a transformer trained on the energy alone was more accurate on all five metrics,
-in every seed, than the same transformer trained on the solutions of the same 1,024
-instances. A graph network trained on those solutions had lower displacement errors than
-the label-free transformer on most instances but higher stress errors on almost all of
-them, so that displacement error ranked the two in the opposite order to stress error.
-Every three-dimensional supervised network returned some in-band predictions worse than the
-zero field; the label-free network returned none, averaged over each instance's load cases,
-and \numThreeFreeLoadWorse{} in \numThreeFreeLoads{} load cases taken singly. In two
-dimensions, the label-free transformer's displacement error was \numCmFreeDispExcessAbs{}
-larger than the supervised transformer's, and it was more accurate on every other metric.
-Trained on the stiffness-norm error instead of the displacement error, with the same labels,
-the supervised transformer lowered its von Mises error by \numHTwoBRel{} (pre-registered
-hypothesis H2b, supported), and its errors lay lower in the spectrum of the stiffness
-matrix, as measured afterwards.
-\item Negative results (\cref{sec:results2d,sec:transfer,sec:cost}). In two dimensions,
-conjugate gradients started from a label-free prediction did not need fewer iterations to a
-tight residual tolerance than from zero. No network transferred to a three-dimensional mesh
-about twice as fine without retraining; a closed-form rescaling applied after the fact
-removed about two-thirds of the label-free network's displacement error there.
+square root of the condition number of $K$, and then they can (\cref{rem:rank}); and the
+energy ranks predictions, and on average surrogates, by their stiffness-norm errors
+without reference solutions (\cref{cor:rank}). The sign of $\Pi_h(u)$ tells, for each load
+case, whether a prediction is worse than the zero field (\cref{cor:zero}), and the two terms
+of $\Pi_h(u)$ give a rescaling after which it is not (\cref{prop:amp}). Under the Chebyshev
+bound, a warm start lowers the iteration bound of conjugate gradients by a fraction that
+depends only on the prediction's relative energy gap and the target tolerance
+(\cref{cor:warm}).
+\item Three dimensions (\cref{sec:results3d}). A transformer trained on the energy alone
+was more accurate on all five metrics, in every seed, than the same transformer trained on
+the solutions of the same 1,024 instances, and the pre-registered accuracy condition on the
+label-free network was met with a wide margin. In the same run, a graph network trained on
+those solutions had lower displacement errors than the label-free transformer on most
+instances but higher von Mises errors on almost all of them, so that the two errors ranked
+the networks in opposite orders; this is a reading of the run, not a pre-registered
+criterion. Every supervised network returned some predictions worse than the zero field; the
+label-free network returned none, averaged over each instance's load cases, and
+\numThreeFreeLoadWorse{} in \numThreeFreeLoads{} load cases taken singly.
+\item Two dimensions (\cref{sec:results2d}). The label-free transformer's displacement error
+was \numCmFreeDispExcessAbs{} larger than the supervised transformer's, and it was more
+accurate on every other metric. Trained on the stiffness-norm error instead of the
+displacement error, with the same labels, the supervised transformer lowered its von Mises
+error by \numHTwoBRel{} (a pre-registered hypothesis, supported), and its errors lay lower
+in the spectrum of the stiffness matrix, as measured afterwards.
+\item Negative results (\cref{sec:transfer,sec:cost}, \ref{app:e1}). No network transferred
+to a three-dimensional mesh about twice as fine without retraining; a closed-form rescaling
+applied after the fact removed about two-thirds of the label-free network's displacement
+error there. In two dimensions, conjugate gradients started from a label-free prediction did
+not need fewer iterations to a tight residual tolerance than from zero. A token-bottleneck
+network that trained \numTimeBottleneckSpeedup{} times faster was less accurate and was
+dropped.
 \item Cost (\cref{sec:cost}). The label-free network was trained without a single solve;
 in three dimensions the supervised networks' 1,024 labelled training instances took
 \numThreeTrainSolves{} solves, and evaluating any method on the in-band and fine-mesh
 validation sets took a further \numThreeEvalSolves{}.
 \end{enumerate}
 
-We do not claim that a surrogate is faster than solving a linear elastostatic problem:
-sparse direct and iterative solvers are fast at the sizes studied here
-(\cref{sec:cost}). Linear elastostatics is the test bed on which the exactness of the
-objective can be proved and the comparison with supervision kept narrow: the same network,
-the same instances and the same schedule, with only the loss and its learning rate
-differing. The interest of label-free training lies where solves are expensive and labels
-scarce, for example in nonlinear and time-dependent problems whose implicit steps are again
-energy minimisations (\cref{sec:discussion}).
+We do not claim that a surrogate is faster than solving a linear elastostatic problem; at
+the sizes studied here, sparse direct and iterative solvers are fast. Linear elastostatics
+is the test bed on which the exactness of the objective can be proved and the comparison
+with supervision kept narrow: the same network, the same instances and the same schedule,
+with only the loss and its learning rate differing. The interest of label-free training lies
+where solves are expensive and labels scarce, for example in nonlinear and time-dependent
+problems whose implicit steps are again energy minimisations (\cref{sec:discussion}).
 
 \Cref{sec:related} reviews related work, \cref{sec:theory} the theory and
-\cref{sec:methods} the problems, networks and protocol. \Cref{sec:results2d,sec:results3d}
-report the two- and three-dimensional comparisons, \cref{sec:transfer} the transfer to a
-finer mesh and \cref{sec:cost} the cost. \Cref{sec:discussion} discusses the results and
-their limits. \ref{app:prereg} lists every pre-registered criterion with its outcome and
-the deviations from the plans, \ref{app:e1} a negative result on latent regularisation
-and \ref{app:repro} how every number is reproduced from the records.
+\cref{sec:methods} the problems, networks and protocol. \Cref{sec:results3d} reports the
+three-dimensional comparison, organised by the three roles, and \cref{sec:results2d} the
+two-dimensional comparison that separates the norm of the loss from the labels;
+\cref{sec:transfer} reports the transfer to a finer mesh and \cref{sec:cost} the cost and
+the warm starts. \Cref{sec:discussion} discusses the results and their limits.
+\ref{app:prereg} lists every pre-registered criterion with its outcome and the deviations
+from the plans, \ref{app:e1} two pre-registered side experiments, on latent regularisation
+and on a token bottleneck, \ref{app:repro} how every number is reproduced from the records,
+and \ref{app:july} the July run.

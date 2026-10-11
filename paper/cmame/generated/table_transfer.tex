@@ -28,6 +28,6 @@ Supervised from scratch, 64 fine-mesh labels & 0.193 $\pm$ 0.076 & 13.2 $\pm$ 5.
 \begin{minipage}{\linewidth}\footnotesize\raggedright
 256 fine-mesh evaluation instances (median 36,216 nodes), disjoint from the 64 instances reserved for few-shot training. Mean $\pm$ sample standard deviation over 3 seeds; the naive baselines are deterministic and built from the 1,024 in-band labelled instances.\par
 In-band, the label-free network's displacement error is 0.0300; the zero-shot ratio is therefore 8.62.\par
-Few-shot training runs 50 epochs at learning rate 1.5 $\times$ 10$^{-3}$ from the trained label-free network of the same seed, or from random initialisation (scratch); the few-shot comparison was pre-registered as reported only.
+Few-shot training minimises the relative displacement error $\mathcal{L}_D$ \eqref{eq:ld}, without the energy term, for 50 epochs at learning rate 1.5 $\times$ 10$^{-3}$, from the trained label-free network of the same seed or from random initialisation (scratch); the few-shot comparison was pre-registered as reported only.
 \end{minipage}
 \end{table}

@@ -1,21 +1,25 @@
-\section{Results in two dimensions}\label{sec:results2d}
+\section{Two dimensions: the norm or the labels?}\label{sec:results2d}
 
-The two-dimensional comparison is the pre-registered run of 9 October 2026, made with the
-later code of \cref{sec:methods:networks}, which multiplies the decoded field by $F_{\max}$
-as in three dimensions. It trained again two networks of an earlier pre-registered run,
-that of 16 July 2026, on the same corpus, split and seeds and with the same training
-settings: the supervised transformer, with every number of labelled instances, and the
-graph network, with 64 and 1,024 only (\cref{sec:methods:training}). Beside them it
-evaluated, without retraining them, the three label-free transformers that the run of 29
-September 2026 had trained with the same code on the same 1,024 instances (the
-unregularised networks of \ref{app:e1}). It added one network, the stiffness-norm
-transformer: the supervised transformer trained on the relative stiffness-norm error
-\eqref{eq:lk} instead of the relative displacement error \eqref{eq:ld}, with the same
-labels, which separates the norm of the loss from the labels (\cref{sec:results2d:norm}).
-The trained networks of this section are thus the label-free, the supervised and the
-stiffness-norm transformers and the graph network. The run of 16 July 2026 is reported in
-\cref{sec:results2d:july}; the configuration hashes of both runs are given in
-\ref{app:repro}.
+\Cref{sec:results3d} found the label-free transformer more accurate than the same network
+trained on the solutions, with the largest margins in the stresses. \Cref{sec:theory}
+explains this by the norm of the loss: the energy regresses in the stiffness norm, which by
+\cref{prop:stress} measures the stress error, whereas the relative displacement error
+weights all eigenmodes of $K$ equally (\cref{sec:theory:metrics}). The two-dimensional
+comparison (\cref{tab:runs}) tests this explanation by separating the norm of the loss from
+the labels. Beside the label-free transformer, it trained the supervised transformer, with
+every number of labelled instances, and the graph network, with 64 and 1,024; these repeat
+two networks of the July run with the later code, on the same corpus, split and seeds and
+with the same training settings. It added one network, the stiffness-norm transformer: the
+supervised transformer trained on the relative stiffness-norm error \eqref{eq:lk} instead of
+the relative displacement error \eqref{eq:ld}, with the same labels
+(\cref{sec:results2d:norm}). Its label-free networks are those of the latent-regularisation
+run, evaluated without retraining (\cref{sec:methods:training}); the configuration hashes
+are given in \ref{app:repro}. The comparison was registered with the values of its
+label-free networks on these validation instances known, and after a functional check at a
+far smaller scale had shown the directions of H1, H2a and H2b (\ref{app:prereg}). Beyond the
+hypotheses and the readings that its pre-registration required beside them, the
+instance-by-instance comparisons and the readings taken after the run are not pre-registered
+criteria.
 
 \subsection{Accuracy}\label{sec:results2d:accuracy}
 
@@ -24,8 +28,9 @@ stiffness-norm transformers and the graph network. The run of 16 July 2026 is re
 \Cref{tab:2d} gives every metric with 1,024 labelled instances. The label-free transformer
 was more accurate than the supervised transformer, the same network trained on the solutions
 of the same instances, on every metric but the displacement error, in each of the three
-seeds: its relative energy gap, \numCmFreeGap{}, was \numCmLabOverFreeGap{} times lower, and
-its von Mises error (\numCmFreeVm{} against \numCmLabVm{}), peak stress error
+seeds: its relative energy gap, \numCmFreeGap{}, was \numCmLabOverFreeGap{} times lower, a
+factor of \numCmLabOverFreeGapRoot{} in the root-mean-square relative stiffness-norm error,
+and its von Mises error (\numCmFreeVm{} against \numCmLabVm{}), peak stress error
 (\numCmFreePeak{} against \numCmLabPeak{}) and critical-region recall (\numCmFreeRecall{}
 against \numCmLabRecall{}) were better. Its displacement error, \numCmFreeDispFour{}, was
 \numCmFreeDispExcessAbs{} higher than the supervised transformer's, \numCmLabDispFour{}, and
@@ -38,31 +43,32 @@ Mises error ranked the two networks in opposite orders (\cref{rem:rank}).
 
 The pre-registered hypothesis H1, that the label-free transformer has the lower relative
 energy gap, was supported: its seed mean was \numHOneRel{} lower, beyond the noise guard of
-\numHOneTau{}. The guard, fixed in the pre-registration, is the larger of 10\% and twice the
-standard error of the relative difference of the two seed means (note to
-\cref{tab:criteria}); a difference within it is reported as no difference shown, which is
-not equivalence. \Cref{tab:cm2d} gives, for H1 and the other hypotheses of this run, the
-per-seed values and the readings that the pre-registration required beside each verdict:
-on the seeds' medians over the instances the guard gave the same readings, and the 95\%
-intervals of the relative difference, from Welch's statistic over the seeds and from
-resampling the instances, lay below zero for H1, H2a and H2b.
+\numHOneTau{} (\cref{sec:methods:prereg}). \Cref{tab:cm2d} gives, for H1 and the other
+hypotheses of this run, the per-seed values and the readings that the pre-registration
+required beside each verdict: on the seeds' medians over the instances the guard gave the
+same readings, and the 95\% intervals of the relative difference, from Welch's statistic
+over the seeds and from resampling the instances, lay below zero for H1, H2a and H2b.
 
 As in three dimensions (\cref{sec:results3d:reverse}), the graph network had the lowest
 displacement error in the table, \numCmMgnDisp{}, \numCmMgnBelowLabDisp{} below the
 supervised transformer's and within the noise guard of it, and stress errors several times
 the label-free transformer's: its von Mises error was \numCmMgnOverFreeVm{} times the
 label-free transformer's, and its relative energy gap, \numCmMgnGap{} against
-\numCmFreeGap{}, was the largest of the trained networks, \numCmMgnOverLabGap{} times even the
+\numCmFreeGap{}, was the largest of the trained networks, \numCmMgnOverLabGap{} times even
+the
 supervised transformer's. Against the supervised transformer, instance by instance, it had
 the lower displacement error on \numPairCmMgnLabDisp{} of the pairs, the lower relative
 energy gap on \numPairCmMgnLabGap{} and the lower von Mises error on \numPairCmMgnLabVm{}.
-Of its \numCmPairs{} instance-seed predictions, \numCmMgnWorse{} were further from the
-solution, in the energy norm, than the zero field, against none for each of the three
-transformers. Taken load case by load case after the run, over the \numSpecLoads{} triples
-of seed, instance and load case of \cref{sec:results2d:spectrum}, \numSpecLoadWorseMgn{} of
-the graph network's predictions were worse than the zero field, against
-\numSpecLoadWorseFree{} for the label-free transformer, \numSpecLoadWorseLab{} for the
-supervised transformer and \numSpecLoadWorseKnorm{} for the stiffness-norm transformer.
+
+\paragraph{Failures}
+Of the graph network's \numCmPairs{} instance-seed predictions, \numCmMgnWorse{} had a mean
+relative energy gap above one, against none for each of the three transformers
+(\cref{fig:energygap}, right). Load case by load case, with the test of \cref{cor:zero},
+measured after the run over the \numSpecLoads{} triples of seed, instance and load case of
+\cref{sec:results2d:spectrum}, \numSpecLoadWorseMgn{} of the graph network's predictions
+were worse than the zero field, against \numSpecLoadWorseFree{} for the label-free
+transformer, \numSpecLoadWorseLab{} for the supervised transformer and
+\numSpecLoadWorseKnorm{} for the stiffness-norm transformer.
 
 \subsection{Supervision in the stiffness norm}\label{sec:results2d:norm}
 
@@ -70,49 +76,48 @@ The supervised and the label-free transformers differ chiefly in the labels and 
 of the loss, the Euclidean norm of \eqref{eq:ld} against the stiffness norm in which, by
 \cref{cor:training}, the energy regresses; they also weight the load cases differently and
 were trained at different learning rates (\cref{sec:methods:training}). The stiffness-norm
-transformer keeps the labels and changes the norm. At a given seed it starts from the same
-initial weights as the supervised transformer and visits the instances in the same
-sequence, so the two differ only in the loss (\cref{sec:methods:training}). Two hypotheses
-about it were pre-registered: H2a, that its relative energy gap is lower than the
-supervised transformer's, which is close to a check that the change of loss took effect,
-since \eqref{eq:lk} averages the square roots of the relative energy gaps; and H2b, that its
-von Mises error is lower. The von Mises error is a term of neither loss, and by
+transformer keeps the labels and changes the norm; it differs from the supervised
+transformer only in the loss (\cref{sec:methods:training}). Two hypotheses about it were
+pre-registered: H2a, that its relative energy gap is lower than the supervised
+transformer's, which is close to a check that the change of loss took effect, since
+\eqref{eq:lk} averages the square roots of the relative energy gaps; and H2b, that its von
+Mises error is lower. The von Mises error is a term of neither loss, and by
 \cref{prop:stress} the stiffness-norm error is the compliance-weighted stress error and
 bounds the area-weighted von Mises error: H2b tests the explanation this paper gives for the
-label-free network's accurate stresses (\cref{sec:discussion}).
+label-free network's accurate stresses. Both hypotheses fixed a direction only.
 
 Both were supported. With 1,024 labelled instances the stiffness-norm transformer's relative
 energy gap was \numHTwoARel{} lower than the supervised transformer's (guard
-\numHTwoATau{}), and its von Mises error \numHTwoBRel{} lower, \numCmKnormVm{} against
-\numCmLabVm{} (guard \numHTwoBTau{}). It had the lower relative energy gap on
-\numPairCmKnormLabGap{} of the instance-seed pairs, the lower von Mises error on
-\numPairCmKnormLabVm{} and the lower displacement error on \numPairCmKnormLabDisp{}: changing
-the norm halved the von Mises error and left the displacement error about where it was,
+\numHTwoATau{}), \numHTwoARootRel{} lower in the root-mean-square relative stiffness-norm
+error, and its von Mises error \numHTwoBRel{} lower, \numCmKnormVm{} against \numCmLabVm{}
+(guard \numHTwoBTau{}). It had the lower relative energy gap on \numPairCmKnormLabGap{} of
+the instance-seed pairs, the lower von Mises error on \numPairCmKnormLabVm{} and the lower
+displacement error on \numPairCmKnormLabDisp{}: changing the norm lowered the von Mises
+error by more than half and left the displacement error about where it was,
 \numCmKnormDisp{} against \numCmLabDisp{}. Weighted by element area, as in
 \cref{prop:stress}, instead of equally, the ratio of the two networks' mean von Mises errors
 was \numSpecVmAreaRatio{}, against \numSpecVmElemRatio{} for the reported metric (measured
-after the run, \cref{sec:results2d:spectrum}).
+after the run, \ref{app:repro:checks}).
 
 A third comparison, H3, was pre-registered as a reading without a criterion: the
 stiffness-norm transformer against the label-free transformer. It showed no difference
-beyond the guard, which is not equivalence. The stiffness-norm transformer's relative energy
-gap, \numCmKnormGap{}, was \numHThreeRel{} lower, within the guard of \numHThreeTau{}, which
-its seeds made wide (\numCmKnormGapSeeds{}, against \numCmFreeGapSeeds{}); with the
-stiffness-norm transformer as the reference instead, the label-free transformer's was
-\numHThreeExRel{} higher, within the guard of \numHThreeExTau{}. In every seed the
-stiffness-norm transformer was the more accurate of the two on every metric, by
-\numHThreeSeedRel{} in relative energy gap in seeds 0, 1 and 2: seed 1 makes most of the
-difference between the seed means (seeds 0 and 2 alone give \numHThreeSeedsZeroTwo{}) and,
-through the spread it adds, most of the width of the guard. Instance by instance, the
-stiffness-norm transformer had the lower relative energy gap on \numPairCmKnormFreeGap{} of
-the pairs, the lower von Mises error on \numPairCmKnormFreeVm{} and the lower displacement
-error on \numPairCmKnormFreeDisp{}, and resampling the instances, with the seeds kept, put
-its relative energy gap \numHThreeResLow{} to \numHThreeResHigh{} below the label-free
-transformer's (95\% interval, \cref{tab:cm2d}); the guard, which treats the three seeds as
-the replicates, does not separate the two networks. H3 compares two networks rather than
-training with and without labels: by \eqref{eq:lkgrad} the two objectives weight the same
-residual differently per load case, and the two networks were trained at different learning
-rates.
+beyond the guard. The stiffness-norm transformer's relative energy gap, \numCmKnormGap{},
+was \numHThreeRel{} lower, within the guard of \numHThreeTau{}, which its seeds made wide
+(\numCmKnormGapSeeds{}, against \numCmFreeGapSeeds{}); with the stiffness-norm transformer
+as the reference instead, the label-free transformer's was \numHThreeExRel{} higher, within
+the guard of \numHThreeExTau{}. In every seed the stiffness-norm transformer was the more
+accurate of the two on every metric, by \numHThreeSeedRel{} in relative energy gap in seeds
+0, 1 and 2: seed 1 makes most of the difference between the seed means (seeds 0 and 2 alone
+give \numHThreeSeedsZeroTwo{}) and, through the spread it adds, most of the width of the
+guard. Instance by instance, the stiffness-norm transformer had the lower relative energy
+gap on \numPairCmKnormFreeGap{} of the pairs, the lower von Mises error on
+\numPairCmKnormFreeVm{} and the lower displacement error on \numPairCmKnormFreeDisp{}, and
+resampling the instances, with the seeds kept, put its relative energy gap
+\numHThreeResLow{} to \numHThreeResHigh{} below the label-free transformer's (95\% interval,
+\cref{tab:cm2d}); the guard, which treats the three seeds as the replicates, does not
+separate the two networks. H3 compares two networks rather than training with and without
+labels: by \eqref{eq:lkgrad} the two objectives weight the same residual differently per
+load case, and the two networks were trained at different learning rates.
 
 \subsection{Where the errors lie in the spectrum}\label{sec:results2d:spectrum}
 
@@ -171,20 +176,26 @@ the solution's own.
 
 The graph network's errors had the size of the supervised transformer's (ratio of
 $\delta^2$, graph network over supervised, \numSpecMgnLabDisp{}) and lay higher still (ratio
-of $\rho$ \numSpecMgnLabRq{}). The stiffness-norm and the label-free transformers, trained in
+of $\rho$ \numSpecMgnLabRq{}). The stiffness-norm and the label-free transformers, trained
+in
 the same norm, had errors at the same place in the spectrum (ratio of $\rho$, stiffness-norm
 over label-free, \numSpecKnormFreeRq{}) and of different sizes (ratio of $\delta^2$
 \numSpecKnormFreeDisp{}; \numSpecKnormFreeDispSeeds{} in the three seeds): the
 stiffness-norm transformer's errors were the smaller in every seed, by far the smaller in
-seed 1, the seed that makes most of the difference in H3 (\cref{sec:results2d:norm}).
+seed 1, the seed that makes most of the difference in H3 (\cref{sec:results2d:norm}). The
+networks ran with TF32 matrix products, whose rounding weighs heavily in the stiffness norm;
+evaluated with TF32 off, the geometric-mean ratio of $\rho$ between the supervised and the
+stiffness-norm transformers rose from \numSpecLabKnormRq{} to \numSpecIeeeLabKnormRq{}, so
+the readings as run understate the differences between the networks trained in the two
+norms (\ref{app:repro:tf32}).
 
 \begin{figure}[tbp]
 \centering
 \includegraphics[width=\linewidth]{generated/fig_field2d.pdf}
 \caption{Two dimensions, validation instance No.~\numSpecFigIndex{}, the one with the median
 relative energy gap of the supervised transformer, seed 0, under the \numFigTwoDLoad{}
-(selection rules in \cref{sec:methods:prereg}). Von Mises stress of the reference solution
-and of the four networks with 1,024 labelled instances, on one colour scale set by the
+(selection rules in \ref{app:repro:plots}). Von Mises stress of the reference solution and
+of the four networks with 1,024 labelled instances, on one colour scale set by the
 reference. First row: the reference, then the two networks trained in the stiffness norm
 (the label-free and the stiffness-norm transformers); second row: the two trained on the
 displacement error (the supervised transformer and the graph network). Above each network,
@@ -193,53 +204,18 @@ the sign of $\Pi_h(u)$.}
 \label{fig:field2d}
 \end{figure}
 
-\Cref{fig:field2d} shows one instance, chosen by the rule of \cref{sec:methods:prereg}
-before the run's spectra were exported, in the load case that the same rule picks among its
-four. On that load case, the four networks' displacement errors lay between
-\numFigTwoDDispMin{} and \numFigTwoDDispMax{} and their relative energy gaps between
-\numFigTwoDGapMin{} and \numFigTwoDGapMax{}; the stress fields of the two networks trained on
-the displacement error are visibly rougher.
-
-The networks ran with TF32 matrix products (\cref{sec:methods:training}), whose rounding
-varies from node to node and therefore weighs heavily in the energy norm, so each network was
-also evaluated with TF32 off. The rounding, the difference between the two predictions, had
-a squared stiffness norm of a median \numSpecTfFree{} and \numSpecTfKnorm{} of that of the
-error for the label-free and the stiffness-norm transformers (\numSpecTfLab{} and
-\numSpecTfMgn{} for the two networks trained on the displacement error). In the modes with
-$\lambda_m\ge10^4R(\Ustar)$ it had a median \numSpecTfStiffFree{} and
-\numSpecTfStiffKnorm{} of the error's squared stiffness norm in those modes, on the
-\numSpecTfStiffN{} triples whose spectra reach that far (\numSpecTfStiffLoads{} of the
-\numSpecLoadCases{} pairs of instance and load case, in each seed). With TF32 off, the
-median quotients $\rho$ were \numSpecIeeeRqFree{} (label-free), \numSpecIeeeRqKnorm{}
-(stiffness norm), \numSpecIeeeRqLab{} (supervised) and \numSpecIeeeRqMgn{} (graph network),
-and the geometric-mean ratios of $\rho$ and of $g$ between the supervised and the
-stiffness-norm transformers rose to \numSpecIeeeLabKnormRq{} and \numSpecIeeeLabKnormGap{}.
-The rounding thus places the errors of the two networks trained in the stiffness norm higher
-in the spectrum than they would lie without it, and the readings as run understate the
-differences between the networks trained in the two norms.
+\Cref{fig:field2d} shows one instance, chosen by a rule fixed before the run's spectra were
+exported, in the load case that the same rule picks among its four. On that load case, the
+four networks' displacement errors lay between \numFigTwoDDispMin{} and
+\numFigTwoDDispMax{} and their relative energy gaps between \numFigTwoDGapMin{} and
+\numFigTwoDGapMax{}; the stress fields of the two networks trained on the displacement error
+are visibly rougher.
 
 \subsection{Label efficiency}\label{sec:results2d:labels}
 
-\input{generated/table_label_efficiency}
-
-\begin{figure}[tbp]
-\centering
-\includegraphics[width=\linewidth]{generated/fig_label_efficiency.pdf}
-\caption{Label efficiency in two dimensions (left; the run of 9 October 2026) and three
-dimensions (right): seed-mean relative displacement error (top) and relative energy gap
-(bottom) of the supervised networks against the number of labelled training instances. The
-horizontal line is the label-free transformer, trained on the same 1,024 instances without
-their solutions. The stiffness-norm transformer was trained in two dimensions only, and the
-graph network, in both panels, with 64 and 1,024 labels only; the supervised transformer
-with the energy term is shown in three dimensions only (its two-dimensional values, from
-the run of 16 July 2026, are in \cref{tab:labeleff}).}
-\label{fig:labeleff}
-\end{figure}
-
-\Cref{tab:labeleff} and \cref{fig:labeleff} give the errors of the supervised networks
-against the number of labelled instances. With no labels, the label-free transformer's
-relative energy gap was lower than the supervised transformer's and the graph network's at
-every budget; its advantage over the supervised transformer,
+In two dimensions (\cref{tab:labeleff,fig:labeleff}, right), with no labels, the label-free
+transformer's relative energy gap was lower than the supervised transformer's and the graph
+network's at every budget; its advantage over the supervised transformer,
 $1-g_{\text{label-free}}/g_{\text{supervised}}$ for the seed means, fell from
 \numCmAdvMax{} with 16 labels to \numCmAdvMin{} with 1,024. In displacement, the supervised
 transformer and the graph network needed 1,024 labels to pass it.
@@ -265,121 +241,13 @@ lower relative energy gap on \numPairCmFreeKnormGapTwoFiveSix{} of the instance-
 supervised on the displacement error, 1,024 left a von Mises error \numCmLabOverFreeVm{}
 times the label-free transformer's.
 
-\subsection{The run of 16 July 2026}\label{sec:results2d:july}
+\subsection{The July run}\label{sec:results2d:july}
 
-The run of 16 July 2026, pre-registered before it was executed, compared the networks on the
-same corpus, split and seeds with the code of July 2026, in which the decoder did not
-multiply $F_{\max}$ back onto the prediction, so that no network in that run could know the
-absolute amplitude of an instance's loads (\cref{sec:methods:networks}). It also trained
-what the run of 9 October 2026 did not: the supervised transformer with an energy term, the
-supervised transformer trained from the label-free transformer's parameters
-(\cref{sec:methods:training}), and the graph network with every number of labelled
-instances. It trained no stiffness-norm transformer.
-
-\subsubsection{Accuracy and label efficiency}\label{sec:results2d:julyaccuracy}
-
-\input{generated/table_2djuly}
-
-\Cref{tab:2djuly} gives every metric with 1,024 labelled instances. The supervised
-transformer had the lowest displacement error, \numTwoLabDispFour{} against
-\numTwoFreeDispFour{} for the label-free transformer, which was \numTwoFreeDispExcessAbs{}
-higher, and higher in each of the three seeds. On every other metric the label-free
-transformer was the most accurate network in the table: its relative energy gap,
-\numTwoFreeGap{}, was \numTwoLabOverFreeGap{} times lower than the supervised transformer's,
-and its von Mises error (\numTwoFreeVm{} against \numTwoLabVm{}), peak stress error
-(\numTwoFreePeak{} against \numTwoLabPeak{}) and critical-region recall (\numTwoFreeRecall{}
-against \numTwoLabRecall{}) were better. Compared instance by instance within each seed, the
-label-free transformer had the lower relative energy gap on \numPairTwoLabGap{} of the
-\numTwoPairs{} instance-seed pairs and the lower von Mises error on \numPairTwoLabVm{}, but
-the lower displacement error on only \numPairTwoLabDisp{}. The energy term lowered the
-supervised transformer's relative energy gap to \numTwoAncGap{} and its von Mises error to
-\numTwoAncVm{}, both still above the label-free values. The graph network matched the others
-in displacement (\numTwoMgnDisp{}) but had a relative energy gap of \numTwoMgnGap{} and a von
-Mises error of \numTwoMgnVm{}: \numTwoMgnWorse{} of its \numTwoPairs{} instance-seed
-predictions were further from the solution, in the energy norm, than the zero field. The
-supervised transformer had \numTwoLabWorse{} such predictions, the supervised transformer
-with the energy term \numTwoAncWorse{}, and the label-free transformer \numTwoFreeWorse{},
-one per seed.
-
-The displacement errors of the five trained networks lie between \numTwoLabDisp{} and
-\numTwoMgnDisp{}, a narrow band, while their relative energy gaps span a factor of
-\numTwoGapSpread{}. We attribute the narrow band to the code: no network could know the
-absolute amplitude of an instance's loads, which adds an error common to every displacement
-and compresses their differences. With the later code, the displacement errors of the
-label-free transformer, the supervised transformer and the graph network on the same
-instances were \numJulyOverCmDispMin{} to \numJulyOverCmDispMax{} times lower
-(\cref{tab:2d}), and those of the trained networks spanned a factor of \numCmDispSpread{}
-rather than \numTwoDispSpread{}. This agrees with the attribution, but the two runs also
-differ in their software versions, and no experiment isolated the output scaling.
-
-With no labels, the label-free transformer's relative energy gap was lower than every
-supervised network's at every budget (\cref{tab:labeleff}); its advantage over the supervised
-transformer fell from \numTwoAdvMax{} with 16 labels to \numTwoAdvMin{} with 1,024. In
-displacement, the supervised transformer needed 1,024 labels to pass it. With 16 labels, the
-supervised transformer with the energy term was less accurate in displacement than without
-it, and its per-seed errors scattered widely (\numTwoAncSixteenSeeds{}); an exploratory run
-later traced this to the instability of the gradient-scaled energy term with very few labels
-(\ref{app:prereg}). With 16 labels the supervised transformer of the later code was less
-accurate than that of July 2026, with a relative energy gap of \numCmLabGapSixteen{} against
-\numTwoLabGapSixteen{}.
-
-\subsubsection{Pre-registered decisions}\label{sec:results2d:decisions}
-
-The gate of this run concerned the energy term and pretraining rather than the label-free
-network alone, and all three of its conditions were met (\cref{tab:criteria}). Its first
-condition read a separate energy-term sub-experiment of the same run, which trained its own
-supervised transformers with and without the energy term in the same configuration: there,
-the supervised transformer with the energy term was \numGOneSanityMin{} to
-\numGOneSanityMax{} times more accurate in displacement than the zero field and beat the two
-naive baselines and the plain polynomial (\cref{sec:methods:networks}), all fitted on 1,024
-labelled instances, at every budget. The other two conditions read the networks of
-\cref{tab:2djuly,tab:labeleff}: with 64 labels, the energy term lowered the relative energy
-gap by \numGOneGapReduction{} and the von Mises error by \numGOneVmReduction{}, and
-label-free training followed by supervised training beat supervised training alone by
-\numGOneFtGap{} in relative energy gap. The kill conditions on the label-free network were not
-triggered: its displacement error was within the 30\% allowed by K2, and its relative
-energy-gap advantage stayed above the 40\% floor at every budget. Two kill conditions were
-triggered, and both claims were withdrawn.
-
-\paragraph{Warm start (K5)}
-On \numKfiveEval{} validation instances and four load cases each, unpreconditioned
-conjugate gradients needed on average \numKfiveZero{} iterations from the zero field to
-reach a relative residual of \numKfiveTol{}, \numKfiveFree{} from the prediction of a
-label-free transformer (trained for 100 epochs for this test) and \numKfiveNaive{} from
-the scaled polynomial: savings of \numKfiveSaving{} and \numKfiveNaiveSaving{} against the
-20\% required. The prediction was accurate in energy, $g=\numKfiveStartGap{}$, and five
-and twenty iterations from it lowered the relative energy gap to \numKfiveFiveGap{} and
-\numKfiveTwentyGap{}, but it did not shorten the run to the tolerance. This is consistent
-with \cref{cor:warm,rem:residual}: at a tight tolerance a warm start of this accuracy lowers
-the iteration bound by only a small fraction, and a residual-based stop can see a
-prediction accurate in energy as further from convergence than the zero field. Neither the
-initial residuals nor energy-based stopping were measured, so the two effects cannot be
-separated here.
-
-\paragraph{Cross-resolution regulariser (K6)}
-A term that penalised differences between the latent representations of the same instance
-meshed at two resolutions did not shrink the transfer gap, the increase of the
-displacement error from the training resolution to a finer one; it widened it, by
-\numCoarsenHighWiden{} for meshes coarsened by a factor of \numCoarsenHigh{} and by
-\numCoarsenLowWiden{} for \numCoarsenLow{}. The regulariser plays no further part in this
-paper.
-
-\subsubsection{Further observations}\label{sec:results2d:other}
-
-\paragraph{Replication}
-An exploratory run on 30 July 2026, which was not pre-registered, trained the label-free
-transformer \numDiagSeeds{} more times with the same configuration, with seeds 0 to 5. The
-first three repeat the seed numbers of the run of 16 July 2026 but did not reproduce its values
-exactly; the replication ran on a different GPU model and a later release of the code whose
-training path is unchanged. Over all \numTwoRuns{} trainings the displacement error was
-\numTwoRunsDisp{} and the relative energy gap \numTwoRunsGap{} (mean and sample standard
-deviation).
-
-\paragraph{Cross-resolution transfer}
-In the test of K6, label-free transformers trained for 100 epochs, with seed 0, on 512
-coarsened meshes and without the regulariser were evaluated on the coarsened and on the
-original meshes of 128 held-out instances. The displacement error rose from
-\numCoarsenLowCoarse{} to \numCoarsenLowFine{} for meshes \numCoarsenLow{} times finer
-than in training and from \numCoarsenHighCoarse{} to \numCoarsenHighFine{} for meshes
-\numCoarsenHigh{} times finer. In this code version the output did not depend on the mesh
-through $F_{\max}$; the contrast with three dimensions is taken up in \cref{sec:transfer}.
+The July run (\cref{tab:runs}), pre-registered before it was executed, with the weaker
+public record described in \cref{sec:methods:prereg}, compared the networks on the same
+corpus, split and seeds with the earlier code, which did not multiply the output by
+$F_{\max}$ (\cref{sec:methods:networks}). It gave the same ordering: the label-free
+transformer's displacement error was \numTwoFreeDispExcessAbs{} larger than the supervised
+transformer's, and its relative energy gap \numTwoLabOverFreeGap{} times lower.
+\ref{app:july} reports the run in full, with its pre-registered decisions; its warm-start
+test is in \cref{sec:cost:warm}.

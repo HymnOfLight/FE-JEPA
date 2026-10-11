@@ -1007,3 +1007,96 @@ The authors' decisions of 10 October 2026, entered in the manuscript:
 - The manuscript compiles without undefined references.
 - No source file, configuration, pre-registration or run record changed.
   Suite 573.
+
+## Stage 10c (10 Oct 2026) -- one narrative: the three roles, three dimensions first
+
+The full-text check of 10 October 2026 (two independent readers, a reading of the
+full texts of the three closest works and a bibliography check) and the authors'
+decisions of that day (three dimensions before two; "stiffness norm" throughout),
+entered in the manuscript, then read again by two independent readers, whose
+findings are addressed. No result changed: every number still comes from the
+generator, and no record, configuration, pre-registration or source file changed.
+
+- Structure:
+  - Section 5 is the three-dimensional comparison, by role (training objective,
+    evaluation metric, failure detector), then label efficiency and the
+    pre-registered decisions; Section 6 is the two-dimensional comparison, "the
+    norm or the labels?", which tests the explanation of Section 3.
+  - Introduction: one statement of the three roles, with the metric role made
+    precise (energy differences rank the predictions of one load case without a
+    solution; the relative energy gap of the tables needs the solution's energy);
+    the thesis moved there from the discussion, softened to "controls them less
+    well"; the label-free definition at the end of its second paragraph;
+    contribution 1 separates the classical identities from the statements added.
+  - Section 3 by role; a new Corollary 3 (ranking by energy) holds the ranking
+    statement, the zero-field test is Corollary 4 and the warm-start bound
+    Corollary 5. Section 3.7's checks, Section 3.3's medians, the TF32 paragraph
+    and the field-plot rules moved to Appendix C (C.1 to C.3).
+  - Section 4.5: one paragraph and the run register (Table 1); the text names the
+    runs. The noise guard is defined once (note to Table A.1) and scoped to the
+    runs that registered it; the three-dimensional pre-registration fixed none.
+    "Each run was carried out once" now says that restarts reused trained
+    networks and that the one repetition is the amendment of deviation D14.
+  - The July run (old Section 5.5, Table 3 and the July rows of the
+    label-efficiency table) moved to a new Appendix D (Tables D.1 and D.2), with
+    a summary in Section 6.5; its warm-start test (K5) and Corollary 5's values
+    form a new Section 8.3.
+  - The token bottleneck moved from Section 8.2 to Appendix B, now "Two
+    pre-registered side experiments"; Section 4.2 defines it.
+  - Discussion: opens with "One energy, three roles"; a paragraph on the
+    counterexample of FEVessel (a single run, best test error over the last third
+    of training, reduced-integration references, unstated quadrature); sections
+    cited instead of re-quoted numbers; limitations added (Proposition 1's
+    assumptions, the displacement reversal between the dimensions, untested
+    label-free fine-tuning, point-cloud thinning against mesh refinement).
+- Accuracy:
+  - Related work corrected against the full texts: Monteiro Fernandes et al.
+    train a 3D convolutional network on the stress divergence; Monteiro
+    Fernandes et al. and FEVessel each compare the same network with and without
+    labels in a single run, with opposite outcomes; PFEM's warm start is "up to
+    about nine times fewer iterations" at a tolerance of 10^-3; the nearest uses
+    of the energy or residual to screen predictions are named; the shrinking of
+    the saving with the tolerance is credited to PFEM and FEVessel.
+  - Abstract, introduction and conclusion: no "decided the stress accuracy";
+    H2b "supporting a pre-registered hypothesis"; the graph network's reversal
+    labelled a reading of the run; ranking "of one load case".
+  - Section 5.5 states the gate under both readings (GO amended, NO-GO
+    registered) and that KP1 and KP2 were not triggered; the introduction's
+    "pre-registered criteria ... met" is now the accuracy condition only.
+  - Squared ratios: macros numThreeAncOverFreeGapRoot, numCmLabOverFreeGapRoot
+    and numHTwoARootRel give the root-mean-square relative stiffness-norm errors
+    beside the headline ratios of g.
+  - The noise guard of the two-dimensional comparison, applied after the run to
+    the three-dimensional comparison, puts three of its ten differences of seed
+    means within the guard (numThreeGuardWithin, numThreeGuardTotal; the
+    generator stops if the set changes).
+  - Section 6 says what was known when the comparison was registered beside the
+    hypotheses; the area-weighted reading cites Appendix C.1.
+  - Drafting traces removed (DRAFT comments, "to be confirmed", "to be
+    completed", Appendix C's pending box). Two pending boxes remain: the cost
+    table (Section 8.4) and the Data availability's first sentence.
+- Decisions of 10 October 2026 (Guide for Authors): the footnote "Corresponding
+  authors. Ruifeng Cao handles correspondence."; Fig. 1's caption and Appendix C
+  on AI-assisted drawing, and the generative-AI declaration names the TikZ code
+  of Fig. 1 and the graphical abstract; the abstract has 240 words (248 with
+  hyphenated words split) and no digits; `graphical_abstract.tex` (13 x 5.2 cm,
+  numbers from generated/numbers.tex); line numbers after the front matter
+  (`\linenumbersfalse` removes them); the highlights say "von Mises error".
+- Generator: run names in Table A.1 and in the hashes list; "Label-free
+  transformer" and "Token bottleneck" in Tables 6, 7 and B.2 and Fig. B.1;
+  "stiffness norm" and "noise guard" in the notes, which define the guard once;
+  the July rows of the label-efficiency table in
+  `table_label_efficiency_july.tex`; three dimensions first in Table 3 and
+  Figs. 5 and 6; the few-shot loss in Table 5's note; G1' (a) names the two naive
+  baselines and the plain polynomial.
+- Bibliography: issue numbers, OpenReview and proceedings addresses, DOIs and
+  ISBNs added; arXiv DOIs for the three preprints; DeRyck2024 cited as its ICLR
+  version. Still to check in a browser: OrtizStainier1999 (DOI, issue),
+  Taylor2023DFR (DOI), Saad2003 (SIAM DOI), LeCun2006EBM (chapter authors and
+  pages), and the published versions of PFEM and Monteiro Fernandes et al.
+- Tests: the new table in TEXT; checks of the root ratios and of the guard
+  reading; the hand-typed-number check skips table column widths; the theory
+  tests renamed for the new corollary numbers; the highlights test follows the
+  new wording; `test_manuscript_compiles` also builds the graphical abstract and
+  checks its 2.5:1 page. No test added; the runbook's count stands.
+  Suite 573.

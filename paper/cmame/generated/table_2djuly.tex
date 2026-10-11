@@ -3,7 +3,7 @@
 \centering
 \footnotesize
 \setlength{\tabcolsep}{4pt}
-\caption{Two-dimensional plates, the run of 16 July 2026 with the earlier code (\cref{sec:results2d:july}): every metric at the largest label budget, on the instances of \cref{tab:2d}.}
+\caption{Two-dimensional plates, the July run with the earlier code: every metric at the largest label budget, on the instances of \cref{tab:2d}.}
 \label{tab:2djuly}
 \resizebox{\ifdim\width>\textwidth\textwidth\else\width\fi}{!}{%
 \begin{tabular}{lcccccc}
@@ -26,8 +26,8 @@ Zero field & 1.00 & 1.00 & 1.00 & 1.00 & -- & -- \\
 \smallskip
 \begin{minipage}{\linewidth}\footnotesize\raggedright
 256 validation instances, never trained on; four load cases each. Errors are relative to the reference finite-element solution, per load case, then averaged over the load cases; the relative energy gap of the zero field is 1. Trained networks: mean $\pm$ sample standard deviation over 3 seeds; the nearest-neighbour field and the scaled polynomial are deterministic.\par
-Worse than zero field: instance-seed pairs whose relative energy gap exceeds 1, that is, predictions further from the solution in the energy norm than the zero field.\par
+Worse than zero field: instance-seed pairs whose relative energy gap, the mean over the four load cases as the evaluation records it, exceeds 1, that is, predictions further from the solution in the stiffness norm than the zero field on average; the count uses the reference solutions. The test of \cref{cor:zero} needs none and applies to single load cases (\cref{sec:methods:metrics}).\par
 Critical-region recall: the share of the 10\% most stressed elements of the reference solution that are also among the 10\% most stressed of the prediction (higher is better; in every other column lower is better).\par
-Run of 16 July 2026. Its code did not multiply the load scale back onto the output (\cref{sec:methods:networks}); we attribute the narrow spread of the displacement errors to this; no experiment isolated it (\cref{sec:results2d:julyaccuracy}).
+The July run (16 July 2026). Its code did not multiply the load scale back onto the output (\cref{sec:methods:networks}); we attribute the narrow spread of the displacement errors to this; no experiment isolated it.
 \end{minipage}
 \end{table}

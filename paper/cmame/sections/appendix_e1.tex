@@ -1,43 +1,52 @@
-\section{Latent representations: a negative result}\label{app:e1}
+\section{Two pre-registered side experiments}\label{app:e1}
 \setcounter{table}{0}\setcounter{figure}{0}\setcounter{equation}{0}
 \setcounter{proposition}{0}\renewcommand{\theproposition}{\Alph{section}.\arabic{proposition}}
 
-Three criteria of \cref{tab:criteria} (K4, E6 and KP6) and the experiment of this appendix
-concern the latent vectors of the transformer, the outputs of its encoder, one per node,
-which the rest of the paper does not use. Self-supervised representation learning guards
-against representational collapse, the mapping of different inputs to nearly identical
-latent vectors, with regularisers on the distribution of the latent vectors. The sketched
-isotropic Gaussian regulariser SIGReg \cite{Balestriero2025LeJEPA} projects the latent
-vectors onto random directions and penalises the mean, over the directions, of the
+This appendix reports two experiments that were pre-registered separately and whose outcomes
+are not part of the two comparisons of the main text, although the bottleneck networks
+appear in the readings of \cref{sec:transfer:amplitude}: a regulariser of the latent
+representations, whose unregularised networks are the two-dimensional label-free networks
+of \cref{sec:results2d}, and a token bottleneck that reduces the cost of attention.
+
+\subsection{Latent regularisation}\label{app:e1:latent}
+
+Three criteria of \cref{tab:criteria} (K4, E6 and KP6) and the experiment of this
+subsection concern the latent vectors of the transformer, the outputs of its encoder, one
+per node, which the rest of the paper does not use. Self-supervised representation learning
+guards against representational collapse, the mapping of different inputs to nearly
+identical latent vectors, with regularisers on the distribution of the latent vectors. The
+sketched isotropic Gaussian regulariser SIGReg \cite{Balestriero2025LeJEPA} projects the
+latent vectors onto random directions and penalises the mean, over the directions, of the
 Epps--Pulley statistic \cite{EppsPulley1983}, which measures how far the distribution of a
 projection is from the standard normal one; it was introduced for joint-embedding
 predictive architectures (JEPA), self-supervised networks that predict the latent
 representation of one part of an input from that of another.
 
-Under a separate pre-registration we added SIGReg, applied to a learned projection of the
-latent vectors (a projection head), to the label-free objective of the two-dimensional
-transformer, with the later code of \cref{sec:methods:networks}, and asked whether it kept
-the accuracy and separated the geometries better in latent space (\cref{tab:e1}). The
-separation was measured by the silhouette $S\in[-1,1]$ of the instance-mean latent vectors
-of the 256 validation instances, grouped into four bins by the quartiles of the first
-principal component of the geometry descriptor; $S$ is near zero when the bins overlap and
-near one when they are well separated. The accuracy was unchanged within the
-pre-registered resolution. The separation rose in every seed, by \numEOneDeltaMin{} to
-\numEOneDeltaMax{}, but by less than the \numEOneFloor{} required in every seed, and the
-experiment read NO-GO. Untrained networks that received the geometry descriptor as input
-separated the bins better than trained ones, and a linear probe read the descriptor from
-them perfectly; without that input, or with its input weights set to zero, untrained
-networks did not separate the bins at all. The descriptor is an input feature of every
-node, so these readings measure the input rather than anything learned. We report the
-experiment because it was pre-registered; it does not bear on the results of the paper.
+The latent-regularisation run (\cref{tab:runs}) added SIGReg, applied to a learned
+projection of the latent vectors (a projection head), to the label-free objective of the
+two-dimensional transformer, with the later code, and asked whether it kept the accuracy and
+separated the geometries better in latent space (\cref{tab:e1}). The separation was measured
+by the silhouette $S\in[-1,1]$ of the instance-mean latent vectors of the 256 validation
+instances, grouped into four bins by the quartiles of the first principal component of the
+geometry descriptor; $S$ is near zero when the bins overlap and near one when they are well
+separated. The accuracy was unchanged within the pre-registered noise guard. The separation
+rose in every seed, by \numEOneDeltaMin{} to \numEOneDeltaMax{}, but by less than the
+\numEOneFloor{} required in every seed, and the experiment read NO-GO. Untrained networks
+that received the geometry descriptor as input separated the bins better than trained
+ones, and a linear probe read the descriptor from them perfectly; without that input, or
+with its input weights set to zero, untrained networks did not separate the bins at all.
+The descriptor is an input feature of every node, so these readings measure the input
+rather than anything learned. The unregularised networks of this run are the label-free
+networks of the two-dimensional comparison, which reuses them without retraining
+(\cref{sec:methods:training}); the regulariser itself plays no part in the results.
 
-Criterion K4 of the two-dimensional run of 16 July 2026 (\cref{tab:criteria}) concerned the
-same kind of regulariser in an earlier setting: three regularisers of the latent
-distribution, each added to the energy and the masked-prediction term of the
-joint-embedding objective (\ref{app:prereg}) and trained for 2,000 steps on 64 instances,
-with and without the geometry descriptor, were compared by the standardised effective rank
-of the latent vectors on 256 instances. The best raised it by more than the factor of 1.5
-at or below which the criterion would have been triggered.
+Criterion K4 of the July run (\cref{tab:criteria}) concerned the same kind of regulariser
+in an earlier setting: three regularisers of the latent distribution, each added to the
+energy and the masked-prediction term of the joint-embedding objective (\ref{app:prereg})
+and trained for 2,000 steps on 64 instances, with and without the geometry descriptor, were
+compared by the standardised effective rank of the latent vectors on 256 instances. The
+best raised it by more than the factor of 1.5 at or below which the criterion would have
+been triggered.
 
 What accuracy does imply for the latent representation is limited to load cases on a
 shared stiffness matrix. Fix one instance, with load vectors $F_1,\dots,F_L$ and solutions
@@ -64,7 +73,7 @@ $\norm{\Ustar_i-\Ustar_j}_K\le\norm{\Ustar_i-D(z_i)}_K+\norm{D(z_i)-D(z_j)}_K
 
 The bound is informative when the solutions themselves are separated; on sixteen
 validation instances of each corpus the smallest separation between the load cases of one
-instance, relative to the mean energy norm of its solutions, was \numPremiseTwo{} (two
+instance, relative to the mean stiffness norm of its solutions, was \numPremiseTwo{} (two
 dimensions) and \numPremiseThree{} (three). Across geometries there is no common stiffness
 norm, and the natural analogue in a transported metric fails: among the same sixteen
 instances, two different geometries had solutions under the same load, normalised to unit
@@ -75,3 +84,31 @@ latent representations and those of the solutions was \numRhoTwo{} and \numRhoTh
 (criteria E6 and KP6).
 
 \input{generated/table_e1}
+
+\subsection{Token bottleneck}\label{app:e1:bottleneck}
+
+To reduce the cost of attention, the bottleneck run (\cref{tab:runs}) tested, under a
+separate pre-registration, a token-bottleneck network that pools the nodes into $M=512$ or
+$M=1{,}024$ tokens seeded by farthest-point sampling, applies attention to the tokens only,
+and decodes each node from a smooth blend of its six nearest tokens. It was trained on the
+energy alone, with every other setting as for the transformer (\cref{tab:e2,fig:e2}). It
+trained \numTimeBottleneckSpeedup{} times faster per seed (\numTimeBottleneckSeedMin{} h
+against \numTimeThreeSeed{} h), but it was less accurate: its in-band relative energy gap
+was \numEtwoGapMin{} to \numEtwoGapMax{} times the transformer's and its zero-shot
+fine-mesh displacement error \numEtwoFineMin{} to \numEtwoFineMax{} times. Both variants
+were dropped under their pre-registered accuracy criterion (\cref{tab:criteria}). Their
+amplitudes on the finer mesh, measured after the runs, are in
+\cref{tab:amplitude,tab:remesh}.
+
+\input{generated/table_e2}
+
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=\linewidth]{generated/fig_e2_cost_accuracy.pdf}
+\caption{Cost against accuracy of the label-free transformer and the token bottleneck
+(three dimensions, three seeds each; faint markers are seeds, ringed markers seed means).
+Left: in-band relative energy gap against the time of one training step on an in-band
+instance. Right: zero-shot fine-mesh displacement error against the time of one step on a
+fine-mesh instance.}
+\label{fig:e2}
+\end{figure}

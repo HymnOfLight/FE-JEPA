@@ -3,7 +3,7 @@
 \centering
 \footnotesize
 \setlength{\tabcolsep}{4pt}
-\caption{The pre-registered comparisons of the two-dimensional run of 9 October 2026, with 1,024 labelled instances, as its adjudicator recorded them, and the readings its pre-registration required beside each.}
+\caption{The pre-registered hypotheses of the two-dimensional comparison, with 1,024 labelled instances, as its adjudicator recorded them, and the readings its pre-registration required beside each.}
 \label{tab:cm2d}
 \resizebox{\ifdim\width>\textwidth\textwidth\else\width\fi}{!}{%
 \begin{tabular}{lcccc}
@@ -30,7 +30,7 @@ Instance resampling 95\% & $-$74.3\% to $-$68.3\% & $-$80.3\% to $-$76.3\% & $-$
 
 \smallskip
 \begin{minipage}{\linewidth}\footnotesize\raggedright
-rel = mean(A)/mean(B) $-$ 1 over the three seeds' values, each the mean over the 256 validation instances and their four load cases; SE$_\mathrm{rel}$ = $(s_A^2/3 + s_B^2/3)^{1/2}$ divided by mean(B), where $s_A$ and $s_B$ are the sample standard deviations over the seeds; the guard is max(10\%, 2 SE$_\mathrm{rel}$). A is lower beyond the guard when rel is below minus the guard; within the guard no difference is shown, which is not equivalence.\par
+rel, SE$_\mathrm{rel}$ and the noise guard as defined in the note to \cref{tab:criteria}, over the three seeds' values, each the mean over the 256 validation instances and their four load cases.\par
 Medians: the same reading on each seed's median over the instances instead of its mean. Welch: rel $\pm$ t $\times$ SE$_\mathrm{rel}$, with t the 97.5\% quantile of Student's distribution at the Welch--Satterthwaite degrees of freedom, a symmetric interval that can extend below $-$100\%. Instance resampling: the 2.5\% and 97.5\% percentiles of rel over 2,000 resamplings of the 256 validation instances, the same instances drawn for both networks and every seed, the seeds kept.\par
 H3 is a reading without a criterion. With the roles of A and B exchanged, rel was +31.9\% against a guard of 50.2\%.
 \end{minipage}

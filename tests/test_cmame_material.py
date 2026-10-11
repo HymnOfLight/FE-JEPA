@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PAPER = ROOT / "paper" / "cmame"
 OUT = PAPER / "generated"
 TEXT = ("table_2d.tex", "table_2djuly.tex", "table_3d.tex", "table_label_efficiency.tex",
-        "table_transfer.tex", "table_criteria.tex", "table_cm2d.tex", "table_amplitude.tex",
+        "table_label_efficiency_july.tex", "table_transfer.tex", "table_criteria.tex", "table_cm2d.tex", "table_amplitude.tex",
         "table_remesh.tex", "table_e2.tex", "table_e1.tex", "numbers.tex", "hashes.tex",
         "material.md", "sources.json")
 FIGS = ("fig_disp_vs_stress.pdf", "fig_energy_gap.pdf", "fig_label_efficiency.pdf",
@@ -133,6 +133,28 @@ def test_numbers_agree_with_the_records(built):
     vm = statistics.fmean(_seeds(r3, "mgn", "vm_rel_l2")) / statistics.fmean(
         _seeds(r3, "ar", "vm_rel_l2"))
     assert _f(N["numThreeMgnOverFreeVm"]) == pytest.approx(vm, abs=0.05)
+    # the ratio of relative energy gaps for the stiffness-norm error: the square root of
+    # the ratio of the means of g over every seed and instance, which is the ratio of the
+    # root-mean-square relative stiffness-norm errors (equal load cases per instance)
+    rms = np.sqrt(_inst(r3, "labels_anchor", "energy_gap_rel").mean()
+                  / _inst(r3, "ar", "energy_gap_rel").mean())
+    assert _f(N["numThreeAncOverFreeGapRoot"]) == pytest.approx(rms, abs=0.05)
+    assert _f(N["numThreeAncOverFreeGapRoot"]) ** 2 == pytest.approx(
+        _f(N["numThreeAncOverFreeGap"]), rel=0.03)
+    # Section 5.1, read after the run: the noise guard of the two-dimensional comparison
+    # applied to the label-free transformer against the two supervised transformers
+    within = []
+    for arm in ("labels", "labels_anchor"):
+        for m in ("disp_rel_l2", "energy_gap_rel", "vm_rel_l2", "peak_vm_rel_err",
+                  "crit_recall"):
+            a, b = np.array(_seeds(r3, "ar", m)), np.array(_seeds(r3, arm, m))
+            rel = a.mean() / b.mean() - 1
+            se = np.sqrt(a.var(ddof=1) / 3 + b.var(ddof=1) / 3) / b.mean()
+            if abs(rel) <= max(0.1, 2 * se):
+                within.append((arm, m))
+    assert within == [("labels", "energy_gap_rel"), ("labels", "peak_vm_rel_err"),
+                      ("labels_anchor", "crit_recall")]
+    assert (N["numThreeGuardWithin"], N["numThreeGuardTotal"]) == ("three", "ten")
     assert _f(N["numMgnVmHigher"]) == int((_inst(r3, "mgn", "vm_rel_l2")
                                           > _inst(r3, "ar", "vm_rel_l2")).sum())
     lab = _inst(r3, "labels", "energy_gap_rel")
@@ -211,6 +233,12 @@ def test_cm2d_numbers_agree_with_the_report_and_the_verdict(built):
     # H2a's ratio of the seed means, and the number of secondary readings (16 per metric)
     assert _f(N["numCmLabOverKnormGap"]) == pytest.approx(
         mean("labels", "energy_gap_rel") / mean("labels_knorm", "energy_gap_rel"), abs=5e-3)
+    # the same comparisons for the root-mean-square relative stiffness-norm error
+    assert _pct(N["numHTwoARootRel"]) == pytest.approx(
+        1 - np.sqrt(mean("labels_knorm", "energy_gap_rel") / mean("labels", "energy_gap_rel")),
+        abs=5e-4)
+    assert _f(N["numCmLabOverFreeGapRoot"]) == pytest.approx(
+        np.sqrt(mean("labels", "energy_gap_rel") / mean("ar", "energy_gap_rel")), abs=0.05)
     assert int(N["numCmSecondary"]) == 5 * (4 * 3 + 2 * 2)
     # the solves: 256 validation and 1,024 training instances, four load cases each
     assert (_f(N["numCmSolvesVal"]), _f(N["numCmSolvesTrain"]), _f(N["numCmSolves"])) == (
@@ -245,7 +273,7 @@ def test_spectral_readings_follow_from_the_per_load_arrays(built):
         assert _pct(N[f"numSpecShareEuc{TAGS[r]}"]) == pytest.approx(
             share2, abs=5e-4 if share2 < 0.095 else 5e-3), r
         assert int(N[f"numSpecLoadWorse{TAGS[r]}"]) == int((z["pi"][i] > 0).sum())
-        assert np.array_equal(z["pi"][i] > 0, z["eK"][i] > z["uK_star"])   # Corollary 3
+        assert np.array_equal(z["pi"][i] > 0, z["eK"][i] > z["uK_star"])   # Corollary 4
         assert not (z["rel_c"][i] > 1).any()
         tf = np.median(z["dK_tf32"][i] / z["eK"][i])
         assert _pct(N[f"numSpecTf{TAGS[r]}"]) == pytest.approx(tf, rel=0.05, abs=5e-5), r
@@ -283,7 +311,7 @@ def test_field_readings_follow_from_the_per_load_arrays(built):
     for i, a in enumerate(arms):
         assert _f(N[f"numFieldRq{TAGS[a]}"]) == pytest.approx(float(np.median(rho[i])), rel=5e-3)
         assert int(N[f"numFieldLoadWorse{TAGS[a]}"]) == int((z["pi"][i] > 0).sum())
-        assert np.array_equal(z["pi"][i] > 0, z["eK"][i] > z["uK_star"])  # Corollary 3
+        assert np.array_equal(z["pi"][i] > 0, z["eK"][i] > z["uK_star"])  # Corollary 4
         assert not (z["rel_c"][i] > 1).any() and (z["rel_c"][i] <= z["rel"][i] * (1 + 1e-9)).all()
         for key, M in (("vm_vol", "VmVol"), ("vm_elem", "VmElem")):
             assert _f(N[f"numField{M}{TAGS[a]}"]) == pytest.approx(float(np.median(z[key][i])),
@@ -739,10 +767,10 @@ def test_highlights_match_the_numbers(built):
     assert len(lines) == 5 and all(0 < len(x) <= 85 for x in lines)
     num = built["numbers"]
     assert "zero labels beat 1,024 on all five metrics" in lines[1]
-    assert f"{num['numThreeMgnOverFreeVm']} times the label-free stress error" in lines[2]
+    assert f"{num['numThreeMgnOverFreeVm']} times the label-free von Mises error" in lines[2]
     # "halved": in 2D the stiffness-norm transformer's von Mises error is about half the
     # supervised transformer's (H2b, the run of 9 October 2026)
-    assert "a stiffness-norm loss halved the stress error" in lines[3]
+    assert "a stiffness-norm loss halved the von Mises error" in lines[3]
     assert 0.4 <= float(num["numCmKnormVm"]) / float(num["numCmLabVm"]) <= 0.55
 
 
@@ -754,10 +782,11 @@ def test_abstract_has_no_numbers_and_at_most_250_words():
 
 def _prose(tex: str) -> str:
     """The text of a section without comments, macro names, labels, references,
-    graphics paths and TikZ options."""
+    graphics paths, TikZ options and table column widths."""
     tex = "\n".join(line.split("%")[0] if not line.lstrip().startswith("%") else ""
                     for line in tex.replace("\\%", "PCT").splitlines())
     tex = re.sub(r"\\begin\{tikzpicture\}.*?\\end\{tikzpicture\}", "", tex, flags=re.S)
+    tex = re.sub(r"\{[0-9.]+\\(?:line|text)width\}", "", tex)    # column widths of a table
     tex = re.sub(r"\\(ref|cref|Cref|label|eqref|cite|input|includegraphics|path)"
                  r"(\[[^\]]*\])?\{[^}]*\}", "", tex)
     return re.sub(r"\\[A-Za-z]+", " ", tex)
@@ -945,7 +974,7 @@ def test_proposition_1_energy_gap_and_stress_error():
                 assert lhs / float(np.sum(meas * vm_s ** 2)) <= (1 + gamma) * g * (1 + 1e-12)
 
 
-def test_proposition_2_and_corollary_3_amplitude_and_zero_field():
+def test_proposition_2_and_corollaries_3_and_4_amplitude_ranking_and_zero_field():
     rng = np.random.default_rng(2)
     for a in _instances():
         free = ~a.dirichlet_mask
@@ -964,15 +993,16 @@ def test_proposition_2_and_corollary_3_amplitude_and_zero_field():
                 g_c = ((c * u - us) @ (a.K @ (c * u - us))) / nus
                 assert g_c == pytest.approx(1 - cos ** 2, abs=1e-10)
                 g = ((u - us) @ (a.K @ (u - us))) / nus
-                assert (pi(u) > 0) == (g > 1)                                 # Corollary 3
+                assert (pi(u) > 0) == (g > 1)                                 # Corollary 4
                 w = us + rng.normal(size=us.size) * free * np.abs(us).max() * 0.1
                 g_w = ((w - us) @ (a.K @ (w - us))) / nus
+                # Corollary 3: energy differences are differences of the energy gaps
                 assert (pi(u) - pi(w)) == pytest.approx(0.5 * nus * (g - g_w), rel=1e-8)
 
 
-def test_corollary_4_warm_start_iteration_bound():
+def test_corollary_5_warm_start_iteration_bound():
     """Conjugate gradients from a warm start with relative energy gap g0 reach the
-    target g_bar within the iterations Corollary 4 states, the Chebyshev bound holds
+    target g_bar within the iterations Corollary 5 states, the Chebyshev bound holds
     along the way, and the bound's saving is the fraction of eq:warm."""
     rng = np.random.default_rng(4)
     g_bar, tested = 1e-4, 0
@@ -1011,7 +1041,7 @@ def test_corollary_4_warm_start_iteration_bound():
     assert tested >= 4
 
 
-def test_remarks_2_and_3_rank_and_residual_bounds():
+def test_remarks_3_and_4_rank_and_residual_bounds():
     rng = np.random.default_rng(3)
     for a in _instances():
         free = ~a.dirichlet_mask
@@ -1043,7 +1073,7 @@ def test_manuscript_compiles(tmp_path):
     work = tmp_path / "cmame"
     shutil.copytree(PAPER, work, ignore=shutil.ignore_patterns(
         "*.aux", "*.log", "*.fls", "*.fdb_latexmk", "*.out", "*.bbl", "*.blg", "*.pdf.tmp"))
-    for f in work.glob("main.pdf"):
+    for f in (*work.glob("main.pdf"), *work.glob("graphical_abstract.pdf")):
         f.unlink()
     res = subprocess.run(["latexmk", "-pdf", "-interaction=nonstopmode", "-halt-on-error",
                           "main.tex"], cwd=work, capture_output=True, text=True, timeout=600)
@@ -1052,3 +1082,18 @@ def test_manuscript_compiles(tmp_path):
     assert (work / "main.pdf").stat().st_size > 100_000
     assert not re.search(r"(Reference|Citation) .* undefined", log)
     assert "Float too large" not in log
+    # the graphical abstract, a separate file at submission: 13 x 5.2 cm, the 2.5:1 of
+    # the Guide for Authors' 1328 x 531 pixels
+    res = subprocess.run(["latexmk", "-pdf", "-interaction=nonstopmode", "-halt-on-error",
+                          "graphical_abstract.tex"], cwd=work, capture_output=True, text=True,
+                         timeout=300)
+    glog = (work / "graphical_abstract.log").read_text(encoding="latin-1")
+    assert res.returncode == 0, glog[-3000:]
+    assert "Overfull" not in glog and "Underfull" not in glog
+    pdfinfo = shutil.which("pdfinfo")
+    if pdfinfo:
+        info = subprocess.run([pdfinfo, str(work / "graphical_abstract.pdf")],
+                              capture_output=True, text=True).stdout
+        w, h = (float(x) for x in re.search(r"Page size:\s+([\d.]+) x ([\d.]+) pts",
+                                            info).groups())
+        assert w / h == pytest.approx(2.5, abs=0.01)

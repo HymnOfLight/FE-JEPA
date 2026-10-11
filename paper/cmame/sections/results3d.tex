@@ -1,32 +1,48 @@
-\section{Results in three dimensions}\label{sec:results3d}
+\section{Three dimensions: the three roles}\label{sec:results3d}
 
-The three-dimensional comparison is the run of 28 September 2026, made under the
-pre-registered amendment of \cref{sec:methods:prereg}; its configuration hash is given in
-\ref{app:repro}.
+In the three-dimensional comparison (\cref{tab:runs}), the label-free transformer, trained
+in the amended run, was compared with the supervised transformer, with and without the
+energy term, and the graph network, which the initial run had trained on the same corpus,
+split and seeds and which were reused after their hashes were checked
+(\cref{sec:methods:prereg}); the configuration hash is given in \ref{app:repro}. Of its
+pre-registered conditions, the one on the accuracy of the label-free network was met and the
+one on transfer failed (\cref{sec:results3d:decisions}); beyond them, the readings of this
+section come from the run's records and are not pre-registered criteria. The section takes
+the three roles of the energy in turn: the training objective, through the same network
+trained with and without labels (\cref{sec:results3d:same}); the evaluation metric, through
+the order in which the displacement and the von Mises errors rank the networks
+(\cref{sec:results3d:reverse}); and the failure detector, through the predictions worse than
+the zero field (\cref{sec:results3d:detection}).
 
-\subsection{The same network with and without labels}\label{sec:results3d:same}
+\subsection{Training objective: the same network with and without labels}\label{sec:results3d:same}
 
 \input{generated/table_3d}
 
 \Cref{tab:3d} gives every metric with 1,024 labelled instances. The label-free transformer
-was more accurate than the same transformer trained on the solutions of the same
-instances, with or without the energy term, on all five metrics, in the seed mean and in
-each of the three seeds. Its displacement error, \numThreeFreeDisp{}, was
-\numThreeFreeDispAdvantage{} lower than the supervised transformer's, \numThreeLabDisp{};
-its relative energy gap, \numThreeFreeGap{}, was \numThreeAncOverFreeGap{} times lower than
-that of the supervised transformer with the energy term, the better of the two supervised
-variants; and its von Mises error (\numThreeFreeVm{} against \numThreeLabVm{} and
-\numThreeAncVm{}), peak stress error (\numThreeFreePeak{} against \numThreeLabPeak{} and
-\numThreeAncPeak{}) and critical-region recall (\numThreeFreeRecall{} against
-\numThreeLabRecall{} and \numThreeAncRecall{}) were better. Compared instance by instance
-within each seed, the label-free transformer had the lower relative energy gap on
-\numPairThreeLabGap{} and \numPairThreeAncGap{} of the \numThreePairs{} instance-seed pairs
-against the two supervised variants, the lower von Mises error on \numPairThreeLabVm{} and
-\numPairThreeAncVm{}, and the lower displacement error on \numPairThreeLabDisp{} and
-\numPairThreeAncDisp{}. Unlike in two dimensions, the label-free transformer was also the
-more accurate in displacement. Both comparisons used the later code, which multiplies the
-output by $F_{\max}$ (\cref{sec:methods:networks}); we have not investigated why the two
-dimensions differ in this respect.
+was more accurate than the same transformer trained on the solutions of the same instances,
+with or without the energy term, on all five metrics, in the seed mean and in each of the
+three seeds. Its displacement error, \numThreeFreeDisp{}, was \numThreeFreeDispAdvantage{}
+lower than the supervised transformer's, \numThreeLabDisp{}; its relative energy gap,
+\numThreeFreeGap{}, was \numThreeAncOverFreeGap{} times lower than that of the supervised
+transformer with the energy term, the better of the two supervised variants, a factor of
+\numThreeAncOverFreeGapRoot{} in the root-mean-square relative stiffness-norm error; and its
+von Mises error (\numThreeFreeVm{} against \numThreeLabVm{} and \numThreeAncVm{}), peak
+stress error (\numThreeFreePeak{} against \numThreeLabPeak{} and \numThreeAncPeak{}) and
+critical-region recall (\numThreeFreeRecall{} against \numThreeLabRecall{} and
+\numThreeAncRecall{}) were better. Compared instance by instance within each seed, the
+label-free transformer had the lower relative energy gap on \numPairThreeLabGap{} and
+\numPairThreeAncGap{} of the \numThreePairs{} instance-seed pairs against the two supervised
+variants, the lower von Mises error on \numPairThreeLabVm{} and \numPairThreeAncVm{}, and
+the lower displacement error on \numPairThreeLabDisp{} and \numPairThreeAncDisp{}. The
+three-dimensional pre-registration fixed no noise guard; read after the run with the guard
+of the two-dimensional comparison, \numThreeGuardWithin{} of the \numThreeGuardTotal{}
+differences of seed means lie within it: in relative energy gap and peak stress error
+against the supervised transformer, whose seed \numThreeLabWorstSeed{} widens the guard
+(below), and in critical-region recall against the variant with the energy term. In two
+dimensions, with the same code, the label-free transformer was not the more accurate in
+displacement
+(\cref{sec:results2d:accuracy}); we have not investigated why the two dimensions differ in
+this respect.
 
 The supervised transformer's mean relative energy gap, \numThreeLabGapMs{}, is the mean of
 three seeds, \numThreeLabGapSeeds{}. The second is dominated by one validation instance,
@@ -35,15 +51,15 @@ relative energy gap of \numThreeLabWorst{}, averaged over its four load cases, w
 displacement error of \numWorstSeedLabDisp{}, a von Mises error of \numWorstSeedLabVm{} and
 a peak stress error of \numWorstSeedLabPeak{}. The same instance had the largest relative
 energy gap of the supervised transformer in all three seeds. Supervised regression on the
-displacement error does not control the energy norm, and with it the stresses: the median
-relative energy gap of the supervised transformer, \numThreeLabGapMedian{}, is far below
-its mean. The energy term repaired most of this, but not at every budget: with 256 labels
-it raised the displacement error of the supervised transformer in every seed and, through
-one of the three seeds, its mean relative energy gap (\cref{tab:labeleff}), although it
-reduced the number of instance-seed predictions worse than the zero field from
+displacement error does not control the stiffness norm, and with it the stresses: the
+median relative energy gap of the supervised transformer, \numThreeLabGapMedian{}, is far
+below its mean. The energy term repaired most of this, but not at every budget: with 256
+labels it raised the displacement error of the supervised transformer in every seed and,
+through one of the three seeds, its mean relative energy gap (\cref{tab:labeleff}),
+although it reduced the number of instance-seed predictions worse than the zero field from
 \numThreeLabWorseTwoFiveSix{} to \numThreeAncWorseTwoFiveSix{}.
 
-\subsection{Displacement error ranks surrogates in reverse}\label{sec:results3d:reverse}
+\subsection{Metric: displacement error against von Mises error}\label{sec:results3d:reverse}
 
 \begin{figure}[tbp]
 \centering
@@ -51,7 +67,7 @@ reduced the number of instance-seed predictions worse than the zero field from
 \caption{Three dimensions, 1,024 labelled instances: relative von Mises error against
 relative displacement error for every validation instance and seed (\numThreePairs{} points
 per network). The graph network's points lie to the left of the label-free transformer's, at
-lower displacement error, and above them, at higher stress error. The point at the top
+lower displacement error, and above them, at higher von Mises error. The point at the top
 right is instance No.~\numWorstIndex{} in seed \numThreeLabWorstSeed{}
 (\cref{sec:results3d:same}).}
 \label{fig:reverse}
@@ -60,50 +76,53 @@ right is instance No.~\numWorstIndex{} in seed \numThreeLabWorstSeed{}
 The graph network trained with labels had the lowest mean displacement error in
 \cref{tab:3d}, \numThreeMgnDisp{}, \numThreeFreeOverMgnDisp{} times lower than the
 label-free transformer's, and the label-free transformer was more accurate on every other
-metric. The reversal holds on most instances individually (\cref{fig:reverse}). Compared
-within each
-seed, the graph network's displacement error was lower on \numMgnDispLowerMin{} to
-\numMgnDispLowerMax{} of the instances, but its von Mises error was higher on
-\numMgnVmHigher{} of the \numThreePairs{} instance-seed pairs, with a mean
+metric. The reversal held on most instances individually (\cref{fig:reverse}). Compared
+within each seed, the graph network's displacement error was lower on
+\numMgnDispLowerMin{} to \numMgnDispLowerMax{} of the instances, but its von Mises error was
+higher on \numMgnVmHigher{} of the \numThreePairs{} instance-seed pairs, with a mean
 \numThreeMgnOverFreeVm{} times higher, and its relative energy gap was higher on at least
 \numMgnGapHigherMin{} of the instances in every seed. On \numMgnLowerDispHigherVm{} pairs
-both held at once: a lower displacement error and a higher stress error. The peak stress
-error, which compares a single value per load case, follows the pattern less closely: the
+both held at once: a lower displacement error and a higher von Mises error. The peak stress
+error, which compares a single value per load case, followed the pattern less closely: the
 graph network's was the lower on \numMgnPeakLowerMin{} to \numMgnPeakLowerMax{} of the
-instances, although its mean was \numThreeMgnOverFreePeak{} times higher.
+instances, although its mean was \numThreeMgnOverFreePeak{} times higher. The relative
+energy gap thus ranked the two networks as the von Mises error did, not as the displacement
+error did. These per-instance comparisons average $g$ over the load cases and use the
+solutions; for the predictions of one load case, the energy ranks them exactly as $g$ does,
+without a reference solution (\cref{cor:rank}).
 
 Validation instance No.~\numWorstIndex{} in seed 0 (\cref{fig:field-worst}) shows the
 pattern on one instance. Averaged over its four load cases, the label-free transformer had
-the largest displacement error of the three networks, \numWorstFreeDisp{}, and the most accurate stresses, with a von Mises
-error of \numWorstFreeVm{} and a relative energy gap of \numWorstFreeGap{}. The supervised
-transformer and the graph network had displacement errors of \numWorstLabDisp{} and
-\numWorstMgnDisp{}, von Mises errors of \numWorstLabVm{} and \numWorstMgnVm{}, and relative
-energy gaps of \numWorstLabGap{} and \numWorstMgnGap{}: both were more accurate in
-displacement and worse than the zero field in energy. On the load case of
-\cref{fig:field-worst}, the \numFigWorstLoad{}, the three displacement fields have the shape
-of the reference, the label-free one with too large an amplitude: its relative displacement
-error of \numFigWorstFreeDisp{} falls to \numFigWorstFreeDispC{} when it is rescaled by
-$\cstar=\numFigWorstFreeC{}$ (\cref{prop:amp}). The stress fields of the two supervised
-networks are rough, and more than twice the reference's on \numFigWorstTwiceLab{} and
-\numFigWorstTwiceMgn{} of the solid's volume, against \numFigWorstTwiceFree{} for the
-label-free transformer. \Cref{fig:field-median} shows a typical instance, on which the
-supervised networks' predictions were better than the zero field and their stress fields
-still rough. \Cref{rem:rank} shows that such reversals are possible only when the
-displacement errors differ by less than $\kappa^{1/2}$, and \cref{prop:stress} why the
-energy, not the displacement, follows the stress.
+the largest displacement error of the three networks, \numWorstFreeDisp{}, and the most
+accurate stresses, with a von Mises error of \numWorstFreeVm{} and a relative energy gap of
+\numWorstFreeGap{}. The supervised transformer and the graph network had displacement
+errors of \numWorstLabDisp{} and \numWorstMgnDisp{}, von Mises errors of \numWorstLabVm{}
+and \numWorstMgnVm{}, and relative energy gaps of \numWorstLabGap{} and \numWorstMgnGap{}:
+both were more accurate in displacement and worse than the zero field in energy. On the
+load case of \cref{fig:field-worst}, the \numFigWorstLoad{}, the three displacement fields
+have the shape of the reference, the label-free one with too large an amplitude: its
+relative displacement error of \numFigWorstFreeDisp{} falls to \numFigWorstFreeDispC{} when
+it is rescaled by $\cstar=\numFigWorstFreeC{}$ (\cref{prop:amp}). The stress fields of the
+two supervised networks are rough, and more than twice the reference's on
+\numFigWorstTwiceLab{} and \numFigWorstTwiceMgn{} of the solid's volume, against
+\numFigWorstTwiceFree{} for the label-free transformer. \Cref{fig:field-median} shows a
+typical instance, on which the supervised networks' predictions were better than the zero
+field and their stress fields still rough. \Cref{rem:rank} permits reversals between the
+displacement and the stiffness-norm errors whenever the displacement errors differ by less
+than $\kappa^{1/2}$, and \cref{prop:stress} shows why the energy, not the displacement,
+follows the stress.
 
 \begin{figure}[tbp]
 \centering
 \includegraphics[width=\linewidth]{generated/fig_field_worst.pdf}
 \caption{Validation instance No.~\numWorstIndex{}, the one with the largest relative energy
 gap of the supervised transformer, seed 0, under the \numFigWorstLoad{} (selection rules in
-\cref{sec:methods:prereg}). Magnitude of the displacement (top) and von
-Mises stress (bottom) of the reference solution and of the three networks with 1,024
-labelled instances, on the three visible faces of the box; each row has one colour scale,
-set by the reference, and darker values saturate. Above each network, its relative
-displacement error $\delta$ and relative energy gap $g$ on this load case and the sign of
-$\Pi_h(u)$, positive when the prediction is further from the solution, in the energy norm,
-than the zero field.}
+\ref{app:repro:plots}). Magnitude of the displacement (top) and von Mises stress (bottom) of
+the reference solution and of the three networks with 1,024 labelled instances, on the
+three visible faces of the box; each row has one colour scale, set by the reference, and
+darker values saturate. Above each network, its relative displacement error $\delta$ and
+relative energy gap $g$ on this load case and the sign of $\Pi_h(u)$, positive when the
+prediction is further from the solution, in the stiffness norm, than the zero field.}
 \label{fig:field-worst}
 \end{figure}
 
@@ -112,31 +131,33 @@ than the zero field.}
 \includegraphics[width=\linewidth]{generated/fig_field_median.pdf}
 \caption{A typical validation instance, the one with the median relative energy gap of the
 label-free transformer, seed 0, under the \numFigMedianLoad{} (selection rules in
-\cref{sec:methods:prereg}). Von Mises stress of the reference solution and of the three
+\ref{app:repro:plots}). Von Mises stress of the reference solution and of the three
 networks, displayed as in \cref{fig:field-worst}.}
 \label{fig:field-median}
 \end{figure}
 
-Where the errors lie in the spectrum of $K$ was measured after the run, as in two dimensions
-(\cref{sec:results2d:spectrum}), from the norms of the errors on every validation instance,
-load case and seed. The normalised Rayleigh quotient $\rho$ of \cref{rem:factor} had a
-median of \numFieldRqFree{} for the label-free transformer, \numFieldRqLab{} for the
-supervised transformer and \numFieldRqMgn{} for the graph network, and it was larger for the
-supervised transformer than for the label-free one on \numFieldRqAboveLab{} of the
-\numFieldLoads{} triples of seed, instance and load case, and larger for the graph network
-than for the label-free one on \numFieldRqAboveMgn{}. The graph network's smaller
-displacement errors lay far higher in the spectrum, where by \eqref{eq:factor} they cost
-more energy and, by \cref{prop:stress}, more stress error.
+Where the errors lay in the spectrum of $K$ was measured after the run, from the norms of
+the errors on every validation instance, load case and seed; \cref{sec:results2d:spectrum}
+makes the same measurement in two dimensions, with the full eigendecomposition. The
+normalised Rayleigh quotient $\rho$ of \cref{rem:factor} had a median of \numFieldRqFree{}
+for the label-free transformer, \numFieldRqLab{} for the supervised transformer and
+\numFieldRqMgn{} for the graph network, and it was larger for the supervised transformer
+than for the label-free one on \numFieldRqAboveLab{} of the \numFieldLoads{} triples of
+seed, instance and load case, and larger for the graph network than for the label-free one
+on \numFieldRqAboveMgn{}. The graph network's smaller displacement errors lay far higher in
+the spectrum, where by \eqref{eq:factor} they cost more energy and, by \cref{prop:stress},
+more stress error.
 
-\subsection{Failures and their detection}\label{sec:results3d:detection}
+\subsection{Failure detector: predictions worse than the zero field}\label{sec:results3d:detection}
 
 \begin{figure}[tbp]
 \centering
 \includegraphics[width=\linewidth]{generated/fig_energy_gap.pdf}
-\caption{Distribution of the relative energy gap over the \numThreePairs{} validation
-instance-seed pairs, 1,024 labelled instances, in two dimensions (left; the run of 9 October
-2026) and three dimensions (right). Markers show the medians; predictions to the right of the dashed line
-are further from the solution, in the energy norm, than the zero field.}
+\caption{Distribution of the relative energy gap, averaged over each instance's four load
+cases, over the \numThreePairs{} validation instance-seed pairs, 1,024 labelled instances,
+in three dimensions (left) and in the two-dimensional comparison (right). Markers show the
+medians; predictions to the right of the dashed line are further from the solution, in the
+stiffness norm, than the zero field, on average over their load cases.}
 \label{fig:energygap}
 \end{figure}
 
@@ -146,50 +167,63 @@ dimensions the label-free transformer's median, \numThreeFreeGapMedian{}, was
 networks' medians, and none of its \numThreePairs{} instance-seed predictions had a mean
 relative energy gap above one. The supervised transformer had \numThreeLabWorse{} such
 predictions, the supervised transformer with the energy term \numThreeAncWorse{} and the
-graph network \numThreeMgnWorse{}. Per load case, measured after the run, \numFieldLoadWorseLab{} of the supervised
-transformer's \numFieldLoads{} predictions and \numFieldLoadWorseMgn{} of the graph
-network's were worse than the zero field, against \numThreeFreeLoadWorse{} of the label-free
-transformer's; after the rescaling by $\cstar$ none was, and the rescaling never increased a
+graph network \numThreeMgnWorse{}. These counts use the solutions. Load case by load case,
+measured after the run with the test of \cref{cor:zero}, which does not,
+\numFieldLoadWorseLab{} of the supervised transformer's \numFieldLoads{} predictions and
+\numFieldLoadWorseMgn{} of the graph network's were worse than the zero field, against
+\numThreeFreeLoadWorse{} of the label-free transformer's; the per-load-case energies of the
+supervised transformer with the energy term were not exported. After the rescaling by
+$\cstar$ none of them was worse than the zero field, and the rescaling never increased a
 relative energy gap.
 
-None of these failures needs a reference solution to be found. By \cref{cor:zero}, a load
-case whose prediction is worse than the zero field is exactly one with $\Pi_h(u)>0$, which
-is known as soon as the energy has been evaluated; by \cref{prop:amp}, rescaling by $\cstar$
-turns it into a prediction no worse than the zero field. The check applies to any network,
-however it was trained; for the label-free transformer the energy is also the training
-objective.
+These load cases are found without a reference solution, since by \cref{cor:zero} each is
+one with $\Pi_h(u)>0$, and rescaling by $\cstar$ makes each no worse than the zero field
+(\cref{prop:amp}); the check applies to any network, however it was trained. It catches
+gross failures only: the supervised transformer's median prediction, with a
+relative energy gap of \numThreeLabGapMedian{}, passed it.
 
 \subsection{Label efficiency}\label{sec:results3d:labels}
 
-In three dimensions (\cref{tab:labeleff,fig:labeleff}, right) the label-free
-transformer's relative energy gap was lower than every supervised network's at every
-budget, and its displacement error lower than both supervised transformers' at every
-budget. The graph network reached a lower displacement error than the label-free
-transformer with 1,024 labels, not with 64. The supervised transformer's relative energy
-gap did not fall monotonically with the number of labels: its seed mean rose from 256 to
-1,024 labels, through the single instance discussed in \cref{sec:results3d:same}.
+\input{generated/table_label_efficiency}
+
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=\linewidth]{generated/fig_label_efficiency.pdf}
+\caption{Label efficiency in three dimensions (left) and in the two-dimensional comparison
+(right): seed-mean relative displacement error (top) and relative energy gap (bottom) of
+the supervised networks against the number of labelled training instances. The horizontal
+line is the label-free transformer, trained on the same 1,024 instances without their
+solutions. The supervised transformer with the energy term is shown in three dimensions only
+(its two-dimensional values, from the July run, are in \cref{tab:labeleffjuly}); the
+stiffness-norm transformer was trained in two dimensions only, and the graph network, in
+both panels, with 64 and 1,024 labels only.}
+\label{fig:labeleff}
+\end{figure}
+
+\Cref{tab:labeleff} and \cref{fig:labeleff} give the errors of the supervised networks
+against the number of labelled instances. In three dimensions the label-free transformer's
+relative energy gap was lower than every supervised network's at every budget, and its
+displacement error lower than both supervised transformers' at every budget. The graph
+network reached a lower displacement error than the label-free transformer with 1,024
+labels, not with 64. The supervised transformer's relative energy gap did not fall
+monotonically with the number of labels: its seed mean rose from 256 to 1,024 labels,
+through the single instance discussed in \cref{sec:results3d:same}.
 
 \subsection{Pre-registered decisions}\label{sec:results3d:decisions}
 
-The gate of this run combined three conditions as (a) and ((b) or (c))
-(\cref{tab:criteria}). Condition (a)
-is a sanity check on the supervised side: the supervised transformer with the energy term
-must be at least \numGTwoSanityX{} times more accurate in displacement than the zero field
-and better than both naive baselines. Condition (b) concerns the label-free transformer:
-its displacement error within 10\% of the supervised transformer's with 1,024 labels, and
-an advantage in relative energy gap of at least 40\% at every budget. Condition (c)
-concerns transfer to the finer mesh.
-
-Condition (b) was met with a wide margin: the label-free displacement error was
+The gate of the three-dimensional comparison combined three conditions as (a) and ((b) or
+(c)) (\cref{tab:criteria}): (a) a sanity check on the supervised side, (b) the label-free
+transformer's displacement error within 10\% of the supervised transformer's with 1,024
+labels and an advantage in relative energy gap of at least 40\% at every budget, and (c)
+transfer to the finer mesh. Condition (b), the pre-registered test of the label-free
+network's accuracy, was met with a wide margin: the label-free displacement error was
 \numGTwoParity{} relative to the supervised one, and the smallest advantage in relative
-energy gap was \numGTwoAdvMin{}. Condition (c) failed (\cref{sec:transfer}), and kill
-condition KP4 withdrew the transfer claim. Condition (a) was met at 64, 256 and 1,024
-labels, by factors of \numGTwoSanitySixtyFour{} to \numGTwoSanityMax{}, but not at 16
-labels, where the factor was \numGTwoSanitySixteen{}. The amendment of
-\cref{sec:methods:prereg} assessed (a) only from \numGTwoFloor{} labels on; under it the
-gate read GO, under the registered form, which assesses every budget, NO-GO. Condition (a)
-involves only the supervised networks and the baselines, whose results were known when the
-amendment was written, so the change of reading was made with knowledge of its effect; it
-was disclosed in the amendment itself, and the reference reading was computed and published
-with the run. The conclusions of this paper rest on condition (b) and on the measurements
-themselves, not on the gate's verdict.
+energy gap was \numGTwoAdvMin{}; the kill conditions on that accuracy, KP1 and KP2, were not
+triggered. Condition (c) failed, and kill condition KP4 withdrew the transfer claim
+(\cref{sec:transfer}). Condition (a) was met from 64 labels on, but with 16 labels the
+supervised transformer with the energy term was only \numGTwoSanitySixteen{} times more
+accurate in displacement than the zero field, against the \numGTwoSanityX{} required. The
+amendment, written after this result of the initial run was known, assessed (a) only from
+\numGTwoFloor{} labels: under it the gate read GO, and under the registered form, which
+assesses every budget, it read NO-GO (\ref{app:prereg}). The claims of this section rest on
+condition (b) and on the measurements, not on the gate's verdict.

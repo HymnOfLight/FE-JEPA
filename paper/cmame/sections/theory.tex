@@ -1,14 +1,17 @@
 \section{Theory}\label{sec:theory}
 
-This section collects the identities on which the method and its evaluation rest.
-\Cref{lem:exact,lem:cond}, \cref{cor:modes}, \cref{rem:dual} and \cref{prop:sep} of
-\ref{app:e1} are restated, with proofs, from the companion note \cite{CaoSong2026}, and
-\eqref{eq:cheb} is the classical Chebyshev bound of conjugate gradients \cite{Saad2003}; the other
-statements are added here. All are elementary consequences of the energy-norm algebra of
-symmetric positive definite systems \cite{Ciarlet1978,Saad2003}. What they provide is an
-exact account of what label-free training optimises, of how its results should be measured,
-and of what the energy of a prediction reveals without a reference solution. Each statement
-with numerical content is implemented as an executable check (\cref{sec:theory:checks}).
+This section collects the identities on which the method and its evaluation rest, ordered
+by the three roles of the energy: training objective (\cref{sec:theory:exact}), evaluation
+metric (\cref{sec:theory:stress,sec:theory:metrics}) and failure detector
+(\cref{sec:theory:detector}). \Cref{lem:exact,lem:cond}, \cref{cor:modes}, \cref{rem:dual}
+and \cref{prop:sep} of \ref{app:e1} are restated, with proofs, from the companion note
+\cite{CaoSong2026}, and \eqref{eq:cheb} is the classical Chebyshev bound of conjugate
+gradients \cite{Saad2003}; the other statements are added here. All are elementary
+consequences of the algebra of symmetric positive definite systems
+\cite{Ciarlet1978,Saad2003}. What they provide is an exact account of what label-free
+training optimises, of how its results should be measured, and of what the energy of a
+prediction reveals without a reference solution. Each statement with numerical content is
+checked numerically on assembled instances (\ref{app:repro:checks}).
 
 \subsection{Discrete setting}\label{sec:theory:setting}
 
@@ -28,9 +31,9 @@ discrete potential energy of a vector $u\in\R^{n}$ is
 \Pi_h(u) = \tfrac12\,u^{\top}Ku - F^{\top}u ,
 \label{eq:energy}
 \end{equation}
-and the stiffness norm, or energy norm, is $\norm{v}_K=(v^{\top}Kv)^{1/2}$ for
-$v\in\R^{n}$. For a prediction $u$ with error $e=u-\Ustar$ we call
-$\gap(u)=\Pi_h(u)-\Pi_h(\Ustar)$ its energy gap and
+and the stiffness norm, which finite-element analysis calls the energy norm, is
+$\norm{v}_K=(v^{\top}Kv)^{1/2}$ for $v\in\R^{n}$. For a prediction $u$ with error
+$e=u-\Ustar$ we call $\gap(u)=\Pi_h(u)-\Pi_h(\Ustar)$ its energy gap and
 \begin{equation}
 g(u) = \frac{\norm{u-\Ustar}_K^{2}}{\norm{\Ustar}_K^{2}}
 \label{eq:relgap}
@@ -42,9 +45,9 @@ $\kappa=\lambda_{\max}/\lambda_{\min}$ is its spectral condition number. Evaluat
 $\Pi_h(u)$ requires $K$ and $F$, which every finite-element code assembles before solving,
 and one sparse matrix-vector product; it does not require $\Ustar$. The energy gap and
 $g$ do require $\Ustar$: in this paper they are evaluation quantities, computed on
-validation instances only.
+validation instances only. Differences of energy do not (\cref{cor:rank}).
 
-\subsection{Label-free training is stiffness-norm regression}\label{sec:theory:exact}
+\subsection{Training objective}\label{sec:theory:exact}
 
 \begin{lemma}[Exactness]\label{lem:exact}
 For every $u\in\R^{n}$,
@@ -89,10 +92,10 @@ Apply \cref{lem:exact} to each term; the chain rule carries the equality of grad
 from $u_{ij}$ to $\theta$.
 \end{proof}
 
-The regression in \eqref{eq:training} sums squared energy-norm errors without normalising
-them, so instances whose solutions carry more strain energy weigh more. Normalising each
-term by $\lvert\Pi_{ij}(\Ustar_{ij})\rvert$ would require the solutions; the label-free
-objective cannot do it.
+The regression in \eqref{eq:training} sums squared stiffness-norm errors without
+normalising them, so instances whose solutions carry more strain energy weigh more.
+Normalising each term by $\lvert\Pi_{ij}(\Ustar_{ij})\rvert$ would require the solutions;
+the label-free objective cannot do it.
 
 \begin{remark}[Dual norm]\label{rem:dual}
 With the residual $r(u)=F-Ku=-Ke$, \cref{lem:exact} reads
@@ -104,7 +107,7 @@ $\norm{r(u)}_2^2=e^{\top}K^{2}e$, a regression in the norm of $K^2$, whose condi
 number is $\kappa^2$ \cite{DeRyck2024}.
 \end{remark}
 
-\subsection{The energy gap measures the stress error}\label{sec:theory:stress}
+\subsection{Metric: the energy gap and the stress error}\label{sec:theory:stress}
 
 Let $v_h$ denote the finite-element displacement field of a vector $v\in\R^n$, extended by
 zero on the constrained degrees of freedom, $\varepsilon(v_h)$ its strain,
@@ -112,8 +115,9 @@ $\sigma(v_h)=\mathbb{C}:\varepsilon(v_h)$ its stress for the fourth-order elasti
 tensor $\mathbb{C}$, $s=\sigma-\tfrac13(\operatorname{tr}\sigma)I$ the deviatoric stress,
 $p=\tfrac13\operatorname{tr}\sigma$ the mean stress and $\vm(\sigma)=(\tfrac32\,s:s)^{1/2}$
 the von Mises stress of a stress tensor $\sigma$; we write $\vm(v_h)$ and $p(v_h)$ for the
-fields $\vm(\sigma(v_h))$ and $p(\sigma(v_h))$. For a homogeneous isotropic material with Young's modulus $E$ and Poisson's
-ratio $\nu$, $G=E/(2(1+\nu))$ is the shear modulus and $B=E/(3(1-2\nu))$ the bulk modulus.
+fields $\vm(\sigma(v_h))$ and $p(\sigma(v_h))$. For a homogeneous isotropic material with
+Young's modulus $E$ and Poisson's ratio $\nu$, $G=E/(2(1+\nu))$ is the shear modulus and
+$B=E/(3(1-2\nu))$ the bulk modulus.
 
 \begin{proposition}[Energy gap and stress error]\label{prop:stress}
 Let the material be homogeneous and isotropic and the stiffness matrix be integrated
@@ -175,18 +179,10 @@ compliance-weighted squared stress error. The bounds \eqref{eq:vmbound} and
 \eqref{eq:vmboundrel} concern the area- or volume-weighted von Mises error, whereas the
 metric reported in \cref{sec:methods:metrics} weights elements equally, as pre-registered;
 on graded meshes the two differ, so the bounds explain rather than bound the reported
-numbers. For the networks with 1,024 labelled instances, measured after the runs, the two
-differed little. In two dimensions the median area-weighted errors over the validation load
-cases were \numSpecVmAreaFree{}, \numSpecVmAreaKnorm{}, \numSpecVmAreaLab{} and
-\numSpecVmAreaMgn{} for the label-free, the stiffness-norm and the supervised transformers
-and the graph network of \cref{sec:results2d}, against element-wise medians of
-\numSpecVmElemFree{}, \numSpecVmElemKnorm{}, \numSpecVmElemLab{} and \numSpecVmElemMgn{}; in
-three dimensions the median volume-weighted errors were \numFieldVmVolFree{},
-\numFieldVmVolLab{} and \numFieldVmVolMgn{} for the label-free transformer, the supervised
-transformer and the graph network of \cref{sec:results3d}, against element-wise medians of
-\numFieldVmElemFree{}, \numFieldVmElemLab{} and \numFieldVmElemMgn{}.
+numbers. Measured after the runs for the networks with 1,024 labelled instances, the two
+differed little (\ref{app:repro:checks}).
 
-\subsection{Displacement error and energy-norm error}\label{sec:theory:metrics}
+\subsection{Metric: displacement and stiffness-norm errors}\label{sec:theory:metrics}
 
 \begin{lemma}[Conditioning]\label{lem:cond}
 For every $u\in\R^{n}$,
@@ -219,7 +215,7 @@ Immediate from $\nabla\Pi_h(u)=K(u-\Ustar)$ and the diagonalisation of $K$.
 \end{proof}
 
 In the same eigenbasis, $\norm{e}_K^2=\sum_m\lambda_m\hat e_m^2$ while
-$\norm{e}_2^2=\sum_m\hat e_m^2$: the energy norm weights the error in mode $m$ by
+$\norm{e}_2^2=\sum_m\hat e_m^2$: the stiffness norm weights the error in mode $m$ by
 $\lambda_m$, the Euclidean displacement norm weights all modes equally. In elasticity the
 smooth, low-frequency modes have small eigenvalues and the oscillatory, high-frequency modes
 large ones, so an error made of low-frequency modes is large in displacement and small in
@@ -244,7 +240,8 @@ the relative energy gap is the squared relative displacement error $\delta^2$ ti
 normalised Rayleigh quotient $\rho$, which measures how far up the spectrum of $K$ the error
 lies compared with the solution. For two predictions $u_a$ and $u_b$ of the same load case,
 $g(u_a)/g(u_b)=(\rho(u_a)/\rho(u_b))\,(\delta(u_a)/\delta(u_b))^2$, so that a difference
-in relative energy gap is a difference in the size of the errors, in their spectral position,
+in relative energy gap is a difference in the size of the errors, in their spectral
+position,
 or in both.
 \end{remark}
 
@@ -258,16 +255,56 @@ by $\lambda_{\min}\norm{e}_2^2\le\norm{e}_K^2\le\lambda_{\max}\norm{e}_2^2$, tha
 $\kappa^{-1}\le R(e_a)/R(e_b)\le\kappa$ in the notation of \cref{rem:factor}, and both bounds
 are attained by eigenvectors of $\lambda_{\max}$ and $\lambda_{\min}$. Hence two
 predictions can be ranked in opposite orders by the displacement error and by the
-energy-norm error only if their displacement errors differ by less than a factor
+stiffness-norm error only if their displacement errors differ by less than a factor
 $\kappa^{1/2}$, and for every ratio within that factor some pair of errors is so ranked. On
-the instances checked in this study, $\kappa^{1/2}$ lies between about \numSqrtKappaMin{}
-and \numSqrtKappaMax{} (\cref{sec:theory:checks}). By \cref{prop:stress} the energy-norm
+the sixteen assembled validation instances of each corpus on which it was computed
+(\cref{sec:methods:data}), $\kappa^{1/2}$ lies between about \numSqrtKappaMin{} and
+\numSqrtKappaMax{}. By \cref{prop:stress} the stiffness-norm
 error is the compliance-weighted stress error, so the same holds for it; for the von Mises
-error, \eqref{eq:vmbound} gives a one-sided bound only. \Cref{sec:results3d} reports
-reversals between two trained networks.
+error, \eqref{eq:vmbound} gives a one-sided bound only. \Cref{sec:results3d:reverse}
+reports such reversals between two trained networks.
 \end{remark}
 
-\subsection{The energy as metric and failure detector}\label{sec:theory:detector}
+\begin{corollary}[Ranking by energy]\label{cor:rank}
+For any two predictions $u_1,u_2$ of the same load case,
+$\Pi_h(u_1)-\Pi_h(u_2)=\gap(u_1)-\gap(u_2)
+=\tfrac12\bigl(\norm{u_1-\Ustar}_K^2-\norm{u_2-\Ustar}_K^2\bigr)$, so the energy ranks
+any set of predictions of one load case exactly by their stiffness-norm errors. Over a
+fixed set of load cases, the mean energy of a surrogate's predictions differs from the mean
+of their energy gaps by a constant, the mean energy of the solutions, so the mean energy
+ranks surrogates by their mean energy gap. Neither statement needs a reference solution.
+\end{corollary}
+
+\begin{proof}
+Apply \cref{lem:exact} to each prediction and subtract; for the second statement, average
+over the load cases.
+\end{proof}
+
+Ranking candidate fields by their energy is the Ritz minimum principle itself. The ranking
+is by the energy gap, not by the relative energy gap $g$ of the tables, whose normalisation
+by $\lvert\Pi_h(\Ustar)\rvert$ needs the solution; the tables report $g$ because it compares
+instances and load cases of different strain energy on one scale.
+
+\subsection{Failure detector: the zero-field test and rescaling}\label{sec:theory:detector}
+
+\begin{corollary}[Zero-field test]\label{cor:zero}
+For each load case, $\Pi_h(u)>0$ if and only if $\norm{u-\Ustar}_K>\norm{\Ustar}_K$, that
+is, if and only if $g(u)>1$: the prediction is further from the solution in the stiffness
+norm than the zero field. The test needs no reference solution.
+\end{corollary}
+
+\begin{proof}
+Apply \cref{lem:exact} at $u$ and at $0$, and use $\Pi_h(0)=0$.
+\end{proof}
+
+What \cref{cor:zero} adds to the Ritz principle for surrogates is a test against a fixed
+reference, the zero field, that each prediction passes or fails on its own. It detects
+gross failures only: it does not bound the error of a prediction that passes it. The counts
+of predictions worse than the zero field in the tables of
+\cref{sec:results3d,sec:results2d} use the mean of $g$ over the four load cases of an
+instance, as the evaluation records it, and so need the solutions; the counts of single
+load cases in \cref{sec:results3d:detection,sec:results2d:accuracy} coincide exactly with
+the test of \cref{cor:zero}.
 
 \begin{proposition}[Energy-optimal amplitude]\label{prop:amp}
 Let $u\in\R^{n}$ with $u^{\top}Ku>0$ and let
@@ -298,32 +335,11 @@ The rescaled prediction $\cstar u$ is the $K$-orthogonal projection of $\Ustar$ 
 span of $u$, the one-dimensional Ritz approximation. It needs no label and no work beyond
 evaluating $\Pi_h(u)$, since $u^{\top}Ku$ and $F^{\top}u$ are the two terms of $\Pi_h(u)$.
 After the rescaling only the error of direction, $\sin^2\psi$, remains; an error of
-amplitude is removed exactly. The improvement is in the energy norm: in other norms, such
-as the displacement error, rescaling can make a prediction worse.
-
-\begin{corollary}[Zero-field test and ranking]\label{cor:zero}
-For each load case, $\Pi_h(u)>0$ if and only if $\norm{u-\Ustar}_K>\norm{\Ustar}_K$, that
-is, if and only if $g(u)>1$: the prediction is further from the solution in the energy
-norm than the zero field. More generally, for any two predictions $u_1,u_2$ of the same
-load case, $\Pi_h(u_1)-\Pi_h(u_2)=\gap(u_1)-\gap(u_2)$, so the energy ranks any set of
-predictions exactly by their energy-norm errors. Neither statement needs a reference
-solution.
-\end{corollary}
-
-\begin{proof}
-Apply \cref{lem:exact} at $u$ and at $0$, and use $\Pi_h(0)=0$.
-\end{proof}
-
-Ranking candidate fields by their energy is the Ritz minimum principle itself; what
-\cref{cor:zero} adds for surrogates is a test against a fixed reference, the zero field,
-that each prediction passes or fails on its own. The counts of instance-seed predictions
-worse than the zero field in the tables of \cref{sec:results2d,sec:results3d} use the mean
-of $g$ over the four load cases of an instance, as the evaluation records it; the counts of
-single load cases in \cref{sec:results2d:accuracy,sec:results3d:detection} coincide exactly
-with the sign test of \cref{cor:zero}. Together, \cref{cor:zero} and
-\cref{prop:amp} give a deployment guard: compute $\Pi_h(u)$, flag the prediction if it is
-positive, and rescale it by $\cstar$, which never makes it worse in the energy norm and
-makes it no worse than the zero field.
+amplitude is removed exactly. The improvement is in the stiffness norm: in other norms,
+such as the displacement error, rescaling can make a prediction worse. Together,
+\cref{cor:zero} and \cref{prop:amp} give a deployment guard: compute $\Pi_h(u)$, flag the
+prediction if it is positive, and rescale it by $\cstar$, which never makes it worse in the
+stiffness norm and makes it no worse than the zero field.
 
 \subsection{Conjugate gradients from a prediction}\label{sec:theory:cg}
 
@@ -340,7 +356,8 @@ q = \frac{\kappa^{1/2}-1}{\kappa^{1/2}+1}.
 
 \begin{corollary}[Iteration bound of a warm start]\label{cor:warm}
 Let $\bar g\in(0,1)$ be a target relative energy gap and $g_0\in(\bar g,1]$ the relative
-energy gap of the initial iterate. Under \eqref{eq:cheb}, $k\ge\ln(4g_0/\bar g)/(2\ln q^{-1})$
+energy gap of the initial iterate. Under \eqref{eq:cheb}, $k\ge\ln(4g_0/\bar g)/(2\ln
+q^{-1})$
 iterations suffice to reach $\bar g$, and $g_0=1$ for the zero field. The warm start
 therefore lowers this iteration bound by $\ln(1/g_0)/(2\ln q^{-1})$ iterations, a fraction
 \begin{equation}
@@ -359,14 +376,7 @@ The corollary compares bounds, not iteration counts: how many iterations a warm 
 actually saves depends on the spectral content of its error and can even be negative. What
 it shows is that a prediction of given accuracy lowers the iteration bound by a fixed number
 of iterations, while the bound grows with $\ln(1/\bar g)$, so that its share shrinks as the
-tolerance tightens. For $g_0=\numKfiveStartGap$, the initialiser tested in
-\cref{sec:results2d:decisions}, the fraction \eqref{eq:warm} is \numWarmFractionSeven{} for
-$\bar g=10^{-7}$, \numWarmFractionTwelve{} for $\bar g=10^{-12}$ and
-\numWarmFractionSeventeen{} for $\bar g=10^{-17}$. The residual test of that section,
-$\norm{r_k}_2\le\tau\norm{F}_2$ with $\tau=10^{-6}$, corresponds to targets in this
-range: it guarantees $g\le\kappa\tau^2$, which is up to about \numKappaTauTwo{} for the
-two-dimensional condition numbers of \cref{sec:theory:checks}, and an iterate exactly at
-the threshold has $g\ge\tau^2/\kappa$, which is down to about \numTauSqKappaTwo{}.
+tolerance tightens (\cref{sec:cost:warm} gives values).
 
 \begin{remark}[Residual-based stopping]\label{rem:residual}
 The initial residual of a prediction is $r_0=-Ke_0$, so
@@ -376,37 +386,11 @@ $\norm{\Ustar}_K^2=F^{\top}K^{-1}F\le\norm{F}_2^2/\lambda_{\min}$,
 \frac{\norm{r_0}_2}{\norm{F}_2} \le (\kappa\,g_0)^{1/2},
 \label{eq:residual}
 \end{equation}
-while the zero field starts from $\norm{r_0}_2/\norm{F}_2=1$. Both inequalities are attained,
+while the zero field starts from $\norm{r_0}_2/\norm{F}_2=1$. Both inequalities are
+attained,
 the first when $e_0$ is an eigenvector of $\lambda_{\max}$ and the second when $F$ is one
 of $\lambda_{\min}$, so the bound is sharp. A prediction that is accurate in energy can
 therefore start with a larger residual than the zero field, by a factor of up to
 $(\kappa g_0)^{1/2}$, because $K$ amplifies the stiff-mode components of its error, and a
 residual-based stopping test then credits a warm start with less than its energy accuracy.
 \end{remark}
-
-\subsection{Executable checks}\label{sec:theory:checks}
-
-The statements of this section are checked numerically, as follows. \Cref{lem:exact} holds
-on assembled instances to machine precision. The checks of
-\cref{lem:cond}, \cref{cor:modes} and \eqref{eq:cheb} were pre-registered for sixteen
-assembled validation instances of each corpus (criteria C5 and KP5 in
-\cref{tab:criteria}); none was violated. The modewise identity \eqref{eq:modes} held to \numModesPhrase{} on
-the extreme eigenvectors; for random perturbations of the solutions, the displacement errors reached at
-most \numCondTwo{} and \numCondThree{} of the bound \eqref{eq:cond}, and the
-conjugate-gradient ratios at most \numChebTwo{} and \numChebThree{} of the bound
-\eqref{eq:cheb}; and $\kappa$ ranged from \numKappaTwoLow{} to \numKappaTwoHigh{} in two
-dimensions and from \numKappaThreeLow{} to \numKappaThreeHigh{} in three.
-\Cref{prop:stress,prop:amp}, \cref{cor:zero,cor:warm} and \cref{rem:rank,rem:residual} are
-checked on assembled two- and three-dimensional instances by the repository's test suite
-(\ref{app:repro}). On the \numAmpRows{} instance-seed evaluations of the post hoc readings of
-\cref{sec:transfer}, the relative energy gap after rescaling, computed from the energies,
-agreed with $1-\cos^2\psi$ to within \numAmpIdentity{}. On every validation load case of the
-networks measured after the runs, all with 1,024 labelled instances (the four trained
-two-dimensional networks of \cref{sec:results2d}, and the label-free transformer, the
-supervised transformer and the graph network in three dimensions), the energy was positive
-exactly when the error's stiffness norm exceeded the solution's, that is, when the
-prediction was further from the solution than the zero field in the energy norm
-(\cref{cor:zero}), the rescaling by $\cstar$ never increased the relative energy gap
-(\cref{prop:amp}), and the area- or volume-weighted von Mises error obeyed
-\eqref{eq:vmboundrel}, with largest ratios of its left side to its right side of
-\numSpecBoundMax{} in two dimensions and \numFieldBoundMax{} in three.
