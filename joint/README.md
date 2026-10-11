@@ -13,7 +13,7 @@ This folder holds the work towards a label-free surrogate for the extended end p
 - `joint_hf.py`, `tstub_hf.py`, `tstub.py`, `delft_tstubs.py`: the higher-fidelity joint and T-stub models of G-C1a2 and G-C1b, and the T-stub tests.
 - `family.py`, `export.py`: the joint family of stage C1.3, and its condensed nodal problem.
 
-**`c13/`: the run code of gate G-C1.3.** `RUNBOOK_C13.md` gives its commands in order.
+**`c13/`: the run code of gate G-C1.3.** `RUNBOOK_C13.md` gives its commands in order. `RUNBOOK_C13_addendum.md` records what the operator was given beyond it after the stamp.
 
 **`tests/`: the tests.** From this folder, with the repository one level up:
 ```bash
@@ -54,6 +54,12 @@ FEJEPA_REPO=.. python -m pytest -q -p no:cacheprovider tests
 - `probes/c13_scale.py`, `gc1b_weld_bracket.py` and `gc1b_weld_bracket_tables.py` read files in `checks/`, so they do not run from this folder alone.
 - `probes/c13_segment_effect.json` has no script. A one-off command solved FS1 to FS4 with `fejoint.joint.analyse` under G-C1a's options, on the 10 mm mesh with one layer, with the full beam and with segments of 300 mm and 400 mm. FS4 with the 300 mm segment was recomputed on 10 October 2026 and matched to every digit.
 - In `probes/c13_cost/pilot_energy.json` and `pilot_supervised.json`, the local path of the repository checkout was replaced by its branch and commit. Nothing else in them was changed.
+
+## Licence
+
+The repository's licences cover this folder as they cover the rest (see the repository's README):
+- the code (`fejoint/`, `c13/`, `tests/`, the scripts in `probes/` and the stamped copy in `docs/G-C1.3_stamped_code/`) under the PolyForm Noncommercial License 1.0.0 (`../LICENSE`);
+- the pre-specifications, verdicts and notes in `docs/`, `RUNBOOK_C13.md` with its addendum, and the records in `probes/` (the `.json` and `.log` files) under the Creative Commons Attribution 4.0 International licence (`../LICENSE-CC-BY-4.0`), as the repository's pre-registration documents and records are.
 
 ## Reference
 

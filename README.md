@@ -9,6 +9,27 @@ Theory note: R. Cao and X. Song, *Discrete energy as an exact label-free
 training objective for finite-element surrogates*, arXiv:2608.05437 [cs.CE], 2026.
 <https://arxiv.org/abs/2608.05437>
 
+## Licence
+
+The code in this repository is licensed under the
+[PolyForm Noncommercial License 1.0.0](LICENSE): it may be used, changed and shared for
+any noncommercial purpose, as the licence defines it, including research and teaching.
+Commercial use needs a separate licence from the author, Ruifeng Cao
+(ruifeng.cao@manchester.ac.uk).
+
+The following are licensed instead under the
+[Creative Commons Attribution 4.0 International licence](LICENSE-CC-BY-4.0), on every
+branch where they appear:
+
+- the records in `records/` and the console record `wp2_e2_console.txt`;
+- the pre-registration documents (`PREREG*.md`) and the deviations ledger
+  (`DEVIATIONS_PHASE2.md`);
+- the provenance note (`PROVENANCE_NOTE.md`);
+- the manuscript sources in `paper/`.
+
+These terms apply to every version of these files in this repository, including earlier
+commits, branches and tags.
+
 ## Install (on the GPU box)
 
     pip install -e ".[torch,gen,dev]"     # torch + scikit-fem/gmsh + pytest
