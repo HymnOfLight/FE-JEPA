@@ -2,9 +2,9 @@ Supervised training of a finite-element surrogate needs a solve per training exa
 cost the surrogate should remove. For linear elastostatics we train on the assembled
 discrete potential energy instead. Minimising it is exactly supervised regression in the
 stiffness norm, which measures the strain energy of the stress error, yet no example is
-solved. The identity also makes the energy, without reference solutions, a metric that ranks
-predictions of one load case by this error and a failure detector whose sign flags
-predictions worse than the zero field. In a pre-registered three-dimensional comparison, a
+solved. The identity gives the energy three roles: training objective, metric and failure
+detector. Without reference solutions, the energy ranks predictions of one load case by
+their stiffness-norm error, and its sign flags predictions worse than the zero field. In a pre-registered three-dimensional comparison, a
 transformer trained on the energy alone was more accurate on every metric, in each of three
 seeds, than the same network trained on the solutions of the same instances. In the same
 run, a supervised graph network had the smaller displacement error on most instances and the

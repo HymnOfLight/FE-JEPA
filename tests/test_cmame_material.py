@@ -24,7 +24,8 @@ PAPER = ROOT / "paper" / "cmame"
 OUT = PAPER / "generated"
 TEXT = ("table_2d.tex", "table_2djuly.tex", "table_3d.tex", "table_label_efficiency.tex",
         "table_label_efficiency_july.tex", "table_transfer.tex", "table_criteria.tex", "table_cm2d.tex", "table_amplitude.tex",
-        "table_remesh.tex", "table_e2.tex", "table_e1.tex", "numbers.tex", "hashes.tex",
+        "table_remesh.tex", "table_e2.tex", "table_e1.tex", "table_cost.tex", "numbers.tex",
+        "hashes.tex",
         "material.md", "sources.json")
 FIGS = ("fig_disp_vs_stress.pdf", "fig_energy_gap.pdf", "fig_label_efficiency.pdf",
         "fig_e2_cost_accuracy.pdf", "fig_spectra.pdf", "fig_field2d.pdf", "fig_field_worst.pdf",
@@ -761,6 +762,143 @@ def test_the_functional_check_is_described_as_recorded():
              for k, a in zip(val["knorm"], val["ar"], strict=True)]
     assert len(set(order)) == 2
 
+
+
+def _secs(cell: str) -> tuple:
+    """A cost-table time in seconds, with half its last shown digit (the rounding)."""
+    v, unit = cell.split()
+    scale = {"ms": 1e-3, "s": 1.0}[unit]
+    dec = len(v.split(".")[1]) if "." in v else 0
+    return float(v.replace(",", "")) * scale, 0.5 * 10 ** -dec * scale
+
+
+def _shown(cell: str) -> tuple:
+    v = cell.replace(",", "").replace("%", "")
+    dec = len(v.split(".")[1]) if "." in v else 0
+    return float(v), 0.5 * 10 ** -dec
+
+
+def test_the_cost_table_follows_from_the_timing_records(built):
+    """Section 8.4: every cell and number of the cost table recomputed from the
+    per-instance timing records with numpy (the generator uses statistics), and
+    the script's own summary medians agreeing; the threads' readings likewise."""
+    tab, N = built["files"]["table_cost.tex"], built["numbers"]
+    T, H = ROOT / "records" / "cmame" / "timing", ROOT / "records" / "cmame" / "threads"
+    rec = {f: json.loads((T / f).read_text()) for f in ("timing_2d.json", "timing_3d.json")}
+    sets = {"2D": rec["timing_2d.json"]["results"]["val"],
+            "3D": rec["timing_3d.json"]["results"]["val"],
+            "3D, fine mesh": rec["timing_3d.json"]["results"]["fine"]}
+    head = next(ln for ln in tab.splitlines() if ln.startswith(" & 2D"))
+    assert head == r" & 2D & 3D & 3D, fine mesh \\"
+
+    def row(label):
+        found = [ln for ln in tab.splitlines() if ln.startswith(label + " &")]
+        assert len(found) == 1, label
+        return [c.strip() for c in found[0].rstrip("\\ ").split("&")[1:]]
+
+    def med(res, key):
+        return float(np.median([r[key] for r in res["per_instance"]]))
+
+    for key, label in (("surrogate_cold_s", "Surrogate, first call"),
+                       ("surrogate_warm_s", "Surrogate, repeated call"),
+                       ("direct_s", "Sparse direct solve"), ("cg_s", "CG from the zero field"),
+                       ("cg_warm_s", "CG from the prediction"),
+                       ("cg_match_s", "CG to the prediction's accuracy"),
+                       ("cg_match_cstar_s", "the same, after rescaling by $c^*$")):
+        for cell, res in zip(row(label), sets.values(), strict=True):
+            v, half = _secs(cell)
+            m = med(res, key)
+            assert m == pytest.approx(res["summary"][key]["median"], rel=1e-12)
+            assert abs(v - m) <= half * 1.0001, (label, cell, m)
+    for cell, res in zip(row("Instances (load cases)"), sets.values(), strict=True):
+        n = len(res["per_instance"])
+        assert cell == f"{n} ({sum(r['n_loads'] for r in res['per_instance'])})"
+    for cell, res in zip(row("Nodes, median"), sets.values(), strict=True):
+        assert cell == f"{round(med(res, 'n_nodes')):,}"
+
+    def per_load(res, key):
+        return float(np.median([x for r in res["per_instance"] for x in r[key]]))
+
+    for cell, res in zip(row("CG iterations per load case"), sets.values(), strict=True):
+        assert cell == (f"{per_load(res, 'cg_iters'):,.0f} / "
+                        f"{per_load(res, 'cg_match_iters'):,.0f}")
+    for key, label in (("energy_gap_rel", "Surrogate's relative energy gap"),
+                       ("disp_rel_l2", "Surrogate's displacement error"),
+                       ("energy_gap_rel_cstar", "Energy gap after rescaling by $c^*$"),
+                       ("disp_rel_l2_cstar", "Displacement error after rescaling by $c^*$")):
+        for cell, res in zip(row(label), sets.values(), strict=True):
+            v, half = _shown(cell)
+            assert abs(v - med(res, key)) <= half * 1.0001, label
+    for cell, res in zip(row("CG's displacement error at that accuracy"), sets.values(),
+                         strict=True):
+        v, half = _shown(cell)
+        assert abs(v - per_load(res, "cg_match_disp_at_match")) <= half * 1.0001
+    # every solve complete, none fell back, every match reached
+    for res in sets.values():
+        for r in res["per_instance"]:
+            assert not (r["cg_fallback"] or r["cg_warm_fallback"] or r["cg_match_unreached"]
+                        or r["cg_match_cstar_unreached"])
+    # the text's numbers
+    for tag, res in zip(("Two", "ThreeVal", "ThreeFine"), sets.values(), strict=True):
+        ratio = float(np.median([r["direct_s"] / r["surrogate_cold_s"]
+                                 for r in res["per_instance"]]))
+        assert ratio == pytest.approx(med(res, "direct_over_surrogate_cold"), rel=1e-9)
+        v, half = _shown(N[f"numCost{tag}DirectRatio"])
+        assert abs(v - ratio) <= half * 1.0001
+        match = float(np.median([r["cg_match_s"] / r["surrogate_cold_s"]
+                                 for r in res["per_instance"]]))
+        v, half = _shown(N[f"numCost{tag}MatchRatio"])
+        assert abs(v - match) <= half * 1.0001
+        v, half = _shown(N[f"numCost{tag}Gap"])
+        assert abs(v - med(res, "energy_gap_rel")) <= half * 1.0001
+    saving = [float(np.median([1 - sum(r["cg_warm_iters"]) / sum(r["cg_iters"])
+                               for r in res["per_instance"]])) for res in sets.values()]
+    for macro, x in (("numCostWarmMore", -min(saving)), ("numCostWarmFewer", max(saving))):
+        v, half = _shown(N[macro])
+        assert x > 0 and abs(v - 100 * x) <= half * 1.0001, macro
+    # the fine mesh's failures, which its medians hide
+    fine = sets["3D, fine mesh"]["per_instance"]
+    worse = sorted(x for r in fine for x in r["cg_match_targets"] if x > 1)
+    assert all(it == 0 for r in fine for x, it in zip(r["cg_match_targets"], r["cg_match_iters"])
+               if x > 1)
+    note = " ".join(tab.split())
+    n_inst = sum(1 for r in fine if r["energy_gap_rel"] > 1)
+    words = ("zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine")
+    assert (f"On the fine mesh, {words[len(worse)]} of the {4 * len(fine)} load cases had a "
+            "relative energy gap above 1") in note
+    assert f"and {words[n_inst]} of the {words[len(fine)]} instances a mean above 1" in note
+    assert "2D: the first 32 validation instances" in note
+    # the threads: one thread against the environment's, and the repeat
+    thr = {k: json.loads((H / f"timing_3d_{k}.json").read_text()) for k in ("env", "one", "env2")}
+    tm = {k: {s: {q: float(np.median([r[q] for r in thr[k]["results"][s]["per_instance"]]))
+                  for q in ("direct_s", "cg_s")} for s in ("val", "fine")} for k in thr}
+    direct_dev = max(abs(tm["one"][s]["direct_s"] / tm["env"][s]["direct_s"] - 1)
+                     for s in ("val", "fine"))
+    gain = [1 - tm["one"][s]["cg_s"] / tm["env"][s]["cg_s"] for s in ("val", "fine")]
+    drift = max(abs(tm["env2"][s][q] / tm["env"][s][q] - 1) for s in ("val", "fine")
+                for q in ("direct_s", "cg_s"))
+    for macro, x in (("numThreadsDirectDev", direct_dev), ("numThreadsCgGainMin", min(gain)),
+                     ("numThreadsCgGainMax", max(gain))):
+        v, half = _shown(N[macro])
+        assert abs(v - 100 * x) <= half * 1.0001, macro
+    pools = {k: json.loads((H / f"blas_{k}.log").read_text())["pools"] for k in ("env", "one")}
+    assert {p_["num_threads"] for p_ in pools["env"]} == {int(N["numThreadsHost"])}
+    assert {p_["num_threads"] for p_ in pools["one"]} == {1}
+    assert (f"Threads, on a second host (Xeon Platinum 8470Q, {N['numThreadsHost']} threads)"
+            in note)
+    assert rf"the direct solve took the same time (within {100 * direct_dev:.1f}\%)" in note
+    assert rf"agreed within {100 * drift:.1f}\%" in note
+    t2 = {k: json.loads((H / f"timing_2d_{k}.json").read_text()) for k in ("env", "one")}
+    g2 = {q: 1 - float(np.median([r[q] for r in t2["one"]["results"]["val"]["per_instance"]]))
+          / float(np.median([r[q] for r in t2["env"]["results"]["val"]["per_instance"]]))
+          for q in ("direct_s", "cg_s")}
+    assert (rf"one thread was {100 * g2['direct_s']:.1f}\% faster for the direct solve and "
+            rf"{100 * g2['cg_s']:.1f}\% for CG") in note
+    assert "Xeon Platinum 8470Q" in note and "Xeon Gold 6459C" in note
+    # no pending box is left in the section, and Appendix C no longer excepts the table
+    sec = (PAPER / "sections" / "cost.tex").read_text(encoding="utf-8")
+    assert r"\pending" not in sec and r"\input{generated/table_cost}" in sec
+    assert "pending cost table" not in (PAPER / "sections" / "appendix_repro.tex").read_text()
 
 def test_highlights_match_the_numbers(built):
     lines = (PAPER / "highlights.txt").read_text(encoding="utf-8").splitlines()

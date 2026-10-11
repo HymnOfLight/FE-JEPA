@@ -163,6 +163,50 @@ passed, 2 deselected (the two LaTeX compile tests).
   report's arrays, select the instances exported; and the two validation
   figures carry their instance's per-load arrays.
 
+## The threads of the solvers: RUNBOOK_W9 Sec. 4 (11 October 2026)
+
+`threads/` holds RUNBOOK_W9 Sec. 4 as it ran on the box on 11 October 2026,
+copied byte for byte from `wp9_threads_return_20261011.tgz` (SHA-256
+`cef9d17f23069ed5baa508559cd4dcaba54ab0609f07fe0dde9d0778d565ea81`, as the
+operator sent it and as recomputed on receipt); branch wp9-pool commits the
+same files as `records/wp9/threads/`. The cost table's timing above recorded
+the threads of its environment (`OMP_NUM_THREADS` and `MKL_NUM_THREADS` 16)
+but not the threads the solvers used. This return times the same direct solve
+and conjugate gradients on the first 8 validation and 2 fine-mesh instances
+of Phase-2b's corpus with the label-free state of seed 0, in the box's
+environment, with one thread, and in the environment again, and reads the
+BLAS pools that numpy and SciPy load (`scripts/blas_threads.py`). It ran on
+another host than the cost table: a Xeon Platinum 8470Q with 25 CPUs
+allotted and NVIDIA driver 580.95.05, where the environment sets the threads
+to 25 (wp9-pool's `DEVIATIONS_W9.md`, W1 and W3).
+
+| file | SHA-256 |
+|---|---|
+| `blas.txt` | `75e6e1c6c29958ba8de261e03bfcbd6734ebbb57e499031d3e4f3ed8b6ffa3d2` |
+| `blas_env.log` | `36c5f0f861e8ec84fe9fc5f6a1c3d6e84fe7a4092cec46567ba64dc48b2af94e` |
+| `blas_one.log` | `2857509aeb14a114e0183c5210417dfa6742a60fbac1927efa59b16268e0db5d` |
+| `machine.txt` | `4436f8d70e59373d3b0790f18329fe26ea316d5933f516376971037d620fe128` |
+| `precheck.txt` | `cc74ce67bac1b3053b4649d766e6e127f07255aca07ddc9632a9bdc35a528cf6` |
+| `status.txt` | `7effaf50153a333b35fdc992387e8d6ede92695a9b34fd685f9a21d6d5225f57` |
+| `timing_2d_env.json` | `5f77cac2c5bfc638c25f278b5beeac6aa1ff9591f39aa37094ef83e0b635eb08` |
+| `timing_2d_env.log` | `8009fdbf4bc5e8b69912aac1ce3d4862b52a35f4434e7da71ab8ea325f0fa7d8` |
+| `timing_2d_one.json` | `0e87c30cac6d58c2997124209de0b22459a55e5b22429b62fc87c07d9f5c5a49` |
+| `timing_2d_one.log` | `93b171606edce5d0ed4856f6fc034f6856896385dd1c9d21d184b619b028b8a8` |
+| `timing_3d_env.json` | `eaf238953e2cf7eb7ac127d24a6112f1b388979198ae52bccb107582e7d19c6f` |
+| `timing_3d_env.log` | `44f67f1e7d44e26f9d861c326f9fc78f601b1d46a8e752797ed07db705feef0e` |
+| `timing_3d_env2.json` | `38b4e98fd17c1cb864d228d9d8bb2c2cc27cf83e47eef3e2dd0870cd58bf43ef` |
+| `timing_3d_env2.log` | `0370ff3fe199a27d5f7b25da74b2007d8ace6898338efe1a343df026143a3563` |
+| `timing_3d_one.json` | `6d17ce7a1963303302d23423abb3d43e1660f478fe220a5f4a43b100207baa37` |
+| `timing_3d_one.log` | `64a443e75405ba348121dbd33559a512eb100dfed6bf4a0db506a2d43d35d82f` |
+
+The readings, which `scripts/make_cmame_material.py` turns into the cost
+table's note on threads and `tests/test_cmame_material.py` recomputes: both
+BLAS pools (two OpenBLAS builds) ran the environment's 25 threads, and 1 with
+one thread; the direct solve took the same time with one thread as with 25;
+conjugate gradients took less with one thread; the repeat in the environment
+agreed with the first run. Every solution agreed with the stored labels, and
+the timed model reproduced its report's arrays.
+
 ## B0 readiness (8 October 2026)
 
 `cm2d_ready.log` (SHA-256 `d1ca946eee99f272e8924275329cff2634a454bf134fbdc265c304c57546a28e`):

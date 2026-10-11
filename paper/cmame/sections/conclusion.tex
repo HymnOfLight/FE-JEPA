@@ -19,7 +19,8 @@ displacement error, with the same labels, the supervised network lowered its von
 by more than half, supporting a pre-registered hypothesis, and its errors lay lower in the
 spectrum of the stiffness matrix, as measured afterwards. A warm start from one label-free
 prediction of the earlier code did not shorten unpreconditioned conjugate gradients to a
-relative residual of \numKfiveTol{} in two dimensions. In three dimensions no network
+relative residual of \numKfiveTol{} in two dimensions, and the predictions timed in
+\cref{tab:cost} did not shorten it to \numCostCgTol{} in two dimensions or three. In three dimensions no network
 transferred to a substantially finer mesh without retraining, although a label-free
 rescaling removed most of the label-free network's error there. These limits, and the
 criteria that were not met, are reported with the results.

@@ -170,6 +170,31 @@
 - Medians: the same reading on each seed's median over the instances instead of its mean. Welch: rel ± t × SE_rel, with t the 97.5% quantile of Student's distribution at the Welch–Satterthwaite degrees of freedom, a symmetric interval that can extend below −100%. Instance resampling: the 2.5% and 97.5% percentiles of rel over 2,000 resamplings of the 256 validation instances, the same instances drawn for both networks and every seed, the seeds kept.
 - H3 is a reading without a criterion. With the roles of A and B exchanged, rel was +31.9% against a guard of 50.2%.
 
+### Time of the label-free transformer's inference against solves of the same systems, on the same instances, with the surrogate's accuracy there.
+
+|  | 2D | 3D | 3D, fine mesh |
+|---|---|---|---|
+| Instances (load cases) | 32 (128) | 32 (128) | 8 (32) |
+| Nodes, median | 562 | 4,960 | 38,156 |
+| Surrogate, first call | 2.6 ms | 49 ms | 2.17 s |
+| Surrogate, repeated call | 2.1 ms | 48 ms | 2.18 s |
+| Sparse direct solve | 3.1 ms | 907 ms | 105 s |
+| CG from the zero field | 24 ms | 1.24 s | 26.2 s |
+| CG from the prediction | 24 ms | 1.28 s | 26.1 s |
+| CG to the prediction's accuracy | 7.2 ms | 217 ms | 4.26 s |
+| the same, after rescaling by c* | 7.1 ms | 215 ms | 4.31 s |
+| CG iterations per load case | 290 / 85 | 746 / 134 | 1,456 / 241 |
+| Surrogate's relative energy gap | 0.029 | 0.0085 | 0.12 |
+| Surrogate's displacement error | 0.050 | 0.031 | 0.27 |
+| Energy gap after rescaling by c* | 0.028 | 0.0077 | 0.065 |
+| Displacement error after rescaling by c* | 0.040 | 0.014 | 0.076 |
+| CG's displacement error at that accuracy | 0.049 | 0.018 | 0.16 |
+
+- Medians over the instances (the iterations, from the zero field / to the prediction's accuracy, and CG's displacement error: over the load cases). 2D: the first 32 validation instances of the two-dimensional comparison, with its label-free transformer of seed 0; 3D: the first 32 validation and the first 8 fine-mesh instances of the three-dimensional comparison, with its label-free transformer of seed 0. Times are wall times per instance, for all its load cases together; assembly is excluded from both sides (the surrogate needs no stiffness matrix).
+- The surrogate ran on one NVIDIA GeForce RTX 5090 with TF32; both its rows include preparing the inputs and copying the prediction back, the first call after an untimed warm-up on 4 validation instances, the repeated one as the median of 2 further passes. The solvers ran on the CPU of the same machine (Xeon Gold 6459C, 16 CPUs, the thread environment set to 16): SuperLU, which produced the labels, and unpreconditioned conjugate gradients (CG) to a relative residual of $10^{-10}$, from the zero field or from the prediction. CG to the prediction's accuracy starts from the zero field and stops, on each load case, at the first iterate whose relative energy error is at most the prediction's: a stop that reads the reference solution, so a lower bound.
+- On the fine mesh, three of the 32 load cases had a relative energy gap above 1 (4.76, 4.77 and 22.0) and three of the eight instances a mean above 1; CG matches such a load case with no iteration.
+- Threads, on a second host (Xeon Platinum 8470Q, 25 threads), first 8 validation and 2 fine-mesh 3D instances: with one thread, the direct solve took the same time (within 1.1%) and CG 16%–29% less; a repeat with 25 threads agreed within 2.1%. In 2D (8 instances, no repeat), one thread was 7.2% faster for the direct solve and 4.3% for CG.
+
 ## In-text numbers
 
 - `numAmpFineCstar`: 1.23
@@ -262,6 +287,19 @@
 - `numCoarsenLowWiden`: 17.6%
 - `numCondThree`: 0.012
 - `numCondTwo`: 0.022
+- `numCostCgTol`: $10^{-10}$
+- `numCostThreads`: 16
+- `numCostThreeFineDirectRatio`: 51
+- `numCostThreeFineGap`: 0.12
+- `numCostThreeFineMatchRatio`: 1.7
+- `numCostThreeValDirectRatio`: 20
+- `numCostThreeValGap`: 0.0085
+- `numCostThreeValMatchRatio`: 3.9
+- `numCostTwoDirectRatio`: 1.2
+- `numCostTwoGap`: 0.029
+- `numCostTwoMatchRatio`: 2.6
+- `numCostWarmFewer`: 0.3%
+- `numCostWarmMore`: 2.0%
 - `numCrossThree`: $7.43 \times 10^{-3}$
 - `numCrossTwo`: $8.39 \times 10^{-3}$
 - `numDfourteenAlpha`: $3.6 \times 10^{-4}$
@@ -538,6 +576,10 @@
 - `numSqrtKappaMin`: 69
 - `numTauSqKappaTwo`: $6 \times 10^{-18}$
 - `numTauSquared`: $10^{-12}$
+- `numThreadsCgGainMax`: 29%
+- `numThreadsCgGainMin`: 16%
+- `numThreadsDirectDev`: 1.1%
+- `numThreadsHost`: 25
 - `numThreeAncDisp`: 0.0470
 - `numThreeAncGap`: 0.116
 - `numThreeAncGapMedian`: 0.108

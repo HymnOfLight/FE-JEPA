@@ -1,0 +1,14 @@
+HEAD 92dfc9381555ea40bc3f83fc015d51963febfdf2
+describe prereg-w9
+MKL_NUM_THREADS=25
+OMP_NUM_THREADS=25
+NVIDIA GeForce RTX 5090, 580.95.05, 32607 MiB
+CPU(s):                          208
+Model name:                      Intel(R) Xeon(R) Platinum 8470Q
+Thread(s) per core:              2
+Socket(s):                       2
+nproc 25
+2500000 100000
+98784247808
+               total        used        free      shared  buff/cache   available
+Mem:             754         220         262           4         271         524

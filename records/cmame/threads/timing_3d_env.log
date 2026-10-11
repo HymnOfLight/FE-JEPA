@@ -1,0 +1,13 @@
+[timing] val 1/8 dof 12798 | surrogate 0.0377 s (warm 0.0375) | direct 0.9513 s | cg 1.5221 s | 5 s
+[timing] val 2/8 dof 16185 | surrogate 0.0563 s (warm 0.0559) | direct 1.5603 s | cg 2.2517 s | 9 s
+[timing] val 3/8 dof 15807 | surrogate 0.0560 s (warm 0.0556) | direct 1.9638 s | cg 1.9273 s | 14 s
+[timing] val 4/8 dof 14667 | surrogate 0.0488 s (warm 0.0484) | direct 1.2715 s | cg 1.8991 s | 17 s
+[timing] val 5/8 dof 11565 | surrogate 0.0340 s (warm 0.0332) | direct 1.2118 s | cg 1.1574 s | 20 s
+[timing] val 6/8 dof 10167 | surrogate 0.0263 s (warm 0.0257) | direct 0.7872 s | cg 0.9401 s | 25 s
+[timing] val 7/8 dof 16644 | surrogate 0.0580 s (warm 0.0574) | direct 1.4816 s | cg 2.6685 s | 30 s
+[timing] val 8/8 dof 10197 | surrogate 0.0257 s (warm 0.0255) | direct 0.5816 s | cg 1.2288 s | 33 s
+{"set": "val", "n": 8, "surrogate_cold_s": 0.043251363560557365, "surrogate_warm_s": 0.04294152371585369, "direct_s": 1.2416638266295195, "cg_s": 1.7106118947267532, "disp_rel_l2": 0.024842991685991012, "energy_gap_rel": 0.007830892440477322, "direct_label_max_rel_dev": 0.0, "cg_label_max_rel_dev": 3.0984562827954167e-12}
+[timing] fine 1/2 dof 75333 | surrogate 0.9943 s (warm 0.9958) | direct 48.7559 s | cg 19.3361 s | 73 s
+[timing] fine 2/2 dof 118122 | surrogate 2.3795 s (warm 2.3832) | direct 145.9501 s | cg 47.8041 s | 278 s
+{"set": "fine", "n": 2, "surrogate_cold_s": 1.686911216005683, "surrogate_warm_s": 1.689487892203033, "direct_s": 97.35299939662218, "cg_s": 33.57009037397802, "disp_rel_l2": 0.8302988624870797, "energy_gap_rel": 3.416102625290212, "direct_label_max_rel_dev": 0.0, "cg_label_max_rel_dev": 8.415408607377964e-13}
+{"check_against_report": {"checked": true, "n": 8, "disp_rel_l2_max_rel_dev": 0.0, "energy_gap_rel_max_rel_dev": 0.0}}

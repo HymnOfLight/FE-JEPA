@@ -1100,3 +1100,63 @@ generator, and no record, configuration, pre-registration or source file changed
   new wording; `test_manuscript_compiles` also builds the graphical abstract and
   checks its 2.5:1 page. No test added; the runbook's count stands.
   Suite 573.
+
+## Stage 10d (11 Oct 2026) -- the cost table; the abstract names the three roles
+
+- Abstract: the sentence on the metric and the detector becomes two. "The
+  identity gives the energy three roles: training objective, metric and
+  failure detector. Without reference solutions, the energy ranks predictions
+  of one load case by their stiffness-norm error, and its sign flags
+  predictions worse than the zero field." The list is three bare noun
+  phrases, as in the title, with "and" before the last and no serial comma;
+  the comma before "and" in the second sentence joins two independent
+  clauses; "without reference solutions" governs both roles that need none;
+  the error is named, since "this error" stood a sentence away from its noun.
+  244 words, no digits.
+- Section 8.4: the pending box is replaced by Table 8 (`table_cost.tex`) and
+  a paragraph. The table: on the first 32 validation instances of each
+  comparison and the first 8 fine-mesh instances of the 3D one, with the
+  label-free transformer of seed 0, the medians of the surrogate's first and
+  repeated call against the sparse direct solve (SuperLU) and conjugate
+  gradients from the zero field, from the prediction, and stopped at the
+  prediction's accuracy (an oracle stop, so a lower bound) with and without
+  c*; the iterations per load case; the surrogate's accuracy with and without
+  c*, and the matched CG's displacement error. Its notes give the instances,
+  the hardware and settings, the fine mesh's failures (three load cases with
+  a relative energy gap above 1, matched with no iteration) and the threads.
+  The paragraph quotes the ratios as medians of per-instance ratios, the
+  warm start's change of iterations in both directions with the caveat of
+  Section 8.3, the threads in three dimensions (so the CG times may be
+  overstated), and why the times are not read as a speed advantage (GPU
+  against CPU, neither solver the one of choice for these symmetric positive
+  definite systems, the matched ratio falling on the finer mesh).
+- The introduction's "at the sizes studied here, sparse direct and iterative
+  solvers are fast" now reads "conjugate gradients reached the surrogate's
+  accuracy within a few times its inference time (Section 8.4)"; the
+  discussion and the conclusion add that the predictions of Table 8 did not
+  shorten conjugate gradients to $10^{-10}$ in two dimensions or three.
+- `records/cmame/threads/`: RUNBOOK_W9 Sec. 4's return of 11 October 2026,
+  byte for byte (the files wp9-pool commits as `records/wp9/threads/`), with
+  a README section. It ran on another host (a Xeon Platinum 8470Q, 25
+  threads) than the cost table (a Xeon Gold 6459C, 16).
+- Generator: `cost_material` computes every cell from the per-instance records
+  (refusing a record with an unsolved, fallen-back or unmatched solve, or a
+  timed model that does not reproduce its report), the fine mesh's failures,
+  and the thread readings in 3D and 2D; macros numCost... and numThreads....
+  Appendix C no longer excepts a pending cost table and names the timings
+  among the generator's inputs.
+- An independent review: one blocking finding (the thread sentence had no
+  scope; the 2D thread readings, unread, showed one thread faster), five
+  important (per-instance ratios not said; "exact solves"; what the first
+  call includes; the timing host's BLAS threads never read; the fine mesh's
+  failures hidden by medians; no reason given for claiming no speed
+  advantage) and minor ones (the warm-start wording, rounding of node
+  medians, the table's scaling, an untested row, the 3D warm-start null
+  result missing from the discussion); all addressed. The table now sets
+  unscaled, and its float fits the page.
+- Tests: `test_the_cost_table_follows_from_the_timing_records` recomputes
+  every cell, ratio, failure count and thread reading with numpy from the
+  per-instance records and checks the timing script's own summary medians
+  against them; the new table in TEXT. RUNBOOK_CMAME: the suite count in
+  A0c, B1c and D0c reads 572 passed, 2 deselected.
+  Suite 574.

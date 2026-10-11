@@ -1,0 +1,30 @@
+{
+ "env": {
+  "OMP_NUM_THREADS": "1",
+  "MKL_NUM_THREADS": "1",
+  "OPENBLAS_NUM_THREADS": "1",
+  "GOTO_NUM_THREADS": null
+ },
+ "affinity": 208,
+ "os_cpu_count": 208,
+ "numpy": "2.4.6",
+ "scipy": "1.18.0",
+ "pools": [
+  {
+   "kind": "openblas",
+   "library": "libscipy_openblas-5f890258.so",
+   "path": "/root/miniconda3/lib/python3.12/site-packages/scipy.libs/libscipy_openblas-5f890258.so",
+   "query": "scipy_openblas_get_num_threads",
+   "num_threads": 1
+  },
+  {
+   "kind": "openblas",
+   "library": "libscipy_openblas64_-32a4b2a6.so",
+   "path": "/root/miniconda3/lib/python3.12/site-packages/numpy.libs/libscipy_openblas64_-32a4b2a6.so",
+   "query": "scipy_openblas_get_num_threads64_",
+   "num_threads": 1
+  }
+ ],
+ "torch": "2.12.1+cu130",
+ "torch_threads": 1
+}

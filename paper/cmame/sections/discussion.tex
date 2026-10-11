@@ -80,7 +80,8 @@ which design decisions usually depend.
 
 \paragraph{Warm starts}
 The label-free prediction did not shorten conjugate gradients to a relative residual of
-\numKfiveTol{} in two dimensions (\cref{sec:cost:warm}), whereas the pretrain finite element
+\numKfiveTol{} in two dimensions (\cref{sec:cost:warm}), nor to \numCostCgTol{} in two or
+three dimensions (\cref{tab:cost}), whereas the pretrain finite element
 method needed up to about nine times fewer conjugate-gradient iterations than a zero start
 at a tolerance of $10^{-3}$ \cite{Wang2026PretrainFEM}. In its pressure-vessel follow-up the
 saving of conjugate gradients fell from about three times at a relative residual of

@@ -55,11 +55,32 @@ trained for half the usual number of epochs, and one solver without precondition
 
 \subsection{Inference and solving}\label{sec:cost:inference}
 
-\pending{A cost table: on the training machine and on the same validation and fine-mesh
-instances, the time of surrogate inference (first call and repeated calls) against a
-sparse direct solve, conjugate gradients from zero, conjugate gradients from the
-prediction, and conjugate gradients stopped once the energy error of the iterate reaches
-that of the prediction, with and without the rescaling of \cref{prop:amp}, together with
-the surrogate's accuracy on those instances. The last two use the reference solution to
-decide when to stop, so they give a lower bound on the time conjugate gradients need to
-match the surrogate.}
+\input{generated/table_cost}
+
+\Cref{tab:cost} times the label-free transformer's inference against solves of the same
+systems, on the same instances, with the sparse direct solver that produced the labels and
+with conjugate gradients; the network ran on the GPU and the solvers on the CPU of the same
+machine, and assembly is excluded from both. In two dimensions the direct solve took
+\numCostTwoDirectRatio{} times as long as the surrogate's first call, as the median over the
+instances of the ratio of the two times, and its solution is exact. In three dimensions this
+median ratio was \numCostThreeValDirectRatio{} on the validation instances and
+\numCostThreeFineDirectRatio{} on the fine-mesh instances, where the surrogate's median
+relative energy gap was \numCostThreeFineGap{} against \numCostThreeValGap{} on the in-band
+validation instances. Conjugate gradients from the zero field, stopped at the first iterate
+as accurate as the prediction in the stiffness norm, took a median of
+\numCostThreeValMatchRatio{} times the surrogate's first call on the three-dimensional
+validation instances and \numCostThreeFineMatchRatio{} times on the fine-mesh ones, again
+per instance; this stop reads the reference solution, so a practical run would take at
+least as long. Started from the prediction instead of the zero field, conjugate gradients to
+a relative residual of \numCostCgTol{} needed between \numCostWarmMore{} more and
+\numCostWarmFewer{} fewer iterations (medians per set), consistent with
+\cref{cor:warm,rem:residual}; as in \cref{sec:cost:warm}, the initial residuals were not
+recorded. The solvers ran with \numCostThreads{} threads. On a second host, in three
+dimensions, the direct solve took the same time with one thread, and conjugate gradients
+\numThreadsCgGainMin{} to \numThreadsCgGainMax{} less, so the conjugate-gradient times here
+may be overstated (\cref{tab:cost}). We do not read these times as a speed advantage of the
+surrogate: the network ran on a GPU and the solvers on a CPU, neither the general sparse LU
+factorisation of SuperLU nor unpreconditioned conjugate gradients is the solver of choice
+for these symmetric positive definite systems, and the ratio of the matched solve to the
+surrogate fell from \numCostThreeValMatchRatio{} to \numCostThreeFineMatchRatio{} on the
+finer mesh (\cref{sec:intro}).

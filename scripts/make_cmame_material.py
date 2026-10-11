@@ -22,7 +22,11 @@ Inputs (their SHA-256 values are written to sources.json):
   (scripts/cm2d_spectra.py; post hoc);
 * records/cmame/timing/fields/ -- the per-load energies, error diagnostics and
   field figures of the three-dimensional networks (scripts/export_fields.py;
-  post hoc).
+  post hoc);
+* records/cmame/timing/timing_2d.json, timing_3d.json, machine.txt -- the
+  surrogate's inference against exact solves (RUNBOOK_CMAME Sec. A);
+* records/cmame/threads/ -- the threads of those solvers, timed again on
+  another host (RUNBOOK_W9 Sec. 4).
 
 Outputs (paper/cmame/generated/):
 
@@ -33,6 +37,7 @@ Outputs (paper/cmame/generated/):
 * table_transfer.tex -- the finer three-dimensional mesh, zero-shot and few-shot;
 * table_criteria.tex -- every pre-registered criterion with its outcome;
   table_cm2d.tex -- CM2D's comparisons with the readings required beside them;
+* table_cost.tex -- the surrogate's inference against exact solves (Section 8.4);
 * table_amplitude.tex, table_remesh.tex, table_e1.tex, table_e2.tex -- the
   wp8 tables' rows (shared code) with this manuscript's captions;
 * numbers.tex -- one macro per number quoted in the text;
@@ -84,6 +89,8 @@ RCM = ROOT / "records" / "cmame" / "cm2d" / "return" / "report.json"
 VCM = ROOT / "records" / "cmame" / "cm2d" / "verdict.json"
 SPEC = ROOT / "records" / "cmame" / "spectra" / "export"
 FLD = ROOT / "records" / "cmame" / "timing" / "fields"
+TIM = ROOT / "records" / "cmame" / "timing"
+THR = ROOT / "records" / "cmame" / "threads"
 MINUS = "−"
 WORDS = ("zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
          "ten")
@@ -1925,6 +1932,198 @@ def timing_numbers(N: Numbers, e2: dict, used: dict) -> None:
     N.put("numEtwoTransformerFineStep", f"{t_fi / 1000:.1f}")
 
 
+# ---------------------------------------------------------------- cost (Section 8.4)
+COST_SOLVERS = ("direct", "cg", "cg_warm", "cg_match", "cg_match_cstar")
+COST_SETS = (("2D", "timing_2d.json", "val"), ("3D", "timing_3d.json", "val"),
+             ("3D, fine mesh", "timing_3d.json", "fine"))
+COST_TAG = {"2D": "Two", "3D": "ThreeVal", "3D, fine mesh": "ThreeFine"}
+
+
+def secs(x: float) -> str:
+    """A wall time as the cost table writes it."""
+    if x < 0.01:
+        return f"{x * 1e3:.1f} ms"
+    if x < 1:
+        return f"{x * 1e3:.0f} ms"
+    if x < 10:
+        return f"{x:.2f} s"
+    return f"{x:.1f} s" if x < 100 else f"{x:.0f} s"
+
+
+def _med(rows: list, key: str) -> float:
+    return statistics.median(float(r[key]) for r in rows)
+
+
+def _med_loads(rows: list, key: str) -> float:
+    """The median over every load case of the set."""
+    return statistics.median(float(x) for r in rows for x in r[key])
+
+
+def cost_material(N: Numbers, used: dict) -> tuple:
+    """The cost table and its numbers, from the per-instance records of RUNBOOK_CMAME
+    Sec. A (medians over the instances, computed here) and the thread readings of
+    RUNBOOK_W9 Sec. 4. Refuses a record in which a solver left an instance unsolved,
+    fell back to the direct solve or missed its target, or whose timed model does not
+    reproduce its report."""
+    recs = {f: load(TIM / f, used) for f in ("timing_2d.json", "timing_3d.json")}
+    mach = (TIM / "machine.txt").read_bytes()
+    used[_rel(TIM / "machine.txt")] = hashlib.sha256(mach).hexdigest()
+    mtxt = mach.decode("utf-8")
+    cpu = re.search(r"^Model name:\s+(?:Intel\(R\) )?(.+)$", mtxt, re.M).group(1)
+    nproc = int(re.search(r"^nproc (\d+)$", mtxt, re.M).group(1))
+    cols, shared = {}, None
+    for name, f, s in COST_SETS:
+        rec = recs[f]
+        if rec["skipped_families"] or rec["settings"]["solvers"] != list(COST_SOLVERS):
+            raise SystemExit(f"{f}: not the cost table's solvers, or a family was skipped")
+        chk = rec["check_against_report"]
+        if not chk["checked"] or max(chk["disp_rel_l2_max_rel_dev"],
+                                     chk["energy_gap_rel_max_rel_dev"]) > 1e-9:
+            raise SystemExit(f"{f}: the timed model does not reproduce its report")
+        rows = rec["results"][s]["per_instance"]
+        for r in rows:
+            if (r["cg_fallback"] or r["cg_warm_fallback"] or r["cg_match_unreached"]
+                    or r["cg_match_cstar_unreached"] or r["cg_match_iters_mismatch"]
+                    or r["cg_match_cstar_iters_mismatch"]
+                    or any(r.get(f"{k}_s") is None for k in COST_SOLVERS)):
+                raise SystemExit(f"{f} {s} {r['file']}: a solve is missing, fell back or "
+                                 "missed its target")
+        mc = rec["machine"]
+        here = (mc["gpu"], mc["env_threads"]["OMP_NUM_THREADS"], mc["torch_threads"],
+                rec["settings"]["cg_tol"])
+        if shared not in (None, here):
+            raise SystemExit("the two timing records ran in different settings")
+        shared = here
+        loads = {int(r["n_loads"]) for r in rows}
+        if len(loads) != 1:
+            raise SystemExit(f"{f} {s}: instances with different numbers of load cases")
+        cols[name] = {"n": len(rows), "loads": loads.pop(), "rows": rows,
+                      **{k: _med(rows, k) for k in (
+                          "n_nodes", "surrogate_cold_s", "surrogate_warm_s", "direct_s", "cg_s",
+                          "cg_warm_s", "cg_match_s", "cg_match_cstar_s", "energy_gap_rel",
+                          "disp_rel_l2", "energy_gap_rel_cstar", "disp_rel_l2_cstar",
+                          "direct_over_surrogate_cold", "cg_match_over_surrogate_cold",
+                          "cg_match_cstar_over_surrogate_cold", "cg_warm_iteration_saving")},
+                      **{f"{k}_per_load": _med_loads(rows, f"{k}_iters")
+                         for k in ("cg", "cg_warm", "cg_match")},
+                      "cg_match_disp_per_load": _med_loads(rows, "cg_match_disp_at_match"),
+                      "worse_loads": sorted(float(x) for r in rows for x in r["cg_match_targets"]
+                                            if float(x) > 1),
+                      "worse_instances": sum(1 for r in rows if float(r["energy_gap_rel"]) > 1),
+                      "settings": rec["settings"]}
+    gpu, env_threads, torch_threads, tol = shared
+    if str(env_threads) != str(torch_threads) or int(env_threads) != nproc:
+        raise SystemExit("the timing's thread settings are not the machine's allotment")
+    head = ["", *(n for n, _, _ in COST_SETS)]
+    C = [cols[n] for n, _, _ in COST_SETS]
+    rows = [["Instances (load cases)", *(f"{c['n']} ({c['n'] * c['loads']})" for c in C)],
+            ["Nodes, median", *(f"{round(c['n_nodes']):,}" for c in C)],
+            ["Surrogate, first call", *(secs(c["surrogate_cold_s"]) for c in C)],
+            ["Surrogate, repeated call", *(secs(c["surrogate_warm_s"]) for c in C)],
+            ["Sparse direct solve", *(secs(c["direct_s"]) for c in C)],
+            ["CG from the zero field", *(secs(c["cg_s"]) for c in C)],
+            ["CG from the prediction", *(secs(c["cg_warm_s"]) for c in C)],
+            ["CG to the prediction's accuracy", *(secs(c["cg_match_s"]) for c in C)],
+            ["the same, after rescaling by c*", *(secs(c["cg_match_cstar_s"]) for c in C)],
+            ["CG iterations per load case",
+             *(f"{c['cg_per_load']:,.0f} / {c['cg_match_per_load']:,.0f}" for c in C)],
+            ["Surrogate's relative energy gap", *(num(c["energy_gap_rel"], 2) for c in C)],
+            ["Surrogate's displacement error", *(num(c["disp_rel_l2"], 2) for c in C)],
+            ["Energy gap after rescaling by c*",
+             *(num(c["energy_gap_rel_cstar"], 2) for c in C)],
+            ["Displacement error after rescaling by c*",
+             *(num(c["disp_rel_l2_cstar"], 2) for c in C)],
+            ["CG's displacement error at that accuracy",
+             *(num(c["cg_match_disp_per_load"], 2) for c in C)]]
+    # the threads of the solvers, timed again on another host (RUNBOOK_W9 Sec. 4)
+    thr2 = {}
+    for k in ("env", "one"):
+        rec = load(THR / f"timing_2d_{k}.json", used)
+        thr2[k] = {q: _med(rec["results"]["val"]["per_instance"], q) for q in ("direct_s", "cg_s")}
+        n_2d_thr = len(rec["results"]["val"]["per_instance"])
+    gain2 = {q: 1 - thr2["one"][q] / thr2["env"][q] for q in ("direct_s", "cg_s")}
+    thr, thr_n = {}, set()
+    for k in ("env", "one", "env2"):
+        rec = load(THR / f"timing_3d_{k}.json", used)
+        thr[k] = {s: {q: _med(rec["results"][s]["per_instance"], q)
+                      for q in ("direct_s", "cg_s")} for s in ("val", "fine")}
+        thr_n.add(tuple(len(rec["results"][s]["per_instance"]) for s in ("val", "fine")))
+    if len(thr_n) != 1:
+        raise SystemExit("records/cmame/threads: the three timings timed different sets")
+    n_val_thr, n_fine_thr = thr_n.pop()
+    pools = {}
+    for k in ("env", "one"):
+        b = load(THR / f"blas_{k}.log", used)
+        n_thr = {int(pl["num_threads"]) for pl in b["pools"]}
+        if len(n_thr) != 1 or len(b["pools"]) != 2:
+            raise SystemExit(f"blas_{k}.log: not two pools of one thread count")
+        pools[k] = n_thr.pop()
+    tmach = (THR / "machine.txt").read_bytes()
+    used[_rel(THR / "machine.txt")] = hashlib.sha256(tmach).hexdigest()
+    tcpu = re.search(r"^Model name:\s+(?:Intel\(R\) )?(.+)$", tmach.decode("utf-8"),
+                     re.M).group(1)
+    direct_dev = max(abs(thr["one"][s]["direct_s"] / thr["env"][s]["direct_s"] - 1)
+                     for s in ("val", "fine"))
+    cg_gain = [1 - thr["one"][s]["cg_s"] / thr["env"][s]["cg_s"] for s in ("val", "fine")]
+    drift = max(abs(thr["env2"][s][q] / thr["env"][s][q] - 1) for s in ("val", "fine")
+                for q in ("direct_s", "cg_s"))
+    if not (direct_dev < 0.03 and min(cg_gain) > 0 and drift < 0.03):
+        raise SystemExit("records/cmame/threads: the readings are not the text's")
+    cpu_tex = cpu.replace("(R)", "").replace("  ", " ")
+    tcpu_tex = tcpu.replace("(R)", "").replace("  ", " ")
+    fine = cols["3D, fine mesh"]
+    st = cols["3D"]["settings"]
+    worse = and_list([num(x, 3) for x in fine["worse_loads"]])
+    notes = [
+        "Medians over the instances (the iterations, from the zero field / to the "
+        "prediction's accuracy, and CG's displacement error: over the load cases). 2D: the "
+        f"first {cols['2D']['n']} validation instances of the two-dimensional comparison, with "
+        "its label-free transformer of seed 0; 3D: the first "
+        f"{cols['3D']['n']} validation and the first {fine['n']} fine-mesh instances of the "
+        "three-dimensional comparison, with its label-free transformer of seed 0. Times are "
+        "wall times per instance, for all its load cases together; assembly is excluded from "
+        "both sides (the surrogate needs no stiffness matrix).",
+        f"The surrogate ran on one {gpu} with TF32; both its rows include preparing the "
+        "inputs and copying the prediction back, the first call after an untimed warm-up on "
+        f"{st['warmup']} validation instances, the repeated one as the median of "
+        f"{st['repeats'] - 1} further passes. The solvers ran on the CPU of the same machine "
+        f"({cpu_tex}, {nproc} CPUs, the thread environment set to {env_threads}): SuperLU, "
+        "which produced the labels, and unpreconditioned conjugate gradients (CG) to a "
+        "relative residual of $10^{-10}$, from the zero field or from the prediction. CG to "
+        "the prediction's accuracy starts from the zero field and stops, on each load case, "
+        "at the first iterate whose relative energy error is at most the prediction's: a stop "
+        "that reads the reference solution, so a lower bound.",
+        f"On the fine mesh, {words(len(fine['worse_loads']))} of the {fine['n'] * fine['loads']} "
+        f"load cases had a relative energy gap above 1 ({worse}) and "
+        f"{words(fine['worse_instances'])} of the {words(fine['n'])} instances a mean above 1; "
+        "CG matches such a load case with no iteration.",
+        f"Threads, on a second host ({tcpu_tex}, {pools['env']} threads), first {n_val_thr} "
+        f"validation and {n_fine_thr} fine-mesh 3D instances: with one thread, the direct "
+        f"solve took the same time (within {pct(direct_dev)}) and CG "
+        f"{pct(min(cg_gain), 0)}–{pct(max(cg_gain), 0)} less; a repeat with {pools['env']} "
+        f"threads agreed within {pct(drift)}. In 2D ({n_2d_thr} instances, no repeat), one "
+        f"thread was {pct(gain2['direct_s'])} faster for the direct solve and "
+        f"{pct(gain2['cg_s'])} for CG."]
+    for name, _, _ in COST_SETS:
+        c, tag = cols[name], COST_TAG[name]
+        N.put(f"numCost{tag}DirectRatio", f"{c['direct_over_surrogate_cold']:.0f}"
+              if c["direct_over_surrogate_cold"] >= 10 else f"{c['direct_over_surrogate_cold']:.1f}")
+        N.put(f"numCost{tag}MatchRatio", f"{c['cg_match_over_surrogate_cold']:.1f}")
+        N.put(f"numCost{tag}Gap", num(c["energy_gap_rel"], 2))
+    saving = [cols[n]["cg_warm_iteration_saving"] for n, _, _ in COST_SETS]
+    if not (min(saving) < 0 < max(saving)):
+        raise SystemExit("the warm start's median change of iterations is not of both signs")
+    N.put("numCostWarmMore", pct(-min(saving)))
+    N.put("numCostWarmFewer", pct(max(saving)))
+    N.put("numCostCgTol", "$10^{-10}$" if tol == 1e-10 else _sci(tol, 1))
+    N.put("numThreadsHost", str(pools["env"]))
+    N.put("numThreadsDirectDev", pct(direct_dev))
+    N.put("numThreadsCgGainMin", pct(min(cg_gain), 0))
+    N.put("numThreadsCgGainMax", pct(max(cg_gain), 0))
+    N.put("numCostThreads", str(env_threads))
+    return head, rows, notes
+
+
 def _params_transformer(f: int, sd: int, D: int = 256, depth: int = 8) -> tuple:
     """Parameters of models/fejepa.py: (encoder + decoder, auxiliary heads), by formula
     (checked against the torch modules in tests/test_cmame_material.py)."""
@@ -2490,6 +2689,8 @@ CAP_REM = ("Post hoc, three-dimensional: the energy-optimal amplitude c_b of the
 CAP_E2 = ("Token bottleneck against the label-free transformer, which has one token per "
           "node, both trained on the energy alone with the same corpus, split, seeds and "
           "schedule (three dimensions).")
+CAP_COST = ("Time of the label-free transformer's inference against solves of the same "
+            "systems, on the same instances, with the surrogate's accuracy there.")
 CAP_E1 = ("Isotropic Gaussian regularisation of the latent vectors added to the label-free "
           r"objective (two dimensions, with the later code of \cref{sec:methods:networks}).")
 
@@ -2522,6 +2723,7 @@ def build() -> dict:
     field_numbers(N, fj, ez)
     figure_numbers(N, figs)
     timing_numbers(N, e2, used)
+    h_cost, r_cost, n_cost = cost_material(N, used)
     t = ampw["archs"]["transformer"]
     lcs = [float(x) for x in t["lc"]]
     fine_lc = float(e2["corpus"]["lc_fine"])
@@ -2648,6 +2850,8 @@ def build() -> dict:
                               relabel("e2", h_e2, r_e2, W.e2_notes(e2))[2]),
         "table_e1.tex": table(*relabel("e1", h_e1, r_e1, W.e1_notes(e1, probe))[:2], CAP_E1,
                               "tab:e1", relabel("e1", h_e1, r_e1, W.e1_notes(e1, probe))[2]),
+        "table_cost.tex": table(h_cost, r_cost, CAP_COST, "tab:cost", n_cost, align="lccc",
+                                rules=(2, 4, 9, 10)),
         "numbers.tex": numbers_tex(N),
         "hashes.tex": hashes_tex(used),
     }
@@ -2660,6 +2864,7 @@ def build() -> dict:
         + "\n" + md(hle, rle, CAP_LE, nle) + "\n" + md(hlj, rlj, CAP_LEJULY, nlj) + "\n"
         + md(htr, rtr, CAP_TR, ntr) + "\n"
         + md(hcr, rcr, CAP_CR, ncr) + "\n" + md(hcm, rhy, CAP_CM2D, ncm2)
+        + "\n" + md(h_cost, r_cost, CAP_COST, n_cost)
         + "\n## In-text numbers\n\n"
         + "\n".join(f"- `{k}`: {N[k]}" for k in sorted(N)) + "\n")
     files["sources.json"] = json.dumps({"generator": "scripts/make_cmame_material.py",

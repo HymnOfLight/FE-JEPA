@@ -112,7 +112,8 @@ validation sets took a further \numThreeEvalSolves{}.
 \end{enumerate}
 
 We do not claim that a surrogate is faster than solving a linear elastostatic problem; at
-the sizes studied here, sparse direct and iterative solvers are fast. Linear elastostatics
+the sizes studied here, conjugate gradients reached the surrogate's accuracy within a few
+times its inference time (\cref{sec:cost:inference}). Linear elastostatics
 is the test bed on which the exactness of the objective can be proved and the comparison
 with supervision kept narrow: the same network, the same instances and the same schedule,
 with only the loss and its learning rate differing. The interest of label-free training lies
