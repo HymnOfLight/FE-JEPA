@@ -1939,6 +1939,12 @@ COST_SETS = (("2D", "timing_2d.json", "val"), ("3D", "timing_3d.json", "val"),
 COST_TAG = {"2D": "Two", "3D": "ThreeVal", "3D, fine mesh": "ThreeFine"}
 
 
+def _round2(x: float) -> int:
+    """x to two significant figures, as an integer."""
+    e = int(floor(log10(abs(x)))) - 1
+    return int(round(x / 10 ** e) * 10 ** e)
+
+
 def secs(x: float) -> str:
     """A wall time as the cost table writes it."""
     if x < 0.01:
@@ -2116,6 +2122,18 @@ def cost_material(N: Numbers, used: dict) -> tuple:
     N.put("numCostWarmMore", pct(-min(saving)))
     N.put("numCostWarmFewer", pct(max(saving)))
     N.put("numCostCgTol", "$10^{-10}$" if tol == 1e-10 else _sci(tol, 1))
+    # the break-even of Section 8.4: the labels of the 3D training instances at the median
+    # direct solve, and the predictions after which one seed's training is recovered
+    c3 = cols["3D"]
+    hours = float(N["numTimeThreeSeed"])
+    n_train = int(N["numThreeTrainSolves"].replace(",", "")) // c3["loads"]
+    save_direct = c3["direct_s"] - c3["surrogate_cold_s"]
+    save_match = c3["cg_match_s"] - c3["surrogate_cold_s"]
+    if not (save_direct > 0 and save_match > 0):
+        raise SystemExit("the surrogate is not faster than the solves it is set against")
+    N.put("numCostLabelMin", f"{n_train * c3['direct_s'] / 60:.0f}")
+    N.put("numCostBreakEvenDirect", f"{_round2(hours * 3600 / save_direct):,}")
+    N.put("numCostBreakEvenMatch", f"{_round2(hours * 3600 / save_match):,}")
     N.put("numThreadsHost", str(pools["env"]))
     N.put("numThreadsDirectDev", pct(direct_dev))
     N.put("numThreadsCgGainMin", pct(min(cg_gain), 0))

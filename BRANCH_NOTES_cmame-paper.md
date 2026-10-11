@@ -1366,3 +1366,30 @@ generator, and no record, configuration, pre-registration or source file changed
   RUNBOOK_CMAME: the suite count in A0c, B1c and D0c reads 581 passed, 2
   deselected.
   Suite 583.
+
+## Stage 10g (11 Oct 2026) -- the break-even of label-free training
+
+- Section 8.4 ends with a paragraph on what label-free training saves. At the
+  median times of Table 8, the 4,096 solves that label the 1,024 training
+  instances in three dimensions take about 15 min of the direct solver,
+  against 27.3 h of training per seed, which the supervised transformer needs
+  as well: for these problems label-free training saves those minutes, not
+  the cost of training. Against the direct solve, one seed's training is
+  recovered after about 110,000 predicted instances, and after about 590,000
+  against conjugate gradients stopped at the surrogate's accuracy (an upper
+  bound, since that stop reads the reference solution), on the hardware of
+  Table 8. The abstract's first sentence now says that the cost of a solve per
+  training example dominates where solves are expensive, instead of calling it
+  the cost the surrogate should remove. The paragraph points to the
+  Outlook, where solves are expensive enough for label-free training to pay
+  for itself.
+- The numbers are generated (`numCostLabelMin`, `numCostBreakEvenDirect`,
+  `numCostBreakEvenMatch`, rounded to two significant figures) by
+  `cost_material` from the 3D validation medians of the timing record, the
+  training solves and the per-seed training time; the generator stops if the
+  surrogate is not faster than either solve.
+- Tests: `tests/test_cmame_references.py` recomputes the three numbers from
+  the timing record and the deviation ledger, independently of the
+  generator, and quotes the paragraph. RUNBOOK_CMAME: the suite count in A0c,
+  B1c and D0c reads 582 passed, 2 deselected.
+  Suite 584.

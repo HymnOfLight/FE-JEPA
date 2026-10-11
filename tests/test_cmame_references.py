@@ -244,3 +244,34 @@ def test_the_text_states_the_published_versions_and_credits_the_bound():
             ("discussion.tex", r"variational integrators \cite{MarsdenWest2001} write each"),
             ("transfer.tex", "on the training mesh")):
         assert gone.lower() not in s[name].lower(), (name, gone)
+
+
+def test_the_break_even_of_section_8_is_recomputed_from_the_records():
+    """Section 8.4: the labels of the 3D training instances at the median direct solve, and
+    the predictions after which one seed's training is recovered, recomputed here from the
+    timing record and the deviation ledger, independently of the generator."""
+    import json
+    import statistics
+    rows = json.loads((ROOT / "records" / "cmame" / "timing" / "timing_3d.json").read_text(
+        encoding="utf-8"))["results"]["val"]["per_instance"]
+    med = {k: statistics.median(float(r[k]) for r in rows)
+           for k in ("direct_s", "surrogate_cold_s", "cg_match_s")}
+    ledger = (ROOT / "DEVIATIONS_PHASE2.md").read_text(encoding="utf-8")
+    hours = float(re.search(r"AR 3 x ([0-9.]+) h", ledger).group(1))
+    numbers = (PAPER / "generated" / "numbers.tex").read_text(encoding="utf-8")
+    macro = lambda k: re.search(rf"\\newcommand{{\\{k}}}{{([^}}]*)}}", numbers).group(1)  # noqa
+    assert int(macro("numCostLabelMin")) == round(1024 * med["direct_s"] / 60)
+    for k, solve in (("numCostBreakEvenDirect", "direct_s"), ("numCostBreakEvenMatch",
+                                                               "cg_match_s")):
+        n = round(hours, 1) * 3600 / (med[solve] - med["surrogate_cold_s"])
+        assert abs(int(macro(k).replace(",", "")) / n - 1) < 0.05, (k, n)
+    text = _sections()["cost.tex"] + " " + _sections()["abstract.tex"]
+    for s in (r"take about \numCostLabelMin{} min of the direct solver, against "
+              r"\numTimeThreeSeed{} h of training per seed",
+              r"the training of one seed is recovered after about \numCostBreakEvenDirect{} "
+              r"predicted instances, and after about \numCostBreakEvenMatch{} against conjugate "
+              r"gradients stopped at the surrogate's accuracy, an upper bound since that stop reads the "
+              r"reference solution",
+              r"needs a solve per training example, a cost that dominates where solves are "
+              r"expensive."):
+        assert s in text, s

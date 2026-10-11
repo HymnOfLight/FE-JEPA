@@ -287,7 +287,10 @@
 - `numCoarsenLowWiden`: 17.6%
 - `numCondThree`: 0.012
 - `numCondTwo`: 0.022
+- `numCostBreakEvenDirect`: 110,000
+- `numCostBreakEvenMatch`: 590,000
 - `numCostCgTol`: $10^{-10}$
+- `numCostLabelMin`: 15
 - `numCostThreads`: 16
 - `numCostThreeFineDirectRatio`: 51
 - `numCostThreeFineGap`: 0.12

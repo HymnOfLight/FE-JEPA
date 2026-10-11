@@ -84,3 +84,14 @@ factorisation of SuperLU nor unpreconditioned conjugate gradients is the solver 
 for these symmetric positive definite systems, and the ratio of the matched solve to the
 surrogate fell from \numCostThreeValMatchRatio{} to \numCostThreeFineMatchRatio{} on the
 finer mesh (\cref{sec:intro}).
+
+The labels themselves are cheap here. At the median times of \cref{tab:cost}, the
+\numThreeTrainSolves{} solves that label the 1,024 training instances in three dimensions
+take about \numCostLabelMin{} min of the direct solver, against \numTimeThreeSeed{} h of
+training per seed, which the supervised transformer needs as well; for these problems,
+label-free training saves those minutes, not the cost of training. Set against the direct
+solve, the training of one seed is recovered after about \numCostBreakEvenDirect{}
+predicted instances, and after about \numCostBreakEvenMatch{} against conjugate gradients
+stopped at the surrogate's accuracy, an upper bound since that stop reads the reference
+solution, with the hardware of \cref{tab:cost}. Label-free
+training pays for itself where a solve is expensive enough (\cref{sec:discussion}).

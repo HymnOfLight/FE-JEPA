@@ -1,5 +1,5 @@
-Supervised training of a finite-element surrogate needs a solve per training example, the
-cost the surrogate should remove. For linear elastostatics we train on the assembled
+Supervised training of a finite-element surrogate needs a solve per training example, a
+cost that dominates where solves are expensive. For linear elastostatics we train on the assembled
 discrete potential energy instead. Minimising it is exactly supervised regression in the
 stiffness norm, which measures the strain energy of the stress error, yet no example is
 solved. The identity gives the energy three roles: training objective, metric and failure
