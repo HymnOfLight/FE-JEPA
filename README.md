@@ -1,4 +1,10 @@
-# FE-JEPA v2.0
+# label-free-fe-surrogates
+
+This repository was called FE-JEPA until 11 October 2026, when it was transferred from
+the account that created it to Ruifeng Cao's and renamed; links to
+<https://github.com/HymnOfLight/FE-JEPA> lead here. Its commit history and tags are
+unchanged, and the Python package keeps the name `fejepa`, under which the recorded runs
+and the pre-registrations were made. To cite the code, see [`CITATION.cff`](CITATION.cff).
 
 Physics-faithful, label-free FEA surrogates around an exact assembled-energy anchor.
 This package is a ground-up refactor matching the **Experimental Plan v2.0 one-to-one**

@@ -936,10 +936,11 @@ ALLOWED_DECIMALS = {"0.05", "0.5", "1.5", "0.25", "0.38", "0.8", "0.06", "0.16",
                     "1.2", "0.08", "0.0579", "0.0906", "0.0374", "1.8", "2.5"}
 ALLOWED_PERCENT = {"5", "10", "20", "30", "40", "95"}
 # names that contain version numbers, not results: the AI models named in the
-# generative-AI declaration and in Appendix C, and the licences named in the Data
-# availability statement
+# generative-AI declaration and in Appendix C, and the licences and the archive's DOI
+# named in the Data availability statement
 NAMES_WITH_VERSIONS = ("Claude Fable 5.1", "Claude Opus 5.5",
-                       "PolyForm Noncommercial License 1.0.0", "CC BY 4.0")
+                       "PolyForm Noncommercial License 1.0.0", "CC BY 4.0",
+                       "10.5281/zenodo.23298799")
 
 
 def test_the_text_carries_no_hand_typed_result():

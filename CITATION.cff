@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata in this file."
+type: software
+title: "label-free-fe-surrogates"
+authors:
+  - family-names: Cao
+    given-names: Ruifeng
+    affiliation: "School of Engineering, The University of Manchester"
+    orcid: "https://orcid.org/0000-0001-9077-9561"
+repository-code: "https://github.com/RuifengCao/label-free-fe-surrogates"
+license: PolyForm-Noncommercial-1.0.0
+doi: 10.5281/zenodo.23298799
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.23298799
+    description: "Zenodo archive of the version tagged cmame-submission"
+  - type: swh
+    value: "swh:1:snp:79f91af6d07e45a45933743bda38253b49c82bb6"
+    description: "Software Heritage snapshot of the repository as it stood on 11 October 2026, when it moved to this address"

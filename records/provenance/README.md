@@ -40,11 +40,58 @@ compiled on 1 August 2026; the note records their SHA-256 hashes (`b9470e68...` 
 `550cf7c6...`). The tag `provenance-2026-07-14`, created in October 2026, keeps `b365af5`.
 See also the addendum of 10 October 2026 in `PROVENANCE_NOTE.md`.
 
-## The owner account's security log
+## The transfer of 11 October 2026
+
+On 11 October 2026 the repository was transferred from `HymnOfLight`, the account that
+created it, to `RuifengCao` (at about 12:28 UTC), and then renamed from `FE-JEPA` to
+`label-free-fe-surrogates` (before 12:52 UTC). `repository_2026-10-11.json` is the
+repository's record on the hosting service, read at 14:03 UTC that day: it keeps the id
+1299960094, the id of the repository whose creation on 14 July 2026 the security log
+records (below), and gives its creation time to the second. The service keeps the commit
+history and the tags with the repository, and redirects the old addresses,
+`https://github.com/HymnOfLight/FE-JEPA` and `https://github.com/RuifengCao/FE-JEPA`, to
+`https://github.com/RuifengCao/label-free-fe-surrogates`.
+
+`refs_2026-10-11.txt` lists the repository's branches and tags as printed by
+
+    git ls-remote --symref https://github.com/RuifengCao/label-free-fe-surrogates.git
+
+at 13:33 UTC that day: 6 branches, 11 tags (10 of them annotated, with their peeled
+commits) and `HEAD`, which points to `main`. Read with `git ls-remote` from
+`HymnOfLight/FE-JEPA` before the transfer (05:53 and 07:18 UTC), from it and
+`RuifengCao/FE-JEPA` after the transfer (12:28 UTC), from all three addresses after the
+renaming (12:52 UTC) and from the new address at 13:33 UTC, the branches and tags were
+the same each time. At 13:34 UTC the branch `wp10-joint` moved on, so later lists differ.
+
+`github_activity_2026-10-11.json` is the activity record exported again after the
+transfer, at 12:53 UTC that day, with
+
+    gh api -X GET repos/RuifengCao/label-free-fe-surrogates/activity \
+        -f per_page=100 -f direction=asc --paginate
+
+and written as the first export was. It holds 110 events: the 103 events of
+`github_activity_2026-10-10.json`, unchanged and in the same order, followed by 6 pushes
+and 1 branch creation (of `wp10-joint`) between 10 October 2026 at 11:36 UTC and
+11 October 2026 at 05:31 UTC. The export came as one JSON array, which is the file's
+events written without whitespace (`json.dumps(events, separators=(",", ":"))` in
+Python), SHA-256 `f771989fa4077487d6e9d41d9601f0976bdb498665508cb634e440573aaabbab`. An
+export taken from the old address before the transfer, at 05:52 UTC that day, gave the
+same output byte for byte: the transfer left the record as it was.
+
+Software Heritage archived the repository that day through its Save Code Now service,
+from the old address before the transfer and from the new address after it, both before
+13:34 UTC; its archive lists a visit for each address. Both visits gave the snapshot
+`swh:1:snp:79f91af6d07e45a45933743bda38253b49c82bb6`, the snapshot identifier of the
+branches and tags of `refs_2026-10-11.txt` (computed with Software Heritage's library
+`swh.model` 8.4.1, and by `tests/test_repository_transfer.py` from the list itself): the
+archive holds exactly those branches and tags, with the full history behind them.
+
+## The security log of the account that created the repository
 
 `security_log_FE-JEPA_2026-10-10.json` holds the 15 entries that name `FE-JEPA` in the
-security log of the repository's owner account, `HymnOfLight`, as exported by the account
-holder on 10 October 2026 (file `export-HymnOfLight-1791628693.json.gz`, SHA-256
+security log of `HymnOfLight`, the account that created the repository and owned it until
+11 October 2026, as exported by the account holder on 10 October 2026 (file
+`export-HymnOfLight-1791628693.json.gz`, SHA-256
 `980044307e7f171aa4f92cc00658f781370e36cf7e4597d483a57eddc67cd042`; 643 entries, from
 13 April to 10 October 2026). Each entry keeps the fields `@timestamp`, `_document_id`,
 `action`, `actor`, `actor_id`, `created_at`, `operation_type`, `repo`, `repo_id`,
@@ -72,3 +119,6 @@ visibility of none of the account's repositories changed in that period.
 |---|---|
 | `github_activity_2026-10-10.json` | `f78f0071e040bfc56f87132508148df039f57195efae83b671f19ee11f2907bc` |
 | `security_log_FE-JEPA_2026-10-10.json` | `dcb0a879ee700d21897be2e10c2f5585ce85202684d453286d4e6d1607c6bf7f` |
+| `github_activity_2026-10-11.json` | `9755acaf36205b34df1591c0421bcb49dc25c20b1098868b63f2d72f2129e296` |
+| `refs_2026-10-11.txt` | `f6a5cbc9241ee40fb26b32b8415598de35859680dd6c85436ce2753c2bad8ff2` |
+| `repository_2026-10-11.json` | `dfaa23a83a6e51117f7bc27382d6d01fecef2779c4f72329593b00dab90eb2e0` |

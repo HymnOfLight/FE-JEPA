@@ -131,8 +131,8 @@ PRESENT, NAMESAKE = 1299960094, 1268189576
 
 
 def test_the_security_log_entries_support_the_text():
-    """The owner account's security log (its entries naming FE-JEPA, user agents and request
-    identifiers removed): the present repository created public on 14 July 2026 at 03:23:30
+    """The security log of the account that created the repository (its entries naming
+    FE-JEPA, user agents and request identifiers removed): the present repository created public on 14 July 2026 at 03:23:30
     UTC, 13 seconds after its public namesake of 13 June 2026 was deleted; no visibility
     change; and the text and the note say so."""
     sha = hashlib.sha256(SECLOG.read_bytes()).hexdigest()

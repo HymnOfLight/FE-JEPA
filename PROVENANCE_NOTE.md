@@ -2,7 +2,8 @@
 
 Compiled 1 August 2026; terminal-log status finalised 6 August 2026;
 arXiv ID recorded 7 August 2026; addendum on the repository's first
-history 10 October 2026.
+history 10 October 2026; addendum on its transfer and new name
+11 October 2026.
 This note attests the code state, data lineage, and
 artefact fingerprints of the three executed runs of the 2D phase. All SHA-256
 digests below were computed independently from the received archives.
@@ -131,3 +132,20 @@ digests below were computed independently from the received archives.
   03:23 UTC, with no later change of visibility, and that a public
   repository of the same name, created on 13 June 2026, was deleted at
   03:23:17 UTC that day.
+
+## Addendum, 11 October 2026: the repository's transfer and new name
+- On 11 October 2026 the repository was transferred from HymnOfLight, the
+  account that created it, to RuifengCao, and renamed from FE-JEPA to
+  label-free-fe-surrogates. Its id (1299960094), commit history and tags
+  are unchanged, and https://github.com/HymnOfLight/FE-JEPA redirects to
+  https://github.com/RuifengCao/label-free-fe-surrogates.
+- The hosting service's activity record, exported again after the
+  transfer (records/provenance/github_activity_2026-10-11.json), begins
+  with the 103 events of the export of 10 October 2026, unchanged.
+- Software Heritage archived the repository that day, from the old address
+  before the transfer and from the new address after it. Both visits gave
+  the snapshot swh:1:snp:79f91af6d07e45a45933743bda38253b49c82bb6, the
+  snapshot of the branches and tags listed in
+  records/provenance/refs_2026-10-11.txt.
+- The Python package keeps its name, fejepa, under which the runs above
+  were made.

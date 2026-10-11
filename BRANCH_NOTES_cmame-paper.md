@@ -1160,3 +1160,74 @@ generator, and no record, configuration, pre-registration or source file changed
   against them; the new table in TEXT. RUNBOOK_CMAME: the suite count in
   A0c, B1c and D0c reads 572 passed, 2 deselected.
   Suite 574.
+
+## Stage 10e (11 Oct 2026) -- the repository's new address in the manuscript and the records
+
+- The repository was transferred on 11 October 2026 from HymnOfLight, the
+  account that created it, to RuifengCao (about 12:28 UTC), and renamed
+  label-free-fe-surrogates (before 12:52 UTC); the old addresses redirect and
+  the repository keeps its id. `git ls-remote` gave the same 6 branches and
+  11 tags from the old address before the transfer and from all three
+  addresses after it, until 13:34 UTC, when wp10-joint moved on. The activity
+  record exported after the transfer begins with the 103 events of the export
+  of 10 October, unchanged; an export taken before the transfer gave the same
+  output byte for byte. Software Heritage archived the repository from the
+  old address before the transfer and from the new one after it, and both
+  visits gave the snapshot swh:1:snp:79f91af6d07e45a45933743bda38253b49c82bb6.
+- Data availability: the last pending box is replaced. The code,
+  configurations and records are at
+  https://github.com/RuifengCao/label-free-fe-surrogates; the version described
+  is tagged `cmame-submission` and archived at Zenodo,
+  https://doi.org/10.5281/zenodo.23298799; the repository as it stood on
+  11 October 2026, when it moved to its present address, is archived with its
+  full history by Software Heritage as that snapshot (linked). The DOI is
+  reserved: on submission day the tag is made on the submitted commit, the
+  tag's source archive is uploaded to the Zenodo draft and published, the DOI
+  is checked to resolve, and the new address is saved to Software Heritage
+  again; the PDF does not circulate before. The paragraph sets with
+  `\emergencystretch=3em`, which keeps the addresses and the identifier inside
+  the measure.
+- Appendix A: the visibility sentence no longer outruns its evidence: the
+  security log of the account that created the repository, exported on
+  10 October 2026, records no change of its visibility up to that day.
+  Appendix C: the entries of that log, and two sentences on the transfer, the
+  second export and the snapshot.
+- `records/provenance/`: `github_activity_2026-10-11.json` (the record
+  exported after the transfer, 110 events, written as the first export; its
+  compact form is the export as returned), `refs_2026-10-11.txt` (`git
+  ls-remote --symref` of the new address at 13:33 UTC) and
+  `repository_2026-10-11.json` (the repository's id, name, creation time,
+  visibility and owner after the transfer). The README gains a section on the
+  transfer and names the account of the security log by what it now is.
+- `PROVENANCE_NOTE.md`: an addendum of 11 October 2026, CRLF kept; the
+  opening lists it. The addendum of 10 October is left as written.
+- README: titled with the new name; it says that the repository was called
+  FE-JEPA until 11 October 2026, that the old address leads here and that the
+  package keeps the name `fejepa`, and points to `CITATION.cff`.
+- `CITATION.cff` (CFF 1.2.0, valid by `cffconvert --validate`): the code's
+  author alone, the repository, the licence PolyForm-Noncommercial-1.0.0, the
+  DOI and the snapshot. main gets the same README and a `CITATION.cff`
+  without the DOI, which goes in once the Zenodo record is published.
+- Tests: `tests/test_repository_transfer.py` (5 tests): the second export
+  begins with the first, is written the same way, and in compact form hashes
+  to the export as returned; the repository record keeps the id that the
+  security log records as created, at the same second; the snapshot
+  identifier recomputed from the listed refs (the manifest of swh.model, whose
+  8.4.1 gives the same identifier), the kinds of the listed objects and the
+  peeled commits of the tags where the clone holds them (git checks only in a
+  work tree of its own); the records README's counts, times and hashes; the
+  manuscript's statements, with no pending box left and no "owner account",
+  HymnOfLight or FE-JEPA in its files; the note, the README and
+  CITATION.cff. `test_cmame_material.py` names the DOI among the names that
+  carry version numbers. Twenty-two deliberate mutations were all caught.
+- An independent review: two blocking findings (the DOI read as a typed
+  number; the suite count), four important (the snapshot is the repository at
+  its move, not its history up to that day, since wp10-joint moved at 13:34
+  UTC; the visibility claim beyond its evidence; quoted facts the tests did
+  not check; the reserved DOI before submission) and minor ones (wording of
+  the records README, the repository record, git checks in a tree unpacked
+  inside another clone, a stale docstring, the scope of the name checks,
+  peeled commits, the DOI on main, the DOI and the snapshot shown as links);
+  all addressed. RUNBOOK_CMAME: the suite count in A0c, B1c and D0c reads
+  577 passed, 2 deselected.
+  Suite 579.
