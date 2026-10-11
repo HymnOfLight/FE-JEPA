@@ -207,7 +207,8 @@ def test_the_manuscript_gives_the_address_tag_doi_and_snapshot():
     tex = (SECTIONS / "declarations.tex").read_text(encoding="utf-8")
     statement = _flat(tex.split(r"\section*{Data availability}", 1)[1].split(r"\section*", 1)[0])
     for s in (rf"are available at \url{{{URL}}}. The version described here is tagged "
-              rf"\texttt{{{TAG}}} and archived at Zenodo, \url{{https://doi.org/{DOI}}}.",
+              rf"\texttt{{{TAG}}} and archived at Zenodo \cite{{Cao2026Zenodo}}, "
+              rf"\url{{https://doi.org/{DOI}}}.",
               "The repository as it stood on 11 October 2026, when it moved to its present "
               "address, is archived with its full history by Software Heritage as the snapshot",
               rf"\href{{https://archive.softwareheritage.org/{SNAPSHOT}}}"

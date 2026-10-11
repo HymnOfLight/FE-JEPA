@@ -4,7 +4,7 @@
 In machine learning, an energy-based model scores the compatibility of an input $X$ and an
 output $Y$ with a scalar energy, lowest for compatible pairs, and is used, among other
 things, to find the $Y$ most compatible with $X$, to rank two candidates $Y_1$ and $Y_2$,
-and to detect whether a given $Y$ is compatible with $X$ at all \cite{LeCun2006EBM}. Its
+and to detect whether a given $Y$ is compatible with $X$ at all \cite{LeCun2007EBM}. Its
 energy is learned and measured in arbitrary units, and detection compares it with a
 threshold that is generally unknown when the model is built. For linear elastostatics the
 discrete potential energy is such an energy for the problem $(K,F)$, but assembled rather
@@ -51,11 +51,11 @@ the run; it supports the claim of \cref{sec:intro} rather than establishing it i
 
 \paragraph{A counterexample}
 One comparison, reported in a preprint, points the other way. In the pressure vessels of
-\cite{Sun2026FEVessel}, the same point-cloud transformer trained on the relative error of
-the displacement labels instead of the energy, with every other setting unchanged, was more
-accurate in displacement and in the $H^1$ norm (its Table 2), against the three-dimensional
-result
-of \cref{sec:results3d} and against the account above. The two studies differ in ways that
+Sun et~al.~\cite{Sun2026FEVessel}, the same point-cloud transformer trained on the relative
+error of the displacement labels instead of the energy, with every other setting unchanged,
+was more accurate in displacement and in the $H^1$ seminorm (their Table 2), against the
+three-dimensional result of \cref{sec:results3d} and against the account above. The two
+studies differ in ways that
 may matter. That comparison is a single run, and its reported errors are the lowest test
 errors over the last third of training. Its reference solutions use reduced-integration
 hexahedra with hourglass control, and its energy loss takes derivatives from the shape
@@ -86,17 +86,24 @@ method needed up to about nine times fewer conjugate-gradient iterations than a 
 at a tolerance of $10^{-3}$ \cite{Wang2026PretrainFEM}. In its pressure-vessel follow-up the
 saving of conjugate gradients fell from about three times at a relative residual of
 $10^{-3}$ to almost none at $10^{-4}$ \cite{Sun2026FEVessel}, and neural-operator warm
-starts have also been reported to accelerate iterative solvers \cite{Eshaghi2026NOWS}. Both
-\cite{Wang2026PretrainFEM} and \cite{Sun2026FEVessel} observed that the benefit shrinks as
-the tolerance tightens. \Cref{cor:warm} bounds this effect for conjugate gradients: a warm
-start lowers the iteration bound by a number of iterations set by its own accuracy, so the
-share of the run it can save shrinks as the tolerance tightens, and a residual-based stop
-can hide part of it (\cref{rem:residual}). Reported warm-start speed-ups are therefore
-comparable only when the tolerance, the stopping test and the preconditioner are stated with
-them: \cite{Wang2026PretrainFEM} reports iteration counts, with conjugate gradients in two
-dimensions and a preconditioned method in three, and \cite{Sun2026FEVessel} reports
-relative-residual tolerances and wall-clock times that include the network's forward pass
-and the set-up of algebraic multigrid.
+starts have also been reported to accelerate iterative solvers \cite{Eshaghi2026NOWS}.
+Wang et~al.~\cite{Wang2026PretrainFEM} and Sun et~al.~\cite{Sun2026FEVessel} explain why
+the benefit shrinks as the tolerance tightens: a warm start lowers an iteration bound by a
+fixed number of iterations, as Wang et~al.\ show for fixed-point iterations and Sun et~al.,
+in the relative residual, also for conjugate gradients. The bound is not the count: with
+conjugate gradients, the warm start of Sun et~al.\ saved 580 iterations at $10^{-3}$ but 69
+at $10^{-4}$ (their Table 3). \Cref{cor:warm} states the bound for conjugate gradients in the
+energy norm: a warm start lowers the iteration bound by a number of iterations set by its
+own accuracy, so the share of the run it can save shrinks as the tolerance tightens, and
+a residual-based stop can hide part of it (\cref{rem:residual}). Reported warm-start
+speed-ups are therefore comparable only when the tolerance, the stopping test and the
+preconditioner are stated with them: Wang et~al.~\cite{Wang2026PretrainFEM} report, for
+their linear problems, iteration counts to a relative residual of $10^{-3}$, with
+unpreconditioned conjugate gradients in two dimensions and with unpreconditioned and
+preconditioned conjugate gradients in three, and Sun et~al.~\cite{Sun2026FEVessel} report
+iteration counts and wall-clock speed-ups at three relative-residual tolerances, the
+speed-ups computed from times that include the network's forward pass and, for algebraic
+multigrid, its set-up.
 
 \paragraph{Transfer}
 No network transferred to the finer mesh, and the readings of \cref{sec:transfer} point at
@@ -130,7 +137,7 @@ comparison kept, was chosen after that comparison, and the three-dimensional gat
 amended after the initial run; \ref{app:prereg} reports both. The pre-registration documents
 of the two runs of July 2026 are weaker records than the later ones
 (\cref{sec:methods:prereg}). No network transferred to a substantially finer mesh; the
-resolution invariance reported for point-cloud operators trained on the energy
+discretisation invariance reported for point-cloud operators trained on the energy
 \cite{Wang2026PretrainFEM,Sun2026FEVessel} was tested by varying the density of the input
 point cloud rather than by refining the mesh, and label-free fine-tuning on the finer mesh,
 which needs no solves, was not
@@ -141,9 +148,12 @@ The construction extends wherever each step of a computation is a convex minimis
 linear dynamics, every implicit step of a Newmark-type integrator solves a symmetric
 positive definite system whose effective stiffness combines the stiffness, mass and
 damping matrices, and \cref{lem:exact} holds step by step \cite{CaoSong2026}. Incremental
-variational formulations of dissipative materials \cite{OrtizStainier1999} and variational
-integrators \cite{MarsdenWest2001} write each step of a nonlinear history as the
-minimisation of an incremental potential. There the energy remains a label-free training
-objective, although the energy gap is no longer a squared norm, and the counterparts of
-\cref{prop:amp,cor:zero} remain to be worked out. These are the problems in which a solve
-may be expensive enough for label-free training to pay for itself.
+variational formulations of dissipative materials write each step of a nonlinear history as
+the minimisation of an incremental potential \cite{OrtizStainier1999}, and variational
+integrators derive each step of a time integration from a discrete variational principle
+\cite{MarsdenWest2001}. Where such a step is a minimisation, its potential remains a
+label-free training objective, although the energy gap is no longer a squared norm, and the
+counterparts of \cref{prop:amp,cor:zero} remain to be worked out; at finite strains the
+incremental potential is in general not convex \cite{OrtizStainier1999}, so that its
+minimiser need not be unique. These are the problems in which a solve may be expensive
+enough for label-free training to pay for itself.

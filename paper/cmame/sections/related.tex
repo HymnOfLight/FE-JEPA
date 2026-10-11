@@ -36,11 +36,16 @@ prediction to warm-start the finite-element solver; its authors report up to abo
 times fewer iterations than from a zero initial guess, with conjugate gradients to a
 tolerance of $10^{-3}$. A follow-up applies that approach to three-dimensional pressure
 vessels \cite{Sun2026FEVessel}. Some of these works compare label-free with data-driven
-training \cite{Wurth2024,MonteiroFernandes2025,Sun2026FEVessel}. Two train the same network
-on the same instances with and without reference solutions, in single runs: in
-polycrystals the label-free network was slightly more accurate \cite{MonteiroFernandes2025},
+training \cite{Dalton2023,Wurth2024,MonteiroFernandes2025,Sun2026FEVessel}. Three train the
+same network on the same data with and without reference solutions, in single runs. In
+soft-tissue beams the two had comparable displacement errors and the label-free one smaller
+errors in energy and deformation gradient, a gap that adding the deformation gradient to the
+supervised loss narrowed but did not close \cite{Dalton2023}; in polycrystals the label-free
+network was more accurate in stress than the supervised one,
+which was trained on the reference stresses \cite{MonteiroFernandes2025};
 and in pressure vessels the supervised one was more accurate in displacement and in the
-$H^1$ norm \cite{Sun2026FEVessel} (\cref{sec:discussion}). We are not aware of such a comparison
+$H^1$ seminorm \cite{Sun2026FEVessel} (\cref{sec:discussion}). We are not aware of such a
+comparison
 repeated over several seeds under criteria fixed in advance, nor of the use of the discrete
 energy to rank the predictions of one load case by their stiffness-norm errors and to flag
 those worse than the zero field, both without a reference solution. The nearest uses we
@@ -63,14 +68,17 @@ opposite order to their stress errors.
 \paragraph{Solvers, warm starts and conditioning}
 Neural predictions have been used as initial iterates of iterative solvers
 \cite{Wang2026PretrainFEM,Eshaghi2026NOWS,Sun2026FEVessel} and inside hybrid iterative
-schemes \cite{Lee2025MetaSolver}. Two of these studies report that the saving shrinks as the
-tolerance tightens \cite{Wang2026PretrainFEM,Sun2026FEVessel}; \cref{cor:warm} bounds it for
-conjugate gradients in terms of the prediction's relative energy gap, and
-\cref{sec:cost:warm} reports a pre-registered test in which a warm start saved nothing at a
-tight tolerance. The training difficulty of residual-based physics losses has been traced
-to operator conditioning: descent on a squared residual is governed by an operator whose
-condition number is the square of the original one \cite{DeRyck2024}; the energy objective
-avoids the squaring (\cref{rem:dual}).
+schemes \cite{Lee2025MetaSolver}. Two of these studies explain why the saving shrinks as the
+tolerance tightens: Wang et~al.~\cite{Wang2026PretrainFEM} with an asymptotic iteration
+bound for fixed-point iterations, and Sun et~al.~\cite{Sun2026FEVessel} with its extension
+to conjugate gradients, in the relative residual, and a model of the solver's set-up cost.
+\Cref{cor:warm} states the bound for conjugate gradients in the energy norm, in terms of the
+prediction's relative energy gap, and \cref{sec:cost:warm} reports a pre-registered test in
+which a warm start saved nothing at a tight tolerance.
+The training difficulty of residual-based physics losses has been traced to operator
+conditioning: descent on a squared residual is governed by an operator whose condition
+number is the square of the original one \cite{DeRyck2024}; the energy objective avoids
+the squaring (\cref{rem:dual}).
 
 \paragraph{Fair comparison and pre-registration}
 Weak baselines and selective reporting have led to over-optimism in machine learning for

@@ -6,8 +6,11 @@ metric (\cref{sec:theory:stress,sec:theory:metrics}) and failure detector
 (\cref{sec:theory:detector}). \Cref{lem:exact,lem:cond}, \cref{cor:modes}, \cref{rem:dual}
 and \cref{prop:sep} of \ref{app:e1} are restated, with proofs, from the companion note
 \cite{CaoSong2026}, and \eqref{eq:cheb} is the classical Chebyshev bound of conjugate
-gradients \cite{Saad2003}; the other statements are added here. All are elementary
-consequences of the algebra of symmetric positive definite systems
+gradients \cite{Saad2003}; the other statements are added here, except \cref{cor:warm}, which
+states in the energy norm an estimate that Sun et~al.~\cite{Sun2026FEVessel} give in the
+relative residual, after a bound of Wang et~al.~\cite{Wang2026PretrainFEM} for fixed-point
+iterations. All are elementary consequences of the algebra of symmetric positive definite
+systems
 \cite{Ciarlet1978,Saad2003}. What they provide is an exact account of what label-free
 training optimises, of how its results should be measured, and of what the energy of a
 prediction reveals without a reference solution. Each statement with numerical content is
@@ -346,7 +349,7 @@ stiffness norm and makes it no worse than the zero field.
 A prediction can serve as the initial iterate of the conjugate gradient method
 \cite{HestenesStiefel1952} applied to \eqref{eq:system}. Let $u^k$ be the iterate after
 $k$ iterations and $\gap_k=\gap(u^k)$, so that $\gap_0$ is the energy gap of the initial
-iterate. For $\kappa>1$ the classical bound \cite{Saad2003} is
+iterate. For $\kappa>1$ the classical bound \cite[Section~6.11.3]{Saad2003} is
 \begin{equation}
 \frac{\gap_k}{\gap_0} \le 4q^{2k},
 \qquad
@@ -376,7 +379,13 @@ The corollary compares bounds, not iteration counts: how many iterations a warm 
 actually saves depends on the spectral content of its error and can even be negative. What
 it shows is that a prediction of given accuracy lowers the iteration bound by a fixed number
 of iterations, while the bound grows with $\ln(1/\bar g)$, so that its share shrinks as the
-tolerance tightens (\cref{sec:cost:warm} gives values).
+tolerance tightens (\cref{sec:cost:warm} gives values). Sun et~al.~\cite{Sun2026FEVessel}
+draw the same conclusion for conjugate gradients in the relative residual, where the
+constant of the bound and the conversion between residual and error add a bounded offset to
+the saving, and Wang
+et~al.~\cite{Wang2026PretrainFEM} from an asymptotic bound of the same form for fixed-point
+iterations; \cref{cor:warm} states it in the energy norm, without that offset, and
+\cref{rem:residual} bounds the initial residual by the energy gap.
 
 \begin{remark}[Residual-based stopping]\label{rem:residual}
 The initial residual of a prediction is $r_0=-Ke_0$, so
@@ -393,4 +402,7 @@ of $\lambda_{\min}$, so the bound is sharp. A prediction that is accurate in ene
 therefore start with a larger residual than the zero field, by a factor of up to
 $(\kappa g_0)^{1/2}$, because $K$ amplifies the stiff-mode components of its error, and a
 residual-based stopping test then credits a warm start with less than its energy accuracy.
+Wang et~al.~\cite{Wang2026PretrainFEM} observed the same for Newton's method: the initial
+residual of their predictions could exceed that of the zero initial guess although their
+errors were much smaller.
 \end{remark}

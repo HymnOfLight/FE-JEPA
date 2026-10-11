@@ -89,7 +89,8 @@ for the load case, divided by $F_{\max}$, the largest absolute nodal load compon
 instance's four load cases. Two global descriptors are appended to every token: a load
 summary (the total load magnitude and the net load per component, each divided by the number
 of nodes and by $F_{\max}$, and the fraction of loaded nodes) and a geometry descriptor
-(normalised extents, Poisson's ratio, the number of holes or cavities and their area or
+(the extents, each divided by the upper end of its sampling range, so that the absolute
+size is kept; Poisson's ratio; the number of holes or cavities and their area or
 volume fraction, and in two dimensions their mean radius). An encoder of 8 pre-normalised
 transformer blocks \cite{Vaswani2017} of width 256 with 8 attention heads applies full
 self-attention over the nodes; a decoder maps each node's latent vector, concatenated with
@@ -216,7 +217,10 @@ settings unchanged. Training was in single precision with TF32 matrix products
 accumulated in single precision), with three seeds (0, 1, 2) per network. The supervised
 networks were trained with 16, 64, 256 and 1,024 labelled instances, the first 16, 64, 256
 and 1,024 instances of the training pool, the graph network with 64 and 1,024 only, a saving
-of machine time fixed in the pre-registrations of September and October 2026. The label-free
+of machine time fixed in the pre-registrations of September and October 2026. Every
+network ran 200 epochs, so that a supervised network with $n$ labelled instances took $200n$
+steps, 3,200 with 16, and the comparisons at the smaller budgets differ in the number of
+steps as well as in the labels. The label-free
 network was trained on the
 same 1,024 instances without their solutions, for 204,800 steps; its training set is thus
 the supervised networks' largest one with the labels removed. The two-dimensional

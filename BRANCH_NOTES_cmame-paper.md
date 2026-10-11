@@ -1231,3 +1231,138 @@ generator, and no record, configuration, pre-registration or source file changed
   all addressed. RUNBOOK_CMAME: the suite count in A0c, B1c and D0c reads
   577 passed, 2 deselected.
   Suite 579.
+
+## Stage 10f (11 Oct 2026) -- references checked against their published versions; a data reference
+
+- Six references were checked against PDFs of their published versions from
+  the publishers' sites: the articles of OrtizStainier1999, Taylor2023DFR,
+  MonteiroFernandes2025 and Wang2026PretrainFEM, the front matter of
+  Saad2003 and the chapter of LeCun et al.; and Sun2026FEVessel against the
+  PDF of its preprint (arXiv:2607.17318v1), read in full again. The articles'
+  entries were right, and the DOIs of OrtizStainier1999 and Saad2003, which
+  the PDFs do not print, were confirmed to lead to the article and the book.
+  The chapter is now cited as published, "Energy-based models", chapter 10 of
+  Predicting Structured Data (MIT Press, Cambridge, MA, 2007), pp. 191--246,
+  with its six editors and its own DOI (10.7551/mitpress/7443.003.0014, from
+  the publisher's site; key LeCun2007EBM), instead of the authors' version of
+  2006. Saad2003 gains the DOI of its electronic edition, and its ISBN-10 is
+  replaced by the ISBN of the paperback that the front matter prints,
+  hyphenated in the standard way. The five standard references not checked
+  until then (Samaniego2020, Geuzaine2009, Gustafsson2020, MarsdenWest2001,
+  EppsPulley1983) were checked against the online records their comments
+  name. Each entry's comment says what was checked; the header no longer
+  lists entries to be checked.
+- The three closest works, read in their published or preprint versions:
+  - Wang et al. (the pretrain finite element method) derive, in their
+    Appendix C, an asymptotic iteration bound for fixed-point iterations in
+    which the logarithm of the norm of the initial error enters additively,
+    and conclude that the benefit of a warm start shrinks as the tolerance
+    tightens. Sun et al. (FEVessel), in their Appendix B, extend it to the
+    symmetric positive definite system: for stationary iterations and, by the
+    Chebyshev bound, for conjugate gradients, their estimate of the
+    iterations a warm start saves is set by its initial relative residual and
+    independent of the tolerance, up to a bounded offset from the constant of
+    the bound and the conversion between residual and error, so that its
+    share falls as the tolerance tightens; they add a model of the solver's
+    set-up cost. Section 9 no longer says that a warm start saves a fixed
+    number of iterations: both studies derive this for a bound or an
+    estimate, and the conjugate-gradient counts of Sun et al. saved 580
+    iterations at 10^-3 but 69 at 10^-4, which the section now states. The arXiv version
+    3 of Wang et al., read at arxiv.org on 11 October 2026, has the same
+    appendix; the readings of 10 October missed both appendices. Corollary 5
+    is the energy-norm form of the estimate of Sun et al., without the
+    offset; the opening of Section 3 no longer counts it among the
+    statements added here, and Section 3 (after the corollary), Sections 2
+    and 9 and the introduction's list of contributions credit both studies.
+    Remark 4 credits the observation of Wang et al. that Newton's method
+    could start from a larger residual from their predictions than from the
+    zero initial guess, although the predictions were much closer to the
+    solution; the remark bounds the conversion that Sun et al. treat as an
+    offset.
+  - For their linear problems Wang et al. report iteration counts to a
+    relative residual of 10^-3, with unpreconditioned conjugate gradients in
+    two dimensions and with unpreconditioned and preconditioned conjugate
+    gradients in three (Section 9, which said "a preconditioned method in
+    three"); Sun et al. report iteration counts and wall-clock speed-ups at
+    three relative-residual tolerances (Section 9).
+  - Both tested discretisation invariance on the point cloud of a test
+    instance at varying density: "on the training mesh" is dropped
+    (Section 7), and Section 9 uses the same term.
+  - The supervised network of Sun et al. was more accurate in the H^1
+    seminorm, which they report, not the H^1 norm (Sections 2 and 9).
+  - In Monteiro Fernandes et al., the label-free network was more accurate in
+    stress than the same network trained on the reference stresses (mean
+    relative errors of 2.16% against 2.86% for sigma_xx and 3.99% against
+    4.82% for the von Mises stress); "slightly" is dropped (Section 2).
+  The other statements about them stand as written, among them that the
+  comparison of Sun et al. is a single run whose errors are the lowest over
+  the last third of training, with reference solutions on reduced-integration
+  hexahedra with hourglass control and a quadrature of the energy loss that
+  is not stated.
+- Dalton et al. (2023), read on 11 October 2026 in the accepted manuscript,
+  train the same graph network on the same 200 inputs with and without
+  simulator outputs, in single runs: comparable displacement errors, smaller
+  errors in energy and deformation gradient without labels, and a supervised
+  loss that adds the deformation gradient narrowing that gap without closing
+  it (their Appendix B). Section 2 said that two studies made such a
+  comparison; it now names three, and the introduction cites Dalton et al.
+  among the single runs.
+- Section 4.2 said "normalised extents"; the geometry descriptor divides each
+  extent by the upper end of its sampling range, so that the absolute size is
+  kept, and the text now says so. It also states that every network ran 200
+  epochs, so that a supervised network with n labelled instances took 200n
+  steps and the comparisons at the smaller budgets differ in steps as well as
+  in labels. Both points came from an outside review of an earlier version.
+- The other checked works:
+  - Ortiz and Stainier note that the strain-energy density of a finitely
+    deforming solid, and with it their incremental potential, is in general
+    not convex. The Outlook, which extends the construction to steps that are
+    convex minimisations, now says so, and describes variational integrators
+    as deriving each step from a discrete variational principle, not as
+    minimisations.
+  - Saad is cited at Section 6.11.3 for the bound of conjugate gradients.
+- The Zenodo archive of the version described is cited in the Data
+  availability statement as the data reference Cao2026Zenodo. The journal's
+  guide asks for "[dataset]" immediately before a data reference; a brace
+  group in the author field puts it before the author's initial in
+  elsarticle-num's output. Its title, author and DOI are those of
+  CITATION.cff, and its version is the tag that CITATION.cff's identifier
+  names; the Zenodo record is published with them before submission.
+- Tests: `tests/test_cmame_references.py` (4 tests): the data reference's
+  fields, their agreement with CITATION.cff and the citation; the references
+  as BibTeX renders them with elsarticle-num, without warnings; the comments
+  of the checked entries, the header, the chapter's and Saad's fields, and
+  that the entries without a comment are those of 10 October; the corrected
+  sentences, and the corrected statements gone from their files.
+  `test_repository_transfer.py` quotes the Data availability statement with
+  the citation. Forty-nine deliberate mutations were all caught.
+- An independent review, three rounds. First round: one blocking finding
+  (the suite count), four important (the counts of Wang et al. are
+  relative-residual counts only for their linear problems; Remark 4 did not
+  credit their observation on Newton residuals; the opening of Section 3
+  counted Corollary 5 among the statements added here without
+  qualification; the Outlook set Ortiz and Stainier under convex
+  minimisation) and minor ones (the description of the bound, citations as
+  sentence subjects, "unpreconditioned" and "discretisation invariance"
+  throughout, the chapter's place and sections, Saad's section and DOI, the
+  header's account of the entries of 10 October, the supervised baseline of
+  Monteiro Fernandes et al. trained on stresses, the tests' handling of
+  BibTeX warnings, their scope and comments). Second round: two ambiguous
+  clauses, "et al.~" before citations, and this entry. Third round: the
+  statements resting on the preprint of Sun et al., checked against it; one
+  blocking finding (Section 9 said that a warm start saves a fixed number of
+  iterations, which both studies derive only for a bound or an estimate and
+  which the conjugate-gradient counts of Sun et al. contradict) and minor ones
+  (the offset in their estimate is bounded and comes also from the constant
+  of the bound; wall-clock speed-ups rather than times; a page break inside
+  "et al.", now "et~al."; the preprint's version in its entry; "the same
+  data" rather than "the same instances"). All these were addressed. Not adopted: two optional additions from Wang et al.
+  (the input-point distribution, and their claim that training on the
+  equations avoids discretisation errors) and quotation marks for the
+  sentence paraphrasing LeCun et al. Left for the submission checklist:
+  publishing the Zenodo record with this title, author and version, its
+  resource type, and the proof's handling of "[dataset]"; a check of
+  Samaniego2020, MarsdenWest2001 and EppsPulley1983 against Crossref.
+  RUNBOOK_CMAME: the suite count in A0c, B1c and D0c reads 581 passed, 2
+  deselected.
+  Suite 583.

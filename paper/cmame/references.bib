@@ -1,14 +1,18 @@
 % References of the CMAME manuscript. Entries marked "verified" were checked against the
-% publisher's record (or arXiv) on 3 October 2026; the others are standard references
-% still to be checked against their DOI before submission. An entry whose comment names
-% another source and date (for example the authors' version) was checked against that
-% source on that date.
+% publisher's record (or arXiv) on 3 October 2026; an entry whose comment names another
+% source and date (for example the authors' version) was checked against that source on
+% that date.
 % On 10 October 2026 the issue numbers, OpenReview and proceedings addresses, DOIs and
 % ISBNs of EYu2018, Pfaff2021, Lu2021DeepONet, Li2021FNO, Vaswani2017, Loshchilov2019,
 % HestenesStiefel1952, Saad2003, Ciarlet1978, the three arXiv preprints and DeRyck2024
-% were added from their publishers' and indexes' records. Still to be checked in a
-% browser: the DOI and issue of OrtizStainier1999, the DOI of Taylor2023DFR, the SIAM
-% DOI of Saad2003, and the chapter authors and pages of LeCun2006EBM.
+% were added from their publishers' and indexes' records; the entries without a comment of
+% their own are among these.
+% On 11 October 2026 OrtizStainier1999, Taylor2023DFR, MonteiroFernandes2025,
+% Wang2026PretrainFEM, Saad2003 and LeCun2007EBM were checked against PDFs from their
+% publishers' sites (the published articles, the chapter, and the front matter of the
+% book); Sun2026FEVessel against the PDF of its preprint; and Samaniego2020, Geuzaine2009,
+% Gustafsson2020, MarsdenWest2001 and EppsPulley1983, the standard references not checked
+% until then, against the records that their comments name.
 
 @article{EYu2018,
   author  = {E, Weinan and Yu, Bing},
@@ -21,6 +25,8 @@
   doi     = {10.1007/s40304-018-0127-z}
 }
 
+% verified 11 October 2026 against the University of Cuenca's research portal: authors,
+% title, journal, volume, article number, year and DOI
 @article{Samaniego2020,
   author  = {Samaniego, E. and Anitescu, C. and Goswami, S. and Nguyen-Thanh, V. M. and Guo, H. and Hamdia, K. and Zhuang, X. and Rabczuk, T.},
   title   = {An energy approach to the solution of partial differential equations in computational mechanics via machine learning: concepts, implementation and applications},
@@ -87,7 +93,8 @@
   doi     = {10.1016/j.cma.2024.116904}
 }
 
-% verified (journal, volume, article number and year; DOI to be confirmed)
+% verified 11 October 2026 against the published article: authors, title, journal, volume,
+% article number, year and DOI
 @article{Taylor2023DFR,
   author  = {Taylor, Jamie M. and Pardo, David and Muga, Ignacio},
   title   = {A deep {Fourier} residual method for solving {PDEs} using neural networks},
@@ -198,7 +205,9 @@
   doi     = {10.1016/j.cma.2021.114562}
 }
 
-% verified
+% verified; on 11 October 2026 its comparison of the same graph network trained with and
+% without simulator outputs (Sections 2.3.1, 3.1, 4.1 and Appendix B) was read in the
+% accepted manuscript at eprints.gla.ac.uk/305416
 @article{Dalton2023,
   author  = {Dalton, David and Husmeier, Dirk and Gao, Hao},
   title   = {Physics-informed graph neural network emulation of soft-tissue mechanics},
@@ -220,7 +229,7 @@
   doi     = {10.1016/j.cma.2024.117102}
 }
 
-% verified (full text still to be read)
+% verified 11 October 2026 against the published article, read in full
 @article{MonteiroFernandes2025,
   author  = {Monteiro Fernandes, Lucas and Blusseau, Samy and Rieder, Philipp and Neumann, Matthias and Schmidt, Volker and Proudhon, Henry and Willot, Fran{\c{c}}ois},
   title   = {A physics-informed {3D} surrogate model for elastic fields in polycrystals},
@@ -231,7 +240,7 @@
   doi     = {10.1016/j.cma.2025.117944}
 }
 
-% verified (full text still to be read)
+% verified 11 October 2026 against the published article, read in full
 @article{Wang2026PretrainFEM,
   author  = {Wang, Yizheng and Hao, Zhongkai and Eshaghi, Mohammad Sadegh and Anitescu, Cosmin and Zhuang, Xiaoying and Rabczuk, Timon and Liu, Yinghua},
   title   = {Pretrain finite element method: a pretraining and warm-start framework for {PDEs} via physics-informed neural operators},
@@ -242,12 +251,14 @@
   doi     = {10.1016/j.jmps.2026.106682}
 }
 
-% verified (preprint, read in full on 10 October 2026)
+% verified 11 October 2026 against the preprint arXiv:2607.17318v1, read in full: authors,
+% title, version and date (19 July 2026); it is set in a journal's layout but gives no
+% dates of receipt or acceptance, and is cited as the preprint
 @misc{Sun2026FEVessel,
   author  = {Sun, Yipin and Wang, Yizheng and Lin, Yuzhou and Zheng, Baiyang and Zhuang, Xiaoying and Rabczuk, Timon},
   title   = {{FEVessel}: mesh-independent analysis of {3D} pressure vessels with the label-free pretrained finite element method},
   year    = {2026},
-  note    = {arXiv:2607.17318 [math.NA]},
+  note    = {arXiv:2607.17318v1 [math.NA]},
   doi     = {10.48550/arXiv.2607.17318}
 }
 
@@ -407,6 +418,8 @@
   url       = {https://openreview.net/forum?id=Bkg6RiCqY7}
 }
 
+% verified 11 October 2026 against the citation that gmsh.info asks for (authors, journal,
+% volume, issue, pages, year) and UCLouvain's repository (title and DOI)
 @article{Geuzaine2009,
   author  = {Geuzaine, Christophe and Remacle, Jean-Fran{\c{c}}ois},
   title   = {Gmsh: a {3-D} finite element mesh generator with built-in pre- and post-processing facilities},
@@ -418,6 +431,7 @@
   doi     = {10.1002/nme.2579}
 }
 
+% verified 11 October 2026 against the journal's page of the article
 @article{Gustafsson2020,
   author  = {Gustafsson, Tom and McBain, G. D.},
   title   = {scikit-fem: a {Python} package for finite element assembly},
@@ -440,6 +454,12 @@
   doi     = {10.6028/jres.049.044}
 }
 
+% verified 11 October 2026 against the book's front matter from SIAM: author, title,
+% edition, publisher, place, year and ISBN (of the paperback). The front matter prints no
+% DOI; SIAM serves it under 10.1137/1.9780898718003.fm, the DOI of the electronic edition
+% with a suffix, and the DOI was confirmed on the same day to lead to the book. Section
+% 6.11.3, cited for the bound of conjugate gradients, is "Convergence of the CG Algorithm"
+% in the contents.
 @book{Saad2003,
   author    = {Saad, Yousef},
   title     = {Iterative Methods for Sparse Linear Systems},
@@ -447,7 +467,8 @@
   publisher = {SIAM},
   address   = {Philadelphia},
   year      = {2003},
-  isbn      = {0-89871-534-2}
+  isbn      = {978-0-89871-534-7},
+  doi       = {10.1137/1.9780898718003}
 }
 
 @book{Ciarlet1978,
@@ -461,6 +482,9 @@
   isbn      = {0-444-85028-7}
 }
 
+% verified 11 October 2026 against the published article: authors, title, journal, volume,
+% pages, year and the PII, which is the DOI's suffix; the DOI was confirmed on the same day
+% to lead to the article, which prints no issue number
 @article{OrtizStainier1999,
   author  = {Ortiz, M. and Stainier, L.},
   title   = {The variational formulation of viscoplastic constitutive updates},
@@ -471,6 +495,8 @@
   doi     = {10.1016/S0045-7825(98)00219-9}
 }
 
+% verified 11 October 2026 against Caltech's repository record: authors, title, journal,
+% volume, pages, year and DOI
 @article{MarsdenWest2001,
   author  = {Marsden, J. E. and West, M.},
   title   = {Discrete mechanics and variational integrators},
@@ -499,7 +525,9 @@
   doi    = {10.48550/arXiv.2608.05437}
 }
 
-% standard reference (Biometrika 70(3), 1983)
+% checked 11 October 2026 against the bibliography of arXiv:1312.6815 (authors, title,
+% journal, volume, pages, year); the DOI carries the issue, 3. A paper by Hall and Welsh in
+% the same volume, 70(2), 485--489, has the same title.
 @article{EppsPulley1983,
   author  = {Epps, T. W. and Pulley, Lawrence B.},
   title   = {A test for normality based on the empirical characteristic function},
@@ -511,18 +539,34 @@
   doi     = {10.1093/biomet/70.3.723}
 }
 
-% verified 8 October 2026 against the authors' version: title page, version, date, authors,
-% affiliation and Section 1 of the PDF v1.0 of 19 August 2006 at the URL below. Its title
-% page prints "G. Bakir, T. Hofman" for two of the editors; the names are spelled here as
-% the editors spell them. That book (Predicting Structured Data, MIT Press, 2007)
-% contains the chapter "Energy-Based Models" by Yann LeCun and others (a library catalogue's
-% table of contents); its full author list and pages are to be confirmed before this entry
-% is switched to it.
-@misc{LeCun2006EBM,
-  author       = {LeCun, Yann and Chopra, Sumit and Hadsell, Raia and Ranzato, Marc'Aurelio and Huang, Fu Jie},
-  title        = {A tutorial on energy-based learning},
-  year         = {2006},
-  howpublished = {to appear in G. Bak{\i}r, T. Hofmann, B. Sch{\"o}lkopf, A. Smola and B. Taskar (eds), Predicting Structured Data, MIT Press},
-  note         = {Authors' version 1.0 of 19 August 2006, Courant Institute of Mathematical Sciences, New York University},
-  url          = {https://cs.nyu.edu/~yann/2011f-G22-2565-001/diglib/lecun-06.pdf}
+% verified 11 October 2026 against the chapter's PDF from the publisher: chapter 10, its
+% title, authors and pages, the sections that the discussion draws on (10.1.2 and 10.1.3),
+% and the book's title, editors, publisher, year and DOI (10.7551/mitpress/7443.001.0001).
+% The chapter's own DOI, which the PDF does not print, is the one the publisher's site
+% gives for it, read on the same day. The PDF does not give the place of publication either;
+% the address given is the publisher's seat. The authors' version of 19 August 2006, titled
+% "A tutorial on energy-based learning", was cited until then.
+@incollection{LeCun2007EBM,
+  author    = {LeCun, Yann and Chopra, Sumit and Hadsell, Raia and Ranzato, Marc'Aurelio and Huang, Fu Jie},
+  title     = {Energy-based models},
+  booktitle = {Predicting Structured Data},
+  editor    = {Bak{\i}r, G{\"o}khan and Hofmann, Thomas and Sch{\"o}lkopf, Bernhard and Smola, Alexander J. and Taskar, Ben and Vishwanathan, S. V. N.},
+  publisher = {MIT Press},
+  address   = {Cambridge, MA},
+  year      = {2007},
+  pages     = {191--246},
+  doi       = {10.7551/mitpress/7443.003.0014}
+}
+
+% The archive of the version described in the paper, a data reference cited in the Data
+% availability statement. The journal's guide asks for "[dataset]" immediately before a
+% data reference; the brace group places it before the author's initial. The DOI was
+% reserved on 11 October 2026; the record is published, with this title, author and
+% version, before the paper is submitted.
+@misc{Cao2026Zenodo,
+  author       = {Cao, {\relax [dataset] R}uifeng},
+  title        = {label-free-fe-surrogates},
+  howpublished = {Zenodo, version cmame-submission},
+  year         = {2026},
+  doi          = {10.5281/zenodo.23298799}
 }

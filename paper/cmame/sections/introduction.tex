@@ -46,7 +46,8 @@ closed-form rescaling ensures that it is not.
 
 What label-free training buys is tested against supervision. Single runs of the same
 network trained with and without reference solutions have given opposite outcomes
-\cite{MonteiroFernandes2025,Sun2026FEVessel}; here the same network is trained on the same
+\cite{Dalton2023,MonteiroFernandes2025,Sun2026FEVessel}; here the same network is trained on
+the same
 instances with and without their solutions, over three seeds, under criteria fixed before
 the runs, with the criteria that failed reported alongside those that were met. By the
 identity above, the comparison is between two losses: the squared stiffness-norm error,
@@ -81,7 +82,9 @@ case, whether a prediction is worse than the zero field (\cref{cor:zero}), and t
 of $\Pi_h(u)$ give a rescaling after which it is not (\cref{prop:amp}). Under the Chebyshev
 bound, a warm start lowers the iteration bound of conjugate gradients by a fraction that
 depends only on the prediction's relative energy gap and the target tolerance
-(\cref{cor:warm}).
+(\cref{cor:warm}); Sun et~al.~\cite{Sun2026FEVessel} give this estimate in the relative
+residual, after a bound of Wang et~al.~\cite{Wang2026PretrainFEM} for fixed-point
+iterations.
 \item Three dimensions (\cref{sec:results3d}). A transformer trained on the energy alone
 was more accurate on all five metrics, in every seed, than the same transformer trained on
 the solutions of the same 1,024 instances, and the pre-registered accuracy condition on the
