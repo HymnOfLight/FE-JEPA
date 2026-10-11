@@ -1,0 +1,27 @@
+[prereg] verified against PREREG_W9.md: acccf57ec50e...
+
+=== fejepa v2 run: configs/w9_c1_n1024.json | device=cuda | workers=3 | tf32=True ===
+[plan] steps by experiment: {'e8': 0, 'total': 0}
+
+=== dataset ===
+[dataset] runs/data2d | n_val=256 pool=29744
+
+=== labelling (WP5 economy) ===
+[labelling] policy=asis label_need(pool prefix)=0 label_workers=8
+[labelling] asis: verified labels on val 256 + pool prefix 0
+
+=== loading archives (in-memory prefix 0 + val 256; E1'/E8 stream paths) ===
+
+=== E8 ===
+[E8 (AR pretrain)] starting: 3 units
+[E8 (AR pretrain)] 1/3 (33%) elapsed 00:01:17 eta 00:02:35 | AR pool1024 s0
+[E8 (AR pretrain)] 2/3 (67%) elapsed 00:01:17 eta 00:00:38 | AR pool1024 s1
+[E8 (AR pretrain)] 3/3 (100%) elapsed 00:01:17 eta 00:00:00 | AR pool1024 s2
+[E8 (AR pretrain)] done in 00:01:18
+
+=== gate G1' ===
+[fejepa] report -> runs/w9/c1_n1024/report.json
+[fejepa] RESULTS.md -> runs/w9/c1_n1024/RESULTS.md
+[fejepa] figure -> runs/w9/c1_n1024/figure1_energy_gap.png
+[fejepa] gate G1' passed=False conditions={'a': False, 'b': False, 'c': False}
+[fejepa] solve ledger: {'per_stage': {'asis-preexisting-corpus': 0}, 'total': 0, 'wall_clock_s': 0.0}

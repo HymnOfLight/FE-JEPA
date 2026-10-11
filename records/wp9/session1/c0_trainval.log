@@ -1,0 +1,3 @@
+[c0 trainval] train done 10s
+[c0 trainval] val done 12s
+{"egap_train_over_val": 0.9856902930530866, "disp_train_over_val": 0.9778598295427797, "seconds": 12.1}

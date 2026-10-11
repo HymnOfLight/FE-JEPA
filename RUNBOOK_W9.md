@@ -48,7 +48,12 @@ E1's worker set-up gave each of three workers 69 torch threads); the
 instance now runs on a Xeon Gold 6459C host with 16 CPUs allotted
 (`os.cpu_count()` 128: 42 threads per worker) and 92 GiB of memory; the GPU,
 its driver and torch are E1's. CM2D's 2D transformer steps ran there at
-36-41 ms with three workers.
+36-41 ms with three workers. Session 1 ran there too. Session 2 and Sec. 4
+ran on 10-11 October on a third host, with NVIDIA driver 580.95.05 instead
+of 595.71.05 and, as Sec. 4's record shows, a Xeon Platinum 8470Q with 25
+CPUs allotted and the same memory limit (DEVIATIONS_W9.md; the returns and
+the verdict are in `records/wp9/`). Sec. 0c's count is the stamped
+commit's, which the box ran.
 Everything runs in ONE tmux session; nothing else may use the GPU meanwhile.
 
 ## 0. Preconditions (box, once)

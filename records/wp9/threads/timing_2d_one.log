@@ -1,0 +1,10 @@
+[timing] val 1/8 dof 1602 | surrogate 0.0035 s (warm 0.0033) | direct 0.0058 s | cg 0.0448 s | 0 s
+[timing] val 2/8 dof 1146 | surrogate 0.0030 s (warm 0.0024) | direct 0.0038 s | cg 0.0312 s | 0 s
+[timing] val 3/8 dof 866 | surrogate 0.0028 s (warm 0.0022) | direct 0.0030 s | cg 0.0211 s | 0 s
+[timing] val 4/8 dof 954 | surrogate 0.0027 s (warm 0.0022) | direct 0.0033 s | cg 0.0253 s | 1 s
+[timing] val 5/8 dof 1462 | surrogate 0.0036 s (warm 0.0033) | direct 0.0050 s | cg 0.0409 s | 1 s
+[timing] val 6/8 dof 1414 | surrogate 0.0043 s (warm 0.0035) | direct 0.0052 s | cg 0.0326 s | 1 s
+[timing] val 7/8 dof 488 | surrogate 0.0032 s (warm 0.0021) | direct 0.0015 s | cg 0.0151 s | 1 s
+[timing] val 8/8 dof 2064 | surrogate 0.0049 s (warm 0.0045) | direct 0.0085 s | cg 0.0509 s | 1 s
+{"set": "val", "n": 8, "surrogate_cold_s": 0.003323417156934738, "surrogate_warm_s": 0.002850303426384926, "direct_s": 0.00441085547208786, "cg_s": 0.031915415078401566, "disp_rel_l2": 0.03794752715769366, "energy_gap_rel": 0.018845964927178323, "direct_label_max_rel_dev": 0.0, "cg_label_max_rel_dev": 1.113593415282871e-12}
+{"check_against_report": {"checked": true, "n": 8, "disp_rel_l2_max_rel_dev": 0.0, "energy_gap_rel_max_rel_dev": 0.0}}

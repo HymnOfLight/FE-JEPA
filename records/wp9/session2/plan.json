@@ -1,0 +1,81 @@
+{
+ "what": "wp9 session-2 plan (PREREG_W9 Sec. 4, 8)",
+ "session1": "runs/w9/session1",
+ "decisions_sha256": "3d0b3f768cc7b06a6adc6de133c3a8a593daceb62cfa252ffd454d2bc546cc29",
+ "gate_problems": [],
+ "notes": [],
+ "facts": {
+  "status": {
+   "ood2d.log": 0,
+   "c0_val.log": 0,
+   "c0_trainval.log": 0,
+   "c0_amp2d.log": 0,
+   "c0_memory.log": 0,
+   "profile_w9.log": 0,
+   "decisions.log": 0
+  },
+  "git": "prereg-w9",
+  "ood_manifests": {
+   "IB": "f6cf151d1a1f463b9a889bfecdd9275b8b680acc72e67d3734d4470110223b18",
+   "F1": "e66f6a31b02f9e3b3f958ce4da16f1367dddb4e5a1f112860635185016bb81ed",
+   "F2": "55e0dbc8c2feb2954c55617df74723cd65582a5d39bf76a7b7d3602703775975",
+   "F3": "a99cd2ce5739f7ae5ab4652e565c2f799087f4fa05803c444891372ef0c2e386",
+   "F4": "af01607f85fc63765f35548dbda43df5466fc9d0bad17e9ced72c0b705aa1d06",
+   "F5": "9e92e2289319e6217e04c96c7d68f2417bf4438dc45dc6bc6ca0a154d94c72cd",
+   "R": "88d0944bd1054491aab25b8e392ee2a7352497aca175ded29e700779023cad56"
+  },
+  "reproduction_max_rel_dev": 1.6445513362704568e-10,
+  "usable_host_gb": 98.8,
+  "usable_host_source": "cgroup_limit",
+  "torch": "2.12.1+cu130",
+  "free_gb": 36.6
+ },
+ "arms": [
+  {
+   "arm": "c1_n1024",
+   "config": "configs/w9_c1_n1024.json",
+   "flags": []
+  },
+  {
+   "arm": "c1_n25600",
+   "config": "configs/w9_c1_n25600.json",
+   "flags": [
+    "--workers",
+    "3",
+    "--activation-checkpointing",
+    "off"
+   ]
+  },
+  {
+   "arm": "b_n1024",
+   "config": "configs/w9_b_n1024.json",
+   "flags": [
+    "--workers",
+    "3",
+    "--activation-checkpointing",
+    "off"
+   ]
+  },
+  {
+   "arm": "s_n1024",
+   "config": "configs/w9_s_n1024.json",
+   "flags": [
+    "--workers",
+    "3",
+    "--activation-checkpointing",
+    "off"
+   ]
+  },
+  {
+   "arm": "c1_n4096",
+   "config": "configs/w9_c1_n4096.json",
+   "flags": [
+    "--workers",
+    "3",
+    "--activation-checkpointing",
+    "off"
+   ]
+  }
+ ],
+ "summary": "S admitted: yes | N_max 25,600 with 3 worker(s) at a time | checkpointing off | usable host memory 98.8 GB (cgroup_limit) | E1 reproduction 1.6445513362704568e-10"
+}

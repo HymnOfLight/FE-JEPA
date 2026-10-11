@@ -13,6 +13,9 @@ Writes to --out (default paper/wp9):
                         conditions' quantities and the verdict (if S ran)
   table_w9_s_sets.tex   S against the fresh baseline on every set
                         (exploratory; if S ran)
+  table_w9_s_amp.tex    the same with the energy-optimal amplitude c*: the
+                        median c* of both arms and the changes of the errors
+                        left after scaling by c* (exploratory; if S ran)
   table_w9_remesh.tex   R: the label-free amplitude c_b per mesh size, every arm
   tables.md             the same tables in Markdown
   sources.json          the verdict file's SHA-256
@@ -171,8 +174,10 @@ def c1_table(v: dict, key: str, what: str) -> tuple:
             if s == "inband" and key == "energy_gap_rel":
                 row.append(_cell(tabs.get(role), s, "tail_energy_gap_rel"))
         rows.append(row)
-    notes = [f"{what}: seed mean ± sample SD of the per-seed means over each set's instances; "
-             "the tail is the per-seed 90th percentile of the per-instance energy gap.",
+    tail = ("; the tail is the per-seed 90th percentile of the per-instance energy gap"
+            if key == "energy_gap_rel" else "")
+    notes = [f"{what}: seed mean ± sample SD of the per-seed means over each set's "
+             f"instances{tail}.",
              "In band: E1's validation split (256) and IB (2,048 fresh training-family "
              "instances) together, H1's set; F1-F5: OOD-2D v1 (256 instances each); R: 16 "
              "geometries at 5 mesh sizes. Evaluation only; secondary readings (PREREG_W9 "
@@ -209,6 +214,20 @@ def h2_table(v: dict) -> tuple:
     return head, rows, notes
 
 
+def _change(g: dict) -> str:
+    """An exploratory comparison's change, marked when it crosses the guard."""
+    ch = _signed_pct(g["rel_change"]) if g.get("rel_change") is not None else "n/a"
+    if g.get("lower"):
+        ch += " (lower)"
+    elif g.get("worse"):
+        ch += " (worse)"
+    return ch
+
+
+S_NOTE = ("Exploratory (PREREG_W9 Sec. 7): each change is S against the fresh baseline with "
+          "the Sec. 6 guard computed (lower / worse beyond max(10%, 2 SE_rel)); no verdict.")
+
+
 def s_sets_table(v: dict) -> tuple:
     tabs, cmp_ = v.get("tables", {}), v.get("comparisons_s_vs_b1024_exploratory") or {}
     head = ["Set", "Baseline\nenergy gap", "S\nenergy gap", "Change", "Baseline\ndisplacement",
@@ -218,15 +237,39 @@ def s_sets_table(v: dict) -> tuple:
         row = [SET_HEAD[s].replace("\n", " ")]
         for key in ("energy_gap_rel", "disp_rel_l2"):
             g = (cmp_.get(s) or {}).get(key) or {}
-            ch = _signed_pct(g["rel_change"]) if g.get("rel_change") is not None else "n/a"
-            if g.get("lower"):
-                ch += " (lower)"
-            elif g.get("worse"):
-                ch += " (worse)"
-            row += [_cell(tabs.get("b1024"), s, key), _cell(tabs.get("s"), s, key), ch]
+            row += [_cell(tabs.get("b1024"), s, key), _cell(tabs.get("s"), s, key), _change(g)]
         rows.append(row)
-    notes = ["Exploratory (PREREG_W9 Sec. 7): each change is S against the fresh baseline with "
-             "the Sec. 6 guard computed (lower / worse beyond max(10%, 2 SE_rel)); no verdict."]
+    return head, rows, [S_NOTE]
+
+
+def s_amp_table(v: dict) -> tuple:
+    """S against the fresh baseline with the energy-optimal amplitude c* of
+    each load case's prediction u. In the energy (stiffness) inner product,
+    c* = (|u*| / |u|) cos(u, u*): it reads the prediction's level only where
+    its shape is right (cosine near 1), and a small c* can also mean a poor
+    shape. Scaling by c* removes the level and leaves the shape: the relative
+    energy gap after it is 1 - cos^2."""
+    tabs, cmp_ = v.get("tables", {}), v.get("comparisons_s_vs_b1024_exploratory") or {}
+    head = ["Set", "Baseline\nmedian c*", "S\nmedian c*", "Energy gap\nafter c*: change",
+            "Displacement\nafter c*: change"]
+    rows = []
+    for s in SETS:
+        if s == "inband":                            # the verdict holds no c* for the union
+            continue
+        row = [SET_HEAD[s].replace("\n", " "), _cell(tabs.get("b1024"), s, "c_star_median"),
+               _cell(tabs.get("s"), s, "c_star_median")]
+        for key in ("egap_c", "disp_c"):
+            row.append(_change((cmp_.get(s) or {}).get(key) or {}))
+        rows.append(row)
+    notes = ["c*: the energy-optimal amplitude of a load case's prediction, from the energy "
+             "alone (no reference solution); the median over a set's load cases, then seed "
+             "mean ± sample SD. c* is the solution's energy norm over the prediction's, times "
+             "the cosine between the two in the energy inner product: where the cosine is "
+             "near 1, c* above 1 means the prediction's level is too small and below 1 too "
+             "large, while a small c* can also mean a poor shape. After c*: the relative "
+             "energy gap and the displacement error once each load case's prediction is "
+             "scaled by its c*, which removes the level and leaves the shape (the energy gap "
+             "after c* is one minus the squared cosine).", S_NOTE]
     return head, rows, notes
 
 
@@ -299,6 +342,8 @@ CAPTIONS = {
            "trained baseline.", "tab:w9-h2"),
     "s_sets": ("S against the fresh baseline on every evaluation set (exploratory).",
                "tab:w9-s-sets"),
+    "s_amp": ("S against the fresh baseline with the energy-optimal amplitude c* on every "
+              "evaluation set (exploratory).", "tab:w9-s-amp"),
     "remesh": ("Remesh set R (2D): the label-free amplitude c_b on fixed geometries and loads "
                "meshed at five mesh sizes.", "tab:w9-remesh"),
 }
@@ -312,7 +357,8 @@ def build(verdict: dict, verdict_sha256: str) -> dict:
                                                           "Relative displacement error"))]
     if {"b1024", "s"} <= set(verdict.get("arms", {})) and "F5_displacement" in verdict["H2"]:
         parts += [("h2", "table_w9_h2.tex", h2_table(verdict)),
-                  ("s_sets", "table_w9_s_sets.tex", s_sets_table(verdict))]
+                  ("s_sets", "table_w9_s_sets.tex", s_sets_table(verdict)),
+                  ("s_amp", "table_w9_s_amp.tex", s_amp_table(verdict))]
     parts.append(("remesh", "table_w9_remesh.tex", remesh_table(verdict)))
     files = {}
     md = ["# wp9 tables (generated from records/wp9/w9_verdict.json by "
@@ -326,7 +372,10 @@ def build(verdict: dict, verdict_sha256: str) -> dict:
     if verdict.get("refused_reports"):
         md.append("Refused reports: " + "; ".join(f"{k}: {v}" for k, v in
                                                   sorted(verdict["refused_reports"].items())) + "\n")
-    md.append("Deviations: " + ("; ".join(verdict.get("deviations") or []) or "none") + "\n")
+    md.append("Deviations recorded by the adjudication: "
+              + ("; ".join(verdict.get("deviations") or []) or "none")
+              + ". Deviations recorded by hand, which the adjudication cannot see: "
+              "DEVIATIONS_W9.md.\n")
     files["tables.md"] = "\n".join(md)
     files["sources.json"] = json.dumps({"generator": "scripts/make_w9_paper_material.py",
                                         "verdict_sha256": verdict_sha256}, indent=1) + "\n"

@@ -1,0 +1,90 @@
+{
+ "what": "2D step timing (wp8 wrap-up item 5); reported only",
+ "src": "/root/autodl-tmp/FE-JEPA/src",
+ "fejepa_file": "/root/autodl-tmp/FE-JEPA/src/fejepa/__init__.py",
+ "src_git": "prereg-w9",
+ "src_head": "92dfc9381555ea40bc3f83fc015d51963febfdf2",
+ "torch": "2.12.1+cu130",
+ "cuda": "13.0",
+ "driver": "595.71.05",
+ "numeric_policy": {
+  "tf32": true,
+  "device": "cuda",
+  "torch": "2.12.1+cu130",
+  "gpu": "NVIDIA GeForce RTX 5090"
+ },
+ "cpu": "Intel(R) Xeon(R) Gold 6459C",
+ "cpus": {
+  "os_cpu_count": 128,
+  "affinity": 128,
+  "cgroup_cpu_max": 16.0,
+  "usable": 16,
+  "e1_worker_threads": 42,
+  "env_OMP_NUM_THREADS": "16"
+ },
+ "threads_default": 16,
+ "gpu": "NVIDIA GeForce RTX 5090",
+ "n_inst": 32,
+ "median_nodes": 439,
+ "epochs": [
+  2,
+  6
+ ],
+ "worker_epochs": [
+  2,
+  22
+ ],
+ "pairs": 3,
+ "variants": {
+  "worker3": {
+   "ar": {
+    "ms_per_step_per_unit": 38.78,
+    "estimates_ms": [
+     40.911,
+     37.864,
+     38.78
+    ],
+    "valid": true,
+    "units": 3,
+    "threads_per_worker": 42
+   }
+  },
+  "worker3_no_ckpt": {
+   "ar": {
+    "ms_per_step_per_unit": 27.853,
+    "estimates_ms": [
+     30.022,
+     27.853,
+     26.424
+    ],
+    "valid": true,
+    "units": 3,
+    "threads_per_worker": 42
+   }
+  },
+  "threads_w3": {
+   "ar": {
+    "ms_per_step": 38.705,
+    "estimates_ms": [
+     36.488,
+     38.705,
+     43.616
+    ],
+    "valid": true
+   },
+   "torch_threads": 5
+  },
+  "threads_w3_no_ckpt": {
+   "ar": {
+    "ms_per_step": 23.688,
+    "estimates_ms": [
+     11.712,
+     23.688,
+     26.903
+    ],
+    "valid": true
+   },
+   "torch_threads": 5
+  }
+ }
+}

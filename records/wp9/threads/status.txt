@@ -1,0 +1,7 @@
+timing_2d_env.log exit=0
+timing_2d_one.log exit=0
+timing_3d_env.log exit=0
+timing_3d_one.log exit=0
+timing_3d_env2.log exit=0
+blas_env.log exit=0
+blas_one.log exit=0

@@ -1,0 +1,74 @@
+[prereg] verified against PREREG_W9.md: acccf57ec50e...
+
+=== fejepa v2 run: /root/autodl-tmp/FE-JEPA/configs/w9_c1_n1024.json | device=cuda | workers=3 | tf32=True ===
+[plan] steps by experiment: {'e8': 0, 'total': 0}
+[dry-run] {"dry_run": true, "config": "/root/autodl-tmp/FE-JEPA/configs/w9_c1_n1024.json", "device": "cuda", "model_kind": "fejepa", "prereg_guard": true, "prereg_status": "verified", "prereg_verified": "acccf57ec50e0fddd518f2a4eecfcb664c4b8f6556e5977dec7f25b659cae78a", "plan_steps": {"e8": 0, "total": 0}, "label_need_pool_prefix": 0, "experiments_enabled": ["e8"], "ar_only": true, "loss_spec": null, "w9": {"holdouts": {"IB": 2048, "F1": 256, "F2": 256, "F3": 256, "F4": 256, "F5": 256, "R": 80}, "reuse_from": "verified"}}
+[prereg] verified against PREREG_W9.md: 91e6ecd71bca...
+
+=== fejepa v2 run: /root/autodl-tmp/FE-JEPA/configs/w9_c1_n25600.json | device=cuda | workers=3 | tf32=True ===
+[plan] steps by experiment: {'e8': 614400, 'total': 614400}
+[dry-run] {"dry_run": true, "config": "/root/autodl-tmp/FE-JEPA/configs/w9_c1_n25600.json", "device": "cuda", "model_kind": "fejepa", "prereg_guard": true, "prereg_status": "verified", "prereg_verified": "91e6ecd71bca35ab73e6f0448a27602ae6110cbb01a25bc59b7b3b4cf9d7bd08", "plan_steps": {"e8": 614400, "total": 614400}, "label_need_pool_prefix": 0, "experiments_enabled": ["e8"], "ar_only": true, "loss_spec": null, "w9": {"holdouts": {"IB": 2048, "F1": 256, "F2": 256, "F3": 256, "F4": 256, "F5": 256, "R": 80}}, "activation_checkpointing": false}
+[prereg] verified against PREREG_W9.md: 49574ab0f008...
+
+=== fejepa v2 run: /root/autodl-tmp/FE-JEPA/configs/w9_b_n1024.json | device=cuda | workers=3 | tf32=True ===
+[plan] steps by experiment: {'e8': 614400, 'total': 614400}
+[dry-run] {"dry_run": true, "config": "/root/autodl-tmp/FE-JEPA/configs/w9_b_n1024.json", "device": "cuda", "model_kind": "fejepa", "prereg_guard": true, "prereg_status": "verified", "prereg_verified": "49574ab0f0086d5e8ce0f5fdf0c3872ceb00bb176e9d2039857de0fa1603d566", "plan_steps": {"e8": 614400, "total": 614400}, "label_need_pool_prefix": 0, "experiments_enabled": ["e8"], "ar_only": true, "loss_spec": null, "w9": {"holdouts": {"IB": 2048, "F1": 256, "F2": 256, "F3": 256, "F4": 256, "F5": 256, "R": 80}}, "activation_checkpointing": false}
+[prereg] verified against PREREG_W9.md: b3cbf33c8df3...
+
+=== fejepa v2 run: /root/autodl-tmp/FE-JEPA/configs/w9_s_n1024.json | device=cuda | workers=3 | tf32=True ===
+[plan] steps by experiment: {'e8': 614400, 'total': 614400}
+[dry-run] {"dry_run": true, "config": "/root/autodl-tmp/FE-JEPA/configs/w9_s_n1024.json", "device": "cuda", "model_kind": "fejepa", "prereg_guard": true, "prereg_status": "verified", "prereg_verified": "b3cbf33c8df3e8a30d1723c7bcea01e40b636b7d24fc3c1adb2aa3048216cece", "plan_steps": {"e8": 614400, "total": 614400}, "label_need_pool_prefix": 0, "experiments_enabled": ["e8"], "ar_only": true, "loss_spec": null, "w9": {"holdouts": {"IB": 2048, "F1": 256, "F2": 256, "F3": 256, "F4": 256, "F5": 256, "R": 80}}, "activation_checkpointing": false}
+[prereg] verified against PREREG_W9.md: 0bae42a420f4...
+
+=== fejepa v2 run: /root/autodl-tmp/FE-JEPA/configs/w9_c1_n4096.json | device=cuda | workers=3 | tf32=True ===
+[plan] steps by experiment: {'e8': 614400, 'total': 614400}
+[dry-run] {"dry_run": true, "config": "/root/autodl-tmp/FE-JEPA/configs/w9_c1_n4096.json", "device": "cuda", "model_kind": "fejepa", "prereg_guard": true, "prereg_status": "verified", "prereg_verified": "0bae42a420f41cdcadfb9fb2531ff2fd7bf11c99c6a8694971021cce34a125f4", "plan_steps": {"e8": 614400, "total": 614400}, "label_need_pool_prefix": 0, "experiments_enabled": ["e8"], "ar_only": true, "loss_spec": null, "w9": {"holdouts": {"IB": 2048, "F1": 256, "F2": 256, "F3": 256, "F4": 256, "F5": 256, "R": 80}}, "activation_checkpointing": false}
+[
+ {
+  "arm": "c1_n1024",
+  "config": "configs/w9_c1_n1024.json",
+  "flags": []
+ },
+ {
+  "arm": "c1_n25600",
+  "config": "configs/w9_c1_n25600.json",
+  "flags": [
+   "--workers",
+   "3",
+   "--activation-checkpointing",
+   "off"
+  ]
+ },
+ {
+  "arm": "b_n1024",
+  "config": "configs/w9_b_n1024.json",
+  "flags": [
+   "--workers",
+   "3",
+   "--activation-checkpointing",
+   "off"
+  ]
+ },
+ {
+  "arm": "s_n1024",
+  "config": "configs/w9_s_n1024.json",
+  "flags": [
+   "--workers",
+   "3",
+   "--activation-checkpointing",
+   "off"
+  ]
+ },
+ {
+  "arm": "c1_n4096",
+  "config": "configs/w9_c1_n4096.json",
+  "flags": [
+   "--workers",
+   "3",
+   "--activation-checkpointing",
+   "off"
+  ]
+ }
+]
+S admitted: yes | N_max 25,600 with 3 worker(s) at a time | checkpointing off | usable host memory 98.8 GB (cgroup_limit) | E1 reproduction 1.6445513362704568e-10
+GO -- bash /root/autodl-tmp/FE-JEPA/runs/w9/session2/commands.sh

@@ -779,3 +779,124 @@ text, and brings the runbook up to date.
   (`test_section_a_is_wp9s_section_4_without_f5`) and must change if the two
   branches are ever merged.
 - Suite 445 (on the box 444 passed and 1 skipped where pdflatex is missing).
+
+## Stage 1 (11 Oct 2026) -- the returns committed; PREREG_W9 adjudicated: H1 NOT SUPPORTED, H2 SUPPORTED
+
+The box ran session 1 (returned on 10 October) and session 2 and Sec. 4
+(10-11 October) at the stamped commit `92dfc93` (`prereg-w9`). This stage
+commits the three returns, the adjudication and the tables generated from
+it. No change to `src`, the configurations, the pre-registration or the
+adjudicating code.
+
+- **The returns** (`records/wp9/session1/`, `session2/`, `threads/`), as
+  received, with their tarballs' SHA-256 in `records/wp9/README.md`. Session
+  2 ran the five planned arms in the plan's order (the 1,024 arm, evaluation
+  only; 25,600; the fresh baseline; S; 4,096), each once, with exit 0, no
+  restart, solve ledgers of 0 and no out-of-memory kill.
+- **The verdict** (`records/wp9/w9_verdict.json`): RUNBOOK_W9 Sec. 3 on the
+  stamped code, in a clean checkout of `prereg-w9` with the returns in place
+  (`adjudicator.git` = `prereg-w9`); the two optional paths are given
+  relative to the repository, so that the file holds no machine path. The
+  decisions recomputed from session 1's readings were identical; no report
+  was refused; the adjudication recorded no deviation.
+  - **H1 NOT SUPPORTED.** The 25,600 arm's in-band relative energy gap (the
+    validation split and IB together) against E1's states: -2.5%, tau 10%.
+    Session 1's rule 4 had read "near parity". Against the fresh baseline,
+    trained on the same host and stack, the 25,600 arm reads +1.1%
+    (validation split) and +0.8% (IB).
+  - **H2 SUPPORTED.** S against the fresh baseline: (i) F5 displacement
+    error -76.0%; (ii) the F5 / in-band ratio -74.1% (4.67 to 1.21); (iii)
+    in band, energy gap -1.9% and displacement error -7.3%, neither worse;
+    tau 10% throughout. The fresh baseline showed the deficit rule 1
+    admitted S on; S's median c* on F5 was 0.986 against the baseline's
+    1.28.
+- **Exploratory readings** (Sec. 7, no verdict; the tables in
+  `paper/wp9/tables.md`, the counts and the level and cosine readings below
+  from the reports' per-instance arrays):
+  - R: S's displacement error grew from the coarser mesh sizes to h 0.025
+    by a factor of 1.10-1.35 (seed means, one per coarser size) against the
+    baseline's 4.40-5.62.
+  - F2 (slender plates) is the hardest set for every arm: each arm has a
+    seed in which more than a quarter of the 256 instances have a relative
+    energy gap above 1 (worse than the zero field), and S has the most
+    (171, 220 and 194 by seed). S's mean energy gap and displacement error
+    on F2 are +267.8% and +243.0% against the baseline, within the guard
+    only because its tau is 407% and 486%; S's displacement error there is
+    3.10 in seed 3 against 0.35 and 0.40 in the others.
+  - Level and shape on F2. c* is the solution's energy norm over the
+    prediction's times the cosine between the two in the energy inner
+    product, so a small c* can mean a large level or a poor shape. S's
+    predicted energy norm on F2 is 1.48, 3.25 and 1.74 times the solution's
+    by seed (medians over the load cases), against the baseline's 1.04, 1.14
+    and 0.99, and its cosine 0.53, 0.12 and 0.54 against 0.75, 0.68 and
+    0.86; S's median c* there is 0.031-0.296 by seed against the baseline's
+    0.592-0.847. S raises the predicted level on F2 as on F5, where it lifts
+    the baseline's 0.74-0.77 of the solution's energy norm to 0.99-1.00; on
+    slender plates it overshoots, and its shape is worse as well. Scaling by
+    c* removes the level and leaves the shape: after it, S's errors on F2
+    are worse than the baseline's beyond the guard (energy gap +33.2%,
+    displacement error +29.1%), the only crossings against S, while the
+    25,600 arm's are lower than the baseline's (-30.3%, -28.9%). The new
+    table `table_w9_s_amp.tex` gives c* and the changes after it on every
+    set.
+  - Outliers: outside F2, every instance of the fresh baseline worse than
+    the zero field is in its third seed, seed 5 (14; the largest relative
+    energy gaps 1,907 on F1, 901 on F3, 454 on F4 and 886 on F5). They make
+    the -91% to -99% changes of S's and the 25,600 arm's mean energy gaps on
+    F1, F3, F4 and F5 against it. E1's states have 34 such instance-seed
+    values outside F2 (25 on F3); S and the 4,096 and 25,600 arms have none.
+    No value is non-finite and no seed is flagged as diverged.
+- **`DEVIATIONS_W9.md`** (new): the departures the adjudication cannot see.
+  W1: session 2 ran on a third host with NVIDIA driver 580.95.05 instead of
+  E1's and session 1's 595.71.05 (the reports do not record the driver),
+  without the operator instruction's report of the new host. E1's states
+  gave the same values on both hosts; the fresh baseline is within the
+  guard of E1's states on every in-band reading (2 of 43 comparisons on all
+  sets cross it); on one stack, too, the larger pool shows no reduction. W2:
+  the instance was shut down between the sessions (RUNBOOK_W9 1f says not
+  to; PREREG_W9 allows two visits). W3: Sec. 4 ran with 25 threads instead
+  of the cost table's 16.
+- For later runbooks: the session-2 host check of RUNBOOK_W9 Sec. 2a reads
+  the container's memory limit, which the new host shared, so it could not
+  show this change; a check that is to catch one needs the driver, the CPU
+  model or the host name. And a correction to Stage 0f: the returns'
+  provenance files were to record the memory limit, but Sec. 2d's block
+  prints the CPUs and the memory events, not the limit, and session 1's
+  (1f) was written without a GPU; W1 says what the records do show.
+- `scripts/make_w9_paper_material.py`: a table of S against the fresh
+  baseline with c* (`table_w9_s_amp.tex`, whose note states what c*
+  measures; `tests/test_w9_session2.py` expects it); the displacement
+  table's note no longer speaks of the tail, which only the energy-gap
+  table has; the Markdown names the hand-kept ledger beside the
+  adjudication's deviations. Its outputs, generated from the verdict, are
+  committed in `paper/wp9/` beside `scale_lemma.tex`.
+- `RUNBOOK_W9.md`: where the sessions and Sec. 4 ran. Sec. 0c keeps the
+  stamped commit's count, which the box ran; `tests/test_w9_runbook.py` now
+  checks it against Stage 0f's count, and the notes' latest count against
+  the suite.
+- `records/wp9/README.md`: the returns, the verdict and how to re-check it,
+  the evaluation sets on the box against the sandbox (the F2 manifest
+  identical; the other six differ while every set's node-count range and
+  median agree), and Sec. 4's readings.
+- `tests/test_w9_returns.py` (10 tests): the returns whole and consistent
+  with each other (status, provenance hashes, the plan's decision file and
+  manifests); Sec. 4's return; the adjudication re-run on the committed
+  returns equals the committed verdict but for the adjudicator's record of
+  its own code, which is checked against the stamp's files; H1 and H2, and
+  the c* readings behind the deficit check, recomputed from the reports
+  without the adjudicator's code; E1's states' values on both hosts; the
+  verdict words and the numbers that the ledger, the README and these notes
+  quote, checked phrase by phrase with the labels they carry; the paper
+  material byte for byte.
+- Three independent reviews, two of the first package (the verdict and the
+  records; the package's mechanics) and one of the revised package: nothing
+  blocking. Addressed: the F2 readings (level, shape and the raw changes),
+  the outliers and the c* table above; the training comparisons off the
+  band, the sources and inferences of the host facts, and the shutdown
+  between the sessions (W1, W2); the claims about the verdicts worded as
+  what the records show; tests that tie each quoted fact and verdict word
+  to its record, compare bytes, check lengths and exact equality, and
+  survive later changes to the adjudicating code; the runbook's count.
+  Not changed: the returns keep the box's file names and trailing
+  whitespace, as received.
+- Suite 455 (445 + 10).

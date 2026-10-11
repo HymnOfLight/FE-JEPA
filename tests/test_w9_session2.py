@@ -558,8 +558,8 @@ def test_paper_material_from_the_verdict(box, tmp_path):
     res = json.loads(json.dumps(_adj(tmp, reports, s1), default=str))
     files = mk.build(res, "0" * 64)
     assert set(files) == {"table_w9_h1.tex", "table_w9_c1.tex", "table_w9_c1_disp.tex",
-                          "table_w9_h2.tex", "table_w9_s_sets.tex", "table_w9_remesh.tex",
-                          "tables.md", "sources.json"}
+                          "table_w9_h2.tex", "table_w9_s_sets.tex", "table_w9_s_amp.tex",
+                          "table_w9_remesh.tex", "tables.md", "sources.json"}
     assert mk.build(json.loads(json.dumps(res)), "0" * 64) == files        # deterministic
     md = files["tables.md"]
     for role in ("n1024", "nmax"):                   # H1's quantity: val and IB together (r3)
@@ -589,6 +589,7 @@ def test_paper_material_from_the_verdict(box, tmp_path):
     assert res["H2"]["verdict"].startswith("NOT EVALUATED")
     files = mk.build(res, "1" * 64)
     assert "table_w9_h2.tex" not in files and "table_w9_s_sets.tex" not in files
+    assert "table_w9_s_amp.tex" not in files
     assert f"H2: {res['H2']['verdict']}." in files["tables.md"]
 
 

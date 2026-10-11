@@ -1,0 +1,57 @@
+{
+ "S_enters": {
+  "value": true,
+  "ratio_disp_F5_over_inband": 4.05819849171805,
+  "c_star_median_F5": 1.2384112517512587,
+  "F5": {
+   "family": "F5",
+   "seed": 91005,
+   "n_instances": 256
+  },
+  "rule": "ratio >= 1.5 and c* >= 1.1"
+ },
+ "pool_max": {
+  "value": {
+   "n": 25600,
+   "mode": "parallel"
+  },
+  "n": 25600,
+  "mode": "parallel",
+  "k": 3,
+  "workers": 3,
+  "usable_host_bytes": 98784247808.0,
+  "usable_host_source": "cgroup_limit",
+  "host_per_worker_bytes": {
+   "25600": 17586130944.0,
+   "12800": 9480790016.0
+  },
+  "gpu_total_bytes": 33670758400.0,
+  "gpu_per_worker_bytes_ckpt_on": {
+   "25600": 5298716672.0,
+   "12800": 3268673536.0
+  },
+  "rule": "25,600 then 12,800; at each, 3 workers then one; fit = host and device needs <= 0.8 x their limits, checkpointing on"
+ },
+ "checkpointing_off": {
+  "value": true,
+  "speedup": 1.3923096255340537,
+  "timings_valid": true,
+  "fits_without": true,
+  "gpu_per_worker_bytes_ckpt_off": {
+   "25600": 6408110080.0,
+   "12800": 4378066944.0
+  },
+  "rule": "worker3 / worker3_no_ckpt >= 1.3 with both valid, and the pool choice fits without it; else on"
+ },
+ "C0_4_prediction": {
+  "value": false,
+  "egap_train_over_val": 0.9856902930530866,
+  "reading": "near parity: C1's in-band gain likely small",
+  "rule": "< 0.8: overfit; otherwise near parity (prediction only)"
+ },
+ "C2_score_usable": {
+  "value": true,
+  "spearman_k10": 0.9948527027542533,
+  "rule": "seed-mean Spearman at k = 10 >= 0.9 (recorded for C2; no session-2 effect)"
+ }
+}

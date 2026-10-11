@@ -1,0 +1,62 @@
+HEAD 92dfc9381555ea40bc3f83fc015d51963febfdf2
+tree eff8bd4c38b840cca13a009d83c85a6e01811056
+describe prereg-w9
+--- git status --porcelain ---
+?? "\345\256\213\345\215\232\345\243\253\346\223\215\344\275\234\346\211\213\345\206\214_v6_D10\351\207\215\345\220\257\350\265\267\346\255\245_2026-09-03.md"
+torch 2.12.1+cu130 True
+--- reports ---
+02c029b4b02bca05b01f97f183000ca05d0861908b6e7684a62134caa4051594  runs/w9/b_n1024/report.json
+808ed673b1ba547dc10ed9ddf8d38adaf637e19c71d72b0dd358b5abe65f428b  runs/w9/c1_n1024/report.json
+d27f8c3a1355117f349599f561de28036d3f3a7dabd7b85c9b52191277e583a3  runs/w9/c1_n25600/report.json
+83b39172596191c680b85a410faa0a8d7c1b6cd895a56e1db31c9e2d5faed4f5  runs/w9/c1_n4096/report.json
+297859493d5cdcd5816b0a28d9e19b2e4805f70350e55cc56416301f5418d68c  runs/w9/s_n1024/report.json
+--- states ---
+runs/w9/b_n1024/e8_states/:
+total 85860
+-rw-r--r-- 1 root root 29302805 2026-10-10 23:15:46.211545790 +0800 ar_p1024_s3.pt
+-rw-r--r-- 1 root root 29302805 2026-10-10 23:14:23.309966436 +0800 ar_p1024_s4.pt
+-rw-r--r-- 1 root root 29302805 2026-10-10 23:19:38.571387928 +0800 ar_p1024_s5.pt
+
+runs/w9/c1_n25600/e8_states/:
+total 85860
+-rw-r--r-- 1 root root 29302935 2026-10-10 21:10:53.706044331 +0800 ar_p25600_s0.pt
+-rw-r--r-- 1 root root 29302935 2026-10-10 21:10:47.710043250 +0800 ar_p25600_s1.pt
+-rw-r--r-- 1 root root 29302935 2026-10-10 21:12:12.434075498 +0800 ar_p25600_s2.pt
+
+runs/w9/c1_n4096/e8_states/:
+total 85860
+-rw-r--r-- 1 root root 29302805 2026-10-11 03:29:59.458131590 +0800 ar_p4096_s0.pt
+-rw-r--r-- 1 root root 29302805 2026-10-11 03:33:15.780779391 +0800 ar_p4096_s1.pt
+-rw-r--r-- 1 root root 29302805 2026-10-11 03:30:38.382667574 +0800 ar_p4096_s2.pt
+
+runs/w9/s_n1024/e8_states/:
+total 85860
+-rw-r--r-- 1 root root 29302805 2026-10-11 01:23:13.439402464 +0800 ar_p1024_s3.pt
+-rw-r--r-- 1 root root 29302805 2026-10-11 01:22:08.447535021 +0800 ar_p1024_s4.pt
+-rw-r--r-- 1 root root 29302805 2026-10-11 01:23:17.971394713 +0800 ar_p1024_s5.pt
+012ac43f96631a0a1150de063098d295c745dd6b791e839ebf44cda5589af0d6  runs/w9/b_n1024/e8_states/ar_p1024_s3.pt
+036d8a9a80a593927c69f8f3bb388806b1ba9b7df785548250f21dda53f00349  runs/w9/b_n1024/e8_states/ar_p1024_s4.pt
+012edd879674704ae2e933eb525ecd19ab2a8fd1d4a3710f6629b495eb84dcb9  runs/w9/b_n1024/e8_states/ar_p1024_s5.pt
+93be16ed13de4f61649e001d596898017fa08768b175e0550fdde1fecdaadaf0  runs/w9/c1_n25600/e8_states/ar_p25600_s0.pt
+668e1d7f4db753f8411503f625e693f6d00f073404455ace5867d04f4065694d  runs/w9/c1_n25600/e8_states/ar_p25600_s1.pt
+42275d507364c4207f009d859870308d3cd3f304af46386b85eaaf2d2cf36767  runs/w9/c1_n25600/e8_states/ar_p25600_s2.pt
+5a7ecb771c1b41cf13293692fc16e4835f9f0ac555a344cafde5278a8e9ed758  runs/w9/c1_n4096/e8_states/ar_p4096_s0.pt
+e99fe0d2375d276f7b6f16ced1d8ade37acb3b008c97e880cab1c0ad4cee82d5  runs/w9/c1_n4096/e8_states/ar_p4096_s1.pt
+9521f037b35fdad881c0de7eceb44904541d95b4d9e8ec3b48863b949c6cacc1  runs/w9/c1_n4096/e8_states/ar_p4096_s2.pt
+2abc93af17adf4d3cb89152423504acf17d11fa566801a160cac5794950b7f9b  runs/w9/s_n1024/e8_states/ar_p1024_s3.pt
+ee13fa1f057ca0857a0f01398effff32669218d92ef0926383d94e499b323d57  runs/w9/s_n1024/e8_states/ar_p1024_s4.pt
+6bc92f738dcbe4e783565b417fc35919146f7535528f9cc2f2534c2dcbb9b457  runs/w9/s_n1024/e8_states/ar_p1024_s5.pt
+6edff88987ba58dd246118aa8417ba09a0bd53aef4775ddba9a6ad862b6f7906  runs/e1_2d_base/e8_states/ar_p1024_s0.pt
+13afdc95600d5e3edea7f7369e24f43ced0b9c0e889a627063b44db19d84bb46  runs/e1_2d_base/e8_states/ar_p1024_s1.pt
+97caedfd53d80edb9ee335b1a035952cc82d0d498ff6859c0f8910e8493dfeab  runs/e1_2d_base/e8_states/ar_p1024_s2.pt
+NVIDIA GeForce RTX 5090, 580.95.05, 32607 MiB, 0 MiB
+hostname autodl-container-8j9m4jx891-ed8b652f
+nproc 25
+oom.group 0
+low 0
+high 0
+max 0
+oom 0
+oom_kill 0
+/dev/md0        100G   67G   34G  67% /root/autodl-tmp
+overlay          30G  1.6G   29G   6% /

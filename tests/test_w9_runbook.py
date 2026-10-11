@@ -154,15 +154,22 @@ def test_the_timing_script_runs_with_section_4s_options(tmp_path):
 
 
 def test_the_runbook_states_the_suite_count():
+    """Sec. 0c states the suite of the stamped commit, which the box ran (Stage
+    0f's count in the branch notes); the notes' latest count is this
+    checkout's suite (Stage 1 on)."""
     res = subprocess.run([sys.executable, "-m", "pytest", "--collect-only", "-q",
                           "-p", "no:cacheprovider"], capture_output=True, text=True, cwd=ROOT)
     m = re.search(r"(\d+) tests? collected", res.stdout)
     assert m, res.stdout[-2000:]
     n = int(m.group(1))
     assert LATEX in res.stdout                     # the test that skips without pdflatex
+    notes = (ROOT / "BRANCH_NOTES_wp9-pool.md").read_text(encoding="utf-8")
+    stage_0f = notes[notes.index("## Stage 0f"):]
+    stamped = int(re.search(r"^- Suite (\d+)", stage_0f, re.M).group(1))
+    assert int(re.findall(r"^- Suite (\d+)", notes, re.M)[-1]) == n
     sec = _section("0")
-    assert sec.count(f'"{n} passed"') == 1 and sec.count(f"`{n} passed`") == 1
-    assert sec.count(f"`{n - 1} passed, 1 skipped`") == 1
+    assert sec.count(f'"{stamped} passed"') == 1 and sec.count(f"`{stamped} passed`") == 1
+    assert sec.count(f"`{stamped - 1} passed, 1 skipped`") == 1
 
 
 def test_the_blas_readout_reads_the_loaded_pools():

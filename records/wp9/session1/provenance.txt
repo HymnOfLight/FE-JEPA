@@ -1,0 +1,26 @@
+HEAD 92dfc9381555ea40bc3f83fc015d51963febfdf2
+tree eff8bd4c38b840cca13a009d83c85a6e01811056
+describe prereg-w9
+--- git status --porcelain ---
+?? "\345\256\213\345\215\232\345\243\253\346\223\215\344\275\234\346\211\213\345\206\214_v6_D10\351\207\215\345\220\257\350\265\267\346\255\245_2026-09-03.md"
+--- states ---
+6edff88987ba58dd246118aa8417ba09a0bd53aef4775ddba9a6ad862b6f7906  runs/e1_2d_base/e8_states/ar_p1024_s0.pt
+13afdc95600d5e3edea7f7369e24f43ced0b9c0e889a627063b44db19d84bb46  runs/e1_2d_base/e8_states/ar_p1024_s1.pt
+97caedfd53d80edb9ee335b1a035952cc82d0d498ff6859c0f8910e8493dfeab  runs/e1_2d_base/e8_states/ar_p1024_s2.pt
+torch 2.12.1+cu130 gmsh 4.15.2
+--- compute apps (may be empty inside a container) ---
+hostname autodl-container-pwr6zxz5jh-5286d5a4
+nproc 1
+MemTotal:       791194764 kB
+MemAvailable:   592851580 kB
+--- cgroup ---
+2147483648
+50000 100000
+oom.group 0
+low 0
+high 0
+max 0
+oom 0
+oom_kill 0
+/dev/md0        100G   66G   35G  66% /root/autodl-tmp
+overlay          30G  1.5G   29G   5% /

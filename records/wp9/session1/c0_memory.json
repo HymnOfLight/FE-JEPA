@@ -1,0 +1,75 @@
+{
+ "what": "wp9 C0.6 memory of one AR training unit's residency (instances, packs, CPU-resident energy anchors) as the pool grows, and the device memory of AR steps; reported only",
+ "git": "prereg-w9",
+ "report": "records/wp8/e1/e1_2d_base/report.json",
+ "report_sha256": "0ebd53c3be1dcaf823bb76753692f41aced19734a1e4af972f0a064111cf36fe",
+ "states_dir": null,
+ "device": "cuda",
+ "seeds": [
+  0,
+  1,
+  2
+ ],
+ "limits": {
+  "meminfo_total": 810183438336,
+  "meminfo_available": 699373342720,
+  "cgroup_limit": 98784247808,
+  "cgroup_current": 2286264320,
+  "usable": 98784247808,
+  "usable_source": "cgroup_limit"
+ },
+ "workers": 3,
+ "stop_fraction": 0.6,
+ "marks": [
+  {
+   "n": 1024,
+   "rss": 1369149440,
+   "gpu_allocated": 188521472,
+   "gpu_reserved": 188743680,
+   "seconds": 3.8
+  },
+  {
+   "n": 4096,
+   "rss": 3283496960,
+   "gpu_allocated": 668345856,
+   "gpu_reserved": 668991488,
+   "seconds": 15.9
+  },
+  {
+   "n": 12800,
+   "rss": 8833396736,
+   "gpu_allocated": 2058410496,
+   "gpu_reserved": 2059403264,
+   "seconds": 50.4
+  },
+  {
+   "n": 25600,
+   "rss": 16938737664,
+   "gpu_allocated": 4088568832,
+   "gpu_reserved": 4089446400,
+   "seconds": 102.0
+  }
+ ],
+ "stopped_at": null,
+ "gpu": {
+  "name": "NVIDIA GeForce RTX 5090",
+  "total": 33670758400,
+  "device_used_start": 563347456,
+  "reserved_start": 31457280,
+  "context_estimate": 531890176,
+  "step": {
+   "n_nodes": 2183,
+   "ckpt_on": {
+    "reserved_overhead": 538968064,
+    "allocated_overhead": 387417600
+   },
+   "ckpt_off": {
+    "reserved_overhead": 1648361472,
+    "allocated_overhead": 1401844736
+   }
+  },
+  "context_after_step": 670302208
+ },
+ "rss_before": 681635840,
+ "rss_after_step": 17586130944
+}

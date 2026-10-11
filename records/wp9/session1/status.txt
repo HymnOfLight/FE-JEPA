@@ -1,0 +1,7 @@
+ood2d.log exit=0
+c0_val.log exit=0
+c0_trainval.log exit=0
+c0_amp2d.log exit=0
+c0_memory.log exit=0
+profile_w9.log exit=0
+decisions.log exit=0
