@@ -1,0 +1,7 @@
+Tue Oct 13 00:48:02 CST 2026
+autodl-container-8j9m4jx891-ed8b652f
+NVIDIA GeForce RTX 5090, 580.95.05, 32607 MiB
+Model name:                      Intel(R) Xeon(R) Platinum 8470Q
+25
+/sys/fs/cgroup/memory.max 98784247808
+/sys/fs/cgroup/cpu.max 2500000 100000

@@ -34,3 +34,5 @@ wp9's session 2 ran on another host with another GPU driver, and its records nam
 ```
 - It writes into `records/`, so section 7 returns it.
 - The operator reports a restart of the instance, or a change of host (another host name or driver). Training resumes from its checkpoints either way.
+
+**Correction, 13 October 2026.** The first sentence of this item overstates what wp9's session 2 left unrecorded. Its provenance file (`records/wp9/session2/provenance.txt` on `wp9-pool`) named the host and the driver; it lacked the CPU model and the memory limit. The run reports did not record the driver, and the change of host came to light only with the return (`DEVIATIONS_W9.md`, W1). The line itself and the rest of this addendum are unchanged. The operator ran the line once, after section 0c (`docs/G-C1.3_verdict.md`, deviation 2).

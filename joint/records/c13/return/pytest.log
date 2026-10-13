@@ -1,0 +1,13 @@
+..............................                                                                                                                                                                  [100%]
+========================================================================================== warnings summary ===========================================================================================
+joint/tests/test_family_export.py::test_export_reproduces_the_joint_model[family-None]
+joint/tests/test_family_export.py::test_export_reproduces_the_joint_model[family-300.0]
+  /root/autodl-tmp/FE-JEPA-c13/joint/fejoint/joint.py:367: RuntimeWarning: invalid value encountered in scalar divide
+    return float((U[idx, 0] * wts_).sum() / wts_.sum()), float((y[idx] * wts_).sum() / wts_.sum())
+
+joint/tests/test_c13.py::test_train_resume_and_predict[label_free]
+  /root/autodl-tmp/FE-JEPA-c13/joint/../src/fejepa/anchor/energy.py:70: UserWarning: Sparse invariant checks are implicitly disabled. Memory errors (e.g. SEGFAULT) will occur when operating on a sparse tensor which violates the invariants, but checks incur performance overhead. To silence this warning, explicitly opt in or out. See `torch.sparse.check_sparse_tensor_invariants.__doc__` for guidance.  (Triggered internally at /pytorch/aten/src/ATen/Context.cpp:760.)
+    K_t = torch.sparse_coo_tensor(idx, val, size=Kc.shape).coalesce()   # CPU
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+30 passed, 3 warnings in 223.63s (0:03:43)

@@ -1,0 +1,5 @@
+prereg-c13
+/dev/md0        100G   67G   34G  67% /root/autodl-tmp
+NVIDIA GeForce RTX 5090, 100 %, 0 MiB
+numpy 2.4.6 scipy 1.18.0 torch 2.12.1+cu130 True
+label solver: scipy

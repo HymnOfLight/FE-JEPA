@@ -1,0 +1,2 @@
+# The repository's .gitignore leaves out every folder named runs/. The returned run records are kept.
+!return/runs/
