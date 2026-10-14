@@ -24,6 +24,10 @@ LATEX = ("tests/test_cmame_material.py::test_manuscript_compiles",
          "tests/test_cmame_references.py::"
          "test_the_bibliography_renders_the_data_reference_and_the_chapter")
 """The tests that need a TeX installation, which the box does not have."""
+E0C_STATES = ("python -c \"from fejepa.analysis.holdout import load_spec, check_states; "
+              "s = load_spec('configs/holdout_v1.json'); [check_states(v, s['seeds']) for v in "
+              "s['sets'].values()]; print('21 states verified')\"   # 21 states verified")
+"""RUNBOOK_CMAME E0c's check of the 21 states."""
 SCRIPTS = {"A": {"scripts/time_inference_vs_solve.py", "scripts/export_fields.py"},
            "B": {"scripts/cm2d_precheck.py"},
            "C": {"scripts/adjudicate_cm2d.py"},
@@ -293,6 +297,9 @@ def test_section_e_runs_the_holdout_on_the_tag():
     cfg = json.loads((ROOT / "configs" / "holdout_v1.json").read_text())
     states = [r["state"] for s in cfg["sets"].values() for r in s["rows"].values()]
     assert len(states) * len(cfg["seeds"]) == 21 and "| wc -l   # 21" in e
+    # ... each checked by SHA-256 before anything is labelled (E0c), with the call that
+    # tests/test_holdout_run.py runs on its miniature
+    assert e.count(E0C_STATES) == 1 and e.index(E0C_STATES) < e.index("### E1. The run")
     for st in states:
         d, f = st.rsplit("/", 1)
         assert d in e, st

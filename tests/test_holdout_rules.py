@@ -13,8 +13,13 @@ readings outside the counts and ratios; a non-finite value leaves a claim
 NOT EVALUATED too, except that in H1, H2a, H2b, H2c and H3 a non-finite value
 of the new row alone is a divergence (NOT REPLICATED), as in PREREG_CM2D;
 the secondary readings compare the new row with its reference and sit beside
-the validation arrays' own; and the resampling record that the
-pre-registration quotes is what scripts/holdout_resample.py gives."""
+the validation arrays' own; a claim that does not replicate names the
+comparisons that failed; T1 and D2 carry the pairing-free reading (every
+pair of seeds); V reads REPRESENTATIVE on the manuscript's arrays against
+themselves, rejects a constructed shift in the direction it has, leaves out
+what it cannot read and steps down by Holm's procedure; and the resampling
+record that the pre-registration quotes is what scripts/holdout_resample.py
+gives."""
 
 import importlib.util
 import json
@@ -25,11 +30,13 @@ import numpy as np
 import pytest
 
 from fejepa.analysis.adjudicate_holdout import (CLAIMS, NOT_EVALUATED, NOT_REPLICATED,
-                                                REPLICATED, Arrays, adjudicate_sets,
-                                                arrays_from_report, claim_d2, claim_halved,
-                                                claim_t1, claim_t2, claim_t3,
-                                                mean_gap_above_one, pair_shares, reading_h3,
-                                                set_readings)
+                                                NOT_REPRESENTATIVE, REPLICATED, REPRESENTATIVE,
+                                                Arrays, adjudicate_sets, arrays_from_report,
+                                                claim_d2, claim_halved, claim_t1, claim_t2,
+                                                claim_t3, claims_of, failing_components, holm,
+                                                mean_gap_above_one, pair_shares, pairing_free,
+                                                ratio_intervals, reading_h3, representativeness,
+                                                resampled, set_readings)
 from fejepa.analysis.holdout import METRICS, content_check, worse_than_zero
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -93,7 +100,8 @@ def test_secondary_readings_beside_the_validation_values(manuscript):
     mac = _macros()
     for name, A in (("h3d", a3), ("h2d", a2)):
         sec = res["secondary"][name]
-        assert set(sec) == {"holdout", "validation", "ratio_holdout_over_validation"}
+        assert set(sec) == {"holdout", "validation", "ratio_holdout_over_validation",
+                            "ratio_interval"}
         assert sec["holdout"] == sec["validation"]               # the same arrays here
         assert all(v == pytest.approx(1.0) for r in sec["ratio_holdout_over_validation"].values()
                    for v in r.values())
@@ -322,6 +330,412 @@ def test_the_resampling_record_is_what_the_script_gives():
     assert f"H2c came closest, its largest rel {100 * h2c_max:.1f}%" in text
     assert h2c_max == max(rec["schemes"][s]["quantiles"][k]["max"] for s in rec["schemes"]
                           for k in ("H2c_rel",))
+    # V's calibration, as the text quotes it
+    v = rec["V"]
+    assert set(v) == {"alpha", "halves", "at_holdout_sizes", "single_quantity"}
+    assert v["alpha"] == CRITERIA["representative_alpha"] == 0.05
+    hv, sz = v["halves"], v["at_holdout_sizes"]
+    assert hv["sizes"] == {k: {"holdout": 128, "validation": 128} for k in ("h2d", "h3d")}
+    assert sz["sizes"] == {k: {"holdout": s["n_holdout"], "validation": 256}
+                           for k, s in cfg["sets"].items()}
+    assert hv["draws"] == sz["draws"] == 1000 and hv["draws_per_factor"] == 200
+    assert hv["false_alarm"] <= 0.05 and sz["false_alarm"] <= 0.05
+
+    def pct(x):
+        return f"{100 * x:.1f}".rstrip("0").rstrip(".") + "%"
+
+    assert (f"(1,000 splits), V read NOT REPRESENTATIVE in {pct(hv['false_alarm'])} of the "
+            "splits") in text
+    shifts = ["1.05", "1.10", "1.15", "1.20"]
+    assert list(hv["power"]) == list(sz["power"]) == shifts
+    said = ", ".join(pct(hv["power"][s]) for s in shifts[:3]) + f" and {pct(hv['power']['1.20'])}"
+    assert f"multiplied by 1.05, 1.10, 1.15 and 1.20 on one half in both sets, eight quantities " \
+           f"at once, in {said} of 200 splits each" in text
+    said = ", ".join(pct(sz["power"][s]) for s in shifts[:3]) + f" and {pct(sz['power']['1.20'])}"
+    assert f"in {pct(sz['false_alarm'])} without a change and in {said} of 200 draws" in text
+    assert pct(sz["power"]["1.05"]) == "54%"                        # "about half" (Sec. 9)
+    assert "a 5% change of the label-free errors was detected in about half" in text
+    assert f"V REPRESENTATIVE (in {pct(1 - sz['false_alarm'])} of the calibration's draws at " \
+           "the holdout sets' sizes)" in text
+    # one quantity alone made worse
+    one = v["single_quantity"]
+    assert one["sizes"] == sz["sizes"] and one["draws"] == 200
+    assert one["factors"] == ["1.02", "1.05", "1.10", "1.20"]
+    det = one["detected"]
+    recall = [q for q in det if q.endswith(":crit_recall")]
+    errors = [q for q in det if q not in recall]
+    assert len(det) == 35 and len(errors) == 28 and len(recall) == 7
+    for kind, qs in (("error_metrics", errors), ("crit_recall", recall)):
+        for f in one["factors"]:
+            got = [det[q][f] for q in qs]
+            assert one["summary"][kind][f] == {"min": min(got), "median": float(np.median(got)),
+                                               "max": max(got)}
+    e, r = one["summary"]["error_metrics"], one["summary"]["crit_recall"]
+    assert (f"V rejected that quantity, among the 28 quantities of the error metrics, in "
+            f"{pct(e['1.10']['min'])} to {pct(e['1.10']['max'])} of the draws at 1.10 (median "
+            f"about {100 * e['1.10']['median']:.0f}%) and in {pct(e['1.20']['min'])} to "
+            f"{pct(e['1.20']['max'])} at 1.20 (median about {100 * e['1.20']['median']:.0f}%), "
+            f"and among the critical-region recalls in {pct(r['1.02']['min'])} to "
+            f"{pct(r['1.02']['max'])} at 1.02 (median {pct(r['1.02']['median'])})") in text
+    def span(qs):
+        got = [det[q]["1.10"] for q in qs]
+        return f"{pct(min(got))} to {pct(max(got))}"
+
+    def err(s, rows):
+        return [q for q in errors if q.split(":")[0] == s and q.split(":")[1] in rows]
+
+    assert (f"the error metrics of T1's two rows were rejected at 1.10 in "
+            f"{span(err('h3d', ('ar', 'labels')))} of the draws and those of D2's in "
+            f"{span(err('h2d', ('ar', 'labels')))}") in text
+    assert (f"whose four error metrics alone were rejected at 1.10 in {span(err('h3d', ('ar',)))} "
+            f"of the draws (the two-dimensional one's in {span(err('h2d', ('ar',)))})") in text
+    h1 = det["h2d:ar:energy_gap_rel"]
+    assert (f"the two-dimensional label-free transformer's relative energy gap that H1 reads "
+            f"(rejected in {pct(h1['1.10'])} of the draws at 1.10 and {pct(h1['1.20'])} at "
+            "1.20)") in text
+    assert (f"a change confined to one error metric of one row was detected less often, in as "
+            f"few as {pct(e['1.10']['min'])} of the draws at 10% and {pct(e['1.20']['min'])} at "
+            f"20% (one critical-region recall, by contrast, in most draws already at 2%") in text
+    assert r["1.02"]["median"] > 0.5                                # "most draws"
+
+
+def test_pairing_free_readings_and_v_on_the_manuscripts_own_arrays(manuscript):
+    a3, a2 = manuscript
+    res = adjudicate_sets(a3, a2, CRITERIA, h3d_val=a3, h2d_val=a2)
+    c = res["claims"]
+    assert all(v["failing"] == [] for v in c.values())
+    assert c["T1"]["all_pairs_reading"] and c["D2"]["all_pairs_reading"]
+    d2 = c["D2"]["per_metric"]
+    assert all(v["holds_all_pairs"] for v in d2.values())
+    # the closest pair: L_D's best seed against the label-free transformer's worst
+    peak = d2["peak_vm_rel_err"]
+    assert peak["worst_pair_rel"] == pytest.approx(max(peak["label_free_per_seed"])
+                                                   / min(peak["supervised_per_seed"]) - 1)
+    assert round(100 * peak["worst_pair_rel"], 1) == -3.0
+    t1 = c["T1"]["per_metric"]
+    closest = min(t1, key=lambda m: abs(t1[m]["worst_pair_rel"]))
+    assert closest == "crit_recall"
+    text = (ROOT / "PREREG_HOLDOUT.md").read_text(encoding="utf-8")
+    assert (f"the least favourable pair is {100 * abs(peak['worst_pair_rel']):.1f}% apart in D2 "
+            "(the peak "
+            f"von Mises error) and {100 * abs(t1[closest]['worst_pair_rel']):.1f}% in T1 (the "
+            "critical-region recall)") in text
+    assert min(abs(v["worst_pair_rel"]) for v in d2.values()) == abs(peak["worst_pair_rel"])
+    v = res["V"]
+    names = sorted(f"{n}:{r}:{m}" for n, A in (("h3d", a3), ("h2d", a2)) for r in A.rows
+                   for m in METRICS)
+    assert v["verdict"] == REPRESENTATIVE and sorted(v["quantities"]) == names
+    assert len(names) == 35 and v["left_out"] == [] and v["rejected"] == []
+    assert v["alpha"] == CRITERIA["representative_alpha"] == 0.05
+    assert all(q["p"] == 1.0 and q["prob_holdout_higher"] == 0.5 and not q["holdout_worse"]
+               and q["seeds"] == [0, 1, 2] for q in v["quantities"].values())
+    q = v["quantities"]["h3d:ar:disp_rel_l2"]
+    assert (q["n_holdout"], q["n_validation"]) == (256, 256)
+    assert q["holdout_mean"] == pytest.approx(np.mean(a3.per_seed("ar", "disp_rel_l2")))
+
+
+def test_pairing_free_reading_compares_every_pair_of_seeds():
+    A = _arrays(_t1_values())
+    d, k = METRICS.index("disp_rel_l2"), METRICS.index("crit_recall")
+    A.values[0, :, :, d] = np.array([1.0, 2.0, 3.0])[:, None]     # label-free, per seed
+    A.values[1, :, :, d] = np.array([1.5, 2.5, 3.5])[:, None]     # supervised
+    r = claim_t1(A)
+    assert r["verdict"] == REPLICATED                             # seed s against seed s
+    pm = r["per_metric"]["disp_rel_l2"]
+    assert not pm["better_all_pairs"] and pm["worst_pair_rel"] == pytest.approx(3.0 / 1.5 - 1)
+    assert not r["all_pairs_reading"]
+    A.values[0, :, :, d] = 1.0
+    A.values[0, :, :, k] = np.array([2.0, 1.2, 3.0])[:, None]     # recall: higher is better
+    A.values[1, :, :, k] = np.array([1.0, 1.1, 1.3])[:, None]
+    r = claim_t1(A)
+    assert r["verdict"] == REPLICATED and not r["all_pairs_reading"]
+    assert r["per_metric"]["crit_recall"]["worst_pair_rel"] == pytest.approx(1.2 / 1.3 - 1)
+    A.values[0, :, :, k] = 2.0
+    assert claim_t1(A)["all_pairs_reading"]
+    vals = _vals2()
+    B = _arrays(vals, rows=ROWS2)
+    B.values[0, :, :, d] = np.array([0.060, 0.070, 0.080])[:, None]   # higher than L_D's
+    B.values[1, :, :, d] = np.array([0.050, 0.065, 0.075])[:, None]
+    r = claim_d2(B)
+    assert r["verdict"] == REPLICATED and not r["all_pairs_reading"]
+    pm = r["per_metric"]["disp_rel_l2"]
+    assert not pm["holds_all_pairs"] and pm["worst_pair_rel"] == pytest.approx(0.06 / 0.075 - 1)
+
+
+def test_failing_components_name_what_failed():
+    A = _arrays(_t1_values())
+    A.values[0, 1, :, METRICS.index("vm_rel_l2")] = 2.0           # a tie in seed 1
+    A.values[0, :, :, METRICS.index("crit_recall")] = 1.0         # recall tied throughout
+    r = claim_t1(A)
+    assert failing_components("T1", r) == [
+        "T1 vm_rel_l2 seed 1", "T1 crit_recall seed 0", "T1 crit_recall seed 1",
+        "T1 crit_recall seed 2", "T1 crit_recall seed mean"]
+    vals = _vals2()
+    B = _arrays(vals, rows=ROWS2)
+    B.values[0, 0, :, METRICS.index("peak_vm_rel_err")] = 0.2     # seed 0 worse than L_D's
+    assert failing_components("D2", claim_d2(B)) == ["D2 peak_vm_rel_err seed 0"]
+    G = np.full((3, 3, 4, 4), 0.5)
+    P = np.full(G.shape, -1.0)
+    G[1, 0, 0, 0], P[1, 0, 0, 0] = 1.5, 0.2
+    assert failing_components("T3", claim_t3(_arrays({}, n=4, gap=G, pi=P))) == ["T3 mgn"]
+    C = _arrays({(r, m): 0.1 for r in ROWS2 for m in METRICS}, rows=ROWS2)
+    res = adjudicate_sets(None, C, CRITERIA)
+    for c in ("H1", "H2a", "H2b", "H2c"):
+        assert res["claims"][c]["verdict"] == NOT_REPLICATED and res["claims"][c]["failing"] == [c]
+    assert res["claims"]["T1"]["failing"] == []                   # NOT EVALUATED
+    assert all(v["failing"] == failing_components(c, v) for c, v in res["claims"].items())
+    assert failing_components("T1", claim_t1(_arrays(_t1_values()))) == []   # REPLICATED
+
+
+def test_t2_failing_parts():
+    n = 20
+    A = _arrays({}, n=n)
+    A.values[0, :, :, METRICS.index("disp_rel_l2")] = 1.0
+    A.values[2, :, :, METRICS.index("disp_rel_l2")] = 0.5         # lower everywhere
+    A.values[0, :, :, METRICS.index("vm_rel_l2")] = 1.0
+    A.values[2, :, :, METRICS.index("vm_rel_l2")] = 0.5           # von Mises lower: not higher
+    assert failing_components("T2", claim_t2(A, 0.5, 0.95)) == ["T2 vm_ok"]
+    A.values[2, :, :, METRICS.index("disp_rel_l2")] = 1.0         # a tie: not lower
+    assert failing_components("T2", claim_t2(A, 0.5, 0.95)) == ["T2 disp_ok", "T2 vm_ok"]
+
+
+def test_holm_steps_down_and_stops_at_the_first_kept():
+    assert holm({"a": 0.001, "b": 0.02, "c": 0.04}, 0.05) == {"a": True, "b": True, "c": True}
+    assert holm({"a": 0.001, "b": 0.03, "c": 0.04}, 0.05) == {"a": True, "b": False, "c": False}
+    assert holm({"a": 0.026, "b": 0.03}, 0.05) == {"a": False, "b": False}
+    assert holm({"a": 0.025, "b": 0.05}, 0.05) == {"a": True, "b": True}     # at the level
+    assert holm({"b": 0.001, "a": float("nan")}, 0.05) == {"a": False, "b": True}
+    p = {f"q{i:02d}": 0.05 / (35 - i) for i in range(35)}
+    assert all(holm(p, 0.05).values())
+    p["q00"] = 0.05 / 35 * 1.0001
+    assert not any(holm(p, 0.05).values())
+    assert holm(dict(reversed(list(p.items()))), 0.05) == holm(p, 0.05)
+
+
+def _copy(A: Arrays, used=None) -> Arrays:
+    d = {"rows": np.array(A.rows), "seeds": np.array(A.seeds), "metrics": np.array(METRICS),
+         "values": A.values.copy(), "gap_load": A.gap_load, "pi_load": A.pi_load}
+    return Arrays(d, dict(used or A.used))
+
+
+def test_v_rejects_a_shift_in_its_direction(manuscript):
+    a3, a2 = manuscript
+    H = _copy(a2)
+    errors = [m for m in METRICS if m != "crit_recall"]
+    for m in errors:
+        H.values[0, :, :, METRICS.index(m)] *= 1.5                # the label-free row worse
+    v = representativeness({"h2d": (H, a2), "h3d": (a3, a3)}, 0.05)
+    assert v["verdict"] == NOT_REPRESENTATIVE and v["sets"] == ["h2d", "h3d"]
+    assert v["rejected"] == v["rejected_holdout_worse"] == sorted(f"h2d:ar:{m}" for m in errors)
+    q = v["quantities"]["h2d:ar:disp_rel_l2"]
+    assert q["prob_holdout_higher"] > 0.5 and q["holdout_worse"] and q["p"] < 0.05 / 35
+    assert q["ratio_of_means"] == pytest.approx(1.5)
+    # the p-value is scipy's asymptotic test with the tie and continuity corrections
+    from scipy.stats import mannwhitneyu
+
+    q = v["quantities"]["h2d:labels:disp_rel_l2"]                 # unchanged: p = 1
+    h = H.per_instance("ar", "peak_vm_rel_err").mean(axis=0)
+    w = a2.per_instance("ar", "peak_vm_rel_err").mean(axis=0)
+    got = v["quantities"]["h2d:ar:peak_vm_rel_err"]["p"]
+    kw = dict(alternative="two-sided", method="asymptotic")
+    assert got == mannwhitneyu(h, w, use_continuity=True, **kw).pvalue
+    assert got != mannwhitneyu(h, w, use_continuity=False, **kw).pvalue
+    assert q["p"] == 1.0
+    H = _copy(a2)
+    H.values[0, :, :, METRICS.index("disp_rel_l2")] /= 1.5        # better on the holdout set
+    v = representativeness({"h2d": (H, a2)}, 0.05)
+    assert v["rejected"] == ["h2d:ar:disp_rel_l2"] and v["rejected_holdout_worse"] == []
+    H = _copy(a2)
+    H.values[1, :, :, METRICS.index("crit_recall")] *= 0.7        # recall lower: worse
+    v = representativeness({"h2d": (H, a2)}, 0.05)
+    assert v["rejected"] == v["rejected_holdout_worse"] == ["h2d:labels:crit_recall"]
+    assert v["quantities"]["h2d:labels:crit_recall"]["prob_holdout_higher"] < 0.5
+
+
+def test_v_leaves_out_what_it_cannot_read_and_reads_passed_seeds_only(manuscript):
+    _, a2 = manuscript
+    used = {(r, s): True for r in a2.rows for s in a2.seeds}
+    used.update({("mgn", s): False for s in a2.seeds})            # no seed of mgn passed
+    used[("labels", 1)] = False                                   # one seed of L_D failed
+    H = _copy(a2, used)
+    H.values[1, 1] = 1e6                                          # ... and is not read
+    H.values[0, 2, 7, METRICS.index("vm_rel_l2")] = np.nan        # a non-finite value
+    v = representativeness({"h2d": (H, _copy(a2, used))}, 0.05)
+    assert v["verdict"] == REPRESENTATIVE and v["rejected"] == []
+    assert v["left_out"] == [{"quantity": "h2d:ar:vm_rel_l2",
+                              "why": "non-finite per-instance values",
+                              "non_finite_holdout": 1, "non_finite_validation": 0},
+                             {"quantity": "h2d:mgn",
+                              "why": "no state of the row passed its content check"}]
+    assert len(v["quantities"]) == 20 - 5 - 1
+    assert v["quantities"]["h2d:labels:disp_rel_l2"]["seeds"] == [0, 2]
+    assert v["quantities"]["h2d:labels:disp_rel_l2"]["p"] == 1.0
+    W = _copy(a2)
+    W.values[3, 0, 9, METRICS.index("energy_gap_rel")] = np.inf     # on the validation side
+    v = representativeness({"h2d": (_copy(a2), W)}, 0.05)
+    assert v["left_out"] == [{"quantity": "h2d:mgn:energy_gap_rel",
+                              "why": "non-finite per-instance values",
+                              "non_finite_holdout": 0, "non_finite_validation": 1}]
+    none = {k: False for k in used}
+    v = representativeness({"h2d": (_copy(a2, none), _copy(a2, none))}, 0.05)
+    assert v["verdict"] == NOT_EVALUATED and len(v["left_out"]) == 4
+    assert adjudicate_sets(None, a2, CRITERIA)["V"]["verdict"] == NOT_EVALUATED
+    assert adjudicate_sets(None, a2, CRITERIA, h2d_val=a2)["V"]["sets"] == ["h2d"]
+
+
+def _resample_script():
+    spec = importlib.util.spec_from_file_location("holdout_resample",
+                                                  ROOT / "scripts" / "holdout_resample.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_vs_single_quantity_reading_is_v_with_that_quantity_alone_changed(manuscript):
+    """The calibration's reading with one quantity made worse (its p-value
+    from the family with every quantity made worse, Holm on the family
+    without a change but for it) is what `representativeness` decides when
+    that quantity alone is changed."""
+    mod = _resample_script()
+    a3, a2 = manuscript
+    rng = np.random.default_rng(7)
+    sets = {k: (resampled(A, rng.integers(0, 256, size=300)),
+                resampled(A, rng.integers(0, 256, size=256))) for k, A in (("h3d", a3),
+                                                                            ("h2d", a2))}
+    p0 = {q: x["p"] for q, x in representativeness(sets, 0.05)["quantities"].items()}
+    for f in (1.1, 1.2):
+        pf = {q: x["p"] for q, x in representativeness(
+            {k: (mod.worse(H, f), W) for k, (H, W) in sets.items()}, 0.05)["quantities"].items()}
+        for q in ("h3d:ar:disp_rel_l2", "h3d:mgn:peak_vm_rel_err", "h2d:labels:crit_recall",
+                  "h2d:ar:energy_gap_rel"):
+            name, row, m = q.split(":")
+            H, W = sets[name]
+            one = _copy(H)
+            ri, mi = H.rows.index(row), METRICS.index(m)
+            one.values[ri, :, :, mi] = mod.worse(H, f).values[ri, :, :, mi]
+            direct = representativeness({**sets, name: (one, W)}, 0.05)
+            assert direct["quantities"][q]["p"] == pf[q]
+            assert all(x["p"] == p0[k] for k, x in direct["quantities"].items() if k != q)
+            assert (q in direct["rejected"]) == holm({**p0, q: pf[q]}, 0.05)[q]
+    W = mod.worse(a2, 1.25)                                       # errors up, recall down
+    for m in METRICS:
+        x, y = W.per_instance("ar", m), a2.per_instance("ar", m)
+        assert np.allclose(x, y / 1.25 if m == "crit_recall" else y * 1.25, rtol=1e-15)
+
+
+def test_v_takes_its_level_from_the_configuration(manuscript):
+    a3, a2 = manuscript
+    H = _copy(a2)
+    H.values[0, :, :, METRICS.index("disp_rel_l2")] *= 1.5
+    assert adjudicate_sets(None, H, CRITERIA, h2d_val=a2)["V"]["verdict"] == NOT_REPRESENTATIVE
+    v = adjudicate_sets(None, H, dict(CRITERIA, representative_alpha=0.0), h2d_val=a2)["V"]
+    assert v["verdict"] == REPRESENTATIVE and v["alpha"] == 0.0
+    assert v["quantities"]["h2d:ar:disp_rel_l2"]["p"] < 1e-6
+    mod = _resample_script()
+    from fejepa.analysis.holdout import load_spec
+
+    cfg = load_spec(ROOT / "configs" / "holdout_v1.json")
+    for alpha, want in ((0.0, 0.0), (0.05, 1.0)):
+        rec = mod.resample(dict(cfg, criteria=dict(cfg["criteria"], representative_alpha=alpha)),
+                           10, 0)
+        assert rec["V"]["alpha"] == alpha
+        assert rec["V"]["halves"]["power"]["1.20"] == want            # 2 splits, x 1.2
+        assert rec["V"]["single_quantity"]["detected"]["h3d:ar:crit_recall"]["1.20"] == want
+
+
+def test_ratio_intervals_resample_each_side_on_its_own(manuscript):
+    a3, a2 = manuscript
+    ri = ratio_intervals(a3, a3)
+    assert set(ri) == {"ar", "labels", "mgn"}
+    for r in ri.values():
+        for x in r.values():
+            assert x["ratio"] == 1.0 and x["resamples"] == 2000
+            assert x["non_finite_resamples"] == 0
+            for k in ("interval_95_holdout", "interval_95_both"):
+                assert x[k][0] < 1.0 < x[k][1], k
+    # the heavy tail of the supervised transformer's energy gap: an interval that says little
+    lab = ri["labels"]["energy_gap_rel"]["interval_95_both"]
+    assert lab[0] < 0.01 and lab[1] > 100
+    assert ratio_intervals(a3, a3) == ri                          # seeded
+    assert ratio_intervals(a3, a3, seed=1) != ri
+    # by hand, with sets of different sizes and a remainder chunk: the same draws
+    rng = np.random.default_rng(5)
+    H = _copy(resampled(a2, rng.integers(0, 256, size=4111)))
+    H.values *= 2.0
+    h = H.per_instance("ar", "disp_rel_l2").mean(axis=0)
+    v = a2.per_instance("ar", "disp_rel_l2").mean(axis=0)
+    draw = np.random.default_rng(0)
+    alone, both = [], []
+    for b in (200, 200, 50):
+        ih, iv = draw.integers(0, 4111, size=(b, 4111)), draw.integers(0, 256, size=(b, 256))
+        alone.append(h[ih].mean(axis=1) / v.mean())
+        both.append(h[ih].mean(axis=1) / v[iv].mean(axis=1))
+    got = ratio_intervals(H, a2, n_boot=450)["ar"]["disp_rel_l2"]
+    assert got["ratio"] == pytest.approx(h.mean() / v.mean())
+    assert 1.8 < got["ratio"] < 2.2
+    assert got["interval_95_holdout"] == list(np.quantile(np.concatenate(alone), [0.025, 0.975]))
+    assert got["interval_95_both"] == list(np.quantile(np.concatenate(both), [0.025, 0.975]))
+    w = got["interval_95_holdout"]                                # the holdout's sampling only:
+    assert w[1] - w[0] < got["interval_95_both"][1] - got["interval_95_both"][0]  # narrower
+    # the adjudication's reading is this function with its defaults, holdout over validation
+    res = adjudicate_sets(None, H, CRITERIA, h2d_val=a2)
+    assert res["secondary"]["h2d"]["ratio_interval"] == ratio_intervals(H, a2)
+    # the seeds that passed; values that are not finite; a validation mean of zero
+    used = {(r, s): True for r in a2.rows for s in a2.seeds}
+    used[("labels", 1)] = False
+    H = _copy(a2, used)
+    H.values[1, 1] = 1e6
+    H.values[0, 0, 3, METRICS.index("vm_rel_l2")] = np.nan
+    W = _copy(a2, used)
+    W.values[2, :, :, METRICS.index("disp_rel_l2")] = 0.0
+    ri = ratio_intervals(H, W)
+    assert ri["labels"]["disp_rel_l2"]["ratio"] == pytest.approx(1.0)
+    assert ri["ar"]["vm_rel_l2"] is None and ri["labels_knorm"]["disp_rel_l2"] is None
+    # resamples whose validation mean is zero are counted and left out of the quantiles
+    H = _arrays({("ar", "disp_rel_l2"): 1.0}, n=10)
+    W = _arrays({("ar", "disp_rel_l2"): 0.0}, n=10)
+    W.values[0, :, 0, METRICS.index("disp_rel_l2")] = 1.0         # one instance of ten
+    x = ratio_intervals(H, W)["ar"]["disp_rel_l2"]
+    assert 400 < x["non_finite_resamples"] < 1000 and all(np.isfinite(x["interval_95_both"]))
+    assert x["ratio"] == pytest.approx(10.0) and x["interval_95_holdout"] == [10.0, 10.0]
+
+
+def test_validation_reference_carries_the_pairing_free_readings(manuscript):
+    a3, a2 = manuscript
+    H = _copy(a2)
+    H.values[0, :, :, METRICS.index("peak_vm_rel_err")] *= 0.9
+    res = adjudicate_sets(None, H, CRITERIA, h2d_val=a2)          # the validation side's own
+    pf = res["validation_reference"]["pairing_free"]["D2"]
+    assert pf == pairing_free(claims_of(None, a2, CRITERIA)[0]["D2"])
+    assert pf != pairing_free(res["claims"]["D2"])
+    res = adjudicate_sets(a3, a2, CRITERIA, h3d_val=a3, h2d_val=a2)
+    pf = res["validation_reference"]["pairing_free"]
+    for c in ("T1", "D2"):
+        assert pf[c]["all_pairs_reading"] is True
+        for m, x in pf[c]["per_metric"].items():
+            assert x["worst_pair_rel"] == res["claims"][c]["per_metric"][m]["worst_pair_rel"]
+    assert pf["D2"]["per_metric"]["peak_vm_rel_err"]["holds_all_pairs"] is True
+    assert pf["T1"]["per_metric"]["crit_recall"]["better_all_pairs"] is True
+    res = adjudicate_sets(None, a2, CRITERIA, h2d_val=a2)
+    assert res["validation_reference"]["pairing_free"]["T1"] is None   # no h3d arrays
+
+
+def test_pairing_free_reading_with_a_zero_value():
+    A = _arrays(_t1_values())
+    d = METRICS.index("disp_rel_l2")
+    A.values[1, :, :, d] = np.array([0.0, 2.0, 3.0])[:, None]     # a supervised seed at zero
+    r = claim_t1(A)
+    assert r["per_metric"]["disp_rel_l2"]["worst_pair_rel"] is None
+    assert not r["per_metric"]["disp_rel_l2"]["better_all_pairs"]
+    assert json.dumps(r, allow_nan=False)
+
+
+def test_the_heavy_tail_the_text_quotes(manuscript):
+    a3, _ = manuscript
+    g = a3.per_instance("labels", "energy_gap_rel")[1]
+    text = (ROOT / "PREREG_HOLDOUT.md").read_text(encoding="utf-8")
+    assert f"has a mean of {g.mean():.1f} in seed 1, from one instance at {g.max():,.0f}" in text
+    assert np.mean(np.delete(g, np.argmax(g))) < 1.0
 
 
 # ------------------------------------------------------------ boundaries --

@@ -13,7 +13,7 @@ with its bounds; the regression tool's miniatures within them; the sandbox
 scan's tool), and its instance names follow from the split; the validation
 names that the earlier exports recorded follow the same rule. The
 thresholds and tolerances are the values the pre-registration states.
-The pre-registration is the r4 draft the stamp script accepts, or a stamp of
+The pre-registration is the r5 draft the stamp script accepts, or a stamp of
 it that verifies; the stamp script stamps a copy of the draft so that the
 box script's and the adjudication's checks pass."""
 
@@ -317,7 +317,8 @@ def test_criteria_are_the_prereg_values(spec):
     """The thresholds that decide (PREREG_HOLDOUT Sec. 5) and the content
     tolerance (Sec. 3), as the configuration fixes them."""
     assert spec["criteria"] == {"guard_band": 0.1, "guard_k": 2.0, "most": 0.5,
-                                "almost_all": 0.95, "halved": -0.5}
+                                "almost_all": 0.95, "halved": -0.5,
+                                "representative_alpha": 0.05}
     assert spec["content_tol"] == 1e-3 and spec["seeds"] == [0, 1, 2]
     assert spec["labels"] == {"method": "direct", "stage": "holdout-labels",
                               "residual_max": 1e-8}
@@ -326,14 +327,16 @@ def test_criteria_are_the_prereg_values(spec):
                   "higher on at least 95% of the instance-seed pairs",
                   "tau = max(10%, 2 x SE_rel)", "rel < -50%, the point value",
                   "which must be at most 1e-8",
-                  "of the relative energy gap are at most 1e-3"):
+                  "of the relative energy gap are at most 1e-3",
+                  "Holm's step-down procedure at a family-wise level of 5% "
+                  "(`representative_alpha` in the configuration"):
         assert words in text, words
 
 
 def _draft_text(stamp) -> str:
     """PREREG_HOLDOUT.md as its approved draft (a stamped file un-stamped)."""
     text = PREREG.read_text(encoding="utf-8")
-    m = re.search(r"\*\*Status:\*\* r4, stamped (.+?) before the run:", text)
+    m = re.search(r"\*\*Status:\*\* r5, stamped (.+?) before the run:", text)
     if m:
         text = text.replace(stamp.stamped_status(m.group(1)), stamp.DRAFT_STATUS)
     text = re.sub(r"^CONFIG_SHA256\[holdout_v1\] = [0-9a-f]{64}$",
@@ -360,6 +363,7 @@ def test_prereg_is_the_draft_or_a_verified_stamp(spec, tmp_path):
     draft = _draft_text(stamp)
     for k in ("T1", "T2", "T3", "H1", "H2a", "H2b", "H2c", "D2", "H3"):
         assert f"**{k}.**" in draft or f"**{k}** (a reading" in draft, k
+    assert "**V** (not a claim of the manuscript)" in draft
     # the stamp script stamps a copy of the draft; the original is never written
     before = _sha(PREREG)
     p = tmp_path / "PREREG_HOLDOUT.md"
@@ -391,6 +395,8 @@ def test_config_refuses_a_changed_structure(tmp_path, spec):
     refused(lambda d: d["labels"].update(method="cg"))
     refused(lambda d: d["sets"]["h2d"]["rows"].pop("labels_knorm"))
     refused(lambda d: d["sets"]["h3d"].update(n_holdout=720))           # exclusions not counted
+    refused(lambda d: d["criteria"].pop("representative_alpha"))        # a threshold missing
+    refused(lambda d: d["criteria"].update(guard_k2=2.0))               # one not read
     first_val = f"instance_{np.random.default_rng(1).permutation(2000)[0]:05d}.npz"
 
     def outside(d):                                                     # a validation name

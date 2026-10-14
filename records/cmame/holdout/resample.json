@@ -1,5 +1,5 @@
 {
- "what": "PREREG_HOLDOUT: the rules of Sec. 5 on resamples of the validation instances of the holdout sets' sizes (scripts/holdout_resample.py)",
+ "what": "PREREG_HOLDOUT: the rules of Sec. 5 on resamples of the validation instances of the holdout sets' sizes, and V's calibration (scripts/holdout_resample.py)",
  "inputs": {
   "h3d": {
    "report": "records/wp8/e2/baseline/report_phase2b.json",
@@ -206,6 +206,392 @@
      "median": -0.239509153991306,
      "p99": -0.2154068417655479,
      "max": -0.2094077849290188
+    }
+   }
+  }
+ },
+ "V": {
+  "alpha": 0.05,
+  "halves": {
+   "sizes": {
+    "h2d": {
+     "holdout": 128,
+     "validation": 128
+    },
+    "h3d": {
+     "holdout": 128,
+     "validation": 128
+    }
+   },
+   "draws": 1000,
+   "false_alarm": 0.021,
+   "rejected": {
+    "h2d:ar:crit_recall": 5,
+    "h2d:ar:disp_rel_l2": 2,
+    "h2d:ar:energy_gap_rel": 2,
+    "h2d:ar:peak_vm_rel_err": 5,
+    "h2d:ar:vm_rel_l2": 2,
+    "h2d:labels:crit_recall": 3,
+    "h2d:labels:disp_rel_l2": 5,
+    "h2d:labels:energy_gap_rel": 3,
+    "h2d:labels:peak_vm_rel_err": 1,
+    "h2d:labels:vm_rel_l2": 2,
+    "h2d:labels_knorm:crit_recall": 2,
+    "h2d:labels_knorm:disp_rel_l2": 2,
+    "h2d:labels_knorm:energy_gap_rel": 2,
+    "h2d:labels_knorm:peak_vm_rel_err": 1,
+    "h2d:labels_knorm:vm_rel_l2": 2,
+    "h2d:mgn:crit_recall": 2,
+    "h2d:mgn:disp_rel_l2": 3,
+    "h2d:mgn:energy_gap_rel": 2,
+    "h2d:mgn:peak_vm_rel_err": 3,
+    "h2d:mgn:vm_rel_l2": 2,
+    "h3d:ar:disp_rel_l2": 1,
+    "h3d:labels:crit_recall": 1,
+    "h3d:labels:disp_rel_l2": 1,
+    "h3d:labels:energy_gap_rel": 2,
+    "h3d:labels:vm_rel_l2": 2,
+    "h3d:mgn:disp_rel_l2": 1,
+    "h3d:mgn:energy_gap_rel": 2,
+    "h3d:mgn:peak_vm_rel_err": 2,
+    "h3d:mgn:vm_rel_l2": 1
+   },
+   "draws_per_factor": 200,
+   "power": {
+    "1.05": 0.15,
+    "1.10": 0.655,
+    "1.15": 0.98,
+    "1.20": 1.0
+   }
+  },
+  "at_holdout_sizes": {
+   "sizes": {
+    "h2d": {
+     "holdout": 4111,
+     "validation": 256
+    },
+    "h3d": {
+     "holdout": 686,
+     "validation": 256
+    }
+   },
+   "draws": 1000,
+   "false_alarm": 0.026,
+   "rejected": {
+    "h2d:ar:crit_recall": 3,
+    "h2d:ar:disp_rel_l2": 2,
+    "h2d:ar:energy_gap_rel": 2,
+    "h2d:ar:peak_vm_rel_err": 1,
+    "h2d:ar:vm_rel_l2": 2,
+    "h2d:labels:crit_recall": 3,
+    "h2d:labels:disp_rel_l2": 1,
+    "h2d:labels:energy_gap_rel": 2,
+    "h2d:labels:peak_vm_rel_err": 1,
+    "h2d:labels:vm_rel_l2": 1,
+    "h2d:labels_knorm:crit_recall": 1,
+    "h2d:labels_knorm:disp_rel_l2": 1,
+    "h2d:labels_knorm:energy_gap_rel": 1,
+    "h2d:labels_knorm:peak_vm_rel_err": 1,
+    "h2d:labels_knorm:vm_rel_l2": 1,
+    "h2d:mgn:crit_recall": 1,
+    "h2d:mgn:disp_rel_l2": 1,
+    "h2d:mgn:energy_gap_rel": 1,
+    "h2d:mgn:vm_rel_l2": 1,
+    "h3d:ar:crit_recall": 1,
+    "h3d:ar:disp_rel_l2": 1,
+    "h3d:ar:energy_gap_rel": 4,
+    "h3d:ar:peak_vm_rel_err": 1,
+    "h3d:ar:vm_rel_l2": 2,
+    "h3d:labels:crit_recall": 3,
+    "h3d:labels:peak_vm_rel_err": 4,
+    "h3d:labels:vm_rel_l2": 1,
+    "h3d:mgn:crit_recall": 2,
+    "h3d:mgn:disp_rel_l2": 2,
+    "h3d:mgn:energy_gap_rel": 1,
+    "h3d:mgn:vm_rel_l2": 1
+   },
+   "draws_per_factor": 200,
+   "power": {
+    "1.05": 0.54,
+    "1.10": 1.0,
+    "1.15": 1.0,
+    "1.20": 1.0
+   }
+  },
+  "single_quantity": {
+   "sizes": {
+    "h2d": {
+     "holdout": 4111,
+     "validation": 256
+    },
+    "h3d": {
+     "holdout": 686,
+     "validation": 256
+    }
+   },
+   "draws": 200,
+   "factors": [
+    "1.02",
+    "1.05",
+    "1.10",
+    "1.20"
+   ],
+   "detected": {
+    "h2d:ar:crit_recall": {
+     "1.02": 0.54,
+     "1.05": 1.0,
+     "1.10": 1.0,
+     "1.20": 1.0
+    },
+    "h2d:ar:disp_rel_l2": {
+     "1.02": 0.005,
+     "1.05": 0.01,
+     "1.10": 0.04,
+     "1.20": 0.495
+    },
+    "h2d:ar:energy_gap_rel": {
+     "1.02": 0.01,
+     "1.05": 0.005,
+     "1.10": 0.035,
+     "1.20": 0.205
+    },
+    "h2d:ar:peak_vm_rel_err": {
+     "1.02": 0.01,
+     "1.05": 0.125,
+     "1.10": 0.79,
+     "1.20": 1.0
+    },
+    "h2d:ar:vm_rel_l2": {
+     "1.02": 0.005,
+     "1.05": 0.03,
+     "1.10": 0.265,
+     "1.20": 0.93
+    },
+    "h2d:labels:crit_recall": {
+     "1.02": 0.795,
+     "1.05": 1.0,
+     "1.10": 1.0,
+     "1.20": 1.0
+    },
+    "h2d:labels:disp_rel_l2": {
+     "1.02": 0.005,
+     "1.05": 0.02,
+     "1.10": 0.065,
+     "1.20": 0.62
+    },
+    "h2d:labels:energy_gap_rel": {
+     "1.02": 0.005,
+     "1.05": 0.02,
+     "1.10": 0.395,
+     "1.20": 0.99
+    },
+    "h2d:labels:peak_vm_rel_err": {
+     "1.02": 0.01,
+     "1.05": 0.16,
+     "1.10": 0.915,
+     "1.20": 1.0
+    },
+    "h2d:labels:vm_rel_l2": {
+     "1.02": 0.005,
+     "1.05": 0.205,
+     "1.10": 0.935,
+     "1.20": 1.0
+    },
+    "h2d:labels_knorm:crit_recall": {
+     "1.02": 0.83,
+     "1.05": 1.0,
+     "1.10": 1.0,
+     "1.20": 1.0
+    },
+    "h2d:labels_knorm:disp_rel_l2": {
+     "1.02": 0.0,
+     "1.05": 0.005,
+     "1.10": 0.04,
+     "1.20": 0.4
+    },
+    "h2d:labels_knorm:energy_gap_rel": {
+     "1.02": 0.005,
+     "1.05": 0.005,
+     "1.10": 0.03,
+     "1.20": 0.185
+    },
+    "h2d:labels_knorm:peak_vm_rel_err": {
+     "1.02": 0.01,
+     "1.05": 0.115,
+     "1.10": 0.745,
+     "1.20": 1.0
+    },
+    "h2d:labels_knorm:vm_rel_l2": {
+     "1.02": 0.005,
+     "1.05": 0.03,
+     "1.10": 0.29,
+     "1.20": 0.955
+    },
+    "h2d:mgn:crit_recall": {
+     "1.02": 0.025,
+     "1.05": 0.41,
+     "1.10": 0.975,
+     "1.20": 1.0
+    },
+    "h2d:mgn:disp_rel_l2": {
+     "1.02": 0.005,
+     "1.05": 0.015,
+     "1.10": 0.08,
+     "1.20": 0.55
+    },
+    "h2d:mgn:energy_gap_rel": {
+     "1.02": 0.0,
+     "1.05": 0.005,
+     "1.10": 0.045,
+     "1.20": 0.36
+    },
+    "h2d:mgn:peak_vm_rel_err": {
+     "1.02": 0.0,
+     "1.05": 0.0,
+     "1.10": 0.015,
+     "1.20": 0.185
+    },
+    "h2d:mgn:vm_rel_l2": {
+     "1.02": 0.0,
+     "1.05": 0.035,
+     "1.10": 0.305,
+     "1.20": 0.95
+    },
+    "h3d:ar:crit_recall": {
+     "1.02": 1.0,
+     "1.05": 1.0,
+     "1.10": 1.0,
+     "1.20": 1.0
+    },
+    "h3d:ar:disp_rel_l2": {
+     "1.02": 0.015,
+     "1.05": 0.12,
+     "1.10": 0.79,
+     "1.20": 1.0
+    },
+    "h3d:ar:energy_gap_rel": {
+     "1.02": 0.01,
+     "1.05": 0.11,
+     "1.10": 0.78,
+     "1.20": 1.0
+    },
+    "h3d:ar:peak_vm_rel_err": {
+     "1.02": 0.005,
+     "1.05": 0.11,
+     "1.10": 0.875,
+     "1.20": 1.0
+    },
+    "h3d:ar:vm_rel_l2": {
+     "1.02": 0.02,
+     "1.05": 0.435,
+     "1.10": 0.995,
+     "1.20": 1.0
+    },
+    "h3d:labels:crit_recall": {
+     "1.02": 0.935,
+     "1.05": 1.0,
+     "1.10": 1.0,
+     "1.20": 1.0
+    },
+    "h3d:labels:disp_rel_l2": {
+     "1.02": 0.005,
+     "1.05": 0.115,
+     "1.10": 0.71,
+     "1.20": 1.0
+    },
+    "h3d:labels:energy_gap_rel": {
+     "1.02": 0.005,
+     "1.05": 0.035,
+     "1.10": 0.275,
+     "1.20": 0.93
+    },
+    "h3d:labels:peak_vm_rel_err": {
+     "1.02": 0.0,
+     "1.05": 0.02,
+     "1.10": 0.085,
+     "1.20": 0.625
+    },
+    "h3d:labels:vm_rel_l2": {
+     "1.02": 0.01,
+     "1.05": 0.255,
+     "1.10": 0.885,
+     "1.20": 1.0
+    },
+    "h3d:mgn:crit_recall": {
+     "1.02": 0.68,
+     "1.05": 1.0,
+     "1.10": 1.0,
+     "1.20": 1.0
+    },
+    "h3d:mgn:disp_rel_l2": {
+     "1.02": 0.01,
+     "1.05": 0.09,
+     "1.10": 0.755,
+     "1.20": 1.0
+    },
+    "h3d:mgn:energy_gap_rel": {
+     "1.02": 0.0,
+     "1.05": 0.025,
+     "1.10": 0.11,
+     "1.20": 0.56
+    },
+    "h3d:mgn:peak_vm_rel_err": {
+     "1.02": 0.0,
+     "1.05": 0.015,
+     "1.10": 0.035,
+     "1.20": 0.15
+    },
+    "h3d:mgn:vm_rel_l2": {
+     "1.02": 0.015,
+     "1.05": 0.065,
+     "1.10": 0.415,
+     "1.20": 0.98
+    }
+   },
+   "summary": {
+    "error_metrics": {
+     "1.02": {
+      "min": 0.0,
+      "median": 0.005,
+      "max": 0.02
+     },
+     "1.05": {
+      "min": 0.0,
+      "median": 0.0325,
+      "max": 0.435
+     },
+     "1.10": {
+      "min": 0.015,
+      "median": 0.2975,
+      "max": 0.995
+     },
+     "1.20": {
+      "min": 0.15,
+      "median": 0.9524999999999999,
+      "max": 1.0
+     }
+    },
+    "crit_recall": {
+     "1.02": {
+      "min": 0.025,
+      "median": 0.795,
+      "max": 1.0
+     },
+     "1.05": {
+      "min": 0.41,
+      "median": 1.0,
+      "max": 1.0
+     },
+     "1.10": {
+      "min": 0.975,
+      "median": 1.0,
+      "max": 1.0
+     },
+     "1.20": {
+      "min": 1.0,
+      "median": 1.0,
+      "max": 1.0
+     }
     }
    }
   }

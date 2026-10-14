@@ -75,6 +75,8 @@ SPEC_KEYS = ("_comment", "prereg_file", "seeds", "out", "labels", "content_tol",
              "criteria")
 SET_KEYS = ("corpus", "manifest_sha256", "n_corpus", "split", "used_prefix", "excluded",
             "n_holdout", "report", "report_sha256", "rows")
+CRITERIA_KEYS = ("guard_band", "guard_k", "most", "almost_all", "halved", "representative_alpha")
+"""The thresholds that decide (PREREG_HOLDOUT Sec. 5), each read by name."""
 
 
 def sha256(path) -> str:
@@ -88,6 +90,9 @@ def load_spec(path) -> dict:
     spec = json.loads(Path(path).read_text())
     if sorted(spec) != sorted(SPEC_KEYS):
         raise ValueError(f"{path}: top-level keys {sorted(spec)}, expected {sorted(SPEC_KEYS)}")
+    if sorted(spec["criteria"]) != sorted(CRITERIA_KEYS):
+        raise ValueError(f"{path}: criteria {sorted(spec['criteria'])}, expected "
+                         f"{sorted(CRITERIA_KEYS)}")
     if sorted(spec["sets"]) != sorted(SETS):
         raise ValueError(f"{path}: sets {sorted(spec['sets'])}, expected {sorted(SETS)}")
     for name, s in spec["sets"].items():

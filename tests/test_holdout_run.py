@@ -182,7 +182,7 @@ def _spec_and_prereg(tmp: Path, sets: dict, out=None) -> tuple:
             "labels": {"method": "direct", "stage": "holdout-labels", "residual_max": 1e-8},
             "content_tol": 1e-3, "sets": sets,
             "criteria": {"guard_band": 0.10, "guard_k": 2.0, "most": 0.5,
-                         "almost_all": 0.95, "halved": -0.5}}
+                         "almost_all": 0.95, "halved": -0.5, "representative_alpha": 0.05}}
     cp = tmp / "holdout_v1.json"
     cp.write_text(json.dumps(spec, indent=1))
     return cp, prereg, stamp
@@ -382,6 +382,41 @@ def test_eval_checks_states_and_writes_consistent_arrays(box):
         assert not list(out.glob("*.tmp"))
 
 
+def test_the_runbooks_state_check_before_the_labels(box, tmp_path):
+    """RUNBOOK_CMAME E0c's check of the 21 states, run as the runbook writes
+    it on the miniature's configuration: it prints its line when every state
+    is the configuration's, and names a state that is not."""
+    import re
+
+    line = next(x for x in (ROOT / "RUNBOOK_CMAME.md").read_text().splitlines()
+                if x.startswith('python -c "from fejepa.analysis.holdout import load_spec, '
+                                'check_states'))
+    code = re.fullmatch(r'python -c "(.*)"   # 21 states verified', line).group(1)
+    assert "'configs/holdout_v1.json'" in code
+    run = code.replace("'configs/holdout_v1.json'", repr(str(box["spec_path"])))
+    r = subprocess.run([sys.executable, "-c", run], capture_output=True, text=True, env=ENV,
+                       cwd=ROOT)
+    assert r.returncode == 0 and r.stdout == "21 states verified\n", r.stderr[-2000:]
+    spec = json.loads(box["spec_path"].read_text())
+    state = Path(spec["sets"]["h2d"]["rows"]["labels_knorm"]["state"].format(seed=2))
+    copy = tmp_path / "states" / state.name
+    copy.parent.mkdir(parents=True)
+    copy.write_bytes(state.read_bytes() + b"\0")                 # one state changed
+    spec["sets"]["h2d"]["rows"]["labels_knorm"]["state"] = str(tmp_path / "states" /
+                                                               "labels_knorm_s{seed}.pt")
+    for s in (0, 1):
+        src = Path(json.loads(box["spec_path"].read_text())["sets"]["h2d"]["rows"]
+                   ["labels_knorm"]["state"].format(seed=s))
+        (tmp_path / "states" / src.name).write_bytes(src.read_bytes())
+    cp = tmp_path / "holdout_v1.json"
+    cp.write_text(json.dumps(spec))
+    r = subprocess.run([sys.executable, "-c",
+                        code.replace("'configs/holdout_v1.json'", repr(str(cp)))],
+                       capture_output=True, text=True, env=ENV, cwd=ROOT)
+    assert r.returncode != 0 and "states refused:" in r.stderr and copy.name in r.stderr
+    assert "21 states verified" not in r.stdout
+
+
 def test_eval_refuses_a_changed_state_or_report_before_writing(box):
     spec = json.loads(box["spec_path"].read_text())
     evs = {n: (Path(spec["out"]) / n / "eval.json") for n in ("h3d", "h2d")}
@@ -467,7 +502,8 @@ def test_adjudication_reads_the_return(box, tmp_path):
         set(res["inputs"]["listed"])
     for name in ("h3d", "h2d"):
         sec = res["secondary"][name]
-        assert set(sec) == {"holdout", "validation", "ratio_holdout_over_validation"}
+        assert set(sec) == {"holdout", "validation", "ratio_holdout_over_validation",
+                            "ratio_interval"}
         assert set(sec["holdout"]) == set(sec["validation"])
         assert set(sec["holdout"]["worse_than_zero"]["ar"]) == {"s0", "s1", "s2", "all_seeds"}
         with np.load(ret / name / "eval_arrays.npz") as z:      # each side its own arrays
@@ -478,6 +514,30 @@ def test_adjudication_reads_the_return(box, tmp_path):
             h, v = z["values"][0, :, :, 0].mean(), z["val_values"][0, :, :, 0].mean()
         assert sec["ratio_holdout_over_validation"]["ar"]["disp_rel_l2"] == pytest.approx(h / v)
     assert set(res["validation_reference"]["claims"]) == set(res["claims"])
+    assert all(v["failing"] == [] for v in res["claims"].values()
+               if v["verdict"] != "NOT REPLICATED")
+    v = res["V"]                                                # every row and metric of both
+    assert v["verdict"] in ("REPRESENTATIVE", "NOT REPRESENTATIVE") and v["left_out"] == []
+    assert sorted(v["quantities"]) == sorted(f"{n}:{r}:{m}" for n in ROWS for r in ROWS[n]
+                                             for m in METRICS)
+    for name in ("h3d", "h2d"):
+        with np.load(ret / name / "eval_arrays.npz") as z:
+            h, w = z["values"][0, :, :, 0].mean(axis=0), z["val_values"][0, :, :, 0].mean(axis=0)
+        q = v["quantities"][f"{name}:ar:disp_rel_l2"]
+        assert (q["n_holdout"], q["n_validation"]) == (h.size, w.size)
+        assert q["holdout_mean"] == pytest.approx(h.mean())
+        assert q["validation_mean"] == pytest.approx(w.mean())
+    summary = json.loads(r.stdout)
+    assert summary["V"] == v["verdict"] and summary["V_rejected"] == v["rejected"]
+    assert summary["V_left_out"] == v["left_out"] == []
+    assert summary["failing"] == {c: x["failing"] for c, x in res["claims"].items()
+                                  if x["failing"]}
+    import scipy
+
+    assert res["adjudicator"]["versions"] == {"python": sys.version.split()[0],
+                                              "numpy": np.__version__,
+                                              "scipy": scipy.__version__}
+    assert set(res["validation_reference"]["pairing_free"]) == {"T1", "D2"}
     assert any("torch" in d for d in res["deviations"])        # CPU, not the original stack
     assert not any("attempt" in d or "host" in d for d in res["deviations"])
     assert json.dumps(res, allow_nan=False)
@@ -790,6 +850,7 @@ def test_a_set_that_did_not_return_is_a_deviation(box, tmp_path, how):
     assert all(res["claims"][c]["verdict"] != "NOT EVALUATED" for c in ("T1", "T2", "T3"))
     assert any(d.startswith("h2d: not returned") for d in res["deviations"])
     assert "h2d" not in res["secondary"]
+    assert res["V"]["sets"] == ["h3d"] and len(res["V"]["quantities"]) == 15
     if how == "no_eval":
         assert "eval_h2d.log: last exit 3" in res["deviations"]
 
@@ -849,6 +910,9 @@ def test_a_state_that_does_not_reproduce_its_report(box, tmp_path):
     assert res["readings"]["H3"]["reading"] != "NOT EVALUATED"       # reads ar and L_K only
     assert "h2d: content mismatch ['labels_s1']" in res["deviations"]
     assert "eval_h2d.log: last exit 5" in res["deviations"]
+    assert res["V"]["sets"] == ["h2d"]                                # the seed left out
+    assert all(q["seeds"] == ([0, 2] if k.startswith("h2d:labels:") else [0, 1, 2])
+               for k, q in res["V"]["quantities"].items())
     assert "h3d: no return" not in res["deviations"]                  # its directory is there
     assert any(d.startswith("h3d: not returned") for d in res["deviations"])
 
@@ -901,7 +965,14 @@ def test_non_finite_values_give_strict_json(box, tmp_path):
     res = json.loads(out.read_text(), parse_constant=strict)
     for c in ("H2b", "H2c"):
         assert res["claims"][c]["verdict"] == "NOT REPLICATED" and res["claims"][c]["diverged"]
+        assert res["claims"][c]["failing"] == [c]
     assert res["claims"]["H2a"]["verdict"] != "NOT EVALUATED"          # reads the gap only
+    assert {"quantity": "h2d:labels_knorm:vm_rel_l2", "why": "non-finite per-instance values",
+            "non_finite_holdout": 1, "non_finite_validation": 0} in res["V"]["left_out"]
+    assert "h2d:labels_knorm:vm_rel_l2" not in res["V"]["quantities"]
+    summary = json.loads(r.stdout)
+    assert {"H2b", "H2c"} <= set(summary["failing"]) and summary["failing"]["H2b"] == ["H2b"]
+    assert summary["V_left_out"] == res["V"]["left_out"]
 
 
 def test_adjudicating_code_that_differs_is_a_deviation(box, tmp_path):

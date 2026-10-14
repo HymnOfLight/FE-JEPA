@@ -198,6 +198,7 @@
   "guard_k": 2.0,
   "most": 0.5,
   "almost_all": 0.95,
-  "halved": -0.5
+  "halved": -0.5,
+  "representative_alpha": 0.05
  }
 }

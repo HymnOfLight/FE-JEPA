@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
-"""PREREG_HOLDOUT: the claims T1-T3, H1, H2a, H2b, H2c and D2, the reading H3
-and the secondary readings, from the box return of RUNBOOK_CMAME Sec. E.
+"""PREREG_HOLDOUT: the claims T1-T3, H1, H2a, H2b, H2c and D2, the reading H3,
+V (whether the per-instance values are distributed alike on the holdout set
+and on the validation instances) and the secondary readings, from the box
+return of RUNBOOK_CMAME Sec. E.
 
     python scripts/adjudicate_holdout.py --return records/cmame/holdout/return \\
         --out records/cmame/holdout/verdict.json
@@ -44,8 +46,10 @@ labelling (not adjudicable; every other check of the set still applies)
 (the claims of either NOT EVALUATED); a resumed labelling; a holdout instance that the corpus manifest
 or the corpus file records as labelled; a torch version or GPU other than
 the original runs'; and adjudicating code that differs from its
-`prereg-holdout` version. The verdict file records every input's SHA-256 and
-the adjudicating code's.
+`prereg-holdout` version. The verdict file records every input's SHA-256, the
+adjudicating code's and the versions of Python, NumPy and SciPy, the eight
+verdicts with the comparisons that failed, H3, V with every quantity, and
+the secondary readings.
 """
 from __future__ import annotations
 
@@ -54,6 +58,7 @@ import hashlib
 import importlib.util
 import json
 import math
+import platform
 import re
 import subprocess
 import sys
@@ -492,8 +497,12 @@ def main() -> None:
         res["deviations"].append(commit_note)
     code = code_against(a.code_ref)
     res["config"] = {"path": a.config, "sha256": spec_sha256(spec)}
+    import scipy
+
     res["adjudicator"] = {"sha256": {p: file_sha256(ROOT / p) for p in ADJUDICATING_FILES},
-                          "against_stamp": code}
+                          "against_stamp": code,
+                          "versions": {"python": platform.python_version(),
+                                       "numpy": np.__version__, "scipy": scipy.__version__}}
     if not code["compared"]:
         res["deviations"].append(f"adjudicating code not compared with {a.code_ref} "
                                  f"({code.get('note')})")
@@ -504,6 +513,10 @@ def main() -> None:
     Path(a.out).write_text(json.dumps(jsonable(res), indent=1, allow_nan=False) + "\n")
     print(json.dumps({c: v["verdict"] for c, v in res["claims"].items()}
                      | {"H3": res["readings"]["H3"]["reading"], "tally": res["tally"],
+                        "failing": {c: v["failing"] for c, v in res["claims"].items()
+                                    if v["failing"]},
+                        "V": res["V"]["verdict"], "V_rejected": res["V"].get("rejected", []),
+                        "V_left_out": res["V"].get("left_out", []),
                         "deviations": res["deviations"]}, indent=1))
 
 

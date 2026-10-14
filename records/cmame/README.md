@@ -23,11 +23,11 @@ two modules that no run imports (`fejepa.analysis.holdout` and
 `fejepa.analysis.adjudicate_holdout`, PREREG_HOLDOUT's evaluation and
 adjudication); the regression ran again on 14 October 2026 in the same way,
 with the same result (Stage 9's tree was `7cc8ac1b6b16673f14609a422f7e95479d968df0`;
-the runs took 58 s and 152 s):
+the runs took 60 s and 147 s):
 
 | | source tree (`git rev-parse <commit>:src`) |
 |---|---|
-| this side | the Stage 11 code: `src` = tree `64a85e18bf066e8ef38c618e46171cba1bd0a938` |
+| this side | the Stage 11 code: `src` = tree `b719ea99d4063cf01fd183395745e0e87eba9591` |
 | the other side | `wp8-lejepa` at `5f8e2df`: `src` = tree `5be6357b912cad058121092f274e6a322169b9f6` |
 
 - `regression_wp8_e1_2d_base.json`: a miniature of `configs/e1_2d_base.json`
@@ -453,7 +453,12 @@ after CM2D's verdict and reported only; no verdict reads it.
   PREREG_HOLDOUT Sec. 5 on 1,000 resamples of the validation instances of
   each holdout set's size, drawn directly and with the validation set's own
   sampling added, with the count of each claim's failures by the comparison
-  that failed (`failing`); PREREG_HOLDOUT Sec. 5 quotes it.
+  that failed (`failing`); and the calibration of V on the validation
+  instances alone (`V`: random halves of 128 and draws of the holdout sets'
+  sizes, without a change and with the label-free transformer's four error
+  metrics multiplied by 1.05 to 1.20 in both sets; and at the holdout sets'
+  sizes each quantity alone made worse by 1.02 to 1.20). PREREG_HOLDOUT
+  Sec. 5 quotes both.
 - `tests/test_holdout_config.py` checks the listings against
   `configs/holdout_v1.json`, re-derives the pool depths and the other
   tools' depths from the listed commits when they are in the checkout

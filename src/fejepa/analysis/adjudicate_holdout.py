@@ -33,6 +33,15 @@ Claims (PREREG_HOLDOUT Sec. 5):
   D2  2D: the label-free transformer's displacement error higher than L_D's
       and its other four metrics better, in each seed and in the seed mean;
   H3  2D: L_K against the label-free transformer, a reading without verdict.
+
+And V (not a claim of the manuscript): whether the per-instance values of
+each row and metric (the mean over the row's seeds) are distributed alike on
+the holdout set and on the validation instances, by a two-sided
+Mann-Whitney test per quantity (which detects a difference in the share of
+holdout values above validation values, not one in the means) and Holm's
+procedure at a family-wise level. REPRESENTATIVE or NOT REPRESENTATIVE. The
+holdout-over-validation ratios of the means, with two resampling intervals,
+are readings beside it.
 """
 
 from __future__ import annotations
@@ -45,6 +54,7 @@ from .adjudicate_w9 import guard, instance_bootstrap, welch_interval
 from .holdout import HIGHER_BETTER, METRICS
 
 REPLICATED, NOT_REPLICATED, NOT_EVALUATED = "REPLICATED", "NOT REPLICATED", "NOT EVALUATED"
+REPRESENTATIVE, NOT_REPRESENTATIVE = "REPRESENTATIVE", "NOT REPRESENTATIVE"
 CLAIMS = ("T1", "T2", "T3", "H1", "H2a", "H2b", "H2c", "D2")
 READINGS = ("H3",)
 COMPARISONS = {"h3d": (("ar", "labels"), ("mgn", "ar")),
@@ -126,6 +136,20 @@ def _not_evaluated(why: str) -> dict:
     return {"verdict": NOT_EVALUATED, "why": why}
 
 
+def _all_pairs(a: list, b: list, metric: str, higher: bool = False) -> dict:
+    """The pairing-free reading of a per-seed comparison (a reading, no
+    verdict): `a` better than `b` (or, with `higher`, `a` higher than `b`)
+    for every one of the 3 x 3 pairs of seeds, and the relative difference
+    x / y - 1 of the least favourable pair (the closest when every pair
+    holds; negative when `a`'s value is the lower; None when y is zero)."""
+    if higher or metric in HIGHER_BETTER:
+        holds, x, y = min(a) > max(b), min(a), max(b)
+    else:
+        holds, x, y = max(a) < min(b), max(a), min(b)
+    return {"better_all_pairs": bool(holds),
+            "worst_pair_rel": float(x / y - 1.0) if y != 0 else None}
+
+
 # ------------------------------------------------------------------- 3D --
 
 def claim_t1(A: Arrays) -> dict:
@@ -140,9 +164,11 @@ def claim_t1(A: Arrays) -> dict:
         seeds = [_better(x, y, m) for x, y in zip(a, b, strict=True)]
         mean = _better(float(np.mean(a)), float(np.mean(b)), m)
         per_metric[m] = {"label_free_per_seed": a, "supervised_per_seed": b,
-                         "better_in_seed": seeds, "better_in_mean": mean}
+                         "better_in_seed": seeds, "better_in_mean": mean,
+                         **_all_pairs(a, b, m)}
         ok = ok and all(seeds) and mean
-    return {"verdict": REPLICATED if ok else NOT_REPLICATED, "per_metric": per_metric}
+    return {"verdict": REPLICATED if ok else NOT_REPLICATED, "per_metric": per_metric,
+            "all_pairs_reading": all(v["better_all_pairs"] for v in per_metric.values())}
 
 
 def claim_t2(A: Arrays, most: float, almost_all: float) -> dict:
@@ -231,12 +257,16 @@ def claim_d2(A: Arrays) -> dict:
         else:
             seeds = [_better(x, y, m) for x, y in zip(a, b, strict=True)]
             mean = _better(float(np.mean(a)), float(np.mean(b)), m)
+        pf = _all_pairs(a, b, m, higher=m == "disp_rel_l2")
         per[m] = {"label_free_per_seed": a, "supervised_per_seed": b,
                   "label_free_mean": float(np.mean(a)), "supervised_mean": float(np.mean(b)),
                   "expected": "label-free higher" if m == "disp_rel_l2"
-                  else "label-free better", "holds_in_seed": seeds, "holds_in_mean": mean}
+                  else "label-free better", "holds_in_seed": seeds, "holds_in_mean": mean,
+                  "holds_all_pairs": pf["better_all_pairs"],
+                  "worst_pair_rel": pf["worst_pair_rel"]}
         ok = ok and all(seeds) and mean
-    return {"verdict": REPLICATED if ok else NOT_REPLICATED, "per_metric": per}
+    return {"verdict": REPLICATED if ok else NOT_REPLICATED, "per_metric": per,
+            "all_pairs_reading": all(v["holds_all_pairs"] for v in per.values())}
 
 
 def reading_h3(A: Arrays, band: float, k: float) -> dict:
@@ -361,6 +391,176 @@ def ratios(H: Arrays, V: Arrays) -> dict:
     return out
 
 
+def ratio_intervals(H: Arrays, V: Arrays, n_boot: int = 2000, seed: int = 0,
+                    chunk: int = 200) -> dict:
+    """Per row and metric, the holdout mean over the validation mean (the
+    per-instance means over the seeds that passed their content check, as
+    `ratios`), with two 95% percentile intervals from `n_boot` instance
+    resamples with replacement (`seed` fixed; drawn `chunk` at a time; the
+    same draws for every row and metric): `interval_95_holdout`, the holdout
+    set alone resampled over the validation mean as it is (how far that mean
+    is from the distribution's, as the holdout set estimates it), and
+    `interval_95_both`, each side resampled on its own (how large a
+    difference between the two sets' means their sampling leaves possible;
+    wide where a mean is carried by a few instances). None where a value is
+    not finite or the validation mean is zero. Readings, no verdict."""
+    quantities = []
+    for r in H.rows:
+        keep = [si for si, ok in enumerate(_seeds_ok(H, r)) if ok]
+        for m in METRICS if keep else ():
+            h = H.per_instance(r, m)[keep].mean(axis=0)
+            v = V.per_instance(r, m)[keep].mean(axis=0)
+            ok = bool(np.all(np.isfinite(h)) and np.all(np.isfinite(v)) and v.mean() != 0)
+            quantities.append((r, m, h, v, ok))
+    rng = np.random.default_rng(seed)
+    nh, nv = H.values.shape[2], V.values.shape[2]
+    both = {(r, m): [] for r, m, _, _, ok in quantities if ok}
+    alone = {(r, m): [] for r, m, _, _, ok in quantities if ok}
+    for b in [chunk] * (n_boot // chunk) + ([n_boot % chunk] if n_boot % chunk else []):
+        ih, iv = rng.integers(0, nh, size=(b, nh)), rng.integers(0, nv, size=(b, nv))
+        for r, m, h, v, ok in quantities:
+            if ok:
+                mh = h[ih].mean(axis=1)
+                alone[(r, m)].append(mh / v.mean())
+                with np.errstate(divide="ignore", invalid="ignore"):
+                    both[(r, m)].append(mh / v[iv].mean(axis=1))
+    out = {}
+    for r, m, h, v, ok in quantities:
+        if not ok:
+            out.setdefault(r, {})[m] = None
+            continue
+        x, y = np.concatenate(both[(r, m)]), np.concatenate(alone[(r, m)])
+        out.setdefault(r, {})[m] = {
+            "ratio": float(h.mean() / v.mean()),
+            "interval_95_holdout": [float(q) for q in np.quantile(y, [0.025, 0.975])],
+            "interval_95_both": [float(q) for q in np.quantile(x[np.isfinite(x)],
+                                                               [0.025, 0.975])],
+            "resamples": int(n_boot), "non_finite_resamples": int(np.sum(~np.isfinite(x)))}
+    return out
+
+
+def pairing_free(res: dict) -> dict | None:
+    """The pairing-free reading of a T1 or D2 result (None when the claim was
+    not evaluated): per metric whether every one of the nine pairs of seeds
+    holds, and the least favourable pair's relative difference."""
+    if "per_metric" not in res:
+        return None
+    keys = ("better_all_pairs", "holds_all_pairs", "worst_pair_rel")
+    return {"all_pairs_reading": res["all_pairs_reading"],
+            "per_metric": {m: {k: r[k] for k in keys if k in r}
+                           for m, r in res["per_metric"].items()}}
+
+
+def failing_components(claim: str, res: dict) -> list:
+    """The comparisons that a claim read NOT REPLICATED failed: per metric and
+    seed or the seed mean (T1, D2), the displacement or von Mises part (T2),
+    the supervised network (T3); the claim itself for the single comparisons
+    (H1, H2a, H2b, H2c). Empty for any other verdict."""
+    if res.get("verdict") != NOT_REPLICATED:
+        return []
+    if claim in ("T1", "D2"):
+        out = []
+        for m, r in res["per_metric"].items():
+            seeds = r.get("better_in_seed", r.get("holds_in_seed"))
+            mean = r.get("better_in_mean", r.get("holds_in_mean"))
+            out += [f"{claim} {m} seed {i}" for i, ok in enumerate(seeds) if not ok]
+            out += [f"{claim} {m} seed mean"] if not mean else []
+        return out
+    if claim == "T2":
+        return [f"T2 {k}" for k in ("disp_ok", "vm_ok") if not res.get(k)]
+    if claim == "T3":
+        return [f"T3 {r}" for r, w in res.get("per_row", {}).items()
+                if not (w["worse"] >= 1 and w["sign_mismatch"] == 0)]
+    return [claim]
+
+
+def holm(pvalues: dict, alpha: float) -> dict:
+    """Holm's step-down procedure at family-wise level `alpha`: {name:
+    rejected}. The smallest p-value is compared with alpha / m, the next with
+    alpha / (m - 1), and so on: each at or below its level is rejected, and
+    the procedure stops at the first above it (ties broken by name, so that
+    the result does not depend on the order of the dictionary; a p-value
+    that is not a number is never rejected)."""
+    items = sorted(pvalues.items(),
+                   key=lambda kv: (kv[1] if math.isfinite(kv[1]) else math.inf, kv[0]))
+    out = {k: False for k in pvalues}
+    for i, (k, p) in enumerate(items):
+        if not p <= alpha / (len(items) - i):
+            break
+        out[k] = True
+    return out
+
+
+def representativeness(sets: dict, alpha: float) -> dict:
+    """V (PREREG_HOLDOUT Sec. 5): for each set that returned and is
+    adjudicable (`sets`: {name: (holdout Arrays, validation Arrays)}), row
+    and metric, the per-instance values (the mean over the row's seeds that
+    passed their content check) on the holdout set against those on the
+    validation instances, by a two-sided Mann-Whitney test (asymptotic, with
+    the tie and continuity corrections; one call per set, which equals the
+    calls per quantity); Holm's procedure over all the quantities at
+    family-wise level `alpha`. A row without a seed that passed, and a
+    quantity with a non-finite per-instance value on either side (counted per
+    side), are left out of the family and listed: they are not read.
+    REPRESENTATIVE iff no quantity is rejected; `holdout_worse` is decided by
+    the share of holdout values above validation values (ties counting
+    half), not by the means."""
+    from scipy.stats import mannwhitneyu
+
+    quantities, left_out = {}, []
+    for name in sorted(sets):
+        H, V = sets[name]
+        keys, hs, vs, seeds = [], [], [], {}
+        for r in H.rows:
+            keep = [si for si, ok in enumerate(_seeds_ok(H, r)) if ok]
+            if not keep:
+                left_out.append({"quantity": f"{name}:{r}",
+                                 "why": "no state of the row passed its content check"})
+                continue
+            for m in METRICS:
+                h = H.per_instance(r, m)[keep].mean(axis=0)
+                v = V.per_instance(r, m)[keep].mean(axis=0)
+                if not (np.all(np.isfinite(h)) and np.all(np.isfinite(v))):
+                    left_out.append({"quantity": f"{name}:{r}:{m}",
+                                     "why": "non-finite per-instance values",
+                                     "non_finite_holdout": int(np.sum(~np.isfinite(h))),
+                                     "non_finite_validation": int(np.sum(~np.isfinite(v)))})
+                    continue
+                keys.append((r, m))
+                hs.append(h)
+                vs.append(v)
+                seeds[r] = [H.seeds[si] for si in keep]
+        if not keys:
+            continue
+        hs, vs = np.stack(hs), np.stack(vs)
+        test = mannwhitneyu(hs, vs, axis=1, alternative="two-sided", method="asymptotic",
+                            use_continuity=True)
+        for (r, m), h, v, u, p in zip(keys, hs, vs, np.atleast_1d(test.statistic),
+                                     np.atleast_1d(test.pvalue), strict=True):
+            share = float(u) / (h.size * v.size)          # P(H > V) + P(H = V) / 2
+            quantities[f"{name}:{r}:{m}"] = {
+                "seeds": seeds[r], "n_holdout": int(h.size), "n_validation": int(v.size),
+                "holdout_mean": float(h.mean()), "validation_mean": float(v.mean()),
+                "ratio_of_means": float(h.mean() / v.mean()) if v.mean() != 0 else None,
+                "holdout_median": float(np.median(h)),
+                "validation_median": float(np.median(v)), "u": float(u),
+                "prob_holdout_higher": share, "p": float(p),
+                "holdout_worse": share != 0.5 and (share > 0.5) != (m in HIGHER_BETTER)}
+    out = {"what": "V: the per-instance values of every row and metric on the holdout set "
+                   "against the validation instances (two-sided Mann-Whitney, Holm)",
+           "alpha": float(alpha), "sets": sorted(sets), "left_out": left_out}
+    if not quantities:
+        return {**out, "verdict": NOT_EVALUATED, "why": "no quantity could be read",
+                "quantities": {}, "rejected": [], "rejected_holdout_worse": []}
+    rej = holm({k: q["p"] for k, q in quantities.items()}, alpha)
+    for k, q in quantities.items():
+        q["rejected"] = rej[k]
+    rejected = sorted(k for k, x in rej.items() if x)
+    return {**out, "verdict": NOT_REPRESENTATIVE if rejected else REPRESENTATIVE,
+            "quantities": quantities, "rejected": rejected,
+            "rejected_holdout_worse": [k for k in rejected if quantities[k]["holdout_worse"]]}
+
+
 def claims_of(h3d: Arrays | None, h2d: Arrays | None, criteria: dict,
               why: dict | None = None) -> tuple:
     """The eight claims and the reading H3 of one pair of arrays (`why`: per
@@ -386,6 +586,8 @@ def claims_of(h3d: Arrays | None, h2d: Arrays | None, criteria: dict,
         claims["H2c"] = claim_halved(h2d, float(criteria["halved"]))
         claims["D2"] = claim_d2(h2d)
         readings = {"H3": reading_h3(h2d, band, k)}
+    for c, v in claims.items():
+        v["failing"] = failing_components(c, v)
     return {c: claims[c] for c in CLAIMS}, readings
 
 
@@ -394,10 +596,12 @@ def adjudicate_sets(h3d: Arrays | None, h2d: Arrays | None, criteria: dict,
                     why: dict | None = None) -> dict:
     """Every claim and reading of PREREG_HOLDOUT Sec. 5-6 from the two sets'
     arrays (a set that did not return or is not adjudicable leaves its claims
-    NOT EVALUATED, for the reason in `why`); with the validation arrays,
-    every secondary reading beside its validation value, the
-    holdout-over-validation ratios, and the claims' rules applied to the
-    validation instances for reference (no verdict)."""
+    NOT EVALUATED, for the reason in `why`); with the validation arrays, V
+    over the sets that have both, every secondary reading beside its
+    validation value, the holdout-over-validation ratios with their
+    resampling intervals, and the claims' rules applied to the validation
+    instances for reference, with T1's and D2's pairing-free readings (no
+    verdict)."""
     band, k = float(criteria["guard_band"]), float(criteria["guard_k"])
     claims, readings = claims_of(h3d, h2d, criteria, why)
     secondary = {}
@@ -408,15 +612,24 @@ def adjudicate_sets(h3d: Arrays | None, h2d: Arrays | None, criteria: dict,
         if V is not None:
             sec["validation"] = set_readings(V, name, band, k)
             sec["ratio_holdout_over_validation"] = ratios(H, V)
+            sec["ratio_interval"] = ratio_intervals(H, V)
         secondary[name] = sec
     tally = {v: sum(1 for c in claims.values() if c["verdict"] == v)
              for v in (REPLICATED, NOT_REPLICATED, NOT_EVALUATED)}
-    out = {"claims": claims, "readings": readings, "secondary": secondary, "tally": tally}
+    pairs = {name: (H, V) for name, H, V in (("h3d", h3d, h3d_val), ("h2d", h2d, h2d_val))
+             if H is not None and V is not None}
+    if pairs:
+        v = representativeness(pairs, float(criteria["representative_alpha"]))
+    else:
+        v = {"verdict": NOT_EVALUATED, "why": "no set returned with its validation arrays"}
+    out = {"claims": claims, "readings": readings, "V": v, "secondary": secondary,
+           "tally": tally}
     if h3d_val is not None or h2d_val is not None:
         vc, vr = claims_of(h3d_val, h2d_val, criteria)
         out["validation_reference"] = {
             "what": "the rules of Sec. 5 applied to the validation instances that this run "
                     "recomputed (no verdict)",
             "claims": {c: v["verdict"] for c, v in vc.items()},
-            "H3": vr["H3"]["reading"]}
+            "H3": vr["H3"]["reading"],
+            "pairing_free": {c: pairing_free(vc[c]) for c in ("T1", "D2")}}
     return out

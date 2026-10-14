@@ -82,7 +82,7 @@ Continue only if `FETCH-OK` is printed and the commit is the named one
 (an error printed by a failed first attempt before `FETCH-OK` is harmless);
 otherwise stop here and report.
 
-A0c. Checkout, checks and the suite (~5 min):
+A0c. Checkout, checks and the suite (~7 min):
 ```bash
 cd ~/autodl-tmp/FE-JEPA
 git checkout -B cmame-paper origin/cmame-paper   # "Switched to ..." or "Reset branch ...", maybe "set up to track"
@@ -98,7 +98,7 @@ python -m pytest -q --deselect tests/test_cmame_material.py::test_manuscript_com
     --deselect tests/test_cmame_references.py::test_the_bibliography_renders_the_data_reference_and_the_chapter \
     2>&1 | tee runs/cmame/timing/pytest.log | tail -n 3
 ```
-The suite's last line reads `669 passed, 3 deselected`, then warnings and the
+The suite's last line reads `683 passed, 3 deselected`, then warnings and the
 time (the two LaTeX builds and the bibliography test are left out: they
 need a TeX installation that the box does not have). Anything failed, an
 error, or another count: stop and report. Any other output than the
@@ -505,7 +505,7 @@ bundle is made from the pushed branch with
 commit being on the box since Sec. B; `git bundle list-heads` shows
 `refs/heads/cmame-paper` at the named commit.)
 
-D0c. Checkout, checks and the suite (~5 min):
+D0c. Checkout, checks and the suite (~7 min):
 ```bash
 cd ~/autodl-tmp/FE-JEPA
 git checkout -B cmame-paper origin/cmame-paper   # "Switched to ..." or "Reset branch ...", maybe "set up to track" or "up to date"
@@ -522,7 +522,7 @@ python -m pytest -q --deselect tests/test_cmame_material.py::test_manuscript_com
     --deselect tests/test_cmame_references.py::test_the_bibliography_renders_the_data_reference_and_the_chapter \
     2>&1 | tee runs/cmame/spectra/pytest.log | tail -n 3
 ```
-The suite's last line reads `669 passed, 3 deselected`, then warnings and the
+The suite's last line reads `683 passed, 3 deselected`, then warnings and the
 time. Anything failed, an error, another count, or any other output than the
 comments describe: stop and report.
 
@@ -653,7 +653,7 @@ Sec. D's commit `8b5d443` being on the box; `git bundle list-heads` shows
 `refs/heads/cmame-paper` at the named commit and `refs/tags/prereg-holdout`
 at the annotated tag's own object, which peels to that commit.)
 
-E0c. Checkout, checks and the suite (~5 min):
+E0c. Checkout, checks and the suite (~7 min):
 ```bash
 cd ~/autodl-tmp/FE-JEPA
 git checkout -B cmame-paper origin/cmame-paper   # "Switched to ..." or "Reset branch ...", maybe "set up to track" or "up to date"
@@ -662,6 +662,7 @@ git rev-parse 'HEAD^{tree}'                  # the tree the operator instruction
 git status --porcelain --untracked-files=no  # must print nothing
 ls runs/phase2/e8_states/{ar_p1024,labels_b1024,mgn_b1024}_s*.pt runs/e1_2d_base/e8_states/ar_p1024_s*.pt \
     runs/cm2d/e8_states/*_b1024_s*.pt | wc -l   # 21
+python -c "from fejepa.analysis.holdout import load_spec, check_states; s = load_spec('configs/holdout_v1.json'); [check_states(v, s['seeds']) for v in s['sets'].values()]; print('21 states verified')"   # 21 states verified
 python -c "from pathlib import Path; from fejepa.analysis.holdout import load_spec, holdout_names; s = load_spec('configs/holdout_v1.json'); [print(k, sum((Path(v['corpus']) / f).is_file() for f in holdout_names(v)), v['n_holdout']) for k, v in s['sets'].items()]"   # h3d 686 686, then h2d 4111 4111
 ls runs/holdout/status.txt 2>/dev/null || echo "no E1 yet"   # on the first visit: no E1 yet
 df -h ~/autodl-tmp / | tail -n 2             # >= 5 GB free on the data disk and on / (the suite needs 5)
@@ -675,10 +676,15 @@ python -m pytest -q --deselect tests/test_cmame_material.py::test_manuscript_com
     --deselect tests/test_cmame_references.py::test_the_bibliography_renders_the_data_reference_and_the_chapter \
     2>&1 | tee runs/holdout/pytest.log | tail -n 3
 ```
-The suite's last line reads `669 passed, 3 deselected`, then warnings and the
+The suite's last line reads `683 passed, 3 deselected`, then warnings and the
 time. Anything failed, an error, another count, or any other output than the
 comments describe: stop and report. (`runs/holdout/status.txt` printed on a
-later visit, after an interrupted E1: go to E1' instead of E1.)
+later visit, after an interrupted E1: go to E1' instead of E1.) The line
+`21 states verified` means that every state has the SHA-256 that the
+configuration records. Otherwise that command prints a traceback whose last
+line begins `ValueError: states refused:` and names the refused states of
+the first set that has one, and the rest of the block still runs to its
+end: then stop and report, before anything is labelled.
 
 ### E1. The run (box; ~1.5 h; nothing else on the GPU)
 First the checks, on their own:
@@ -817,7 +823,9 @@ and `provenance.txt` from the return, the reports of `configs/holdout_v1.json`
 from `records/`, and PREREG_HOLDOUT.md, checks every returned file against
 the provenance file and the recorded commit and tree against the tag
 `prereg-holdout`, and writes the claims T1-T3, H1, H2a, H2b, H2c and D2 per
-PREREG_HOLDOUT Sec. 5, the reading H3, the secondary readings of Sec. 6 beside
-their validation values, and the deviations, with every input's SHA-256 and
-the adjudicating code's. The return is committed under
+PREREG_HOLDOUT Sec. 5, each that does not replicate with the comparisons that
+failed, the reading H3, V (whether the per-instance values are distributed
+alike on the holdout set and on the validation instances), the secondary
+readings of Sec. 6 beside their validation values, and the deviations, with
+every input's SHA-256, the adjudicating code's and the library versions. The return is committed under
 `records/cmame/holdout/return/` with the verdict.

@@ -1394,7 +1394,7 @@ generator, and no record, configuration, pre-registration or source file changed
   B1c and D0c reads 582 passed, 2 deselected.
   Suite 584.
 
-## Stage 11 (14 Oct 2026) -- PREREG_HOLDOUT r4 draft: the manuscript's claims on never-used instances
+## Stage 11 (14 Oct 2026) -- PREREG_HOLDOUT r5 draft: the manuscript's claims on never-used instances
 
 - Purpose: after submission, re-read eight of the manuscript's claims on the
   instances of its two corpora on which no recorded run or tool trained a
@@ -1405,7 +1405,29 @@ generator, and no record, configuration, pre-registration or source file changed
   (code, the pre-registration, the box procedure), and r4's changes by a
   fourth; r2, r3 and r4 take up every finding (the third and fourth rounds
   found nothing blocking, and r4 changes no set, count, threshold or
-  claim's rule).
+  claim's rule). r5, after a review of the rules' margins (most of the
+  eight rules turn only if the holdout numbers differ from the validation
+  numbers by 20% or more; D2 and H2c by about 4% and 11%), adds V, whether
+  the per-instance values are distributed alike on the holdout set and on
+  the validation instances, beside the eight claims, with the comparisons
+  that failed reported for a claim that does not replicate, the
+  pairing-free reading of T1 and D2, intervals for the holdout-over-
+  validation ratios of the means, the dependence among the claims stated,
+  and the states' SHA-256 checked before the labels; no set, count, or
+  claim's threshold or rule changes (one threshold added, V's level). Two
+  independent reviewers (statistics and code; the pre-registration and the
+  box procedure) read r5 and found three blocking points, all taken up:
+  the seed matching was called arbitrary (at a seed the two transformers
+  start from the same weights: it is a control); V was described and
+  licensed as a test of the means (it compares the share of holdout values
+  above validation values, so a mean carried by a few instances can move
+  without a rejection); and its quoted power was that of eight quantities
+  moved together (one error metric alone is detected far less often, a
+  critical-region recall alone in most draws already at 2%; now recorded
+  per quantity). A sixth round, one reviewer on the fixes, found nothing
+  blocking; its points (two intervals for the ratios of the means, the
+  wording of the dependence and of what V can see, tests of the new
+  readings with sets of different sizes) are taken up.
 - Sets (`fejepa.analysis.holdout`): the tail of each corpus's pool after the
   deepest prefix any recorded run or tool used, by the seeded split, without
   the instances that another recorded set drew again, that a recorded tool
@@ -1460,8 +1482,9 @@ generator, and no record, configuration, pre-registration or source file changed
   from the records (the Phase-2b d9 record, the box's listing of 22
   September 2026 in `records/wp9/phase2_supervised_states.json`, E1's
   report as CM2D's records it, CM2D's provenance file), the content
-  tolerance (1e-3, as the exports, with every value required finite) and
-  the claims' thresholds.
+  tolerance (1e-3, as the exports, with every value required finite), the
+  claims' thresholds and V's family-wise level (5%); `load_spec` refuses
+  criteria other than these six.
 - `scripts/holdout_run.py` (box): `--stage label|eval|all`; refuses to run
   unless PREREG_HOLDOUT is stamped for the configuration; the evaluation
   refuses a report or a state with another SHA-256 (exit 3) before any model
@@ -1490,7 +1513,33 @@ generator, and no record, configuration, pre-registration or source file changed
   refused otherwise, every other check of the set applying first;
   `status.txt` is read by attempt (a start line with its time and host, and
   the exit line that follows it), giving the attempts, a last attempt cut
-  off or failed, and the hosts.
+  off or failed, and the hosts. A claim that does not replicate lists the
+  comparisons that failed (`failing`: per metric and seed or the seed mean
+  in T1 and D2, the part in T2, the network in T3). T1 and D2 carry the
+  pairing-free reading: per metric, whether every one of the nine pairs of
+  seeds holds, and the least favourable pair's relative difference (on the
+  validation instances all hold; closest 3.0% in D2, the peak von Mises
+  error), for the holdout set and, in `validation_reference`, for the
+  validation instances; at a seed the two transformers start from the same
+  initial weights, so the seed matching is a control and the nine pairs
+  read whether a comparison also holds across seeds. V
+  (`representativeness`): per set that returned and is adjudicable, row
+  and metric (35 quantities), the per-instance values (mean over the seeds
+  that passed) on the holdout set against the validation instances
+  recomputed in the same run, a two-sided Mann-Whitney test (asymptotic,
+  tie and continuity corrections; one vectorised call per set, equal to
+  the per-quantity calls), Holm's step-down procedure at 5% family-wise;
+  REPRESENTATIVE or NOT REPRESENTATIVE with the rejected quantities and
+  those in which the holdout set ranks worse (by the share of holdout
+  values above validation values, not by the means); rows with no passing
+  seed and quantities with non-finite values (counted per side) left out
+  and listed; NOT EVALUATED with nothing to read. Named V because R names
+  wp9's remeshed set in Sec. 2. Beside it, per set, row and metric, the
+  holdout-over-validation ratio of the means with two 95% intervals from
+  2,000 instance resamples (`ratio_intervals`, seeded): the holdout set
+  alone resampled over the validation mean as it is, and both sides
+  resampled on their own. The
+  verdict file records the versions of Python, NumPy and SciPy.
 - `scripts/holdout_resample.py`: the rules on 1,000 resamples of the
   validation instances of the holdout sizes (`records/cmame/holdout/resample.json`):
   every claim REPLICATED in every resample drawn directly; with the
@@ -1498,14 +1547,28 @@ generator, and no record, configuration, pre-registration or source file changed
   in 969 (each of the 31 failures through the peak von Mises error in seed
   0; the record counts the failures per comparison; H2c came closest among
   the others, its largest rel -50.7%). PREREG_HOLDOUT Sec. 5 discloses
-  this, and that T3's sign part is an identity of the computation.
-- `scripts/stamp_prereg_holdout.py`: the CM2D stamp, for this file (r4).
+  this, and that T3's sign part is an identity of the computation. The
+  record also calibrates V on the validation instances alone: random
+  halves of 128 (1,000 splits) read NOT REPRESENTATIVE in 2.1%, and with
+  the label-free transformer's four error metrics multiplied on one half by
+  1.05, 1.10, 1.15 and 1.20, in 15%, 65.5%, 98% and 100% (200 each); at the
+  holdout sizes (drawn with replacement) 2.6% without a change and 54%,
+  100%, 100% and 100% with the factors, eight quantities moved at once. With
+  one quantity alone made worse at the holdout sizes (an error metric
+  multiplied, the recall divided; 200 draws per factor), V rejected it in
+  1.5% to 99.5% of the draws at 1.10 (median about 30%) and 15% to 100% at
+  1.20 among the error metrics (the 2D label-free transformer's energy gap,
+  which H1 reads, 3.5% and 20.5%), and the recalls in 2.5% to 100% at 1.02:
+  a test of the per-instance values rarely sees a 10% change of a widely
+  spread quantity from 256 validation instances.
+- `scripts/stamp_prereg_holdout.py`: the CM2D stamp, for this file (r5).
   `scripts/holdout_scan_sets.py`: the sets of the corpora's generators and
   seed under given directories, per kind, against the bounds (exit 0 iff
   within them), copies of the corpus manifests and stray instance files.
 - RUNBOOK_CMAME Sec. E: the box session (remote set to the repository's new
-  address, branch and tag with a bundle route, 21 states and the holdout
-  files counted, 5 GB free, suite, the four stages logged with start lines
+  address, branch and tag with a bundle route, 21 states counted and
+  checked by SHA-256 before anything is labelled, the holdout files
+  counted, 5 GB free, suite, the four stages logged with start lines
   naming the host to a status file that is never rotated, E1' for
   interruptions, read per attempt: a stage whose last line is a start line
   or an exit of 128 or more is cut off and run again, a labelling run again
@@ -1515,7 +1578,7 @@ generator, and no record, configuration, pre-registration or source file changed
   repo-side adjudication. The suite on the box leaves out the tests that
   need TeX: the two LaTeX builds and the bibliography rendering
   (`tests/test_cmame_references.py`, which the box has never run); the
-  count in A0c, D0c and E0c reads 669 passed, 3 deselected. B1c, which
+  count in A0c, D0c and E0c reads 683 passed, 3 deselected. B1c, which
   runs only on the tagged commit, reads that commit's 514 passed, 2
   deselected, as CM2D's return records it.
 - Tests: `tests/test_holdout_rules.py` (with the configuration's thresholds,
@@ -1527,7 +1590,22 @@ generator, and no record, configuration, pre-registration or source file changed
   ratios; the secondary readings, new row against reference, beside
   validation arrays of their own, and the claims' rules on the validation
   arrays for reference; the resampling record, its failure counts and the
-  quoted margins re-derived), `tests/test_holdout_config.py` (every
+  quoted margins re-derived, with V's calibration and the numbers the text
+  quotes; the failing comparisons named per claim; the pairing-free reading
+  on constructed seeds where the matched comparison holds and a cross pair
+  does not, and its quoted margins; V on the manuscript's arrays against
+  themselves, a constructed shift rejected in its direction and nothing
+  else, recall lower read as worse, rows and non-finite quantities left
+  out, a failed seed not read, nothing to read; Holm at its boundaries,
+  with a NaN and in any order; V's level from the configuration, in the
+  adjudication and in the calibration; the calibration with one quantity
+  changed against V with that quantity alone changed; the ratio intervals
+  re-drawn by hand with sets of different sizes and a remainder chunk,
+  seeded, as the adjudication calls them, with failed seeds, non-finite
+  values and a zero validation mean; the validation side's pairing-free
+  readings against the holdout side's; a zero value in the
+  pairing-free reading; the heavy tail the text quotes),
+  `tests/test_holdout_config.py` (every
   configured value against its record, the thresholds against the
   pre-registration's text; the pool depths and the history scan re-derived
   from the listed commits and tags, or checked for consistency without them;
@@ -1548,6 +1626,9 @@ generator, and no record, configuration, pre-registration or source file changed
   checkout, non-finite values with a strict verdict, adjudicating code that
   differs from the commit compared, a pre-registration stamped for another
   configuration, and 32 altered returns each refused for its own reason,
-  another commit or tree among them), and `tests/test_cmame_runbook.py` for
-  Sec. E.
-  Suite 672.
+  another commit or tree among them; V and the failing lists end to end,
+  the seed of a state that failed left out of V and a set that did not
+  return left out of it; E0c's state check run as the runbook writes it,
+  on the miniature, with one state changed), and
+  `tests/test_cmame_runbook.py` for Sec. E.
+  Suite 686.
