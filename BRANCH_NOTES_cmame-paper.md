@@ -1427,7 +1427,13 @@ generator, and no record, configuration, pre-registration or source file changed
   per quantity). A sixth round, one reviewer on the fixes, found nothing
   blocking; its points (two intervals for the ratios of the means, the
   wording of the dependence and of what V can see, tests of the new
-  readings with sets of different sizes) are taken up.
+  readings with sets of different sizes) are taken up. A last reading of
+  the pushed text (no change to the code, a record or a test) added V's
+  verdict to what any revision reports (the Publication line), said that
+  the joint calibration rests mostly on, not entirely on, the
+  three-dimensional label-free transformer, named the reports' arrays as
+  the source of the quoted pairing-free margins, and set V's bullet in
+  three paragraphs.
 - Sets (`fejepa.analysis.holdout`): the tail of each corpus's pool after the
   deepest prefix any recorded run or tool used, by the seeded split, without
   the instances that another recorded set drew again, that a recorded tool
