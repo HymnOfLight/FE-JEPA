@@ -12,13 +12,19 @@ the manuscript.
 - Sec. C: CM2D's adjudication (repo).
 - Sec. D: the error spectra of CM2D's models (read only; ~30 min; post hoc,
   no pre-registration; after Sec. C).
+- Sec. E: PREREG_HOLDOUT, the manuscript's stored states on the instances of
+  its two corpora on which no recorded run or tool trained a network,
+  computed a label or evaluated a network (evaluation only; ~1-1.5 h; only
+  after PREREG_HOLDOUT is stamped and tagged `prereg-holdout`), and its
+  adjudication in the repo.
 
 No section writes another's files: each reads E1's or Phase-2b's states and
-corpora (Sec. D also CM2D's kept states and its committed return); Sec. A
-and B0 write only under `runs/cmame/`, Sec. B otherwise only under
-`runs/cm2d/`, Sec. D only under `runs/cmame/spectra/`; none writes to a
-stamped configuration of another pre-registration, another run's
-`e8_states/` or `runs/data2d`.
+corpora (Sec. D also CM2D's kept states and its committed return; Sec. E all
+three runs' states); Sec. A and B0 write only under `runs/cmame/`, Sec. B
+otherwise only under `runs/cm2d/`, Sec. D only under `runs/cmame/spectra/`,
+Sec. E only under `runs/holdout/`; none writes to a stamped configuration of
+another pre-registration, another run's `e8_states/`, `runs/data2d` or
+`runs/data3d_phase2`.
 
 ## A. Timing and field export, standalone (box; ~1.5 h)
 
@@ -89,12 +95,14 @@ python -c "import torch; print(torch.__version__, torch.cuda.is_available())"   
 mkdir -p runs/cmame/timing
 python -m pytest -q --deselect tests/test_cmame_material.py::test_manuscript_compiles \
     --deselect tests/test_w9_session2.py::test_paper_material_compiles \
+    --deselect tests/test_cmame_references.py::test_the_bibliography_renders_the_data_reference_and_the_chapter \
     2>&1 | tee runs/cmame/timing/pytest.log | tail -n 3
 ```
-The suite's last line reads `582 passed, 2 deselected`, then warnings and the
-time (the two LaTeX builds are left out: they need a TeX installation that
-this section does not use). Anything failed, an error, or another count: stop
-and report. Any other output than the comments describe: stop and report.
+The suite's last line reads `669 passed, 3 deselected`, then warnings and the
+time (the two LaTeX builds and the bibliography test are left out: they
+need a TeX installation that the box does not have). Anything failed, an
+error, or another count: stop and report. Any other output than the
+comments describe: stop and report.
 
 ### A1. The measurements (box; ~1.5 h; nothing else on the GPU)
 
@@ -265,9 +273,12 @@ grep oom_kill /sys/fs/cgroup/memory.events 2>/dev/null   # note the number: B2' 
 mkdir -p runs/cm2d
 python -m pytest -q --deselect tests/test_cmame_material.py::test_manuscript_compiles \
     --deselect tests/test_w9_session2.py::test_paper_material_compiles \
+    --deselect tests/test_cmame_references.py::test_the_bibliography_renders_the_data_reference_and_the_chapter \
     2>&1 | tee runs/cm2d/pytest.log | tail -n 3
 ```
-The suite's last line reads `582 passed, 2 deselected`, then warnings and the time.
+The suite's last line reads `514 passed, 2 deselected`, then warnings and the time
+(the suite of the tagged commit, as `records/cmame/cm2d/return/pytest.log`
+records it; the third `--deselect` names a later test and deselects nothing).
 Anything failed, an error, another count, or any other output than the
 comments describe: stop and report.
 
@@ -508,9 +519,10 @@ python -c "import torch; print(torch.__version__, torch.cuda.is_available())"   
 mkdir -p runs/cmame/spectra
 python -m pytest -q --deselect tests/test_cmame_material.py::test_manuscript_compiles \
     --deselect tests/test_w9_session2.py::test_paper_material_compiles \
+    --deselect tests/test_cmame_references.py::test_the_bibliography_renders_the_data_reference_and_the_chapter \
     2>&1 | tee runs/cmame/spectra/pytest.log | tail -n 3
 ```
-The suite's last line reads `582 passed, 2 deselected`, then warnings and the
+The suite's last line reads `669 passed, 3 deselected`, then warnings and the
 time. Anything failed, an error, another count, or any other output than the
 comments describe: stop and report.
 
@@ -579,3 +591,233 @@ von Mises error agree with `base_mean / new_mean` of H2a and H2b in
 rows' content deviations are 0) and committed under
 `records/cmame/spectra/`; the manuscript's reading of the errors' spectral
 content is then generated from it.
+
+## E. PREREG_HOLDOUT: the stored states on the never-used instances (box; ~1.5 h)
+The manuscript's networks, unchanged, on the instances of its two corpora on
+which no recorded run or tool trained a network, computed a label or
+evaluated a network (PREREG_HOLDOUT Sec. 2): 686 of `runs/data3d_phase2`
+after the first 1,024 of its pool, and 4,111 of `runs/data2d` after the
+first 25,600 of its pool (the configuration lists the few instances of
+those tails that are left out). Each set is first labelled (one exact solve
+per instance, into `runs/holdout/<set>/labels/`; the corpus files are only
+read), then every state is checked by SHA-256 and by content on its run's
+validation split and evaluated on the set. Nothing trains. Only after
+PREREG_HOLDOUT is stamped and tagged `prereg-holdout`: the script refuses to
+run otherwise. It reads Phase-2b's, E1's and CM2D's states and the two
+corpora, and writes only under `runs/holdout/`. Before the operator
+instruction is sent, the repo side checks the remote:
+`git ls-remote origin refs/heads/cmame-paper 'refs/tags/*'` shows the branch
+at the stamped commit and, of all tags, only `refs/tags/prereg-holdout^{}`
+at that commit (PREREG_HOLDOUT Sec. 7: no other tag on it).
+
+### E0. Preconditions (box)
+
+E0a. The tmux session -- on its own line, outside tmux (skip it if a tmux
+status bar is already showing); after a dropped connection, `tmux attach -t cm`:
+```bash
+tmux new -A -s cm
+```
+
+E0b. The repository's address, then the branch and the tag. Since 11 October
+2026 the repository is `RuifengCao/label-free-fe-surrogates` (the old
+address forwards; the box's remote is set to the new one, once), and the
+tag's refspec is forced, so that a stale local tag of that name is replaced:
+```bash
+cd ~/autodl-tmp/FE-JEPA
+git remote set-url origin https://github.com/RuifengCao/label-free-fe-surrogates.git
+git remote get-url origin                    # https://github.com/RuifengCao/label-free-fe-surrogates.git
+( for i in 1 2 3; do git fetch origin +refs/heads/cmame-paper:refs/remotes/origin/cmame-paper +refs/tags/prereg-holdout:refs/tags/prereg-holdout && exit 0; sleep 10; done
+  exit 1 ) && echo FETCH-OK || echo FETCH-FAILED
+git rev-parse --short origin/cmame-paper     # the commit the operator instruction names
+git rev-parse --short 'prereg-holdout^{commit}'   # the same commit
+```
+Continue only if `FETCH-OK` is printed and both lines are the named commit
+(an error printed by a failed first attempt before `FETCH-OK` is harmless).
+If nothing at all is printed for 10 min, or the fetch has not ended after
+20 min, press Ctrl-C (then `FETCH-OK` does not appear; ignore any lines
+printed after it) and take the bundle route. On `FETCH-FAILED`: upload the bundle
+that the operator instruction sends to `~/cmame-paper.bundle` and run, in
+place of the fetch block:
+```bash
+cd ~/autodl-tmp/FE-JEPA
+sha256sum ~/cmame-paper.bundle               # the SHA-256 the operator instruction names
+git fetch ~/cmame-paper.bundle +refs/heads/cmame-paper:refs/remotes/origin/cmame-paper +refs/tags/prereg-holdout:refs/tags/prereg-holdout && echo FETCH-OK || echo FETCH-FAILED
+git rev-parse --short origin/cmame-paper     # the commit the operator instruction names
+git rev-parse --short 'prereg-holdout^{commit}'   # the same commit
+```
+Continue only if the SHA-256 is the named one, `FETCH-OK` is printed and
+both lines are the named commit; otherwise stop here and report. (Repo side:
+the bundle is made from the pushed branch and tag with
+`git bundle create cmame-paper.bundle 8b5d443..cmame-paper prereg-holdout`,
+Sec. D's commit `8b5d443` being on the box; `git bundle list-heads` shows
+`refs/heads/cmame-paper` at the named commit and `refs/tags/prereg-holdout`
+at the annotated tag's own object, which peels to that commit.)
+
+E0c. Checkout, checks and the suite (~5 min):
+```bash
+cd ~/autodl-tmp/FE-JEPA
+git checkout -B cmame-paper origin/cmame-paper   # "Switched to ..." or "Reset branch ...", maybe "set up to track" or "up to date"
+git describe --tags --match prereg-holdout   # must print exactly: prereg-holdout
+git rev-parse 'HEAD^{tree}'                  # the tree the operator instruction names
+git status --porcelain --untracked-files=no  # must print nothing
+ls runs/phase2/e8_states/{ar_p1024,labels_b1024,mgn_b1024}_s*.pt runs/e1_2d_base/e8_states/ar_p1024_s*.pt \
+    runs/cm2d/e8_states/*_b1024_s*.pt | wc -l   # 21
+python -c "from pathlib import Path; from fejepa.analysis.holdout import load_spec, holdout_names; s = load_spec('configs/holdout_v1.json'); [print(k, sum((Path(v['corpus']) / f).is_file() for f in holdout_names(v)), v['n_holdout']) for k, v in s['sets'].items()]"   # h3d 686 686, then h2d 4111 4111
+ls runs/holdout/status.txt 2>/dev/null || echo "no E1 yet"   # on the first visit: no E1 yet
+df -h ~/autodl-tmp / | tail -n 2             # >= 5 GB free on the data disk and on / (the suite needs 5)
+pgrep -af "fejepa|spawn_main|scripts/[A-Za-z0-9_]+\.py"   # must print nothing
+nvidia-smi --query-gpu=utilization.gpu,memory.used --format=csv,noheader   # about 0 %, under 1,000 MiB
+python -c "import torch; print(torch.__version__, torch.cuda.is_available())"   # 2.12.1+cu130 True
+mkdir -p runs/holdout
+[ -e runs/holdout/pytest.log ] && mv runs/holdout/pytest.log runs/holdout/pytest.log.$(date +%Y%m%d-%H%M%S)
+python -m pytest -q --deselect tests/test_cmame_material.py::test_manuscript_compiles \
+    --deselect tests/test_w9_session2.py::test_paper_material_compiles \
+    --deselect tests/test_cmame_references.py::test_the_bibliography_renders_the_data_reference_and_the_chapter \
+    2>&1 | tee runs/holdout/pytest.log | tail -n 3
+```
+The suite's last line reads `669 passed, 3 deselected`, then warnings and the
+time. Anything failed, an error, another count, or any other output than the
+comments describe: stop and report. (`runs/holdout/status.txt` printed on a
+later visit, after an interrupted E1: go to E1' instead of E1.)
+
+### E1. The run (box; ~1.5 h; nothing else on the GPU)
+First the checks, on their own:
+```bash
+cd ~/autodl-tmp/FE-JEPA
+P=runs/holdout
+( date; hostname; pgrep -af "fejepa|spawn_main|scripts/[A-Za-z0-9_]+\.py"
+  nvidia-smi --query-gpu=utilization.gpu,memory.used --format=csv,noheader ) 2>&1 | tee -a $P/precheck.txt
+```
+`pgrep` must print nothing and the GPU line must read about 0 % and under
+1,000 MiB; otherwise stop here and report. Then, in the same window:
+```bash
+cd ~/autodl-tmp/FE-JEPA
+P=runs/holdout
+touch $P/status.txt
+run() { local log=$1; shift; [ -e $P/$log ] && mv $P/$log $P/$log.$(date +%Y%m%d-%H%M%S)
+        echo "$log start $(date -u +%FT%TZ) $(hostname)" >> $P/status.txt
+        "$@" 2>&1 | tee $P/$log; echo "$log exit=${PIPESTATUS[0]}" | tee -a $P/status.txt; }
+run label_h3d.log python scripts/holdout_run.py --config configs/holdout_v1.json --set h3d --stage label --device cuda
+run eval_h3d.log python scripts/holdout_run.py --config configs/holdout_v1.json --set h3d --stage eval --device cuda
+run label_h2d.log python scripts/holdout_run.py --config configs/holdout_v1.json --set h2d --stage label --device cuda
+run eval_h2d.log python scripts/holdout_run.py --config configs/holdout_v1.json --set h2d --stage eval --device cuda
+( echo "HEAD $(git rev-parse HEAD)"; echo "tree $(git rev-parse 'HEAD^{tree}')"
+  git status --porcelain --untracked-files=no
+  nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader
+  lscpu | grep -E "^Model name|^CPU\(s\)|^Thread|^Socket"; echo "nproc $(nproc)"
+  echo "hostname $(hostname)"
+  cat /sys/fs/cgroup/cpu.max /sys/fs/cgroup/memory.max 2>/dev/null; free -g | head -n 2
+) >> $P/machine.txt 2>&1
+cat $P/status.txt
+```
+`status.txt` is never deleted or rotated: it keeps a start line and an exit
+line per attempt. Do not press Ctrl-C in this window while the block runs: it
+stops only the stage in progress, which is then left without an exit line,
+and the block goes on with the next stage.
+
+What to expect, per set:
+- `label`: a line every 64 instances (`[holdout] h3d labels 64/686 | ... s`),
+  then one summary line: `"n": 686` (h3d) or `4111` (h2d), `"reused": 0`,
+  `"solves": 2744` or `16444`, `"kept": false`, `"residual_max"` of order 1e-11
+  (up to about 1e-10; the script refuses a label above 1e-8),
+  `"source_labelled": 0`. About 35-40 min for h3d (an instance can take half a
+  minute), 5-10 min for h2d. A labelling run again after an
+  interruption counts the labels it kept under `"reused"` and solves only the
+  others; one that finds every label prints `[holdout] h3d labels unchanged:
+  ... kept as it was` and `"reused"` equal to `"n"`, `"solves": 0`,
+  `"kept": true`.
+- `eval`: possibly torch `UserWarning` blocks (harmless), a line every 32
+  validation instances (`[holdout] h3d val 32/256 | ... s`) and every 32
+  holdout instances, then one summary line: `content_median_rel_dev` (two
+  numbers per state) about 0 for the transformer states (`ar_*`, `labels_*`,
+  `labels_knorm_*`), small but not necessarily 0 for the graph-network ones
+  (`mgn_*`: about 1e-4, as in Sec. A); `content_mismatch` empty; the
+  per-state means (`summary`) and the load cases worse than the zero field
+  (`worse_than_zero`, each with `"sign_mismatch": 0`). About 25 min for h3d
+  and 10-20 min for h2d.
+
+`status.txt` must show, for each of `label_h3d.log`, `eval_h3d.log`,
+`label_h2d.log` and `eval_h2d.log` in this order, one start line and one
+`exit=0` line. `exit=3`: a report or a state whose SHA-256 is not the
+configuration's, refused before any model was built and before anything was
+written (the message names it). `exit=5`: a state did not reproduce its
+report's validation arrays (everything else is written). `exit=1` with a
+message about the pre-registration: the checkout is not the stamped tag. Any
+other exit below 128, or a traceback: send the log. Report any of these. A
+stage without an exit line, or with an exit of 128 or more (the stage was
+killed): E1'. Otherwise, in every case, go on to E2: the return carries the
+logs and whatever was written. Never delete anything under `runs/holdout/`.
+
+### E1'. Interruptions
+Type nothing into window 0 while the block runs: as long as it shows no
+prompt, the run is going (look in a second window: Ctrl-b c; back: Ctrl-b 0).
+- A dropped connection: `tmux attach -t cm`; the run goes on. Do not paste
+  anything again.
+- Window 0 shows no new line for 30 min while `pgrep -af
+  "scripts/holdout_run.py"` in a second window still shows the stage: report,
+  and do not stop it.
+- The box restarted, or a stage was cut off: at a prompt in window 0 (after
+  a restart, open tmux again, E0a), run
+  ```bash
+  cd ~/autodl-tmp/FE-JEPA
+  cat runs/holdout/status.txt
+  pgrep -af "scripts/holdout_run.py"      # must print nothing
+  ```
+  If `pgrep` prints a line, the run is still going: no restart. Otherwise
+  look, for each stage, at the last line of `status.txt` that names it: the
+  stage was cut off when that line is a start line, or an exit line with a
+  code of 128 or more (the stage was killed); it never started when no line
+  names it. Paste E1's second block again with only the `run` lines of the
+  stages that were cut off or never started, in E1's order, and after a
+  `label` line always the `eval` line of its set, whatever that line's exit
+  (everything else in the block stays as it is). No other stage is run
+  again. The labelling keeps every label it has already written; each
+  attempt adds its own start and exit lines, and the adjudication records
+  them.
+- A stage cut off twice is not run again, nor its set's `eval`; the other
+  set's stages still run as above; then E2.
+
+### E2. Return (box; minutes)
+```bash
+cd ~/autodl-tmp/FE-JEPA
+P=runs/holdout
+T=$(date +%Y%m%d-%H%M)
+OUT=~/holdout_return && rm -rf $OUT && mkdir -p $OUT/h3d $OUT/h2d
+for s in h3d h2d; do cp $P/$s/eval.json $P/$s/eval_arrays.npz $P/$s/manifest.json $OUT/$s/ 2>/dev/null; done
+cp $P/*.log* $P/status.txt $P/precheck.txt $P/machine.txt $OUT/ 2>/dev/null
+( echo "HEAD $(git rev-parse HEAD)"; echo "tree $(git rev-parse 'HEAD^{tree}')"
+  echo "describe $(git describe --tags --match prereg-holdout)"
+  echo "describe-all $(git describe --always --dirty --tags)"
+  echo "hostname $(hostname)"
+  echo "--- files ---"; cd $OUT && find . -type f ! -name provenance.txt | sort | xargs sha256sum
+) > $OUT/provenance.txt 2>&1
+cd ~ && tar czf holdout_return_$T.tgz holdout_return \
+    && sha256sum holdout_return_$T.tgz && du -h holdout_return_$T.tgz
+```
+The tarball is a few MB. Send it with the SHA-256 line. The labels stay on
+the box (their SHA-256 are in the manifests); then shut the instance down
+without releasing it.
+
+### E3. In the repo
+In a checkout of the branch (a clone of its own, not a copy of a worktree),
+with the tag fetched by a forced refspec:
+```bash
+git fetch origin +refs/heads/cmame-paper:refs/remotes/origin/cmame-paper +refs/tags/prereg-holdout:refs/tags/prereg-holdout
+git tag --points-at 'prereg-holdout^{commit}'   # exactly one line: prereg-holdout
+git checkout -B cmame-paper origin/cmame-paper   # frozen at the stamped commit until the return
+git describe --tags --match prereg-holdout   # exactly: prereg-holdout
+git status --porcelain --untracked-files=no  # must print nothing
+python scripts/adjudicate_holdout.py --return <the unpacked holdout_return> \
+    --out records/cmame/holdout/verdict.json
+```
+The tarball is unpacked with `tar xzf` into an empty directory and
+adjudicated as it is: a file added to it (a `.DS_Store`, say) is not in the
+provenance file and refuses the return. It reads the two sets' evaluations, arrays and labels manifests, `status.txt`
+and `provenance.txt` from the return, the reports of `configs/holdout_v1.json`
+from `records/`, and PREREG_HOLDOUT.md, checks every returned file against
+the provenance file and the recorded commit and tree against the tag
+`prereg-holdout`, and writes the claims T1-T3, H1, H2a, H2b, H2c and D2 per
+PREREG_HOLDOUT Sec. 5, the reading H3, the secondary readings of Sec. 6 beside
+their validation values, and the deviations, with every input's SHA-256 and
+the adjudicating code's. The return is committed under
+`records/cmame/holdout/return/` with the verdict.

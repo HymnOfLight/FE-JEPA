@@ -5,8 +5,12 @@ CM2D's stamped configuration on the tag and writes only under runs/cm2d/
 (its readiness check under runs/cmame/); Sec. D runs the spectral export on
 CM2D's committed return and writes only under runs/cmame/spectra/, and the
 figure instance it names is the script's rule applied to the committed
-report; the runbook states the suite's current test count with the two LaTeX
-builds left out."""
+report; Sec. E (cmame-paper Stage 11) runs PREREG_HOLDOUT's four stages on the
+tag, in the order and with the log names the adjudication reads, checks the
+21 states the configuration names, writes only under runs/holdout/ and
+returns the files the adjudication reads; the runbook states the suite's
+current test count with the tests that need TeX (the two LaTeX builds
+and the bibliography rendering) left out."""
 
 import re
 import subprocess
@@ -16,11 +20,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 RUNBOOK = ROOT / "RUNBOOK_CMAME.md"
 LATEX = ("tests/test_cmame_material.py::test_manuscript_compiles",
-         "tests/test_w9_session2.py::test_paper_material_compiles")
+         "tests/test_w9_session2.py::test_paper_material_compiles",
+         "tests/test_cmame_references.py::"
+         "test_the_bibliography_renders_the_data_reference_and_the_chapter")
+"""The tests that need a TeX installation, which the box does not have."""
 SCRIPTS = {"A": {"scripts/time_inference_vs_solve.py", "scripts/export_fields.py"},
            "B": {"scripts/cm2d_precheck.py"},
            "C": {"scripts/adjudicate_cm2d.py"},
-           "D": {"scripts/cm2d_spectra.py"}}
+           "D": {"scripts/cm2d_spectra.py"},
+           "E": {"scripts/holdout_run.py", "scripts/adjudicate_holdout.py"}}
 ENV = {"PYTHONPATH": str(ROOT / "src"), "PATH": "/usr/bin:/bin"}
 
 
@@ -201,10 +209,18 @@ def test_the_runbook_states_the_suite_count():
     n = int(m.group(1))
     for t in LATEX:                                         # the deselected tests exist
         assert t in res.stdout, t
-    for letter in "ABD":                                    # A0c, B1c, D0c
+    for letter in "ADE":                                    # A0c, D0c, E0c: this commit
         sec = _section(letter)
         assert sec.count(f"`{n - len(LATEX)} passed, {len(LATEX)} deselected`") == 1, letter
-        assert all(sec.count(f"--deselect {t}") == 1 for t in LATEX), letter
+    for letter in "ABDE":
+        assert all(_section(letter).count(f"--deselect {t}") == 1 for t in LATEX), letter
+    # B1c runs only on the tagged commit (`git describe` exactly prereg-cm2d): its suite,
+    # as CM2D's return records it (a --deselect of a test the commit lacks deselects nothing)
+    last = (ROOT / "records/cmame/cm2d/return/pytest.log").read_text().strip().splitlines()[-1]
+    b = re.match(r"(\d+) passed, (\d+) deselected", last)
+    assert b and _section("B").count(f"`{b.group(1)} passed, {b.group(2)} deselected`") == 1
+    assert "git describe --tags --match prereg-cm2d      # must print exactly: prereg-cm2d" \
+        in _section("B")
 
 
 # ---- the suite the runbook runs on the box ends with its summary line ------
@@ -245,3 +261,87 @@ def test_every_test_starts_with_sigpipe_ignored():
     if not sys.platform.startswith("linux"):
         pytest.skip("reads /proc")
     assert _sigpipe_ignored()
+
+
+def test_section_e_runs_the_holdout_on_the_tag():
+    import importlib.util
+    import json
+
+    e = _section("E")
+    stages = [("h3d", "label"), ("h3d", "eval"), ("h2d", "label"), ("h2d", "eval")]
+    assert _lines(e) == [
+        f"python scripts/holdout_run.py --config configs/holdout_v1.json --set {s} "
+        f"--stage {st} --device cuda" for s, st in stages] + [
+        "python scripts/adjudicate_holdout.py --return <the unpacked holdout_return> "
+        "--out records/cmame/holdout/verdict.json"]
+    spec = importlib.util.spec_from_file_location("adjudicate_holdout",
+                                                  ROOT / "scripts" / "adjudicate_holdout.py")
+    adj = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(adj)
+    runs = re.findall(r"^run (\S+) python scripts/holdout_run\.py .*--set (\S+) --stage (\S+)",
+                      e, re.M)
+    assert [r[0] for r in runs] == list(adj.STAGES)
+    assert [(r[1], r[2]) for r in runs] == stages
+    assert all(r[0] == f"{st}_{s}.log" for r, (s, st) in zip(runs, stages))
+    # on the tag, from the repository's address
+    assert "git describe --tags --match prereg-holdout   # must print exactly: prereg-holdout" in e
+    assert ("+refs/heads/cmame-paper:refs/remotes/origin/cmame-paper "
+            "+refs/tags/prereg-holdout:refs/tags/prereg-holdout") in e
+    assert ("git remote set-url origin "
+            "https://github.com/RuifengCao/label-free-fe-surrogates.git") in e
+    # the 21 states the configuration names, and the precheck's other-runs pattern
+    cfg = json.loads((ROOT / "configs" / "holdout_v1.json").read_text())
+    states = [r["state"] for s in cfg["sets"].values() for r in s["rows"].values()]
+    assert len(states) * len(cfg["seeds"]) == 21 and "| wc -l   # 21" in e
+    for st in states:
+        d, f = st.rsplit("/", 1)
+        assert d in e, st
+    pre = (ROOT / "scripts" / "cm2d_precheck.py").read_text()
+    other = re.search(r'OTHER_RUNS = r"([^"]+)"', pre).group(1)
+    assert e.count('pgrep -af "' + other + '"') == 2         # E0c and E1
+    # writes only under runs/holdout; status kept, never rotated
+    text = e.replace("\\\n", " ")
+    assert set(re.findall(r"\bP=([^\s;]+)", text)) == {"runs/holdout"}
+    assert cfg["out"] == "runs/holdout" and "touch $P/status.txt" in e
+    assert "mv $P/status.txt" not in e
+    # B2's helper, whose start lines also name the host; machine.txt is appended to
+    helper = re.search(r"\nrun\(\) \{.*?; \}\n", _section("B"), re.S).group(0)
+    assert 'echo "$log start $(date -u +%FT%TZ)" >> $P/status.txt' in helper
+    assert helper.replace("$(date -u +%FT%TZ)", "$(date -u +%FT%TZ) $(hostname)") in e
+    assert re.search(r"\) >> \$P/machine\.txt 2>&1", e) and "> $P/machine.txt" not in \
+        e.replace(">> $P/machine.txt", "")
+    assert set(adj.status_deviations("".join(
+        f"{s} start 2026-10-18T10:00:00Z box1\n{s} exit=0\n" for s in adj.STAGES))) == set()
+    # interruptions: attach, check, and re-run from the first stage without exit=0
+    rec = " ".join(e.split("### E1'. Interruptions", 1)[1].split("### E2.", 1)[0].split())
+    for s in ("tmux attach -t cm", 'pgrep -af "scripts/holdout_run.py"',
+              "cat runs/holdout/status.txt", "Type nothing into window 0",
+              "the last line of `status.txt` that names it: the stage was cut off when that "
+              "line is a start line, or an exit line with a code of 128 or more",
+              "it never started when no line names it",
+              "only the `run` lines of the stages that were cut off or never started",
+              "after a `label` line always the `eval` line of its set", "No other stage is run",
+              "A stage cut off twice is not run again, nor its set's `eval`",
+              "no new line for 30 min", "report, and do not stop it"):
+        assert s in rec, s
+    assert 'ls runs/holdout/status.txt 2>/dev/null || echo "no E1 yet"' in e
+    assert "Do not press Ctrl-C in this window while the block runs" in e
+    assert "[ -e runs/holdout/pytest.log ] && mv runs/holdout/pytest.log " in e
+    assert "refs/tags/prereg-holdout^{}" in e and "tar xzf` into an empty directory" in e
+    # the bundle route carries the tag; the holdout files are counted; 5 GB
+    assert "git bundle create cmame-paper.bundle 8b5d443..cmame-paper prereg-holdout" in e
+    assert ("git fetch ~/cmame-paper.bundle +refs/heads/cmame-paper:refs/remotes/origin/"
+            "cmame-paper +refs/tags/prereg-holdout:refs/tags/prereg-holdout") in e
+    assert subprocess.run(["git", "-C", str(ROOT), "cat-file", "-e", "8b5d443^{commit}"],
+                          capture_output=True).returncode == 0
+    n3, n2 = (cfg["sets"][k]["n_holdout"] for k in ("h3d", "h2d"))
+    assert f"# h3d {n3} {n3}, then h2d {n2} {n2}" in e and "holdout_names(v)" in e
+    assert ">= 5 GB free on the data disk and on /" in e
+    assert f'"n": {n3}' in e and f"`{n2}` (h2d)" in e
+    assert f'"solves": {4 * n3}' in e and f"`{4 * n2}`" in e
+    # the return holds what the adjudication reads
+    for f in adj.SET_FILES:
+        assert f"$P/$s/{f}" in e, f
+    for f in adj.RETURN_FILES:
+        assert f in e, f
+    assert "find . -type f ! -name provenance.txt | sort | xargs sha256sum" in e

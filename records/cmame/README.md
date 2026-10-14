@@ -1,6 +1,6 @@
 # records/cmame -- cmame-paper records
 
-## Default path against wp8-lejepa (Stage 2, run again at Stage 9)
+## Default path against wp8-lejepa (Stage 2, run again at Stages 9 and 11)
 
 Stage 2 changed `src` (opt-in additions only: the stiffness-norm loss of the
 supervised trainer, its E8 row, an E8 run that trains a supervised grid beside
@@ -18,11 +18,16 @@ and no record here used this mesh; only the three WP7-S1 smoke configurations,
 regression ran again in the sandbox on 10 October 2026, with the same library
 versions, on the same two miniatures as `records/wp9/`;
 `regression_wp8_e1_2d_base.json` and `regression_wp8_phase2b.json` are now its
-summaries, identical to Stage 2's apart from this side's tree:
+summaries, identical to Stage 2's apart from this side's tree. Stage 11 added
+two modules that no run imports (`fejepa.analysis.holdout` and
+`fejepa.analysis.adjudicate_holdout`, PREREG_HOLDOUT's evaluation and
+adjudication); the regression ran again on 14 October 2026 in the same way,
+with the same result (Stage 9's tree was `7cc8ac1b6b16673f14609a422f7e95479d968df0`;
+the runs took 58 s and 152 s):
 
 | | source tree (`git rev-parse <commit>:src`) |
 |---|---|
-| this side | the Stage 9 code: `src` = tree `7cc8ac1b6b16673f14609a422f7e95479d968df0` |
+| this side | the Stage 11 code: `src` = tree `64a85e18bf066e8ef38c618e46171cba1bd0a938` |
 | the other side | `wp8-lejepa` at `5f8e2df`: `src` = tree `5be6357b912cad058121092f274e6a322169b9f6` |
 
 - `regression_wp8_e1_2d_base.json`: a miniature of `configs/e1_2d_base.json`
@@ -394,3 +399,65 @@ after CM2D's verdict and reported only; no verdict reads it.
   the stored eigenvalues, a U* that solves the stored loads, and every row's
   stored seed-0 coefficients, norms, energies, gaps, c*, spectra and von
   Mises stresses.
+
+## The holdout sets: pool depths, exclusions and resampling (PREREG_HOLDOUT, 14 October 2026)
+
+- `holdout/pool_depths.json`: `scripts/holdout_pool_depths.py` on the six
+  branches of the repository as they stood on 14 October 2026 (the commits
+  are listed under `scanned`), reading every JSON file of each from git
+  objects. Fifteen reports: for each its corpus, split, the pool depth it
+  records (`data_economy.unlabeled_pool_depth_used`; every one of the fifteen
+  records it) and the depth its configuration implies
+  (`fejepa.experiments.runner._pool_need`, from which the runner sets the
+  recorded one, so that the two agree by construction). `history`: the scan
+  of every JSON file reachable from the remote branches and tags it lists
+  (`refs`), older commits included, finds the same fifteen reports.
+  `other_reads`: the depths that
+  the recorded tools outside the runs reached, from their records (E1's
+  lambda pilot, the two-dimensional step timing, wp9's C0.6 memory audit and
+  C0.4 reading, CM2D's precheck). The deepest prefix of `runs/data3d_phase2`
+  is 1,024 and of `runs/data2d` 25,600.
+- `holdout/overlap.json`: `scripts/holdout_overlap.py`. The replay of the
+  draws of every three-dimensional set the repository records a generation
+  of, without meshing (the cross-branch regression's miniature of
+  `configs/phase2b_v1.json` and its fine set, run in the sandbox, and the
+  geometries of the mesh-size calibration included), checked against the
+  Poisson ratio, box and load scales of the field export's three figure
+  instances; the sandbox's other sets of the two generators and seed 0,
+  prefixes of the same streams (`sandbox`: `scripts/holdout_scan_sets.py`
+  over /home/claude, /tmp and /mnt/user-data on 14 October 2026 at 05:37
+  UTC; the script lists every set of the generators and seed per kind,
+  copies of the corpus manifests, and stray instance files).
+  Of `runs/data3d_phase2`, the regression's miniature drew instances 0 to
+  79 again, and the fine-mesh set, drawn from the same seed, drew 28, 106
+  and 294 of the tail and 198, 210 and 218 of the training pool (the fine
+  evaluation instances 212, 224 and 232); the 34 tail instances among them
+  (32 of 0 to 79, and 106 and 294) are excluded from h3d. Nine pairs share
+  the box and the Poisson ratio only, with other cavities and load scales
+  (`same_box_and_nu_only_3d`), and are not excluded. In two dimensions: the
+  33 instances of the tail that wp9's load-scale measurement rebuilt (32 of
+  the 256 it rebuilt; the regression's miniature of
+  `configs/e1_2d_base.json`, instances 0 to 79, among them) or whose own
+  file the authors' July 2026 archive holds (6, 9 and 10, rebuilt too, and
+  29992), excluded from h2d (`records/wp9/scale_factor.json`); the backup
+  archives of the whole corpus (`backups_2d`), from which no file is
+  recorded as extracted outside the box, leave nothing out. `bounds`: a set
+  of the generators and seed of at most 80 instances with a band of mesh
+  sizes, 320 at one size or 256 in two dimensions shares with the tails only
+  excluded instances (checked by the script), so that the regression's
+  miniatures, drawn again whenever it runs, leave the sets as they are; the
+  sandbox is scanned again before the stamp, which is not made unless every
+  such set is within the bounds.
+  PREREG_HOLDOUT's sets: 686 and 4,111 instances.
+- `holdout/resample.json`: `scripts/holdout_resample.py`. The rules of
+  PREREG_HOLDOUT Sec. 5 on 1,000 resamples of the validation instances of
+  each holdout set's size, drawn directly and with the validation set's own
+  sampling added, with the count of each claim's failures by the comparison
+  that failed (`failing`); PREREG_HOLDOUT Sec. 5 quotes it.
+- `tests/test_holdout_config.py` checks the listings against
+  `configs/holdout_v1.json`, re-derives the pool depths and the other
+  tools' depths from the listed commits when they are in the checkout
+  (a checkout without them checks the record's consistency), re-derives
+  the overlap record and its bounds, checks that the regression's
+  miniatures are the sets it replays, and tests the scan script on sets of
+  its own; `tests/test_holdout_rules.py` re-derives the resampling record.

@@ -1393,3 +1393,161 @@ generator, and no record, configuration, pre-registration or source file changed
   generator, and quotes the paragraph. RUNBOOK_CMAME: the suite count in A0c,
   B1c and D0c reads 582 passed, 2 deselected.
   Suite 584.
+
+## Stage 11 (14 Oct 2026) -- PREREG_HOLDOUT r4 draft: the manuscript's claims on never-used instances
+
+- Purpose: after submission, re-read eight of the manuscript's claims on the
+  instances of its two corpora on which no recorded run or tool trained a
+  network, computed a label or evaluated a network, with the stored states
+  unchanged (evaluation only; nothing trains). The manuscript is not
+  changed; the results are for a revision. Draft only: not stamped, not
+  tagged. r1, r2 and r3 were each reviewed by three independent reviewers
+  (code, the pre-registration, the box procedure), and r4's changes by a
+  fourth; r2, r3 and r4 take up every finding (the third and fourth rounds
+  found nothing blocking, and r4 changes no set, count, threshold or
+  claim's rule).
+- Sets (`fejepa.analysis.holdout`): the tail of each corpus's pool after the
+  deepest prefix any recorded run or tool used, by the seeded split, without
+  the instances that another recorded set drew again, that a recorded tool
+  rebuilt, or whose own file is held outside the box (backups of a whole
+  corpus do not count) (`excluded`): `runs/data3d_phase2` pool[1024:]
+  without 34 (686 instances) and `runs/data2d` pool[25600:] without 33
+  (4,111). `scripts/holdout_pool_depths.py` reads every report at the head
+  of the six branches from git objects, every JSON file reachable from the
+  remote branches and tags it records (the same fifteen reports), and the
+  depths of the tools outside the runs from their records
+  (`records/cmame/holdout/pool_depths.json`). `scripts/holdout_overlap.py`
+  replays the three-dimensional generator's sequential stream for every
+  recorded set (checked against the field export's figure instances). Sets
+  of seed 0 that draw a mesh size per instance hold the same instances index
+  by index: the cross-branch regression's miniature of
+  `configs/phase2b_v1.json` (`scripts/regress_against_branch.py`, run in the
+  sandbox) is in-band instances 0 to 79 meshed coarsely (it labelled 67 and
+  trained on 64), and the sandbox's rehearsal sets and reviewers'
+  reproductions are shorter prefixes (two at the corpus's own band of mesh
+  sizes, copies of in-band instances 0 to 5 and 0 to 9); the fine-mesh set,
+  without the draw, repeats in-band instances 28, 106 and 294 of the tail
+  and 198, 210 and 218 of the training pool (fine evaluation instances 212,
+  224 and 232). Excluded from h3d: the 32 tail instances among 0 to 79 and
+  106 and 294. In two dimensions: the 32 tail instances among the 256 that
+  wp9's load-scale measurement rebuilt (the regression's 2D miniature, 0 to
+  79, and the sandbox's rehearsals, 0 to 39 at most, among them) and
+  instance 29992, whose own file the authors' July 2026 archive holds.
+  Bounds: a set of the corpora's generators and seed of at most 80 instances
+  with a band, 320 at one size or 256 in two dimensions shares with the
+  tails only excluded instances (the script checks this); the sandbox,
+  scanned on 14 October 2026 at 05:37 UTC by `scripts/holdout_scan_sets.py`
+  (over /home/claude, /tmp and /mnt/user-data), holds no longer set
+  (`records/cmame/holdout/overlap.json`), and is scanned again before the
+  stamp, which is not made unless the scan exits 0; its time and result are
+  recorded with the stamp. Labels: one direct solve per instance (four load
+  cases) into `runs/holdout/<set>/labels/`, a manifest with the SHA-256 of
+  each corpus file and labels file and the residual (at most 1e-8); the
+  corpus files are read only; a resumed labelling keeps its labels, solves a
+  truncated labels file or one recording other bytes of its corpus file
+  again, and leaves the manifest as it was when it keeps every label; every
+  file is written to a temporary name, flushed and moved into place.
+- For the revision of the manuscript (not changed here): its Sec. 4.1 says
+  "the other 720 were never used" and Sec. 7 that no network had seen the
+  fine evaluation instances; three of each are instances of the other set
+  (above), and 34 of the 720 were drawn again by other sets. Without fine
+  evaluation instances 212, 224 and 232 the zero-shot seed means of the
+  three networks' five metrics in the transfer comparison change by less
+  than 1% (largest: the graph network's critical-region recall, -0.9%); no
+  reading of Sec. 7 changes.
+- `configs/holdout_v1.json`: the two sets with their exclusions, the
+  reports (Phase-2b's, CM2D's), the 21 states with their SHA-256 copied
+  from the records (the Phase-2b d9 record, the box's listing of 22
+  September 2026 in `records/wp9/phase2_supervised_states.json`, E1's
+  report as CM2D's records it, CM2D's provenance file), the content
+  tolerance (1e-3, as the exports, with every value required finite) and
+  the claims' thresholds.
+- `scripts/holdout_run.py` (box): `--stage label|eval|all`; refuses to run
+  unless PREREG_HOLDOUT is stamped for the configuration; the evaluation
+  refuses a report or a state with another SHA-256 (exit 3) before any model
+  is built and before anything is written, checks every state by content on
+  its run's validation split (exit 5 on a mismatch, after writing
+  everything), then evaluates every state on every holdout instance with
+  the frozen metric suite, with the per-load gaps and energies, on the
+  validation instances too (`eval.json`, `eval_arrays.npz`), each corpus
+  and labels file checked against the labels manifest first.
+- `scripts/adjudicate_holdout.py` and `fejepa.analysis.adjudicate_holdout`:
+  the claims T1-T3 (3D), H1, H2a, H2b (CM2D's, with its guard), H2c (the
+  abstract's "more than halved", rel < -50% of the seed means) and D2 (the
+  2D abstract sentence, in each seed and the seed mean), the reading H3, and
+  the secondary readings beside their validation values with the
+  holdout-over-validation ratios (per row and seed, each flagged with its
+  state's content check; the counts and ratios over the seeds that passed;
+  a comparison of two rows only when every seed of both passed);
+  non-finite values as PREREG_CM2D in H1, H2a, H2b and H2c, NOT EVALUATED
+  elsewhere (also of the row a claim says is better; disclosed). It
+  verifies every returned file against the provenance file and refuses an
+  unlisted one; a set without a complete evaluation is a deviation (its
+  claims NOT EVALUATED), not a refusal; a set whose evaluation records
+  another labels manifest than the one returned is one too after a
+  labelling that `status.txt` records after the start of the evaluation that
+  wrote the returned file (its last attempt that exited 0 or 5), and is
+  refused otherwise, every other check of the set applying first;
+  `status.txt` is read by attempt (a start line with its time and host, and
+  the exit line that follows it), giving the attempts, a last attempt cut
+  off or failed, and the hosts.
+- `scripts/holdout_resample.py`: the rules on 1,000 resamples of the
+  validation instances of the holdout sizes (`records/cmame/holdout/resample.json`):
+  every claim REPLICATED in every resample drawn directly; with the
+  validation set's own sampling added, every claim in all 1,000 except D2,
+  in 969 (each of the 31 failures through the peak von Mises error in seed
+  0; the record counts the failures per comparison; H2c came closest among
+  the others, its largest rel -50.7%). PREREG_HOLDOUT Sec. 5 discloses
+  this, and that T3's sign part is an identity of the computation.
+- `scripts/stamp_prereg_holdout.py`: the CM2D stamp, for this file (r4).
+  `scripts/holdout_scan_sets.py`: the sets of the corpora's generators and
+  seed under given directories, per kind, against the bounds (exit 0 iff
+  within them), copies of the corpus manifests and stray instance files.
+- RUNBOOK_CMAME Sec. E: the box session (remote set to the repository's new
+  address, branch and tag with a bundle route, 21 states and the holdout
+  files counted, 5 GB free, suite, the four stages logged with start lines
+  naming the host to a status file that is never rotated, E1' for
+  interruptions, read per attempt: a stage whose last line is a start line
+  or an exit of 128 or more is cut off and run again, a labelling run again
+  is followed by its evaluation, a stage cut off twice is not run again;
+  no progress for 30 min is reported, not stopped; the return with a
+  provenance file of every returned file's SHA-256 and the host) and the
+  repo-side adjudication. The suite on the box leaves out the tests that
+  need TeX: the two LaTeX builds and the bibliography rendering
+  (`tests/test_cmame_references.py`, which the box has never run); the
+  count in A0c, D0c and E0c reads 669 passed, 3 deselected. B1c, which
+  runs only on the tagged commit, reads that commit's 514 passed, 2
+  deselected, as CM2D's return records it.
+- Tests: `tests/test_holdout_rules.py` (with the configuration's thresholds,
+  the rules read REPLICATED on the manuscript's own validation arrays with
+  its quoted values, and the zero-field counts are its own; each rule at its
+  boundary, ties, a gap and a mean gap of exactly 1, exactly half and the
+  content tolerance (both medians, not the largest deviation) included; the
+  non-finite rule; a failed seed's own readings kept outside the counts and
+  ratios; the secondary readings, new row against reference, beside
+  validation arrays of their own, and the claims' rules on the validation
+  arrays for reference; the resampling record, its failure counts and the
+  quoted margins re-derived), `tests/test_holdout_config.py` (every
+  configured value against its record, the thresholds against the
+  pre-registration's text; the pool depths and the history scan re-derived
+  from the listed commits and tags, or checked for consistency without them;
+  the overlap record and its bounds re-derived, and the 34 and 33 exclusions
+  derived from it; the regression tool's miniatures the sets it replays,
+  within the bounds; the names; the draft or a verified stamp, stamped as a
+  copy only; the scan script on sets of its own),
+  `tests/test_holdout_run.py` (miniature 2D and 3D runs end to end: exact
+  labels, untouched corpus files, resume with its summary line, a manifest
+  record written again, a truncated labels file and one recording other
+  bytes, the manifest kept, content checks to 1e-6, arrays against summaries
+  and Lemma 1 on both sets, refusals before anything is written, a corpus or
+  labels file that is not the manifest's, a state that does not reproduce
+  its report, a set that did not return, a labels manifest other than the
+  evaluation's with and without a labelling after it (an E1' recovery before
+  the evaluation kept among the latter), labelled and resumed instances,
+  attempts read by attempt and hosts, a report changed in the adjudicating
+  checkout, non-finite values with a strict verdict, adjudicating code that
+  differs from the commit compared, a pre-registration stamped for another
+  configuration, and 32 altered returns each refused for its own reason,
+  another commit or tree among them), and `tests/test_cmame_runbook.py` for
+  Sec. E.
+  Suite 672.

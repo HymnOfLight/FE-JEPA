@@ -1,0 +1,422 @@
+{
+ "what": "PREREG_HOLDOUT Sec. 2: the deepest pool prefix of each corpus that any recorded run used, from every report committed on every branch",
+ "scanned": [
+  {
+   "branch": "origin/cmame-paper",
+   "commit": "f50be06363f629d8061b929713d5bdaab95bb9fa"
+  },
+  {
+   "branch": "origin/main",
+   "commit": "f5a8851fabce5f7a1fe4d407653c414f851ff617"
+  },
+  {
+   "branch": "origin/wp10-joint",
+   "commit": "523e30161e34b4704ae302ffce7fae210f9006bd"
+  },
+  {
+   "branch": "origin/wp7-3d",
+   "commit": "39404366a9cbe4e38f742202eacc449c73c11f20"
+  },
+  {
+   "branch": "origin/wp8-lejepa",
+   "commit": "5f8e2dffad32ed3c074499a1ff72716183222a73"
+  },
+  {
+   "branch": "origin/wp9-pool",
+   "commit": "2f35f2dc5c53e5344852a55c38ecd566db1e6eb6"
+  }
+ ],
+ "reports": [
+  {
+   "path": "records/cmame/cm2d/return/report.json",
+   "branches": [
+    "origin/cmame-paper"
+   ],
+   "commit": "f50be06363f629d8061b929713d5bdaab95bb9fa",
+   "sha256": "a72c007e1a612986af463084572f1794b574e9861cce233006534c51e1a6e5ec",
+   "corpus": "runs/data2d",
+   "split": {
+    "n_val": 256,
+    "seed": 1
+   },
+   "recorded_depth": 1024,
+   "config_depth": 1024
+  },
+  {
+   "path": "records/phase1/report_diag.json",
+   "branches": [
+    "origin/cmame-paper"
+   ],
+   "commit": "f50be06363f629d8061b929713d5bdaab95bb9fa",
+   "sha256": "dbd7e13dc28dea4b727716e7acd8531200bb1a5e84b4e614681dba248343aa9d",
+   "corpus": "runs/data2d",
+   "split": {
+    "n_val": 256,
+    "seed": 1
+   },
+   "recorded_depth": 1024,
+   "config_depth": 1024
+  },
+  {
+   "path": "records/phase1/report_rec8_v2.json",
+   "branches": [
+    "origin/cmame-paper"
+   ],
+   "commit": "f50be06363f629d8061b929713d5bdaab95bb9fa",
+   "sha256": "c6ea5934ff7fee4db63007ca1924b2973be63390d730f311e9bc29840633df51",
+   "corpus": "runs/data2d",
+   "split": {
+    "n_val": 256,
+    "seed": 1
+   },
+   "recorded_depth": 1024,
+   "config_depth": 1024
+  },
+  {
+   "path": "records/phase1/report_wp2_e2.json",
+   "branches": [
+    "origin/cmame-paper"
+   ],
+   "commit": "f50be06363f629d8061b929713d5bdaab95bb9fa",
+   "sha256": "1a868e9ca6b72d58d682a6c286a804ad4147b9942b19d110d621a1b0fe3c2286",
+   "corpus": "runs/data2d",
+   "split": {
+    "n_val": 256,
+    "seed": 1
+   },
+   "recorded_depth": 1024,
+   "config_depth": 1024
+  },
+  {
+   "path": "records/wp8/e1/e1_2d_base/report.json",
+   "branches": [
+    "origin/cmame-paper",
+    "origin/wp10-joint",
+    "origin/wp8-lejepa",
+    "origin/wp9-pool"
+   ],
+   "commit": "f50be06363f629d8061b929713d5bdaab95bb9fa",
+   "sha256": "0ebd53c3be1dcaf823bb76753692f41aced19734a1e4af972f0a064111cf36fe",
+   "corpus": "runs/data2d",
+   "split": {
+    "n_val": 256,
+    "seed": 1
+   },
+   "recorded_depth": 1024,
+   "config_depth": 1024
+  },
+  {
+   "path": "records/wp8/e1/e1_2d_raw_s0/report.json",
+   "branches": [
+    "origin/cmame-paper",
+    "origin/wp10-joint",
+    "origin/wp8-lejepa",
+    "origin/wp9-pool"
+   ],
+   "commit": "f50be06363f629d8061b929713d5bdaab95bb9fa",
+   "sha256": "e46664a472c5fbf494d1bb0c6c27006afeb56707373272370d8afb50cc553d78",
+   "corpus": "runs/data2d",
+   "split": {
+    "n_val": 256,
+    "seed": 1
+   },
+   "recorded_depth": 1024,
+   "config_depth": 1024
+  },
+  {
+   "path": "records/wp8/e1/e1_2d_shaped/report.json",
+   "branches": [
+    "origin/cmame-paper",
+    "origin/wp10-joint",
+    "origin/wp8-lejepa",
+    "origin/wp9-pool"
+   ],
+   "commit": "f50be06363f629d8061b929713d5bdaab95bb9fa",
+   "sha256": "a644f899502a0180b957752ec0e7e0262be0a811f511cd101bde3059f743a411",
+   "corpus": "runs/data2d",
+   "split": {
+    "n_val": 256,
+    "seed": 1
+   },
+   "recorded_depth": 1024,
+   "config_depth": 1024
+  },
+  {
+   "path": "records/wp9/session2/b_n1024/report.json",
+   "branches": [
+    "origin/wp9-pool"
+   ],
+   "commit": "2f35f2dc5c53e5344852a55c38ecd566db1e6eb6",
+   "sha256": "02c029b4b02bca05b01f97f183000ca05d0861908b6e7684a62134caa4051594",
+   "corpus": "runs/data2d",
+   "split": {
+    "n_val": 256,
+    "seed": 1
+   },
+   "recorded_depth": 1024,
+   "config_depth": 1024
+  },
+  {
+   "path": "records/wp9/session2/c1_n1024/report.json",
+   "branches": [
+    "origin/wp9-pool"
+   ],
+   "commit": "2f35f2dc5c53e5344852a55c38ecd566db1e6eb6",
+   "sha256": "808ed673b1ba547dc10ed9ddf8d38adaf637e19c71d72b0dd358b5abe65f428b",
+   "corpus": "runs/data2d",
+   "split": {
+    "n_val": 256,
+    "seed": 1
+   },
+   "recorded_depth": 1024,
+   "config_depth": 1024
+  },
+  {
+   "path": "records/wp9/session2/c1_n25600/report.json",
+   "branches": [
+    "origin/wp9-pool"
+   ],
+   "commit": "2f35f2dc5c53e5344852a55c38ecd566db1e6eb6",
+   "sha256": "d27f8c3a1355117f349599f561de28036d3f3a7dabd7b85c9b52191277e583a3",
+   "corpus": "runs/data2d",
+   "split": {
+    "n_val": 256,
+    "seed": 1
+   },
+   "recorded_depth": 25600,
+   "config_depth": 25600
+  },
+  {
+   "path": "records/wp9/session2/c1_n4096/report.json",
+   "branches": [
+    "origin/wp9-pool"
+   ],
+   "commit": "2f35f2dc5c53e5344852a55c38ecd566db1e6eb6",
+   "sha256": "83b39172596191c680b85a410faa0a8d7c1b6cd895a56e1db31c9e2d5faed4f5",
+   "corpus": "runs/data2d",
+   "split": {
+    "n_val": 256,
+    "seed": 1
+   },
+   "recorded_depth": 4096,
+   "config_depth": 4096
+  },
+  {
+   "path": "records/wp9/session2/s_n1024/report.json",
+   "branches": [
+    "origin/wp9-pool"
+   ],
+   "commit": "2f35f2dc5c53e5344852a55c38ecd566db1e6eb6",
+   "sha256": "297859493d5cdcd5816b0a28d9e19b2e4805f70350e55cc56416301f5418d68c",
+   "corpus": "runs/data2d",
+   "split": {
+    "n_val": 256,
+    "seed": 1
+   },
+   "recorded_depth": 1024,
+   "config_depth": 1024
+  },
+  {
+   "path": "records/wp8/e2/baseline/report_phase2b.json",
+   "branches": [
+    "origin/cmame-paper",
+    "origin/wp10-joint",
+    "origin/wp8-lejepa",
+    "origin/wp9-pool"
+   ],
+   "commit": "f50be06363f629d8061b929713d5bdaab95bb9fa",
+   "sha256": "320b6db5060ecae9f4747327228c7705d30877bece67d09af2f68d6c466f2794",
+   "corpus": "runs/data3d_phase2",
+   "split": {
+    "n_val": 256,
+    "seed": 1
+   },
+   "recorded_depth": 1024,
+   "config_depth": 1024
+  },
+  {
+   "path": "records/wp8/e2/e2_m1024/report.json",
+   "branches": [
+    "origin/cmame-paper",
+    "origin/wp10-joint",
+    "origin/wp8-lejepa",
+    "origin/wp9-pool"
+   ],
+   "commit": "f50be06363f629d8061b929713d5bdaab95bb9fa",
+   "sha256": "3bcd56f14c74ac2a27dfa37e34992b552249da7f6b5e4d4d9d6c6a945f6d3e4e",
+   "corpus": "runs/data3d_phase2",
+   "split": {
+    "n_val": 256,
+    "seed": 1
+   },
+   "recorded_depth": 1024,
+   "config_depth": 1024
+  },
+  {
+   "path": "records/wp8/e2/e2_m512/report.json",
+   "branches": [
+    "origin/cmame-paper",
+    "origin/wp10-joint",
+    "origin/wp8-lejepa",
+    "origin/wp9-pool"
+   ],
+   "commit": "f50be06363f629d8061b929713d5bdaab95bb9fa",
+   "sha256": "02db3bb6715d78861a0447c69a255d01747965ee9e7bd1f2ccbfc48f5a328ad1",
+   "corpus": "runs/data3d_phase2",
+   "split": {
+    "n_val": 256,
+    "seed": 1
+   },
+   "recorded_depth": 1024,
+   "config_depth": 1024
+  }
+ ],
+ "deepest": {
+  "runs/data2d": 25600,
+  "runs/data3d_phase2": 1024
+ },
+ "history": {
+  "refs": [
+   {
+    "ref": "refs/remotes/origin/cmame-paper",
+    "object": "f50be06363f629d8061b929713d5bdaab95bb9fa"
+   },
+   {
+    "ref": "refs/remotes/origin/main",
+    "object": "f5a8851fabce5f7a1fe4d407653c414f851ff617"
+   },
+   {
+    "ref": "refs/remotes/origin/wp10-joint",
+    "object": "523e30161e34b4704ae302ffce7fae210f9006bd"
+   },
+   {
+    "ref": "refs/remotes/origin/wp7-3d",
+    "object": "39404366a9cbe4e38f742202eacc449c73c11f20"
+   },
+   {
+    "ref": "refs/remotes/origin/wp8-lejepa",
+    "object": "5f8e2dffad32ed3c074499a1ff72716183222a73"
+   },
+   {
+    "ref": "refs/remotes/origin/wp9-pool",
+    "object": "2f35f2dc5c53e5344852a55c38ecd566db1e6eb6"
+   },
+   {
+    "ref": "refs/tags/cmame-submission",
+    "object": "0d25ea9a6a678ae6f0f764028f2a2f516ee4a415"
+   },
+   {
+    "ref": "refs/tags/deciding-run-2026-07-16",
+    "object": "f6d60046e609d6c9dc408752b2e664fa5aac32f7"
+   },
+   {
+    "ref": "refs/tags/prereg-c13",
+    "object": "9a136d0edd9a87aef353a58846a0674ce2eeac76"
+   },
+   {
+    "ref": "refs/tags/prereg-cm2d",
+    "object": "d4844e2d75a4332b8564f37316652e875b8a63aa"
+   },
+   {
+    "ref": "refs/tags/prereg-e1",
+    "object": "ac06c7388accc09c2a1aa7701e29a1fba9538b52"
+   },
+   {
+    "ref": "refs/tags/prereg-e2",
+    "object": "95a0a8ecaee1daa126f7fd6691102748526e500f"
+   },
+   {
+    "ref": "refs/tags/prereg-phase2",
+    "object": "9bd529ea142fcf0bc0bd63b07728ab22ffe20be5"
+   },
+   {
+    "ref": "refs/tags/prereg-phase2b-r2",
+    "object": "d530799909b30f32c12245110c4141dd618d0c31"
+   },
+   {
+    "ref": "refs/tags/prereg-w9",
+    "object": "71dac21532d3bb04abf4685e53c5f75444b74464"
+   },
+   {
+    "ref": "refs/tags/prereg-wp2-e2",
+    "object": "485dfe564b5971c79ecd13310e0670ec96932760"
+   },
+   {
+    "ref": "refs/tags/provenance-2026-07-14",
+    "object": "ef5166833a1876330d42f8e6dbd98198824fc0a5"
+   },
+   {
+    "ref": "refs/tags/v2.1.5",
+    "object": "1f3a46ca89c0b95c040490c09918e2d14ca7af4a"
+   }
+  ],
+  "json_objects": 178,
+  "reports": 15,
+  "same_as_heads": true
+ },
+ "other_reads": [
+  {
+   "branch": "origin/cmame-paper",
+   "commit": "f50be06363f629d8061b929713d5bdaab95bb9fa",
+   "path": "records/wp8/e1_pilot.json",
+   "sha256": "75dc90e3c2c6421b3ae147190077415d13544c10459d040c29507644f965d457",
+   "what": "E1's lambda pilot (scripts/e1_lambda_pilot.py): trains on pool[:n_train] and selects on pool[n_train:n_train + n_val]",
+   "corpus": "runs/data2d",
+   "depth": 640
+  },
+  {
+   "branch": "origin/cmame-paper",
+   "commit": "f50be06363f629d8061b929713d5bdaab95bb9fa",
+   "path": "records/wp8/posthoc/profile_2d_head.json",
+   "sha256": "d6ccf59a4fe63a630311a8224aebf7133a282a1a121701f178ff91f8550c9899",
+   "what": "2D step timing (scripts/posthoc_profile_2d.py): pool[:n_inst]",
+   "corpus": "runs/data2d",
+   "depth": 32
+  },
+  {
+   "branch": "origin/cmame-paper",
+   "commit": "f50be06363f629d8061b929713d5bdaab95bb9fa",
+   "path": "records/wp8/posthoc/profile_2d_v215.json",
+   "sha256": "a35b34fedc97680c68a2502816db7bbf26ab11a7101edc30509f5a10f109b918",
+   "what": "2D step timing (scripts/posthoc_profile_2d.py): pool[:n_inst]",
+   "corpus": "runs/data2d",
+   "depth": 32
+  },
+  {
+   "branch": "origin/wp9-pool",
+   "commit": "2f35f2dc5c53e5344852a55c38ecd566db1e6eb6",
+   "path": "records/wp9/session1/profile_2d_w9.json",
+   "sha256": "270e5a424a50cee4d2e3abd9d8d22618d63bee62c83f9f579938d34b3da7538c",
+   "what": "2D step timing (scripts/posthoc_profile_2d.py): pool[:n_inst]",
+   "corpus": "runs/data2d",
+   "depth": 32
+  },
+  {
+   "branch": "origin/wp9-pool",
+   "commit": "2f35f2dc5c53e5344852a55c38ecd566db1e6eb6",
+   "path": "records/wp9/session1/c0_memory.json",
+   "sha256": "38dcc45941f6828ceb66fc513bb6599cd31de2b660a24ed0179acb71e576a34e",
+   "what": "wp9 C0.6 memory audit (scripts/w9_c0.py): loads pool[:n] at each mark, no training",
+   "corpus": "runs/data2d",
+   "depth": 25600
+  },
+  {
+   "branch": "origin/wp9-pool",
+   "commit": "2f35f2dc5c53e5344852a55c38ecd566db1e6eb6",
+   "path": "records/wp9/session1/c0_trainval.json",
+   "sha256": "f30c0619e766954d84e2b46ba19870bdbf18aaf4026aa743f1f40bee74d2651f",
+   "what": "wp9 C0.4 training-set error (scripts/w9_c0.py): E1's states on pool[:n]",
+   "corpus": "runs/data2d",
+   "depth": 1024
+  },
+  {
+   "branch": "origin/cmame-paper",
+   "commit": "f50be06363f629d8061b929713d5bdaab95bb9fa",
+   "path": "records/cmame/cm2d/return/precheck.json.used",
+   "sha256": "f69a8a177c8d6ffdf76679e72a3dab90fd2b8589e9f025e6071380b74b5da377",
+   "what": "CM2D's precheck (scripts/cm2d_precheck.py): checks the labels of pool[:n], two training steps on pool[:2]",
+   "corpus": "runs/data2d",
+   "depth": 1024
+  }
+ ]
+}

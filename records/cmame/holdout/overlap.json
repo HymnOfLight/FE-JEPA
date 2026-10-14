@@ -1,0 +1,1636 @@
+{
+ "what": "PREREG_HOLDOUT Sec. 2: instances of the holdout sets' tails that another recorded set drew again, that a recorded tool rebuilt, or whose own file is held outside the box (scripts/holdout_overlap.py)",
+ "sets_3d": [
+  {
+   "name": "runs/data3d_phase2",
+   "seed": 0,
+   "n": 2000,
+   "mesh_size": [
+    0.0579,
+    0.0906
+   ],
+   "recorded": "configs/e2_m1024.json: data"
+  },
+  {
+   "name": "runs/data3d_phase2_fine",
+   "seed": 0,
+   "n": 320,
+   "mesh_size": "one size",
+   "recorded": "configs/e2_m1024.json: data_transfer"
+  },
+  {
+   "name": "regression miniature (data)",
+   "seed": 0,
+   "n": 80,
+   "mesh_size": [
+    0.3,
+    0.36
+   ],
+   "recorded": "scripts/regress_against_branch.py miniature() of configs/phase2b_v1.json (sandbox; records/cmame/README.md, records/wp9/README.md)"
+  },
+  {
+   "name": "regression miniature (data_transfer)",
+   "seed": 0,
+   "n": 7,
+   "mesh_size": "one size",
+   "recorded": "scripts/regress_against_branch.py miniature(): data_transfer"
+  },
+  {
+   "name": "runs/phase2/pilot_bf16_data",
+   "seed": 123,
+   "n": 128,
+   "mesh_size": [
+    0.0579,
+    0.0906
+   ],
+   "recorded": "scripts/pilot_bf16_transparency.py"
+  },
+  {
+   "name": "runs/phase2/bench_data/one_*",
+   "seed": 999,
+   "n": 1,
+   "mesh_size": "one size",
+   "recorded": "scripts/bench_phase2_preconditions.py"
+  },
+  {
+   "name": "runs/data3d_g1pilot",
+   "seed": 13,
+   "n": 24,
+   "mesh_size": "one size",
+   "recorded": "configs/wp7_e4_3d_pilot.json: data"
+  },
+  {
+   "name": "runs/data3d_g1pilot_c2p0",
+   "seed": 7932,
+   "n": 8,
+   "mesh_size": "one size",
+   "recorded": "configs/wp7_e4_3d_pilot.json: e4 (runner._ensure_multires)"
+  },
+  {
+   "name": "posthoc_amplitude geometry 0",
+   "seed": 90000,
+   "n": 1,
+   "mesh_size": "one size",
+   "recorded": "scripts/posthoc_amplitude.py --remesh 16 (RUNBOOK_E_SERIES 4e)"
+  },
+  {
+   "name": "posthoc_amplitude geometry 1",
+   "seed": 90001,
+   "n": 1,
+   "mesh_size": "one size",
+   "recorded": "scripts/posthoc_amplitude.py --remesh 16 (RUNBOOK_E_SERIES 4e)"
+  },
+  {
+   "name": "posthoc_amplitude geometry 2",
+   "seed": 90002,
+   "n": 1,
+   "mesh_size": "one size",
+   "recorded": "scripts/posthoc_amplitude.py --remesh 16 (RUNBOOK_E_SERIES 4e)"
+  },
+  {
+   "name": "posthoc_amplitude geometry 3",
+   "seed": 90003,
+   "n": 1,
+   "mesh_size": "one size",
+   "recorded": "scripts/posthoc_amplitude.py --remesh 16 (RUNBOOK_E_SERIES 4e)"
+  },
+  {
+   "name": "posthoc_amplitude geometry 4",
+   "seed": 90004,
+   "n": 1,
+   "mesh_size": "one size",
+   "recorded": "scripts/posthoc_amplitude.py --remesh 16 (RUNBOOK_E_SERIES 4e)"
+  },
+  {
+   "name": "posthoc_amplitude geometry 5",
+   "seed": 90005,
+   "n": 1,
+   "mesh_size": "one size",
+   "recorded": "scripts/posthoc_amplitude.py --remesh 16 (RUNBOOK_E_SERIES 4e)"
+  },
+  {
+   "name": "posthoc_amplitude geometry 6",
+   "seed": 90006,
+   "n": 1,
+   "mesh_size": "one size",
+   "recorded": "scripts/posthoc_amplitude.py --remesh 16 (RUNBOOK_E_SERIES 4e)"
+  },
+  {
+   "name": "posthoc_amplitude geometry 7",
+   "seed": 90007,
+   "n": 1,
+   "mesh_size": "one size",
+   "recorded": "scripts/posthoc_amplitude.py --remesh 16 (RUNBOOK_E_SERIES 4e)"
+  },
+  {
+   "name": "posthoc_amplitude geometry 8",
+   "seed": 90008,
+   "n": 1,
+   "mesh_size": "one size",
+   "recorded": "scripts/posthoc_amplitude.py --remesh 16 (RUNBOOK_E_SERIES 4e)"
+  },
+  {
+   "name": "posthoc_amplitude geometry 9",
+   "seed": 90009,
+   "n": 1,
+   "mesh_size": "one size",
+   "recorded": "scripts/posthoc_amplitude.py --remesh 16 (RUNBOOK_E_SERIES 4e)"
+  },
+  {
+   "name": "posthoc_amplitude geometry 10",
+   "seed": 90010,
+   "n": 1,
+   "mesh_size": "one size",
+   "recorded": "scripts/posthoc_amplitude.py --remesh 16 (RUNBOOK_E_SERIES 4e)"
+  },
+  {
+   "name": "posthoc_amplitude geometry 11",
+   "seed": 90011,
+   "n": 1,
+   "mesh_size": "one size",
+   "recorded": "scripts/posthoc_amplitude.py --remesh 16 (RUNBOOK_E_SERIES 4e)"
+  },
+  {
+   "name": "posthoc_amplitude geometry 12",
+   "seed": 90012,
+   "n": 1,
+   "mesh_size": "one size",
+   "recorded": "scripts/posthoc_amplitude.py --remesh 16 (RUNBOOK_E_SERIES 4e)"
+  },
+  {
+   "name": "posthoc_amplitude geometry 13",
+   "seed": 90013,
+   "n": 1,
+   "mesh_size": "one size",
+   "recorded": "scripts/posthoc_amplitude.py --remesh 16 (RUNBOOK_E_SERIES 4e)"
+  },
+  {
+   "name": "posthoc_amplitude geometry 14",
+   "seed": 90014,
+   "n": 1,
+   "mesh_size": "one size",
+   "recorded": "scripts/posthoc_amplitude.py --remesh 16 (RUNBOOK_E_SERIES 4e)"
+  },
+  {
+   "name": "posthoc_amplitude geometry 15",
+   "seed": 90015,
+   "n": 1,
+   "mesh_size": "one size",
+   "recorded": "scripts/posthoc_amplitude.py --remesh 16 (RUNBOOK_E_SERIES 4e)"
+  },
+  {
+   "name": "lc calibration geometries",
+   "seed": "SeedSequence(17) children",
+   "n": 5,
+   "mesh_size": "geometry only",
+   "recorded": "scripts/g1_lc_calibration.py (WP7 3D-G1.1; seed 17, 5 samples)"
+  }
+ ],
+ "sandbox": {
+  "scanned": "14 October 2026, 05:37 UTC",
+  "tool": "scripts/holdout_scan_sets.py /home/claude /tmp /mnt/user-data",
+  "3d_band": {
+   "seed": 0,
+   "sets": 45,
+   "longest": 80,
+   "what": "the regression miniatures (n 16 at wp8 Stage 1.36, 80 since), rehearsals of this project's box procedures and reviewers' reproductions (n 6 to 40): prefixes of the in-band stream; two reproductions at the corpus's own band of mesh sizes (in-band instances 0 to 5, 29 September 2026; 0 to 9, 14 October 2026, deleted before the scan) are copies of those instances"
+  },
+  "3d_one_size": {
+   "seed": 0,
+   "sets": 44,
+   "longest": 20,
+   "what": "the miniatures' and rehearsals' fine sets (n 4 to 20): prefixes of the fine-mesh stream"
+  },
+  "2d": {
+   "seed": 0,
+   "sets": 29,
+   "longest": 80,
+   "what": "the regression miniatures (n 80) and rehearsals of the box procedures (n 12 to 40; some labelled, networks evaluated on some): instances 0 to 79 or fewer"
+  },
+  "copies": "two copies of the corpus manifest of runs/data2d, from the authors' archives, without instance files; its files 0 to 10, uploaded, and a copy of them (COPIES_2D)"
+ },
+ "bounds": {
+  "3d_band": 80,
+  "3d_one_size": 320,
+  "2d": 256,
+  "within_bounds_left_out": true
+ },
+ "checks": [
+  {
+   "figure": "fig5",
+   "set": "runs/data3d_phase2",
+   "index": 485,
+   "recorded": {
+    "file": "instance_00485.npz",
+    "box": [
+     2.9347207069408685,
+     1.0350304988589125,
+     1.004853160957585
+    ],
+    "nu": 0.3572805581592758,
+    "load_scales": [
+     0.0277250400908334,
+     0.02737536154945604,
+     0.03311892415407741,
+     0.06685831733296972
+    ]
+   },
+   "replayed": {
+    "box": [
+     2.9347207069408685,
+     1.0350304988589125,
+     1.004853160957585
+    ],
+    "nu": 0.3572805581592758,
+    "load_scales": [
+     0.0277250400908334,
+     0.027375361549456037,
+     0.03311892415407742,
+     0.06685831733296974
+    ],
+    "lc": 0.08595674756067898
+   },
+   "ok": true
+  },
+  {
+   "figure": "fig6",
+   "set": "runs/data3d_phase2",
+   "index": 130,
+   "recorded": {
+    "file": "instance_00130.npz",
+    "box": [
+     2.185494092434321,
+     1.49636508002332,
+     0.6977373014541332
+    ],
+    "nu": 0.33257763535342066,
+    "load_scales": [
+     0.050257170324166045,
+     0.025818725160360222,
+     0.07330461261786085,
+     0.025673376996319008
+    ]
+   },
+   "replayed": {
+    "box": [
+     2.185494092434321,
+     1.49636508002332,
+     0.6977373014541332
+    ],
+    "nu": 0.33257763535342066,
+    "load_scales": [
+     0.050257170324166045,
+     0.02581872516036022,
+     0.07330461261786085,
+     0.02567337699631901
+    ],
+    "lc": 0.07614445365475997
+   },
+   "ok": true
+  },
+  {
+   "figure": "fig7",
+   "set": "runs/data3d_phase2_fine",
+   "index": 77,
+   "recorded": {
+    "file": "instance_00077.npz",
+    "box": [
+     1.623321238909238,
+     1.2454645128114592,
+     1.1047326890202662
+    ],
+    "nu": 0.2872818713685511,
+    "load_scales": [
+     0.06448837811017474,
+     0.07104613370653746,
+     0.07013616669558058,
+     0.06523012303271336
+    ]
+   },
+   "replayed": {
+    "box": [
+     1.623321238909238,
+     1.2454645128114592,
+     1.1047326890202662
+    ],
+    "nu": 0.2872818713685511,
+    "load_scales": [
+     0.06448837811017474,
+     0.07104613370653745,
+     0.07013616669558058,
+     0.06523012303271336
+    ],
+    "lc": null
+   },
+   "ok": true
+  }
+ ],
+ "coincidences_3d": [
+  {
+   "a": "runs/data3d_phase2",
+   "i": 0,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 0,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.07872864717541156,
+   "lc_b": 0.33821770123928724
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 1,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 1,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.06770057882057248,
+   "lc_b": 0.31798271343224305
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 2,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 2,
+   "b_role": "miniature pool, drawn only",
+   "lc_a": 0.06894969707408326,
+   "lc_b": 0.320274673530428
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 3,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 3,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.059815174738129855,
+   "lc_b": 0.30351408208831165
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 4,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 4,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.06086762459174529,
+   "lc_b": 0.3054451827371473
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 5,
+   "a_role": "validation",
+   "b": "regression miniature (data)",
+   "j": 5,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.061658297108285604,
+   "lc_b": 0.3068959579968543
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 6,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 6,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.060060897642877246,
+   "lc_b": 0.30396494980344446
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 7,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 7,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.06997952424269796,
+   "lc_b": 0.32216426466550085
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 8,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 8,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.07035119562176609,
+   "lc_b": 0.32284623049865335
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 9,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 9,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.06915847040246803,
+   "lc_b": 0.3206577438577395
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 10,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 10,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.07981102247259841,
+   "lc_b": 0.3402037109588961
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 11,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 11,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.06403150230429856,
+   "lc_b": 0.3112504629436671
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 12,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 12,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.08774273723005696,
+   "lc_b": 0.3547573160184531
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 13,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 13,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.07993108341368185,
+   "lc_b": 0.3404240062636364
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 14,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 14,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.08432607178430368,
+   "lc_b": 0.34848820510881406
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 15,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 15,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.08777768794053162,
+   "lc_b": 0.35482144576244334
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 16,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 16,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.07120719308090531,
+   "lc_b": 0.32441686803835834
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 17,
+   "a_role": "validation",
+   "b": "regression miniature (data)",
+   "j": 17,
+   "b_role": "miniature validation, labelled",
+   "lc_a": 0.08778249173291243,
+   "lc_b": 0.35483026006038976
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 18,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 18,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.08483765041944363,
+   "lc_b": 0.34942688150356627
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 19,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 19,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.06705869454103452,
+   "lc_b": 0.31680494411198995
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 20,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 20,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.06324213658017847,
+   "lc_b": 0.30980208546821736
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 21,
+   "a_role": "validation",
+   "b": "regression miniature (data)",
+   "j": 21,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.08131051359446366,
+   "lc_b": 0.3429550708155297
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 22,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 22,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.08238431220762868,
+   "lc_b": 0.34492534350023607
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 23,
+   "a_role": "validation",
+   "b": "regression miniature (data)",
+   "j": 23,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.08267340835671044,
+   "lc_b": 0.3454557951499274
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 24,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 24,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.06356081593056923,
+   "lc_b": 0.31038681822122793
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 25,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 25,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.07987122167372047,
+   "lc_b": 0.3403141682086614
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 26,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 26,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.07984663051546326,
+   "lc_b": 0.34026904681736375
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 27,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 27,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.059478284956561975,
+   "lc_b": 0.3028959357001137
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 28,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 28,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.06010475565983561,
+   "lc_b": 0.30404542322905614
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 28,
+   "a_role": "tail",
+   "b": "runs/data3d_phase2_fine",
+   "j": 30,
+   "b_role": "fine evaluation",
+   "lc_a": 0.06010475565983561,
+   "lc_b": null
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 29,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 29,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.07874366602108854,
+   "lc_b": 0.3382452587542909
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 30,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 30,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.09013466707092291,
+   "lc_b": 0.3591461781117851
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 31,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 31,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.0747457439977164,
+   "lc_b": 0.3309096220141585
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 32,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 32,
+   "b_role": "miniature pool, drawn only",
+   "lc_a": 0.0720350643341229,
+   "lc_b": 0.3259358978607759
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 33,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 33,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.06708448370788321,
+   "lc_b": 0.3168522636841894
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 34,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 34,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.07647962144018663,
+   "lc_b": 0.3340910485141039
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 35,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 35,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.07949104301913529,
+   "lc_b": 0.3396165926956611
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 36,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 36,
+   "b_role": "miniature pool, drawn only",
+   "lc_a": 0.08823117306953698,
+   "lc_b": 0.35565352856795773
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 37,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 37,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.061790160810954724,
+   "lc_b": 0.30713790974487104
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 38,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 38,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.0632609247598959,
+   "lc_b": 0.30983655919246955
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 39,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 39,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.08183901872619521,
+   "lc_b": 0.343924805002193
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 40,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 40,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.06824045507302046,
+   "lc_b": 0.318973312060588
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 41,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 41,
+   "b_role": "miniature pool, drawn only",
+   "lc_a": 0.07035547601154578,
+   "lc_b": 0.32285408442485464
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 42,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 42,
+   "b_role": "miniature pool, drawn only",
+   "lc_a": 0.0588095801326507,
+   "lc_b": 0.30166895437183616
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 43,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 43,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.07213889373298396,
+   "lc_b": 0.3261264105192366
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 44,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 44,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.08597110007269403,
+   "lc_b": 0.3515066056379707
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 45,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 45,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.08179745590714525,
+   "lc_b": 0.34384854294889033
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 46,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 46,
+   "b_role": "miniature pool, drawn only",
+   "lc_a": 0.06634085759727762,
+   "lc_b": 0.3154878121050965
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 47,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 47,
+   "b_role": "miniature validation, labelled",
+   "lc_a": 0.06466983693897325,
+   "lc_b": 0.31242171915407935
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 48,
+   "a_role": "validation",
+   "b": "regression miniature (data)",
+   "j": 48,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.06674988059955336,
+   "lc_b": 0.3162383130267034
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 49,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 49,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.08133298090739607,
+   "lc_b": 0.3429962952429286
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 50,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 50,
+   "b_role": "miniature pool, drawn only",
+   "lc_a": 0.06858792297974795,
+   "lc_b": 0.3196108678527485
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 51,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 51,
+   "b_role": "miniature pool, drawn only",
+   "lc_a": 0.0710909032793911,
+   "lc_b": 0.3242034922557635
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 52,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 52,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.05802494263863243,
+   "lc_b": 0.3002292525479494
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 53,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 53,
+   "b_role": "miniature pool, drawn only",
+   "lc_a": 0.07266034623625063,
+   "lc_b": 0.3270832041032122
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 54,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 54,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.08601701415077738,
+   "lc_b": 0.3515908516528025
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 55,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 55,
+   "b_role": "miniature validation, labelled",
+   "lc_a": 0.0858032322694674,
+   "lc_b": 0.35119859132012365
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 56,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 56,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.08762553726211712,
+   "lc_b": 0.3545422702057195
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 57,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 57,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.08419053254862975,
+   "lc_b": 0.3482395092635408
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 58,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 58,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.08099389474691694,
+   "lc_b": 0.34237411880168245
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 59,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 59,
+   "b_role": "miniature pool, drawn only",
+   "lc_a": 0.07527334106278044,
+   "lc_b": 0.33187769002345036
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 60,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 60,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.08586450896073639,
+   "lc_b": 0.35131102561603006
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 61,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 61,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.05832535091935875,
+   "lc_b": 0.3007804604024931
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 62,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 62,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.06661125036507862,
+   "lc_b": 0.31598394562399745
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 63,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 63,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.061602290266682874,
+   "lc_b": 0.3067931931498768
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 64,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 64,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.06793388520827603,
+   "lc_b": 0.3184107985472955
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 65,
+   "a_role": "validation",
+   "b": "regression miniature (data)",
+   "j": 65,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.07955157219163447,
+   "lc_b": 0.33972765539749444
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 66,
+   "a_role": "validation",
+   "b": "regression miniature (data)",
+   "j": 66,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.08554641529275425,
+   "lc_b": 0.3507273675096408
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 67,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 67,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.0728473118175724,
+   "lc_b": 0.3274262602157291
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 68,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 68,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.06494559052096795,
+   "lc_b": 0.31292768902929896
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 69,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 69,
+   "b_role": "miniature pool, drawn only",
+   "lc_a": 0.06724256961098544,
+   "lc_b": 0.31714232956144117
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 70,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 70,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.08222982900532948,
+   "lc_b": 0.34464188808317336
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 71,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 71,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.08052063754504618,
+   "lc_b": 0.3415057569633875
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 72,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 72,
+   "b_role": "miniature pool, drawn only",
+   "lc_a": 0.0900002092943625,
+   "lc_b": 0.35889946659516053
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 73,
+   "a_role": "validation",
+   "b": "regression miniature (data)",
+   "j": 73,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.06727782456732015,
+   "lc_b": 0.31720701755471586
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 74,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 74,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.06996738608667459,
+   "lc_b": 0.3221419928195864
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 75,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 75,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.07919817096926661,
+   "lc_b": 0.33907921278764513
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 76,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 76,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.07891623579279614,
+   "lc_b": 0.3385619005372406
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 77,
+   "a_role": "validation",
+   "b": "regression miniature (data)",
+   "j": 77,
+   "b_role": "miniature pool, drawn only",
+   "lc_a": 0.07691769255604552,
+   "lc_b": 0.334894848726689
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 78,
+   "a_role": "training pool",
+   "b": "regression miniature (data)",
+   "j": 78,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.06642625863409628,
+   "lc_b": 0.3156445112552225
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 79,
+   "a_role": "tail",
+   "b": "regression miniature (data)",
+   "j": 79,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": 0.07542693703368576,
+   "lc_b": 0.3321595174930014
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 106,
+   "a_role": "tail",
+   "b": "runs/data3d_phase2_fine",
+   "j": 112,
+   "b_role": "fine evaluation",
+   "lc_a": 0.07620490276932597,
+   "lc_b": null
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 198,
+   "a_role": "training pool",
+   "b": "runs/data3d_phase2_fine",
+   "j": 212,
+   "b_role": "fine evaluation",
+   "lc_a": 0.08102645698718335,
+   "lc_b": null
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 210,
+   "a_role": "training pool",
+   "b": "runs/data3d_phase2_fine",
+   "j": 224,
+   "b_role": "fine evaluation",
+   "lc_a": 0.08409864793866989,
+   "lc_b": null
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 218,
+   "a_role": "training pool",
+   "b": "runs/data3d_phase2_fine",
+   "j": 232,
+   "b_role": "fine evaluation",
+   "lc_a": 0.0849014119099795,
+   "lc_b": null
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 294,
+   "a_role": "tail",
+   "b": "runs/data3d_phase2_fine",
+   "j": 316,
+   "b_role": "fine few-shot",
+   "lc_a": 0.08211237852488798,
+   "lc_b": null
+  },
+  {
+   "a": "runs/data3d_phase2_fine",
+   "i": 0,
+   "a_role": "fine evaluation",
+   "b": "regression miniature (data_transfer)",
+   "j": 0,
+   "b_role": "miniature fine evaluation",
+   "lc_a": null,
+   "lc_b": null
+  },
+  {
+   "a": "runs/data3d_phase2_fine",
+   "i": 1,
+   "a_role": "fine evaluation",
+   "b": "regression miniature (data_transfer)",
+   "j": 1,
+   "b_role": "miniature fine evaluation",
+   "lc_a": null,
+   "lc_b": null
+  },
+  {
+   "a": "runs/data3d_phase2_fine",
+   "i": 2,
+   "a_role": "fine evaluation",
+   "b": "regression miniature (data_transfer)",
+   "j": 2,
+   "b_role": "miniature fine evaluation",
+   "lc_a": null,
+   "lc_b": null
+  },
+  {
+   "a": "runs/data3d_phase2_fine",
+   "i": 3,
+   "a_role": "fine evaluation",
+   "b": "regression miniature (data_transfer)",
+   "j": 3,
+   "b_role": "miniature fine few-shot",
+   "lc_a": null,
+   "lc_b": null
+  },
+  {
+   "a": "runs/data3d_phase2_fine",
+   "i": 4,
+   "a_role": "fine evaluation",
+   "b": "regression miniature (data_transfer)",
+   "j": 4,
+   "b_role": "miniature fine few-shot",
+   "lc_a": null,
+   "lc_b": null
+  },
+  {
+   "a": "runs/data3d_phase2_fine",
+   "i": 5,
+   "a_role": "fine evaluation",
+   "b": "regression miniature (data_transfer)",
+   "j": 5,
+   "b_role": "miniature fine few-shot",
+   "lc_a": null,
+   "lc_b": null
+  },
+  {
+   "a": "runs/data3d_phase2_fine",
+   "i": 6,
+   "a_role": "fine evaluation",
+   "b": "regression miniature (data_transfer)",
+   "j": 6,
+   "b_role": "miniature fine few-shot",
+   "lc_a": null,
+   "lc_b": null
+  },
+  {
+   "a": "runs/data3d_phase2_fine",
+   "i": 30,
+   "a_role": "fine evaluation",
+   "b": "regression miniature (data)",
+   "j": 28,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": null,
+   "lc_b": 0.30404542322905614
+  }
+ ],
+ "same_geometry_other_loads_3d": [],
+ "same_box_and_nu_only_3d": [
+  {
+   "a": "runs/data3d_phase2",
+   "i": 53,
+   "a_role": "tail",
+   "b": "runs/data3d_phase2_fine",
+   "j": 58,
+   "b_role": "fine evaluation",
+   "lc_a": 0.07266034623625063,
+   "lc_b": null
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 74,
+   "a_role": "training pool",
+   "b": "runs/data3d_phase2_fine",
+   "j": 79,
+   "b_role": "fine evaluation",
+   "lc_a": 0.06996738608667459,
+   "lc_b": null
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 181,
+   "a_role": "validation",
+   "b": "runs/data3d_phase2_fine",
+   "j": 193,
+   "b_role": "fine evaluation",
+   "lc_a": 0.08457319565181018,
+   "lc_b": null
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 247,
+   "a_role": "training pool",
+   "b": "runs/data3d_phase2_fine",
+   "j": 264,
+   "b_role": "fine few-shot",
+   "lc_a": 0.0637817206594395,
+   "lc_b": null
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 252,
+   "a_role": "validation",
+   "b": "runs/data3d_phase2_fine",
+   "j": 269,
+   "b_role": "fine few-shot",
+   "lc_a": 0.06515805976228413,
+   "lc_b": null
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 269,
+   "a_role": "tail",
+   "b": "runs/data3d_phase2_fine",
+   "j": 289,
+   "b_role": "fine few-shot",
+   "lc_a": 0.05838037387547878,
+   "lc_b": null
+  },
+  {
+   "a": "runs/data3d_phase2",
+   "i": 278,
+   "a_role": "training pool",
+   "b": "runs/data3d_phase2_fine",
+   "j": 299,
+   "b_role": "fine few-shot",
+   "lc_a": 0.0901370150212639,
+   "lc_b": null
+  },
+  {
+   "a": "runs/data3d_phase2_fine",
+   "i": 58,
+   "a_role": "fine evaluation",
+   "b": "regression miniature (data)",
+   "j": 53,
+   "b_role": "miniature pool, drawn only",
+   "lc_a": null,
+   "lc_b": 0.3270832041032122
+  },
+  {
+   "a": "runs/data3d_phase2_fine",
+   "i": 79,
+   "a_role": "fine evaluation",
+   "b": "regression miniature (data)",
+   "j": 74,
+   "b_role": "miniature pool, labelled and trained on",
+   "lc_a": null,
+   "lc_b": 0.3221419928195864
+  }
+ ],
+ "h3d_drawn_again": [
+  "instance_00002.npz",
+  "instance_00006.npz",
+  "instance_00008.npz",
+  "instance_00011.npz",
+  "instance_00012.npz",
+  "instance_00013.npz",
+  "instance_00018.npz",
+  "instance_00020.npz",
+  "instance_00022.npz",
+  "instance_00026.npz",
+  "instance_00027.npz",
+  "instance_00028.npz",
+  "instance_00029.npz",
+  "instance_00033.npz",
+  "instance_00034.npz",
+  "instance_00036.npz",
+  "instance_00038.npz",
+  "instance_00041.npz",
+  "instance_00042.npz",
+  "instance_00043.npz",
+  "instance_00045.npz",
+  "instance_00051.npz",
+  "instance_00052.npz",
+  "instance_00053.npz",
+  "instance_00054.npz",
+  "instance_00056.npz",
+  "instance_00058.npz",
+  "instance_00059.npz",
+  "instance_00062.npz",
+  "instance_00070.npz",
+  "instance_00072.npz",
+  "instance_00079.npz",
+  "instance_00106.npz",
+  "instance_00294.npz"
+ ],
+ "rebuilt_2d": {
+  "script": "scripts/w9_scale_factor.py",
+  "record": "records/wp9/scale_factor.json",
+  "corpus_seed": 0,
+  "instances": [
+   0,
+   255
+  ],
+  "n": 256,
+  "remeshed": 16,
+  "in_h2d": [
+   "instance_00006.npz",
+   "instance_00009.npz",
+   "instance_00010.npz",
+   "instance_00033.npz",
+   "instance_00040.npz",
+   "instance_00047.npz",
+   "instance_00058.npz",
+   "instance_00065.npz",
+   "instance_00067.npz",
+   "instance_00069.npz",
+   "instance_00070.npz",
+   "instance_00076.npz",
+   "instance_00086.npz",
+   "instance_00089.npz",
+   "instance_00103.npz",
+   "instance_00112.npz",
+   "instance_00119.npz",
+   "instance_00140.npz",
+   "instance_00144.npz",
+   "instance_00153.npz",
+   "instance_00157.npz",
+   "instance_00161.npz",
+   "instance_00169.npz",
+   "instance_00177.npz",
+   "instance_00189.npz",
+   "instance_00190.npz",
+   "instance_00202.npz",
+   "instance_00214.npz",
+   "instance_00223.npz",
+   "instance_00236.npz",
+   "instance_00245.npz",
+   "instance_00253.npz"
+  ],
+  "remeshed_in_h2d": [
+   "instance_00006.npz",
+   "instance_00009.npz",
+   "instance_00010.npz"
+  ],
+  "use": "load scales only: no label, no network"
+ },
+ "regress_2d": {
+  "script": "scripts/regress_against_branch.py --config configs/e1_2d_base.json",
+  "n": 80,
+  "split": {
+   "n_val": 3,
+   "seed": 1
+  },
+  "pool": 64,
+  "use": "the miniature's 3 validation instances labelled; label-free networks trained on its pool[:64] (sandbox)",
+  "instances": [
+   0,
+   79
+  ],
+  "labelled": [
+   "instance_00017.npz",
+   "instance_00047.npz",
+   "instance_00055.npz"
+  ],
+  "trained_on": [
+   "instance_00000.npz",
+   "instance_00001.npz",
+   "instance_00003.npz",
+   "instance_00004.npz",
+   "instance_00005.npz",
+   "instance_00006.npz",
+   "instance_00007.npz",
+   "instance_00008.npz",
+   "instance_00009.npz",
+   "instance_00010.npz",
+   "instance_00011.npz",
+   "instance_00012.npz",
+   "instance_00013.npz",
+   "instance_00014.npz",
+   "instance_00015.npz",
+   "instance_00016.npz",
+   "instance_00018.npz",
+   "instance_00019.npz",
+   "instance_00020.npz",
+   "instance_00021.npz",
+   "instance_00022.npz",
+   "instance_00023.npz",
+   "instance_00024.npz",
+   "instance_00025.npz",
+   "instance_00026.npz",
+   "instance_00027.npz",
+   "instance_00028.npz",
+   "instance_00029.npz",
+   "instance_00030.npz",
+   "instance_00031.npz",
+   "instance_00033.npz",
+   "instance_00034.npz",
+   "instance_00035.npz",
+   "instance_00037.npz",
+   "instance_00038.npz",
+   "instance_00039.npz",
+   "instance_00040.npz",
+   "instance_00043.npz",
+   "instance_00044.npz",
+   "instance_00045.npz",
+   "instance_00048.npz",
+   "instance_00049.npz",
+   "instance_00052.npz",
+   "instance_00054.npz",
+   "instance_00056.npz",
+   "instance_00057.npz",
+   "instance_00058.npz",
+   "instance_00060.npz",
+   "instance_00061.npz",
+   "instance_00062.npz",
+   "instance_00063.npz",
+   "instance_00064.npz",
+   "instance_00065.npz",
+   "instance_00066.npz",
+   "instance_00067.npz",
+   "instance_00068.npz",
+   "instance_00070.npz",
+   "instance_00071.npz",
+   "instance_00073.npz",
+   "instance_00074.npz",
+   "instance_00075.npz",
+   "instance_00076.npz",
+   "instance_00078.npz",
+   "instance_00079.npz"
+  ],
+  "in_h2d": [
+   "instance_00006.npz",
+   "instance_00009.npz",
+   "instance_00010.npz",
+   "instance_00033.npz",
+   "instance_00040.npz",
+   "instance_00047.npz",
+   "instance_00058.npz",
+   "instance_00065.npz",
+   "instance_00067.npz",
+   "instance_00069.npz",
+   "instance_00070.npz",
+   "instance_00076.npz"
+  ]
+ },
+ "copies_2d": {
+  "archive": "outputs_fejepa.zip",
+  "made": "15-17 July 2026",
+  "sha256": "4e2150dedd3e51d47112cc61410c8f287fe9fcfdb3143cad7f6d0bef0c50e33c",
+  "corpus_manifest_sha256": "3553396d183115b843512a35cba1a1e8448b9e83e10c1d1a5b02b235a7c79d26",
+  "instances": [
+   "instance_00000.npz",
+   "instance_00001.npz",
+   "instance_00002.npz",
+   "instance_00003.npz",
+   "instance_00004.npz",
+   "instance_00005.npz",
+   "instance_00006.npz",
+   "instance_00007.npz",
+   "instance_00008.npz",
+   "instance_00009.npz",
+   "instance_00010.npz",
+   "instance_29990.npz",
+   "instance_29991.npz",
+   "instance_29992.npz",
+   "instance_29993.npz",
+   "instance_29994.npz",
+   "instance_29995.npz",
+   "instance_29996.npz",
+   "instance_29997.npz",
+   "instance_29998.npz",
+   "instance_29999.npz"
+  ],
+  "in_h2d": [
+   "instance_00006.npz",
+   "instance_00009.npz",
+   "instance_00010.npz",
+   "instance_29992.npz"
+  ]
+ },
+ "backups_2d": [
+  {
+   "archive": "archive_data2d_full.tar.gz",
+   "sha256": "5080d9d7ca50573507458cce65e46253379bcb622fb9184720182084b710a78b",
+   "holds": "the whole corpus",
+   "where": "on the box's data disk, and an off-box copy",
+   "record": "records/wp8/restore_data2d.log; PROJECT_STATUS of 6 August 2026"
+  },
+  {
+   "archive": "the labelled subset",
+   "sha256": "b06d4320",
+   "holds": "the 1,280 labelled instances: validation and pool[:1024]",
+   "where": "off-box",
+   "record": "PROJECT_STATUS of 6 August 2026"
+  }
+ ],
+ "h2d_excluded": [
+  "instance_00006.npz",
+  "instance_00009.npz",
+  "instance_00010.npz",
+  "instance_00033.npz",
+  "instance_00040.npz",
+  "instance_00047.npz",
+  "instance_00058.npz",
+  "instance_00065.npz",
+  "instance_00067.npz",
+  "instance_00069.npz",
+  "instance_00070.npz",
+  "instance_00076.npz",
+  "instance_00086.npz",
+  "instance_00089.npz",
+  "instance_00103.npz",
+  "instance_00112.npz",
+  "instance_00119.npz",
+  "instance_00140.npz",
+  "instance_00144.npz",
+  "instance_00153.npz",
+  "instance_00157.npz",
+  "instance_00161.npz",
+  "instance_00169.npz",
+  "instance_00177.npz",
+  "instance_00189.npz",
+  "instance_00190.npz",
+  "instance_00202.npz",
+  "instance_00214.npz",
+  "instance_00223.npz",
+  "instance_00236.npz",
+  "instance_00245.npz",
+  "instance_00253.npz",
+  "instance_29992.npz"
+ ],
+ "seconds": 0.3
+}
