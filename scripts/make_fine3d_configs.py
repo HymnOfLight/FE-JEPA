@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""fine3d (PREREG_FINE3D Sec. 2-3): generate the three configurations of the
+"""fine3d (PREREG_FINE3D Sec. 2-3): generate the four configurations of the
 pre-registration -- never edited by hand.
 
 R2a (S on the token bottleneck), from E2's stamped M = 1,024 configuration
@@ -14,20 +14,22 @@ instance training prefix, 200 epochs at 1e-3, AR only, P3 zero-shot only,
 TF32, one worker) and add only their own output directory, the guard on
 PREREG_FINE3D.md and a comment.
 
-R3 (label-free fine-tuning at the fine mesh):
+R3 (fine-tuning at the fine mesh; both arms run by scripts/r3_finetune.py):
   r3_eft_b16    the Phase-2b AR states (seeds 0-2), each fine-tuned with the
-                AR objective on the first 16 instances of the fine few-shot
-                prefix with the labelled few-shot fine-tuning's schedule
-                (read from the Phase-2b report's configuration: 50 epochs at
-                lr 1.5e-3), evaluated on the fine evaluation set and the
-                in-band validation split; run by scripts/r3_energy_finetune.py
+                AR objective (label-free) on the first 16 instances of the fine
+                few-shot prefix with the labelled few-shot fine-tuning's
+                schedule (read from the Phase-2b report's configuration: 50
+                epochs at lr 1.5e-3), evaluated on the fine evaluation set and
+                the in-band validation split
+  r3_lft_b16    the same with the displacement labels: P3's labelled few-shot
+                fine-tuning at 16 run again in the same session, R3's reference
 
 S3_FACTOR sets the level of S's decoded output in 3D: the power of two
 nearest the median of max|F| / sum|F| over 256 fresh instances of the
 training family (scripts/fine3d_scale_factor.py,
 records/wp9/fine3d/scale_factor_3d.json), the rule that gave wp9's 1/64.
 
-    python scripts/make_fine3d_configs.py            # writes the three configs
+    python scripts/make_fine3d_configs.py            # writes the four configs
     python scripts/make_fine3d_configs.py --check    # the committed files are the generator's
 """
 from __future__ import annotations
@@ -55,7 +57,7 @@ S3_FACTOR = 0.0009765625
 `sample.factor`; a test keeps the two equal)."""
 FRESH_SEED_OFFSET = 3
 R2A_ARMS = {"r2a_b_m1024": {"s": False}, "r2a_s_m1024": {"s": True}}
-R3_ARM = "r3_eft_b16"
+R3_ARMS = {"r3_eft_b16": {"loss": "ar"}, "r3_lft_b16": {"loss": "labels"}}
 R3 = {"n_train": 16, "seeds": [0, 1, 2], "n_check": 8, "max_rel_dev": 1e-3}
 """R3's own settings: the training budget (the labelled fine-tuning's
 smallest, P3 budget 16), the seeds (the Phase-2b states'), and the content
@@ -63,7 +65,7 @@ check (the first n_check fine evaluation and in-band validation instances
 must reproduce the report's arrays to max_rel_dev: a wrong state or code path
 shows deviations of order one; the transformer's states reproduced their
 report's arrays exactly in wp8's post-hoc pass)."""
-ARMS = (*R2A_ARMS, R3_ARM)
+ARMS = (*R2A_ARMS, *R3_ARMS)
 
 
 def r2a_config(base: dict, arm: str) -> dict:
@@ -84,20 +86,25 @@ def r2a_config(base: dict, arm: str) -> dict:
     return cfg
 
 
-def r3_config(report_cfg: dict) -> dict:
-    """R3's configuration; the schedule is the labelled few-shot fine-tuning's
-    as the Phase-2b report's configuration records it."""
+def r3_config(report_cfg: dict, arm: str = "r3_eft_b16") -> dict:
+    """An R3 arm's configuration; the schedule is the labelled few-shot
+    fine-tuning's as the Phase-2b report's configuration records it. The two
+    arms differ in their loss, output directory and comment only."""
     p3 = report_cfg["experiments"]["p3_transfer"]
     if R3["n_train"] not in [int(b) for b in p3["fewshot_budgets"]]:
         raise SystemExit(f"the Phase-2b few-shot budgets {p3['fewshot_budgets']} do not hold "
                          f"{R3['n_train']}")
+    loss = R3_ARMS[arm]["loss"]
+    what = ("fine-tuned label-free (the AR objective)" if loss == "ar" else
+            "fine-tuned with the displacement labels (P3's labelled few-shot fine-tuning "
+            "run again in the same session: R3's reference)")
     return {
-        "_comment": ("fine3d R3: the Phase-2b AR states fine-tuned label-free (the AR "
-                     "objective) on the first 16 instances of the fine few-shot prefix with "
-                     f"the labelled few-shot fine-tuning's schedule; see {PREREG_FILE}"),
+        "_comment": (f"fine3d R3: the Phase-2b AR states {what} on the first 16 instances of "
+                     "the fine few-shot prefix with the labelled few-shot fine-tuning's "
+                     f"schedule; see {PREREG_FILE}"),
         "source": {"report": PHASE2B_REPORT, "report_sha256": PHASE2B_REPORT_SHA256,
                    "states_dir": PHASE2B_STATES},
-        "train": {"set": "fine_fewshot_prefix", "n": R3["n_train"], "loss": "ar",
+        "train": {"set": "fine_fewshot_prefix", "n": R3["n_train"], "loss": loss,
                   "epochs": int(p3["fewshot_epochs"]), "lr": float(p3["fewshot_lr"]),
                   "weight_decay": 1e-4, "clip": 1.0, "warmup_frac": 0.05},
         "seeds": list(R3["seeds"]),
@@ -105,7 +112,7 @@ def r3_config(report_cfg: dict) -> dict:
                        "inband": int(report_cfg["split"]["n_val"]), "amplitude": True},
         "content_check": {"n_fine": R3["n_check"], "n_inband": R3["n_check"],
                           "max_rel_dev": R3["max_rel_dev"]},
-        "out": f"{OUT_ROOT}/{R3_ARM}/report.json",
+        "out": f"{OUT_ROOT}/{arm}/report.json",
         "prereg_file": PREREG_FILE, "prereg_guard": True, "device": "auto"}
 
 
@@ -137,8 +144,8 @@ def load_phase2b(path: str = PHASE2B_REPORT) -> dict:
 def config_of(arm: str, base: dict | None = None, report: dict | None = None) -> dict:
     if arm in R2A_ARMS:
         return r2a_config(base if base is not None else load_base(), arm)
-    if arm == R3_ARM:
-        return r3_config((report if report is not None else load_phase2b())["config"])
+    if arm in R3_ARMS:
+        return r3_config((report if report is not None else load_phase2b())["config"], arm)
     raise KeyError(arm)
 
 

@@ -16,7 +16,7 @@ compares against.
         displacement is the draw that enters the ratio. Scenarios: S lowers
         the fine error by d (0-70%), with the in-band errors unchanged, 10%
         lower, or 10% higher. Reported: P(SUPPORTED), and P(R2b recommended)
-        (SUPPORTED and the fine error's rel <= -50%).
+        (SUPPORTED and the fine error's rel <= R2B_FINE_REL_MAX, -40%).
   r3    the labelled few-shot fine-tuning at 16 (the Phase-2b report, P3,
         seeds 0-2): the fine energy gap (R3-E) and von Mises error (R3-V);
         both arms drawn afresh in every trial; the energy-fine-tuned arm's
@@ -30,11 +30,33 @@ compares against.
         in-band displacement error and energy gap likewise (rho; rho^2
         between the fine error and the energy gap).
   r3_fixed_reference  the reference held at its observed per-seed values
-        (the design: R3 compares with one recorded run), the record lying at
-        its expectation or 5% or 10% above it (the arms' common true mean
-        the record divided by 1, 1.05 or 1.10); the new arm drawn as in r3.
-        With `tau_floor`: the part of tau the reference's own spread fixes
-        (2 x its sample SD / sqrt(3) / its mean).
+        (r1's design, R3 against the recorded run), the record lying at its
+        expectation or 5% or 10% above it (the arms' common true mean the
+        record divided by 1, 1.05 or 1.10); the new arm drawn as in r3. With
+        `tau_floor`: the part of tau the reference's own spread fixes (2 x its
+        sample SD / sqrt(3) / its mean). Kept for the record; r2 runs the
+        labelled arm again in the same session (r3, r3_paired).
+  r3_paired  as r3 (the labelled arm's spreads for both arms), the two arms'
+        values of a seed correlated (rho): they share the seed's starting state
+        and instance order.
+  r2b  the R2b gate. R2b is the transformer with S against a fresh baseline,
+        three seeds each, judged by R2a's rule on the Phase-2b run's spreads
+        (P3's fine and in-band displacement errors, E8's in-band energy gap):
+        `power`, P(SUPPORTED) by the true fine reduction. S's reduction on the
+        transformer is k times the bottleneck's, k = the ratio of c*'s fine
+        reductions on the two (wp8's post-hoc records), 0.6 or 1.0.
+        `predicted`: given R2a SUPPORTED and its observed fine rel within
+        2.5 points of each value, P(R2b SUPPORTED), the bottleneck's true
+        reduction uniform on 0-80% (about c*'s 78% on it). `gates`: for each
+        gate (R2a SUPPORTED alone, or with the observed fine rel at most T),
+        over the same prior: P(recommended), P(R2b SUPPORTED | recommended),
+        P(recommended and R2b not SUPPORTED) and P(not recommended but R2b
+        SUPPORTED).
+  r3_spread_x2  as r3, both arms' spreads twice the labelled fine-tuning's
+        (the reference's spread rests on three recorded seeds too).
+  r2b_sensitivity  `predicted` and `gates` (k = the c* ratio) with the
+        transformer's spreads doubled, or with the bottleneck's true reduction
+        uniform on 0-60% instead of 0-80%.
 
     python scripts/fine3d_sims.py --out records/wp9/fine3d/simulations.json
 """
@@ -56,7 +78,9 @@ E2 = "records/wp8/e2/e2_m1024/report.json"
 E2_M512 = "records/wp8/e2/e2_m512/report.json"
 P2B = "records/wp8/e2/baseline/report_phase2b.json"
 GUARD_BAND, GUARD_K = 0.10, 2.0
-R2B_FINE_REL_MAX = -0.5
+R2B_FINE_REL_MAX = -0.4
+R2B_GATES = (None, -0.3, -0.4, -0.45, -0.5)
+AMP_T, AMP_B = "records/wp8/posthoc/amp_phase2b.json", "records/wp8/posthoc/amp_e2_m1024.json"
 
 
 def cv(x) -> float:
@@ -120,6 +144,51 @@ def r2a_corr_sim(rng, cvs: dict, d_fine: float, rho: float, n=TRIALS) -> dict:
                      from_normal(z[..., 2], 1.0, cvs["inband_egap"])))
     (fb, ib, eb), (fs, is_, es) = arms
     return _r2a_rule(fb, ib, eb, fs, is_, es)
+
+
+def r2a_rule_d(rng, cvs: dict, d) -> tuple:
+    """R2a's rule with a true fine reduction d per trial (an array; in band
+    unchanged): (supported, observed fine rel)."""
+    d = np.asarray(d, float)
+    shape = (d.size, 3)
+    fb, ib, eb = (draw(rng, 1.0, cvs[k], shape) for k in ("fine", "inband_disp", "inband_egap"))
+    fs = draw(rng, 1.0, cvs["fine"], shape) * (1.0 - d)[:, None]
+    is_, es = draw(rng, 1.0, cvs["inband_disp"], shape), draw(rng, 1.0, cvs["inband_egap"], shape)
+    lo_f, _, rel_f = guard_vec(fb, fs)
+    lo_r, _, _ = guard_vec(fb / ib, fs / is_)
+    _, wo_e, _ = guard_vec(eb, es)
+    _, wo_d, _ = guard_vec(ib, is_)
+    return lo_f & lo_r & ~wo_e & ~wo_d, rel_f
+
+
+def r2b_gate(rng, cvs_b: dict, cvs_t: dict, ks: dict, n=TRIALS, hi: float = 0.8) -> dict:
+    """The gate's properties over a uniform prior on the bottleneck's true fine
+    reduction (0 to `hi`); R2b's success simulated at k times it."""
+    rb = rng.uniform(0.0, hi, n)
+    sup_a, rel_a = r2a_rule_d(rng, cvs_b, rb)
+    out = {"predicted": {}, "gates": {}}
+    for kname, k in ks.items():
+        sup_b, _ = r2a_rule_d(rng, cvs_t, np.clip(k * rb, 0.0, 0.99))
+        out["predicted"][kname] = {
+            f"{lo:+.0%}": float(sup_b[sup_a & (rel_a > lo - 0.025) & (rel_a <= lo + 0.025)].mean())
+            for lo in (-0.30, -0.35, -0.40, -0.45, -0.50, -0.55, -0.60)}
+        out["gates"][kname] = {}
+        for g in R2B_GATES:
+            rec = sup_a & (rel_a <= g) if g is not None else sup_a
+            out["gates"][kname]["supported" if g is None else f"{g:+.0%}"] = {
+                "p_recommended": float(rec.mean()),
+                "p_supported_given_recommended": float(sup_b[rec].mean()),
+                "p_recommended_not_supported": float((rec & ~sup_b).mean()),
+                "p_not_recommended_supported": float((~rec & sup_b).mean())}
+    return out
+
+
+def r3_paired_sim(rng, c: float, d: float, rho: float, n=TRIALS) -> float:
+    """Both arms drawn with spread c, a seed's two values correlated (rho)."""
+    chol = np.linalg.cholesky(np.array([[1.0, rho], [rho, 1.0]]))
+    z = rng.standard_normal((n, 3, 2)) @ chol.T
+    lower, _, _ = guard_vec(from_normal(z[..., 0], 1.0, c), from_normal(z[..., 1], 1.0 - d, c))
+    return float(lower.mean())
 
 
 def r3_sim(rng, c_ref: float, c_new: float, d: float, n=TRIALS) -> float:
@@ -193,13 +262,41 @@ def main() -> None:
                 for d in (0.0, 0.2, 0.3, 0.5):
                     fixed[f"{metric}; record {above:+.0%}; new-arm cv {tag}; {-d:+.0%}"] = \
                         r3_fixed_sim(rng, ref, c_new, above, d, a.trials)
+    paired = {}
+    for metric in ("energy_gap_rel", "vm_rel_l2"):
+        for rho in (0.5, 0.8):
+            for d in (0.0, 0.2, 0.3, 0.5):
+                paired[f"{metric}; rho {rho}; {-d:+.0%}"] = \
+                    r3_paired_sim(rng, r3cv[metric], d, rho, a.trials)
+    cvs_t = spreads(p2b)
+
+    def cstar_cut(path):
+        sm = json.loads((ROOT / path).read_text())["seed_means"]["fine"]
+        return float(1.0 - sm["disp_c"] / sm["disp"])
+    cut = {"transformer": cstar_cut(AMP_T), "bottleneck": cstar_cut(AMP_B)}
+    k_c = cut["transformer"] / cut["bottleneck"]
+    power = {f"{-d:+.0%}": float(r2a_rule_d(rng, cvs_t, np.full(a.trials, d))[0].mean())
+             for d in (0.0, 0.1, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.6, 0.7)}
+    r2b = {"cv": cvs_t, "c_star_fine_cut": cut, "k": k_c, "power": power,
+           **r2b_gate(rng, cvs, cvs_t, {"k": k_c, "0.6": 0.6, "1.0": 1.0}, a.trials)}
+    r3x2 = {}
+    for metric in ("energy_gap_rel", "vm_rel_l2"):
+        for d in (0.0, 0.2, 0.3, 0.5):
+            r3x2[f"{metric}; both arms' cv x2; {-d:+.0%}"] = \
+                r3_sim(rng, 2 * r3cv[metric], 2 * r3cv[metric], d, a.trials)
+    r2b_sens = {}
+    for name, cv_t, hi in (("transformer spreads x2", {k: 2 * v for k, v in cvs_t.items()}, 0.8),
+                           ("prior 0-60%", cvs_t, 0.6)):
+        g = r2b_gate(rng, cvs, cv_t, {"k": k_c}, a.trials, hi=hi)
+        r2b_sens[name] = {"predicted": g["predicted"]["k"], "gates": g["gates"]["k"]}
     res = {"what": "fine3d: properties of the R2a and R3 rules by simulation "
                    "(scripts/fine3d_sims.py); log-normal seed values, three seeds per arm",
            "trials": a.trials, "seed": SEED, "guard": {"band": GUARD_BAND, "k": GUARD_K},
            "r2b_fine_rel_max": R2B_FINE_REL_MAX,
            "r2a_cv": cvs, "r2a_cv_m512": cvs512, "r3_cv": r3cv, "r2a": r2a, "r3": r3,
            "r2a_sensitivity": sens, "r2a_correlated": corr,
-           "r3_tau_floor": floors, "r3_fixed_reference": fixed}
+           "r3_tau_floor": floors, "r3_fixed_reference": fixed, "r3_paired": paired, "r2b": r2b,
+           "r3_spread_x2": r3x2, "r2b_sensitivity": r2b_sens}
     text = json.dumps(res, indent=1)
     if a.out:
         Path(a.out).parent.mkdir(parents=True, exist_ok=True)

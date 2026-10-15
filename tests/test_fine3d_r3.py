@@ -1,11 +1,14 @@
-"""fine3d (PREREG_FINE3D Sec. 3, R3): scripts/r3_energy_finetune.py on a CPU
+"""fine3d (PREREG_FINE3D Sec. 3, R3): scripts/r3_finetune.py on a CPU
 miniature of the Phase-2b run (E8 AR, P3 zero-shot and labelled few-shot at
-budgets of 2 and 3). The script verifies its inputs, reproduces the report's
-arrays before training (both halves of the check), trains label-free on the
-few-shot prefix in the order P3's labelled fine-tuning trained, records what
-the adjudicator reads, survives an interruption, does not run a finished
-seed again, moves an unusable result aside, and refuses what it should."""
+budgets of 2 and 3), both arms. The script verifies its inputs, reproduces the
+report's arrays before training (both halves of the check), trains on the
+few-shot prefix in the order P3's labelled fine-tuning trained -- the energy
+arm label-free, the labelled arm as P3's labelled unit, whose evaluation it
+reproduces per instance, bit for bit -- records what the adjudicator reads,
+survives an interruption, does not run a finished seed again, moves an
+unusable result aside, and refuses what it should."""
 
+import dataclasses
 import hashlib
 import importlib.util
 import json
@@ -26,11 +29,13 @@ ROOT = Path(__file__).resolve().parents[1]
 MODEL = {"dim": 16, "depth": 1, "heads": 2, "features": {"load_summary": True, "geometry": True}}
 TRAIN = {"set": "fine_fewshot_prefix", "n": 2, "loss": "ar", "epochs": 2, "lr": 1.5e-3,
          "weight_decay": 1e-4, "clip": 1.0, "warmup_frac": 0.05}
+TRAIN_L = dict(TRAIN, loss="labels")
+PREFIX = {"ar": "eft", "labels": "lft"}
 
 
 def _script():
-    spec = importlib.util.spec_from_file_location("r3_energy_finetune",
-                                                  ROOT / "scripts" / "r3_energy_finetune.py")
+    spec = importlib.util.spec_from_file_location("r3_finetune",
+                                                  ROOT / "scripts" / "r3_finetune.py")
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -50,8 +55,9 @@ def _name(pack):
 @pytest.fixture(scope="module")
 def mini(tmp_path_factory):
     """A miniature 'Phase-2b' report with its states and corpora; the order in
-    which each of P3's labelled few-shot units visited its training instances
-    is recorded (p3_orders.json, by unit)."""
+    which each of P3's labelled few-shot units visited its training instances,
+    and the trainer configuration it ran with, are recorded (p3_orders.json,
+    p3_cfgs.json, by unit)."""
     from fejepa.train import supervised as sv
 
     tmp = tmp_path_factory.mktemp("r3")
@@ -76,9 +82,10 @@ def mini(tmp_path_factory):
            "device": "cpu", "workers": 1, "tf32": False, "prereg_guard": False,
            "out": str(tmp / "p2b" / "report.json")}
     (tmp / "p2b.json").write_text(json.dumps(cfg))
-    orders, real = {}, sv.train_supervised
+    orders, cfgs, real = {}, {}, sv.train_supervised
 
     def spy(model, train_archs, val_archs, scfg, pretrained_state=None):
+        cfgs[scfg.desc or ""] = dataclasses.asdict(scfg)
         seen = orders.setdefault(scfg.desc or "", [])
         fwd = model.forward_instance
 
@@ -94,6 +101,7 @@ def mini(tmp_path_factory):
     finally:
         sv.train_supervised = real
     (tmp / "p3_orders.json").write_text(json.dumps(orders))
+    (tmp / "p3_cfgs.json").write_text(json.dumps(cfgs))
     return tmp
 
 
@@ -120,6 +128,31 @@ def done(mini):
     return R3.run(p), p
 
 
+@pytest.fixture(scope="module")
+def done_l(mini):
+    """The labelled arm on the miniature (budget 2, seeds 0 and 1)."""
+    p = _r3cfg(mini, mini / "runs" / "L", train=dict(TRAIN_L))
+    return R3.run(p), p
+
+
+def _spy_supervised(monkeypatch, seen):
+    """Record the training instances train_supervised visits, in order."""
+    from fejepa.train import supervised as sv
+
+    real = sv.train_supervised
+
+    def spy(model, train_archs, val_archs, scfg, pretrained_state=None):
+        fwd = model.forward_instance
+
+        def rec(pack, *a, **k):
+            if torch.is_grad_enabled():
+                seen.append(_name(pack))
+            return fwd(pack, *a, **k)
+        model.forward_instance = rec
+        return real(model, train_archs, val_archs, scfg, pretrained_state=pretrained_state)
+    monkeypatch.setattr(sv, "train_supervised", spy)
+
+
 def test_r3_runs_reproduces_and_evaluates(done, mini):
     rep, p = done
     cfg = json.loads(p.read_text())
@@ -144,6 +177,8 @@ def test_r3_runs_reproduces_and_evaluates(done, mini):
             assert r[name]["n_val"] == n and len(r[name]["per_instance"]["vm_rel_l2"]) == n
             assert len(r[name]["amplitude"]["per_instance"]["c_star"]) == n
         assert set(r["seconds"]) == {"load_and_check", "train", "evaluate"}
+        assert set(r["machine"]) == {"start", "end"}
+        assert all(set(m) == {"host", "gpu_driver"} and m["host"] for m in r["machine"].values())
         assert not r.get("from_disk")
         ck = Path(r["state"]["path"]).with_suffix(".ckpt")
         assert not ck.exists() and not ck.with_name(ck.name + ".json").exists()
@@ -179,20 +214,112 @@ def test_r3_trains_without_labels(mini, tmp_path):
     assert rep["per_seed"]["s0"]["state"]["sha256"] == first["state"]["sha256"]
 
 
-def test_r3_trains_in_the_order_p3s_labelled_fine_tuning_trained(mini, tmp_path, monkeypatch):
-    """Through the script, at a budget of 3: each seed visits the instances in
-    exactly the order P3's labelled unit of that seed and budget visited them
-    (recorded while the miniature Phase-2b run trained), which is the order
-    `epoch_orders` gives and the report hashes."""
+def test_r3_labelled_arm_is_p3s_labelled_fine_tuning(done, done_l, mini):
+    """The labelled arm is P3's labelled unit at the same budget run again: the
+    same training instances, the energy arm's instance orders, and per
+    instance the evaluation on the fine set that the miniature report's
+    few-shot row records, bit for bit on CPU. Its record names its arm."""
+    (rep, _), (e, _) = done_l, done
+    p2b = json.loads((mini / "p2b" / "report.json").read_text())
+    row = p2b["results"]["p3_transfer"]["metrics"]["fewshot"]["2"]["finetune"]
+    names = [f.name for f in instance_files(mini / "fine")]
+    for i, s in enumerate((0, 1)):
+        r, re_ = rep["per_seed"][f"s{s}"], e["per_seed"][f"s{s}"]
+        t = r["train"]
+        assert (t["loss"], t["trainer"]) == ("labels", "train_supervised")
+        assert (re_["train"]["loss"], re_["train"]["trainer"]) == ("ar", "pretrain")
+        assert t["files"] == names[3:5] and t["steps"] == 4 and t["seed"] == s
+        assert t["epochs"] == t["epochs_run"] == len(t["loss_by_epoch"]) == 2
+        assert all(math.isfinite(x) for x in t["loss_by_epoch"])
+        assert t["order_sha256"] == re_["train"]["order_sha256"]
+        assert r["content_check"]["passed"] and r["source_state"] == re_["source_state"]
+        assert r["state"]["sha256"] not in (re_["state"]["sha256"], r["source_state"]["sha256"])
+        assert Path(r["state"]["path"]).name == f"lft_b2_s{s}.pt"
+        want = row["per_seed_eval"][i]
+        assert len(r["fine"]["per_instance"]["disp_rel_l2"]) == 3
+        for k in FIELD_KEYS:
+            assert r["fine"]["per_instance"][k] == want["per_instance"][k], k
+            assert r["fine"][k] == want[k], k
+    assert "the labelled arm" in rep["what"] and "the energy arm" in e["what"]
+
+
+def test_r3_labelled_arm_trains_with_p3s_supervised_configuration(mini, tmp_path, monkeypatch):
+    """Every field of the labelled arm's trainer configuration is that of P3's
+    labelled unit of the same budget and seed, but the progress tag and the
+    checkpoint file and its resumption (in the miniature the gradients are too
+    small for the clip to act, so the evaluation alone would not show
+    another clip)."""
+    seen = []
+    from fejepa.train import supervised as sv
+
+    real = sv.train_supervised
+
+    def spy(model, train_archs, val_archs, scfg, pretrained_state=None):
+        seen.append(dataclasses.asdict(scfg))
+        return real(model, train_archs, val_archs, scfg, pretrained_state=pretrained_state)
+    monkeypatch.setattr(sv, "train_supervised", spy)
+    R3.run(_r3cfg(mini, tmp_path / "S", train=dict(TRAIN_L)))
+    p3 = json.loads((mini / "p3_cfgs.json").read_text())
+    skip = {"desc", "ckpt_path", "resume"}
+    assert len(seen) == 2
+    for s, mine in zip((0, 1), seen):
+        theirs = p3[f"P3 finetune b2 s{s}"]
+        assert {k: v for k, v in mine.items() if k not in skip} == \
+            {k: v for k, v in theirs.items() if k not in skip}
+        assert mine["seed"] == s and mine["anchor_mode"] == "none" and mine["clip"] == 1.0
+
+
+def test_r3_refuses_a_source_report_not_in_fp32(mini, tmp_path):
+    """P3's labelled units took their precision and compilation from the
+    report's runtime block; R3 trains in fp32 without compiling, so a report
+    that says otherwise is refused before anything trains."""
+    rep = json.loads((mini / "p2b" / "report.json").read_text())
+    for rt in ({"precision": "bf16"}, {"compile": True}):
+        q = tmp_path / "report_rt.json"
+        q.write_text(json.dumps(dict(rep, config=dict(rep["config"], runtime=rt))))
+        src = {"report": str(q), "report_sha256": _sha(q),
+               "states_dir": str(mini / "p2b" / "e8_states")}
+        with pytest.raises(SystemExit, match="fp32 without compile"):
+            R3.run(_r3cfg(mini, tmp_path / "RT", source=src, train=dict(TRAIN_L)))
+    assert not (tmp_path / "RT").exists()
+
+
+def test_r3_labelled_arm_needs_labels(mini, tmp_path):
+    """One training instance's labels deleted on disk (a copy of the fine
+    corpus, manifest unchanged): the labelled arm refuses before training."""
+    import shutil
+
+    fine2 = tmp_path / "fine"
+    shutil.copytree(mini / "fine", fine2)
+    f = instance_files(fine2)[4]
+    a = load_instance(f)
+    a.U_star = None
+    save_instance(a, f)
+    with pytest.raises(SystemExit, match="carries no labels"):
+        R3.run(_r3cfg(mini, tmp_path / "N", seeds=[0], train=dict(TRAIN_L)), fine_dir=str(fine2))
+    assert not list((tmp_path / "N").glob("*.pt"))
+
+
+@pytest.mark.parametrize("loss", ["ar", "labels"])
+def test_r3_trains_in_the_order_p3s_labelled_fine_tuning_trained(mini, tmp_path, monkeypatch,
+                                                                  loss):
+    """Through the script, at a budget of 3, either arm: each seed visits the
+    instances in exactly the order P3's labelled unit of that seed and budget
+    visited them (recorded while the miniature Phase-2b run trained), which is
+    the order `epoch_orders` gives and the report hashes."""
     from fejepa.train import pretrain as pt
 
-    real, seen = pt.compute_loss, []
+    seen = []
+    if loss == "ar":
+        real = pt.compute_loss
 
-    def spy(model, pack, *a, **k):
-        seen.append(_name(pack))
-        return real(model, pack, *a, **k)
-    monkeypatch.setattr(pt, "compute_loss", spy)
-    rep = R3.run(_r3cfg(mini, tmp_path / "O", train=dict(TRAIN, n=3)))
+        def spy(model, pack, *a, **k):
+            seen.append(_name(pack))
+            return real(model, pack, *a, **k)
+        monkeypatch.setattr(pt, "compute_loss", spy)
+    else:
+        _spy_supervised(monkeypatch, seen)
+    rep = R3.run(_r3cfg(mini, tmp_path / "O", train=dict(TRAIN, n=3, loss=loss)))
     p3 = json.loads((mini / "p3_orders.json").read_text())
     names = [f.name for f in instance_files(mini / "fine")][3:6]
     assert len(seen) == 2 * 3 * 2
@@ -244,30 +371,44 @@ def test_both_trainers_draw_the_same_order(mini):
         assert seen_sup == seen_ar == [names[j] for o in R3.epoch_orders(seed, 3, 3) for j in o]
 
 
-def test_r3_resumes_an_interrupted_seed(mini, tmp_path, monkeypatch):
+@pytest.mark.parametrize("loss", ["ar", "labels"])
+def test_r3_resumes_an_interrupted_seed(mini, done, done_l, tmp_path, monkeypatch, loss):
+    """Either arm, interrupted in seed 0's second epoch: run again, it resumes
+    from the epoch checkpoint (the loss history with it) and ends where an
+    uninterrupted run ends."""
     from fejepa.train import pretrain as pt
+    from fejepa.train import supervised as sv
 
-    real, calls = pt.compute_loss, {"n": 0}
+    mod, attr = (pt, "compute_loss") if loss == "ar" else (sv, "_disp_loss")
+    real, calls = getattr(mod, attr), {"n": 0}
 
     def boom(*a, **k):
         calls["n"] += 1
         if calls["n"] == 3:                          # epoch 2 of seed 0 (2 steps per epoch)
             raise RuntimeError("simulated interruption")
         return real(*a, **k)
-    monkeypatch.setattr(pt, "compute_loss", boom)
-    p = _r3cfg(mini, tmp_path / "C")
+    monkeypatch.setattr(mod, attr, boom)
+    p = _r3cfg(mini, tmp_path / "C", train=dict(TRAIN, loss=loss))
     with pytest.raises(RuntimeError, match="simulated"):
         R3.run(p)
-    assert (tmp_path / "C" / "eft_b2_s0.ckpt").exists()
+    assert (tmp_path / "C" / f"{PREFIX[loss]}_b2_s0.ckpt").exists()
     assert not (tmp_path / "C" / "seed_0.json").exists()
-    monkeypatch.setattr(pt, "compute_loss", real)
+    monkeypatch.setattr(mod, attr, real)
     rep = R3.run(p)
-    first = json.loads((mini / "runs" / "A" / "seed_0.json").read_text())
+    first = (done if loss == "ar" else done_l)[0]["per_seed"]["s0"]
     t = rep["per_seed"]["s0"]["train"]
     assert t["resumed_from_epoch"] == 1 and t["epochs_run"] == 2 and t["steps"] == 4
     assert t["loss_by_epoch"] == first["train"]["loss_by_epoch"]
     assert rep["per_seed"]["s0"]["state"]["sha256"] == first["state"]["sha256"]
     assert rep["per_seed"]["s1"]["train"]["resumed_from_epoch"] is None
+
+
+def test_r3_labelled_arm_does_not_run_a_finished_seed_again(done_l, capsys):
+    rep, p = done_l
+    again = R3.run(p)
+    assert capsys.readouterr().out.count("result on disk") == 2
+    assert all(again["per_seed"][k] == dict(rep["per_seed"][k], from_disk=True)
+               for k in ("s0", "s1"))
 
 
 def test_r3_does_not_run_a_finished_seed_again(done, capsys):
@@ -285,14 +426,15 @@ def test_r3_does_not_run_a_finished_seed_again(done, capsys):
     assert not third["per_seed"]["s1"].get("from_disk") and third["per_seed"]["s0"]["from_disk"]
 
 
-def _patch_adjudicator(monkeypatch, mini, label):
+def _patch_adjudicator(monkeypatch, mini, energy="A", labelled="L"):
     """adjudicate_fine3d's R3 constants set to the miniature's (budget 2, 4
-    steps, two seeds, 3 + 4 evaluation instances; the run's directory)."""
+    steps, two seeds, 3 + 4 evaluation instances; the arms' directories)."""
     from fejepa.analysis import adjudicate_fine3d as A
 
     names = [f.name for f in instance_files(mini / "fine")]
     for k, v in {"R3_SEEDS": [0, 1], "R3_TRAIN_N": 2, "R3_STEPS": 4,
-                 "R3_TRAIN_FILES": names[3:5], "N_FINE": 3, "N_INBAND": 4, "R3_LABEL": label,
+                 "R3_TRAIN_FILES": names[3:5], "N_FINE": 3, "N_INBAND": 4,
+                 "R3_LABELS": {"energy": energy, "labelled": labelled},
                  "PHASE2B_REPORT_SHA256": _sha(mini / "p2b" / "report.json")}.items():
         monkeypatch.setattr(A, k, v)
     return A
@@ -366,27 +508,32 @@ def test_r3_resumes_only_its_own_checkpoint(mini, tmp_path, monkeypatch):
     assert not (out / "eft_b2_s0.ckpt").exists() and not side.exists()
 
 
-def test_r3_counts_epochs_and_steps_from_the_trainers_history(mini, tmp_path, monkeypatch):
-    """A trainer that stops after its first epoch: the result says one epoch
-    and its steps, not the configuration's, and the adjudicator refuses it."""
+@pytest.mark.parametrize("loss", ["ar", "labels"])
+def test_r3_counts_epochs_and_steps_from_the_trainers_history(mini, tmp_path, monkeypatch, loss):
+    """A trainer (either arm's) that stops after its first epoch: the result
+    says one epoch and its steps, not the configuration's, and the adjudicator
+    refuses it."""
     from fejepa.train import pretrain as pt
+    from fejepa.train import supervised as sv
 
-    real = pt.pretrain
+    mod, attr = (pt, "pretrain") if loss == "ar" else (sv, "train_supervised")
+    real = getattr(mod, attr)
 
-    def short(model, archs, cfg, *a, **k):
-        cfg.stop_after_epoch = 1
-        return real(model, archs, cfg, *a, **k)
-    monkeypatch.setattr(pt, "pretrain", short)
-    rep = R3.run(_r3cfg(mini, tmp_path / "H"))
+    def short(*a, **k):
+        a[-1].stop_after_epoch = 1                   # the trainer's configuration
+        return real(*a, **k)
+    monkeypatch.setattr(mod, attr, short)
+    rep = R3.run(_r3cfg(mini, tmp_path / "H", train=dict(TRAIN, loss=loss)))
     for s in ("s0", "s1"):
         t = rep["per_seed"][s]["train"]
         assert t["epochs"] == 2 and t["epochs_run"] == 1 and t["steps"] == 2
         assert len(t["loss_by_epoch"]) == 1
-    A = _patch_adjudicator(monkeypatch, mini, "H")
+    arm = "energy" if loss == "ar" else "labelled"
+    A = _patch_adjudicator(monkeypatch, mini, **{arm: "H"})
     p2b = json.loads((mini / "p2b" / "report.json").read_text())
     with pytest.raises(ValueError, match="trained on"):
         A.check_r3(_stamped(rep), p2b, {"H": rep["provenance"]["config_sha256"]},
-                   _git_describe())
+                   _git_describe(), arm)
 
 
 @pytest.mark.parametrize("which,key", [("fine", "disp_rel_l2"), ("fine", "energy_gap_rel"),
@@ -414,7 +561,10 @@ def test_r3_refusals(mini, tmp_path):
     with pytest.raises(SystemExit, match="warmup_frac"):
         R3.run(_r3cfg(mini, tmp_path / "R2", train=dict(TRAIN, warmup_frac=0.1)))
     with pytest.raises(SystemExit, match="loss"):
-        R3.run(_r3cfg(mini, tmp_path / "R3", train=dict(TRAIN, loss="labels")))
+        R3.run(_r3cfg(mini, tmp_path / "R3", train=dict(TRAIN, loss="jepa")))
+    for k, v in (("weight_decay", 0.0), ("clip", 0.5)):
+        with pytest.raises(SystemExit, match=f"train.{k}"):
+            R3.run(_r3cfg(mini, tmp_path / "R3c", train=dict(TRAIN_L, **{k: v})))
     with pytest.raises(SystemExit, match="loss"):
         R3.run(_r3cfg(mini, tmp_path / "R3b", train=dict(TRAIN, set="inband")))
     with pytest.raises(SystemExit, match="trained"):
@@ -427,7 +577,7 @@ def test_r3_refusals(mini, tmp_path):
     pf.write_text("CONFIG_SHA256[R5] = <fill before tagging>\n")
     with pytest.raises(ValueError, match="unstamped"):
         R3.run(_r3cfg(mini, tmp_path / "R5", prereg_guard=True, prereg_file=str(pf)))
-    assert not any((tmp_path / d).exists() for d in ("R1", "R2", "R3", "R4", "R5"))
+    assert not any((tmp_path / d).exists() for d in ("R1", "R2", "R3", "R3c", "R4", "R5"))
 
 
 def test_r3_dry_run_trains_nothing(mini, tmp_path):
@@ -437,25 +587,40 @@ def test_r3_dry_run_trains_nothing(mini, tmp_path):
     assert not (tmp_path / "D").exists()
 
 
-def test_r3_report_is_what_the_adjudicator_reads(done, mini, monkeypatch):
-    """The miniature's report through adjudicate_fine3d's R3 reader, with the
-    constants set to the miniature's (budget 2, 4 steps, two seeds, 3 + 4
-    evaluation instances): every field the reader needs is there and no
-    reading is left unevaluated."""
-    rep, _ = done
-    A = _patch_adjudicator(monkeypatch, mini, "A")
+def test_r3_reports_are_what_the_adjudicator_reads(done, done_l, mini, monkeypatch):
+    """The miniature's two reports through adjudicate_fine3d's R3 reader, with
+    the constants set to the miniature's (budget 2, 4 steps, two seeds, 3 + 4
+    evaluation instances): every field the reader needs is there, no reading
+    is left unevaluated, the two arms pass as one session, and the labelled
+    arm reads exactly as the recorded labelled fine-tuning."""
+    (e, _), (lab, _) = done, done_l
+    A = _patch_adjudicator(monkeypatch, mini)
     p2b = json.loads((mini / "p2b" / "report.json").read_text())
-    stamped = _stamped(rep)
-    out = A.adjudicate_r3(stamped, p2b, {"A": rep["provenance"]["config_sha256"]},
-                          expected_git=_git_describe())
+    entries = {"A": e["provenance"]["config_sha256"], "L": lab["provenance"]["config_sha256"]}
+    out = A.adjudicate_r3(_stamped(e), _stamped(lab), p2b, entries, expected_git=_git_describe())
     assert set(out["verdicts"]) == {"R3-E", "R3-V"}
     assert all(not v["verdict"].startswith("NOT EVALUATED") for v in out["verdicts"].values())
     rd = out["readings"]
-    assert "not_evaluated" not in rd["amplitude"]
-    for part in ("vs_labelled_ft", "vs_zero_shot", "inband_vs_before"):
-        assert set(rd[part]) == set(FIELD_KEYS)
-        assert all("not_evaluated" not in v["guard"] for v in rd[part].values())
-    assert out["deviations"] == [] and out["notes"] == []
-    assert out["checks"]["seeds"]["s0"]["state_sha256"] == rep["per_seed"]["s0"]["state"]["sha256"]
+    assert all("not_evaluated" not in rd["amplitude"][arm] for arm in ("energy", "labelled"))
+    for part in (rd["vs_labelled"], rd["inband_vs_labelled"], rd["labelled_vs_record"],
+                 rd["energy_vs_record"], *rd["vs_zero_shot"].values(),
+                 *rd["inband_vs_before"].values()):
+        assert set(part) == set(FIELD_KEYS)
+        assert all("not_evaluated" not in v["guard"] for v in part.values())
+    for v in rd["labelled_vs_record"].values():
+        assert v["guard"]["rel_change"] == 0.0 and v["paired_per_seed_rel"] == [0.0, 0.0]
+    assert rd["record_flags"] == [] and out["deviations"] == [] and out["notes"] == []
+    for arm, rep in (("energy", e), ("labelled", lab)):
+        assert out["checks"][arm]["seeds"]["s1"]["state_sha256"] == \
+            rep["per_seed"]["s1"]["state"]["sha256"]
     with pytest.raises(ValueError, match="stamped"):
-        A.adjudicate_r3(rep, p2b, None, expected_git=None)          # the guard was off
+        A.adjudicate_r3(e, _stamped(lab), p2b, None, expected_git=None)     # the guard was off
+    with pytest.raises(ValueError, match="another configuration"):
+        A.adjudicate_r3(_stamped(lab), _stamped(e), p2b, None, expected_git=None)   # swapped
+
+
+def test_the_script_was_renamed():
+    """R3's script runs both arms under its new name (r2); the old name, which
+    an overlay cannot delete, is gone from the checkout."""
+    assert (ROOT / "scripts" / "r3_finetune.py").is_file()
+    assert not (ROOT / "scripts" / "r3_energy_finetune.py").exists()

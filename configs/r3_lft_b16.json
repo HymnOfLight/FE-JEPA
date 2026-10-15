@@ -1,0 +1,37 @@
+{
+ "_comment": "fine3d R3: the Phase-2b AR states fine-tuned with the displacement labels (P3's labelled few-shot fine-tuning run again in the same session: R3's reference) on the first 16 instances of the fine few-shot prefix with the labelled few-shot fine-tuning's schedule; see PREREG_FINE3D.md",
+ "source": {
+  "report": "records/wp8/e2/baseline/report_phase2b.json",
+  "report_sha256": "320b6db5060ecae9f4747327228c7705d30877bece67d09af2f68d6c466f2794",
+  "states_dir": "runs/phase2/e8_states"
+ },
+ "train": {
+  "set": "fine_fewshot_prefix",
+  "n": 16,
+  "loss": "labels",
+  "epochs": 50,
+  "lr": 0.0015,
+  "weight_decay": 0.0001,
+  "clip": 1.0,
+  "warmup_frac": 0.05
+ },
+ "seeds": [
+  0,
+  1,
+  2
+ ],
+ "evaluation": {
+  "fine": 256,
+  "inband": 256,
+  "amplitude": true
+ },
+ "content_check": {
+  "n_fine": 8,
+  "n_inband": 8,
+  "max_rel_dev": 0.001
+ },
+ "out": "runs/fine3d/r3_lft_b16/report.json",
+ "prereg_file": "PREREG_FINE3D.md",
+ "prereg_guard": true,
+ "device": "auto"
+}

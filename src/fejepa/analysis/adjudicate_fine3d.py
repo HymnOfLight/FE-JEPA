@@ -1,14 +1,17 @@
 """Executable adjudication of PREREG_FINE3D (Sec. 5-8): R2a (S on the
 three-dimensional token bottleneck) and R3 (label-free fine-tuning at the
-fine mesh), with the secondary readings.
+fine mesh against labelled fine-tuning run in the same session), with the
+secondary readings.
 
 Inputs: R2a's two reports (`b`: E2's M = 1,024 configuration trained again on
 the fresh seeds 3-5; `s`: the same with S) and, for the mechanism readings
 only, their post-hoc amplitude records (scripts/posthoc_amplitude.py); R3's
-report (scripts/r3_energy_finetune.py); the Phase-2b report (the records
-copy: R3's starting states and reference) and E2's M = 1,024 report (the
-records copy: the corpus, and a reading of the fresh baseline beside the
-seeds E2 trained); the stamped pre-registration's CONFIG_SHA256 lines.
+two reports (scripts/r3_finetune.py: the energy arm and the labelled arm,
+its reference); the Phase-2b report (the records copy: R3's starting states,
+and the recorded labelled fine-tuning beside its re-run) and E2's M = 1,024
+report (the records copy: the corpus, and a reading of the fresh baseline
+beside the seeds E2 trained); the stamped pre-registration's CONFIG_SHA256
+lines.
 
 R2a and R3 are adjudicated independently: whatever makes one of them invalid
 is refused for that one alone (its verdicts read NOT EVALUATED with the
@@ -31,7 +34,10 @@ from .adjudicate_w9 import _soft, config_diff, guard, instance_bootstrap, welch_
 PREREG_NAME = "PREREG_FINE3D.md"
 TAG = "prereg-fine3d"
 R2A_LABELS = {"b": "r2a_b_m1024", "s": "r2a_s_m1024"}
-R3_LABEL = "r3_eft_b16"
+R3_LABELS = {"energy": "r3_eft_b16", "labelled": "r3_lft_b16"}
+R3_LOSS = {"energy": "ar", "labelled": "labels"}
+R3_TRAINER = {"energy": "pretrain", "labelled": "train_supervised"}
+"""R3's two arms: their configurations, losses and trainers."""
 S_KEYS = {("model", "decode_scale"), ("model", "decode_scale_factor"),
           ("model", "features", "load_density")}
 ALLOWED_DIFF_R2A = {("_comment",), ("out",), ("prereg_file",),
@@ -54,10 +60,11 @@ UNINFORMATIVE_RATIO_MIN, UNINFORMATIVE_CSTAR_MIN = 1.5, 1.10
 in-band ratio of seed means is below 1.5, or whose median c* on the fine set
 (the seed mean of each seed's median) is below 1.10, does not show the
 deficit S is meant to remove."""
-R2B_FINE_REL_MAX = -0.5
+R2B_FINE_REL_MAX = -0.4
 """PREREG_FINE3D Sec. 6: R2b is recommended iff R2a is SUPPORTED and S's fine
-displacement error is at most half the fresh baseline's (rel <= -50% in
-condition (i))."""
+displacement error is at most 60% of the fresh baseline's (rel <= -40% in
+condition (i)): from there R2b, on the transformer, is predicted to be
+SUPPORTED more often than not (records/wp9/fine3d/simulations.json, `r2b`)."""
 HIGHER_BETTER = ("crit_recall",)
 RUNTIME_KEYS = ("torch", "gpu", "tf32")
 
@@ -243,7 +250,7 @@ def r2b_recommendation(v: dict) -> dict:
                        f"{R2B_FINE_REL_MAX:+.0%}"}
     return {"recommended": False,
             "why": f"R2a SUPPORTED but S's fine displacement error rel {rel:+.1%} > "
-                   f"{R2B_FINE_REL_MAX:+.0%} (it did not halve)"}
+                   f"{R2B_FINE_REL_MAX:+.0%} (the reduction is below the R2b line)"}
 
 
 def check_amp(amp: dict, rep_sha: str | None) -> None:
@@ -371,7 +378,11 @@ def adjudicate_r2a(b: dict, s: dict, e2: dict, prereg_entries: dict | None = Non
     checks = {"b": check_r2a("b", b, e2, prereg_entries, expected_git, s_factor),
               "s": check_r2a("s", s, e2, prereg_entries, expected_git, s_factor)}
     vb, vs = r2a_values(b), r2a_values(s)
-    verdict = r2a_verdict(vb, vs)
+    try:
+        verdict = r2a_verdict(vb, vs)
+    except ValueError as exc:      # a non-finite value of the fresh baseline: the comparison is void
+        verdict = {"verdict": "NOT EVALUATED: a per-seed value of the fresh baseline is not "
+                              f"finite: the comparison is void ({exc})", "void": True}
     mech = {}
     for role, amp, sha in (("b", amp_b, b_sha256), ("s", amp_s, s_sha256)):
         if amp is None:
@@ -383,7 +394,9 @@ def adjudicate_r2a(b: dict, s: dict, e2: dict, prereg_entries: dict | None = Non
         except Exception as exc:                          # noqa: BLE001
             mech[role] = {"not_evaluated": f"{type(exc).__name__}: {exc}"}
     out = {"verdict": verdict["verdict"], "conditions": verdict, "values": {"b": vb, "s": vs}}
-    if verdict["verdict"] != "SUPPORTED":
+    if verdict.get("void"):
+        out["uninformative_note"] = None
+    elif verdict["verdict"] != "SUPPORTED":
         ok_b = "not_evaluated" not in mech["b"]
         out["uninformative_note"] = _uninformative(vb, mech["b"] if ok_b else None)
         if not ok_b:
@@ -400,7 +413,9 @@ def adjudicate_r2a(b: dict, s: dict, e2: dict, prereg_entries: dict | None = Non
     if diff:
         deviations.append("R2a: the two arms ran with different " + ", ".join(
             f"{k} ({checks['b'][k]!r} / {checks['s'][k]!r})" for k in diff))
-    out.update({"r2b": r2b_recommendation(verdict), "robustness": r2a_robustness(b, s),
+    out.update({"r2b": ({"recommended": False, "why": "R2a not evaluated"}
+                        if verdict.get("void") else r2b_recommendation(verdict)),
+                "robustness": r2a_robustness(b, s),
                 "comparisons": r2a_comparisons(b, s), "fresh_baseline_vs_e2": e2_reading(b, e2),
                 "mechanism": mech, "checks": checks, "deviations": deviations})
     return out
@@ -409,91 +424,136 @@ def adjudicate_r2a(b: dict, s: dict, e2: dict, prereg_entries: dict | None = Non
 # -------------------------------------------------------------------- R3 --
 
 def check_r3(rep: dict, p2b: dict, prereg_entries: dict | None,
-             expected_git: str | None) -> dict:
-    """Refuse an R3 report that is not what PREREG_FINE3D stamped."""
+             expected_git: str | None, arm: str = "energy") -> dict:
+    """Refuse an R3 report that is not what PREREG_FINE3D stamped for `arm`
+    ('energy' or 'labelled')."""
+    label = R3_LABELS[arm]
     pr = rep.get("prereg") or {}
     prov = rep["provenance"]
     if not pr.get("config_sha256") or pr["config_sha256"] != prov.get("config_sha256") \
             or Path(str(pr.get("file", ""))).name != PREREG_NAME:
-        raise ValueError("the R3 report is not a stamped, guard-verified run of "
+        raise ValueError(f"the R3 {arm} report is not a stamped, guard-verified run of "
                          f"{PREREG_NAME}")
-    if prereg_entries is not None and prereg_entries.get(R3_LABEL) != pr["config_sha256"]:
-        raise ValueError(f"the R3 report's verified hash is not PREREG_FINE3D's "
-                         f"CONFIG_SHA256[{R3_LABEL}]")
-    if Path(rep["config"]["out"]).parent.name != R3_LABEL:
-        raise ValueError("the R3 report is another configuration's")
+    if prereg_entries is not None and prereg_entries.get(label) != pr["config_sha256"]:
+        raise ValueError(f"the R3 {arm} report's verified hash is not PREREG_FINE3D's "
+                         f"CONFIG_SHA256[{label}]")
+    cfg = rep["config"]
+    if Path(cfg["out"]).parent.name != label or cfg["train"].get("loss") != R3_LOSS[arm]:
+        raise ValueError(f"the R3 {arm} report is another configuration's "
+                         f"({Path(cfg['out']).parent.name}, loss {cfg['train'].get('loss')!r})")
     if expected_git is not None and prov.get("git") != expected_git:
-        raise ValueError(f"the R3 report ran on {prov.get('git')!r}, not {expected_git!r}")
+        raise ValueError(f"the R3 {arm} report ran on {prov.get('git')!r}, not "
+                         f"{expected_git!r}")
     if prov.get("source_report_sha256") != PHASE2B_REPORT_SHA256:
-        raise ValueError("the R3 report started from another source report")
+        raise ValueError(f"the R3 {arm} report started from another source report")
     if [int(s) for s in prov.get("seeds") or ()] != R3_SEEDS or sorted(rep["per_seed"]) != \
             [f"s{s}" for s in R3_SEEDS]:
-        raise ValueError(f"the R3 report's seeds are {prov.get('seeds')}, not {R3_SEEDS}")
+        raise ValueError(f"the R3 {arm} report's seeds are {prov.get('seeds')}, not {R3_SEEDS}")
     if {d.get("manifest_sha256") for d in prov.get("datasets") or ()} != \
             {d.get("manifest_sha256") for d in p2b["provenance"]["datasets"]}:
-        raise ValueError("the R3 report ran on another corpus")
+        raise ValueError(f"the R3 {arm} report ran on another corpus")
     rec = p2b["results"]["e8"]["metrics"]["d9_restart"]["ar_states"]
-    cfg = rep["config"]
     p3 = p2b["config"]["experiments"]["p3_transfer"]
     epochs = int(p3["fewshot_epochs"])
     if int(cfg["train"]["epochs"]) != epochs or \
             float(cfg["train"]["lr"]) != float(p3["fewshot_lr"]) or \
             int(cfg["train"]["n"]) != R3_TRAIN_N:
-        raise ValueError(f"the R3 schedule is not the labelled few-shot fine-tuning's at "
+        raise ValueError(f"the R3 {arm} schedule is not the labelled few-shot fine-tuning's at "
                          f"{R3_TRAIN_N}")
     out = {"config_sha256": prov.get("config_sha256"), "git": prov.get("git"), "seeds": {}}
     for s in R3_SEEDS:
         r = rep["per_seed"][f"s{s}"]
         t = r["train"]
         if r["source_state"]["sha256"] != rec[f"s{s}"]["sha256"]:
-            raise ValueError(f"R3 seed {s} did not start from the Phase-2b state")
+            raise ValueError(f"R3 {arm} seed {s} did not start from the Phase-2b state")
         if r["content_check"]["passed"] is not True:
-            raise ValueError(f"R3 seed {s}'s content check did not pass")
+            raise ValueError(f"R3 {arm} seed {s}'s content check did not pass")
         if r.get("git") != prov.get("git") or r.get("config_sha256") != prov.get("config_sha256"):
-            raise ValueError(f"R3 seed {s} ran on {r.get('git')!r} with configuration "
+            raise ValueError(f"R3 {arm} seed {s} ran on {r.get('git')!r} with configuration "
                              f"{str(r.get('config_sha256'))[:12]}, not the report's")
+        if t.get("loss") != R3_LOSS[arm] or t.get("trainer") != R3_TRAINER[arm]:
+            raise ValueError(f"R3 {arm} seed {s} trained with loss {t.get('loss')!r} and "
+                             f"{t.get('trainer')!r}, not {R3_LOSS[arm]!r} and "
+                             f"{R3_TRAINER[arm]!r}")
         if int(t.get("seed", -1)) != s:
-            raise ValueError(f"R3 seed {s} trained with the seed {t.get('seed')!r}")
+            raise ValueError(f"R3 {arm} seed {s} trained with the seed {t.get('seed')!r}")
         if t["files"] != R3_TRAIN_FILES or int(t["steps"]) != R3_STEPS or \
                 int(t.get("epochs_run", -1)) != epochs or \
                 len(t.get("loss_by_epoch") or ()) != epochs:
-            raise ValueError(f"R3 seed {s} trained on {t['files'][:2]}... for {t['steps']} "
-                             f"steps ({t.get('epochs_run')} epochs), not the first {R3_TRAIN_N} "
-                             f"of the fine few-shot prefix for {R3_STEPS} steps")
+            raise ValueError(f"R3 {arm} seed {s} trained on {t['files'][:2]}... for "
+                             f"{t['steps']} steps ({t.get('epochs_run')} epochs), not the first "
+                             f"{R3_TRAIN_N} of the fine few-shot prefix for {R3_STEPS} steps")
         for name, n in (("fine", N_FINE), ("inband", N_INBAND)):
             per = (r.get(name) or {}).get("per_instance") or {}
             if any(len(per.get(m) or ()) != n for m in FIELD_KEYS):
-                raise ValueError(f"R3 seed {s}'s {name} evaluation does not hold "
+                raise ValueError(f"R3 {arm} seed {s}'s {name} evaluation does not hold "
                                  f"per-instance values for its {n} instances")
         out["seeds"][f"s{s}"] = {"state_sha256": r["state"]["sha256"],
                                  "content_check": r["content_check"]["max_rel_dev"],
                                  "resumed_from_epoch": t.get("resumed_from_epoch"),
                                  "from_disk": bool(r.get("from_disk")),
                                  "order_sha256": t.get("order_sha256"),
+                                 "machines": _machines(r.get("machine")),
                                  "seconds": r.get("seconds")}
     out.update(_runtime(rep))
-    out["reference_runtime"] = _runtime(p2b)
     return out
 
 
-def labelled_ft(p2b: dict) -> dict:
-    """The labelled few-shot fine-tuning at 16 (P3, seeds 0-2): R3's reference."""
+def _machines(m) -> list:
+    """A seed's machines (host, GPU driver) at its start and its end."""
+    if isinstance(m, dict) and set(m) == {"start", "end"}:
+        return [m["start"], m["end"]]
+    return [m]
+
+
+def check_r3_pair(ce: dict, cl: dict) -> list:
+    """The two arms as one session: the same code and the same recorded epoch
+    orders per seed (the orders each seed determines; refused otherwise).
+    Returns the deviations: another torch, GPU or TF32 setting between the
+    arms, or seeds run on more than one machine (host, GPU driver)."""
+    if ce["git"] != cl["git"]:
+        raise ValueError(f"R3's arms ran on different code ({ce['git']!r} / {cl['git']!r})")
+    for s in R3_SEEDS:
+        if ce["seeds"][f"s{s}"]["order_sha256"] != cl["seeds"][f"s{s}"]["order_sha256"]:
+            raise ValueError(f"R3's arms recorded different epoch orders for seed {s}")
+    diff = [k for k in RUNTIME_KEYS if ce[k] != cl[k]]
+    dev = ([f"R3: the two arms ran with different " + ", ".join(
+        f"{k} ({ce[k]!r} / {cl[k]!r})" for k in diff)] if diff else [])
+    machines = {json.dumps(m, sort_keys=True)
+                for c in (ce, cl) for s in R3_SEEDS for m in c["seeds"][f"s{s}"]["machines"]}
+    if len(machines) > 1:
+        dev.append("R3: the seeds of the two arms ran on more than one machine: "
+                   + "; ".join(sorted(machines)))
+    return dev
+
+
+def recorded_ft(p2b: dict) -> dict:
+    """The labelled few-shot fine-tuning at 16 as the Phase-2b report records
+    it (P3, seeds 0-2): the run R3's labelled arm repeats."""
     return p2b["results"]["p3_transfer"]["metrics"]["fewshot"][str(R3_TRAIN_N)]["finetune"]
 
 
 def r3_cell(rep: dict, which: str) -> dict:
-    """R3's evaluations as a cell (per_seed_eval in seed order)."""
+    """An R3 arm's evaluations as a cell (per_seed_eval in seed order)."""
     return {"per_seed_eval": [rep["per_seed"][f"s{s}"][which] for s in R3_SEEDS]}
 
 
-def r3_verdicts(rep: dict, p2b: dict) -> dict:
+def r3_verdicts(energy: dict, labelled: dict) -> dict:
     """PREREG_FINE3D Sec. 6, R3-E and R3-V: the energy-fine-tuned networks'
     fine energy gap / von Mises error lower than the labelled-fine-tuned
-    networks' beyond the guard."""
-    ref, new = labelled_ft(p2b), r3_cell(rep, "fine")
+    networks' of the same session beyond the guard. A non-finite per-seed
+    value of the energy arm fails its verdict (diverged); one of the labelled
+    arm voids that verdict (NOT EVALUATED), and the other still stands."""
+    ref, new = r3_cell(labelled, "fine"), r3_cell(energy, "fine")
     out = {}
     for name, metric in (("R3-E", "energy_gap_rel"), ("R3-V", "vm_rel_l2")):
-        g = guard(seed_means(ref, metric), seed_means(new, metric))
+        base = seed_means(ref, metric)
+        if not all(math.isfinite(v) for v in base):
+            out[name] = {"metric": metric,
+                         "verdict": f"NOT EVALUATED: the labelled arm's per-seed {metric} "
+                                    f"{base} is not finite: the comparison is void"}
+            continue
+        g = guard(base, seed_means(new, metric))
         out[name] = {"metric": metric, "guard": g,
                      "verdict": "SUPPORTED" if g["lower"] else
                      ("NOT SUPPORTED (diverged)" if g["diverged"] else
@@ -508,50 +568,73 @@ def _amp_readings(rep: dict) -> dict:
             for name in ("fine", "inband")}
 
 
-def r3_readings(rep: dict, p2b: dict) -> dict:
-    ref, new = labelled_ft(p2b), r3_cell(rep, "fine")
-    zs = p3_cell(p2b, "fine")
-    before_in = e8_cell(p2b)
-    after_in = r3_cell(rep, "inband")
-    out = {"vs_labelled_ft": {}, "vs_zero_shot": {}, "inband_vs_before": {}}
+def _compare(ref: dict, new: dict, paired: bool = False) -> dict:
+    """Every metric, `new` against `ref`, with the guard (and, for two arms of
+    the same seeds, the paired per-seed relative differences)."""
+    out = {}
     for m in FIELD_KEYS:
         g = _soft(guard, seed_means(ref, m), seed_means(new, m))
-        out["vs_labelled_ft"][m] = {"guard": g, "energy_ft_is": _direction(g, m),
-                                    "paired_per_seed_rel": [
-                                        float(n / r - 1) for r, n in
-                                        zip(seed_means(ref, m), seed_means(new, m), strict=True)]}
-        g = _soft(guard, seed_means(zs, m), seed_means(new, m))
-        out["vs_zero_shot"][m] = {"guard": g, "energy_ft_is": _direction(g, m)}
-        g = _soft(guard, seed_means(before_in, m), seed_means(after_in, m))
-        out["inband_vs_before"][m] = {"guard": g, "after_is": _direction(g, m)}
-    fine_d, in_d = seed_means(new, "disp_rel_l2"), seed_means(after_in, "disp_rel_l2")
-    out["fine_over_inband_disp_ratio_per_seed"] = ratio_per_seed(fine_d, in_d)
-    out["amplitude"] = _soft(_amp_readings, rep)
+        out[m] = {"guard": g, "new_is": _direction(g, m)}
+        if paired:                                  # None where either value is not finite
+            out[m]["paired_per_seed_rel"] = _soft(lambda: [
+                float(n / r - 1) if math.isfinite(n) and math.isfinite(r) and r else None
+                for r, n in zip(seed_means(ref, m), seed_means(new, m), strict=True)])
+    return out
+
+
+def r3_readings(energy: dict, labelled: dict, p2b: dict) -> dict:
+    """PREREG_FINE3D Sec. 7: secondary readings, no verdict."""
+    ef, lf = r3_cell(energy, "fine"), r3_cell(labelled, "fine")
+    ei, li = r3_cell(energy, "inband"), r3_cell(labelled, "inband")
+    out = {"vs_labelled": _compare(lf, ef, paired=True),
+           "inband_vs_labelled": _compare(li, ei, paired=True),
+           "vs_zero_shot": {"energy": _compare(p3_cell(p2b, "fine"), ef),
+                            "labelled": _compare(p3_cell(p2b, "fine"), lf)},
+           "inband_vs_before": {"energy": _compare(e8_cell(p2b), ei),
+                                "labelled": _compare(e8_cell(p2b), li)},
+           "labelled_vs_record": _compare(recorded_ft(p2b), lf, paired=True),
+           "energy_vs_record": _compare(recorded_ft(p2b), ef, paired=True)}
+    out["record_flags"] = [
+        f"{m}: the labelled arm is {'lower' if v['guard']['lower'] else 'higher'} than the "
+        f"recorded labelled fine-tuning beyond the guard (rel {v['guard']['rel_change']:+.1%})"
+        for m, v in out["labelled_vs_record"].items()
+        if "not_evaluated" not in v["guard"] and not v["guard"].get("diverged")
+        and (v["guard"]["lower"] or v["guard"]["worse"])]
+    out["fine_over_inband_disp_ratio_per_seed"] = {
+        name: _soft(ratio_per_seed, seed_means(f, "disp_rel_l2"), seed_means(i, "disp_rel_l2"))
+        for name, f, i in (("energy", ef, ei), ("labelled", lf, li))}
+    out["amplitude"] = {"energy": _soft(_amp_readings, energy),
+                        "labelled": _soft(_amp_readings, labelled)}
     rob = {}
     for name, metric in (("R3-E", "energy_gap_rel"), ("R3-V", "vm_rel_l2")):
-        rob[name] = {"medians": _soft(guard, seed_medians(ref, metric), seed_medians(new, metric)),
-                     "welch_95": _soft(welch_interval, seed_means(ref, metric),
-                                       seed_means(new, metric)),
-                     "instance_resampling_95": _soft(instance_bootstrap, per_instance(ref, metric),
-                                                     per_instance(new, metric))}
+        rob[name] = {"medians": _soft(guard, seed_medians(lf, metric), seed_medians(ef, metric)),
+                     "welch_95": _soft(welch_interval, seed_means(lf, metric),
+                                       seed_means(ef, metric)),
+                     "instance_resampling_95": _soft(instance_bootstrap, per_instance(lf, metric),
+                                                     per_instance(ef, metric))}
     out["robustness"] = rob
     return out
 
 
-def adjudicate_r3(rep: dict, p2b: dict, prereg_entries: dict | None = None,
+def adjudicate_r3(energy: dict, labelled: dict, p2b: dict, prereg_entries: dict | None = None,
                   expected_git: str | None = TAG) -> dict:
-    checks = check_r3(rep, p2b, prereg_entries, expected_git)
-    v = r3_verdicts(rep, p2b)
-    dev = [f"R3 seed {s}: resumed from epoch {c['resumed_from_epoch']}"
-           for s, c in checks["seeds"].items() if c["resumed_from_epoch"]]
-    dev += [f"R3 seed {s}: taken from an earlier attempt's result on disk"
-            for s, c in checks["seeds"].items() if c["from_disk"]]
-    diff = [k for k in RUNTIME_KEYS if checks[k] != checks["reference_runtime"][k]]
-    notes = ([f"R3 ran with another {', '.join(diff)} than the reference "
-              f"({ {k: checks[k] for k in diff} } against "
-              f"{ {k: checks['reference_runtime'][k] for k in diff} })"] if diff else [])
-    return {"verdicts": v, "readings": r3_readings(rep, p2b), "checks": checks,
-            "deviations": dev, "notes": notes}
+    checks = {"energy": check_r3(energy, p2b, prereg_entries, expected_git, "energy"),
+              "labelled": check_r3(labelled, p2b, prereg_entries, expected_git, "labelled")}
+    dev = check_r3_pair(checks["energy"], checks["labelled"])
+    for arm, c in checks.items():
+        dev += [f"R3 {arm} seed {s}: resumed from epoch {x['resumed_from_epoch']}"
+                for s, x in c["seeds"].items() if x["resumed_from_epoch"]]
+        dev += [f"R3 {arm} seed {s}: taken from an earlier attempt's result on disk"
+                for s, x in c["seeds"].items() if x["from_disk"]]
+    ref = _runtime(p2b)
+    diff = [k for k in RUNTIME_KEYS if checks["labelled"][k] != ref[k]]
+    notes = ([f"R3 ran with another {', '.join(diff)} than the recorded labelled fine-tuning "
+              f"({ {k: checks['labelled'][k] for k in diff} } against "
+              f"{ {k: ref[k] for k in diff} })"] if diff else [])
+    readings = r3_readings(energy, labelled, p2b)
+    notes += readings["record_flags"]
+    return {"verdicts": r3_verdicts(energy, labelled), "readings": readings, "checks": checks,
+            "reference_runtime": ref, "deviations": dev, "notes": notes}
 
 
 # ------------------------------------------------------------------ both --
@@ -560,10 +643,10 @@ def adjudicate_fine3d(r2a: dict | None, r3: dict | None, p2b: dict, e2: dict,
                       prereg_entries: dict | None = None, expected_git: str | None = TAG,
                       s_factor: float | None = None, missing: dict | None = None) -> dict:
     """`r2a`: {"b": report, "s": report, "amp_b"?, "amp_s"?, "b_sha256"?,
-    "s_sha256"?} or None; `r3`: R3's report or None; `missing`: why a part
-    has no input (from the script). Each part is adjudicated on its own; a
-    refusal, or any error while reading a part, leaves only that part NOT
-    EVALUATED."""
+    "s_sha256"?} or None; `r3`: {"energy": report, "labelled": report} or None;
+    `missing`: why a part has no input (from the script). Each part is
+    adjudicated on its own; a refusal, or any error while reading a part,
+    leaves only that part NOT EVALUATED."""
     missing = missing or {}
     out = {"prereg": PREREG_NAME, "tag": expected_git}
     if r2a is None:
@@ -578,12 +661,13 @@ def adjudicate_fine3d(r2a: dict | None, r3: dict | None, p2b: dict, e2: dict,
             out["R2a"] = {"verdict": f"NOT EVALUATED: refused: {type(exc).__name__}: {exc}",
                           "r2b": {"recommended": False, "why": "R2a not evaluated"}}
     if r3 is None:
-        why = missing.get("R3", "no R3 report")
+        why = missing.get("R3", "no R3 reports")
         out["R3"] = {"verdicts": {k: {"verdict": "NOT EVALUATED: " + why}
                                   for k in ("R3-E", "R3-V")}}
     else:
         try:
-            out["R3"] = adjudicate_r3(r3, p2b, prereg_entries, expected_git)
+            out["R3"] = adjudicate_r3(r3["energy"], r3["labelled"], p2b, prereg_entries,
+                                      expected_git)
         except Exception as exc:                          # noqa: BLE001
             out["R3"] = {"verdicts": {k: {"verdict": f"NOT EVALUATED: refused: "
                                                      f"{type(exc).__name__}: {exc}"}

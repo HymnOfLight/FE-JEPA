@@ -2,7 +2,8 @@
 """fine3d: adjudicate PREREG_FINE3D (Sec. 8) from the box's return.
 
 R2a reads its two reports and, for the mechanism readings, the post-hoc
-amplitude records; R3 reads its report. The Phase-2b report and E2's
+amplitude records; R3 reads its two reports (the energy arm and the labelled
+arm, its reference). The Phase-2b report and E2's
 M = 1,024 report are the records copies, each checked by SHA-256; the stamped
 CONFIG_SHA256 lines are read from PREREG_FINE3D.md, and every report must have
 run on the tag. A part whose report is not given, not in the return or not
@@ -11,13 +12,14 @@ amplitude record leaves the mechanism readings unevaluated). The verdict file
 records the inputs' SHA-256, the session's attempts (with `--status`), and the
 adjudicating code: its `git describe`, its files' SHA-256 and whether they and
 the pre-registration read are the tag's. A difference, a tag that cannot be
-read, a footer that does not verify, a missing status file, repeated or
-missing steps are deviations; "deviations" holds them with R2a's and R3's own.
+read, a footer that does not verify, a status file not given or not in the
+return, repeated or missing steps are deviations; "deviations" holds them with R2a's and R3's own.
 
     python scripts/adjudicate_fine3d.py \
         --r2a-b <return>/r2a_b_m1024/report.json --r2a-s <return>/r2a_s_m1024/report.json \
         --amp-b <return>/posthoc/amp_r2a_b_m1024.json --amp-s <return>/posthoc/amp_r2a_s_m1024.json \
-        --r3 <return>/r3_eft_b16/report.json --status <return>/session/status.txt \
+        --r3 <return>/r3_eft_b16/report.json --r3-labelled <return>/r3_lft_b16/report.json \
+        --status <return>/session/status.txt \
         --out records/wp9/fine3d/fine3d_verdict.json
 """
 from __future__ import annotations
@@ -46,7 +48,8 @@ ADJ_FILES = ("src/fejepa/analysis/adjudicate_fine3d.py", "src/fejepa/analysis/ad
 """The adjudicating code and what it reads here (S's factor): compared with
 the tag's copies; the pre-registration read is compared with the tag's
 PREREG_FINE3D.md."""
-STEPS = ("r2a_b_m1024", "r2a_s_m1024", "amp_r2a_b_m1024", "amp_r2a_s_m1024", "r3_eft_b16")
+STEPS = ("r2a_b_m1024", "r2a_s_m1024", "amp_r2a_b_m1024", "amp_r2a_s_m1024", "r3_eft_b16",
+         "r3_lft_b16")
 
 
 def _sha256(path) -> str:
@@ -105,6 +108,18 @@ def code_deviations(rec: dict, prereg) -> list:
     return dev
 
 
+def strict(o):
+    """The verdict file as strict JSON: a non-finite float becomes null (the
+    verdicts and readings that read it say so in words)."""
+    if isinstance(o, float):
+        return o if o == o and o not in (float("inf"), float("-inf")) else None
+    if isinstance(o, dict):
+        return {k: strict(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [strict(v) for v in o]
+    return o
+
+
 def attempts(status_text: str) -> dict:
     """{step: number of attempts} from the session's status file."""
     out = {}
@@ -125,7 +140,8 @@ def main() -> None:
     ap.add_argument("--r2a-s", default=None)
     ap.add_argument("--amp-b", default=None)
     ap.add_argument("--amp-s", default=None)
-    ap.add_argument("--r3", default=None)
+    ap.add_argument("--r3", default=None, help="R3's energy arm (r3_eft_b16)")
+    ap.add_argument("--r3-labelled", default=None, help="R3's labelled arm (r3_lft_b16)")
     ap.add_argument("--status", default=None, help="the session's status.txt (attempts)")
     ap.add_argument("--phase2b", default=str(ROOT / PHASE2B))
     ap.add_argument("--e2", default=str(ROOT / E2_M1024))
@@ -161,6 +177,11 @@ def main() -> None:
         rec, why = read(p)
         return rec if why is None else {"unreadable": why}
 
+    def absent(*given):
+        """What is missing, from (flag, path, present) triples."""
+        return ", ".join(f"{p} is not in the return" if p else f"{flag} was not given"
+                         for flag, p, ok in given if not ok)
+
     missing = {}
     r2a = None
     b, s = present(a.r2a_b), present(a.r2a_s)
@@ -172,15 +193,19 @@ def main() -> None:
             r2a = {"b": rb, "s": rs, "b_sha256": _sha256(b), "s_sha256": _sha256(s),
                    "amp_b": amp(a.amp_b), "amp_s": amp(a.amp_s)}
     else:
-        missing["R2a"] = ("R2a needs both reports; not in the return: "
-                          + ", ".join(str(p) for p, q in ((a.r2a_b, b), (a.r2a_s, s)) if not q))
+        missing["R2a"] = "R2a needs both reports: " + absent(("--r2a-b", a.r2a_b, b),
+                                                              ("--r2a-s", a.r2a_s, s))
     r3 = None
-    if present(a.r3):
-        r3, why = read(a.r3)
-        if why:
-            missing["R3"] = why
+    e, lab = present(a.r3), present(a.r3_labelled)
+    if e and lab:
+        (re_, we), (rl, wl) = read(e), read(lab)
+        if we or wl:
+            missing["R3"] = "; ".join(w for w in (we, wl) if w)
+        else:
+            r3 = {"energy": re_, "labelled": rl}
     else:
-        missing["R3"] = f"R3's report is not in the return ({a.r3})"
+        missing["R3"] = "R3 needs both arms' reports: " + absent(
+            ("--r3", a.r3, e), ("--r3-labelled", a.r3_labelled, lab))
     res = adjudicate_fine3d(r2a, r3, load_json(a.phase2b), load_json(a.e2), entries,
                             a.expected_git or None, s_factor, missing)
     rec = adjudicator_record(Path(a.prereg), TAG)
@@ -195,21 +220,25 @@ def main() -> None:
         else:
             res["attempts"] = None
             dev.append(f"the session's status file is not in the return ({a.status})")
+    else:
+        res["attempts"] = None
+        dev.append("the session's status file was not given (--status)")
     res["session_and_code_deviations"] = dev
     res["deviations"] = (dev + list(res["R2a"].get("deviations") or [])
                          + list(res["R3"].get("deviations") or []))
     res["notes"] = list(res["R3"].get("notes") or [])
     res["inputs"] = {str(p): _sha256(p) for p in (a.r2a_b, a.r2a_s, a.amp_b, a.amp_s, a.r3,
+                                                  a.r3_labelled,
                                                   a.status, a.phase2b, a.e2, a.prereg)
                      if present(p)}
-    text = json.dumps(res, indent=1)
+    text = json.dumps(strict(res), indent=1, allow_nan=False)
     if a.out:
         Path(a.out).parent.mkdir(parents=True, exist_ok=True)
         Path(a.out).write_text(text + "\n")
     summary = {"R2a": res["R2a"].get("verdict"), "R2b": res["R2a"].get("r2b"),
                "R3": {k: v.get("verdict") for k, v in res["R3"]["verdicts"].items()},
                "deviations": res["deviations"], "notes": res["notes"]}
-    print(json.dumps(summary, indent=1))
+    print(json.dumps(strict(summary), indent=1, allow_nan=False))
 
 
 if __name__ == "__main__":

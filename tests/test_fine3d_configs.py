@@ -1,7 +1,8 @@
-"""fine3d (PREREG_FINE3D Sec. 2-3): the three configurations are the
+"""fine3d (PREREG_FINE3D Sec. 2-3): the four configurations are the
 generator's; R2a's differ from E2's stamped M = 1,024 configuration only in
-the keys Sec. 2 names, S's factor is the scale-factor record's, and R3's
-schedule is the labelled few-shot fine-tuning's in the Phase-2b report."""
+the keys Sec. 2 names, S's factor is the scale-factor record's, R3's schedule
+is the labelled few-shot fine-tuning's in the Phase-2b report, and R3's two
+arms differ only in their objective, output directory and comment."""
 
 import importlib.util
 import json
@@ -33,7 +34,7 @@ def test_the_committed_configurations_are_the_generators():
     r = subprocess.run([sys.executable, str(ROOT / "scripts" / "make_fine3d_configs.py"),
                         "--check"], capture_output=True, text=True, cwd=ROOT)
     assert r.returncode == 0, r.stderr[-2000:]
-    assert list(_gen().ARMS) == ["r2a_b_m1024", "r2a_s_m1024", "r3_eft_b16"]
+    assert list(_gen().ARMS) == ["r2a_b_m1024", "r2a_s_m1024", "r3_eft_b16", "r3_lft_b16"]
 
 
 def test_the_generator_refuses_another_base(tmp_path, monkeypatch):
@@ -81,11 +82,13 @@ def test_s_factor_is_the_records_power_of_two():
     assert sf.factor_of(0.0151) == 1 / 64                     # wp9's rule in 2D
 
 
-def test_r3_schedule_is_the_labelled_fine_tunings():
+@pytest.mark.parametrize("arm,loss", [("r3_eft_b16", "ar"), ("r3_lft_b16", "labels")])
+def test_r3_schedule_is_the_labelled_fine_tunings(arm, loss):
     g = _gen()
     rep = json.loads((ROOT / g.PHASE2B_REPORT).read_text())
     p3 = rep["config"]["experiments"]["p3_transfer"]
-    c = _cfg("r3_eft_b16")
+    c = _cfg(arm)
+    assert c["train"]["loss"] == loss
     assert c["train"]["epochs"] == p3["fewshot_epochs"] == 50
     assert c["train"]["lr"] == p3["fewshot_lr"] == 1.5e-3
     assert c["train"]["n"] == 16 and 16 in p3["fewshot_budgets"]
@@ -98,8 +101,14 @@ def test_r3_schedule_is_the_labelled_fine_tunings():
     assert c["seeds"] == rep["provenance"]["seeds"] == [0, 1, 2]
     assert c["source"]["report_sha256"] == g.PHASE2B_REPORT_SHA256
     assert c["evaluation"] == {"fine": 256, "inband": 256, "amplitude": True}
-    assert c["out"] == "runs/fine3d/r3_eft_b16/report.json"
+    assert c["out"] == f"runs/fine3d/{arm}/report.json"
     assert c["prereg_file"] == "PREREG_FINE3D.md" and c["prereg_guard"] is True
+
+
+def test_r3_arms_differ_only_in_their_objective():
+    e, lab = _cfg("r3_eft_b16"), _cfg("r3_lft_b16")
+    assert sorted(config_diff(e, lab)) == [("_comment",), ("out",), ("train", "loss")]
+    assert config_sha256(e) != config_sha256(lab)
 
 
 def test_r2a_configurations_pass_the_runners_checks():

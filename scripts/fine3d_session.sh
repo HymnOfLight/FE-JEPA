@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# fine3d session (PREREG_FINE3D Sec. 8; RUNBOOK_FINE3D Sec. 2). From the repository root:
+# fine3d session (PREREG_FINE3D Sec. 8; RUNBOOK_FINE3D Sec. 1). From the repository root:
 #   bash scripts/fine3d_session.sh
 # Steps, in order: R2a's fresh baseline and S (run-config), the post-hoc amplitude
-# pass on each (wp8 4e, --remesh 16), then R3 (scripts/r3_energy_finetune.py).
-# A step whose output is complete is skipped; an R2a run with states but no report
-# restarts with --reuse-states (D9, recorded in its report); R3 resumes by itself.
+# pass on each (wp8 4e, --remesh 16), then R3's energy arm and its labelled arm
+# (scripts/r3_finetune.py; the labelled arm only once the energy arm's report is
+# complete: R3 needs both). A step whose output is complete is skipped; an R2a
+# run with states but no report restarts with --reuse-states (D9, recorded in
+# its report); an R3 arm resumes by itself.
 # A failed step does not stop the next one. Every attempt keeps its log
 # (<step>.log.<time>), and status.txt time-stamps each attempt. Before every step
 # the checkout must still be the tag, unmodified: `git describe --always --dirty
@@ -92,19 +94,30 @@ PY
       --states-dir "runs/fine3d/$name/e8_states" --remesh 16 --out "$out"
 }
 
+r3_done() {
+  # an R3 arm's report with all three seeds
+  [ -f "runs/fine3d/$1/report.json" ] && python -c 'import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if sorted(d.get("per_seed", {})) == ["s0", "s1", "s2"] else 1)' \
+      "runs/fine3d/$1/report.json" 2>/dev/null
+}
+
 r3() {
-  local rep="runs/fine3d/r3_eft_b16/report.json"
-  code_ok r3_eft_b16 || return 1
-  if [ -f "$rep" ] && python -c 'import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if sorted(d.get("per_seed", {})) == ["s0", "s1", "s2"] else 1)' \
-      "$rep" 2>/dev/null; then
-    echo "r3_eft_b16: report exists, skipped" | tee -a "$P/status.txt"; return 0
+  # $1 the arm; $2 (optional) the arm whose complete report it needs first
+  local name=$1 need=${2:-}
+  code_ok "$name" || return 1
+  if r3_done "$name"; then
+    echo "$name: report exists, skipped" | tee -a "$P/status.txt"; return 0
   fi
-  run r3_eft_b16.log python scripts/r3_energy_finetune.py configs/r3_eft_b16.json
+  if [ -n "$need" ] && ! r3_done "$need"; then
+    echo "$name: not run, $need has no complete report (R3 needs both arms)" \
+      | tee -a "$P/status.txt"; return 1
+  fi
+  run "$name.log" python scripts/r3_finetune.py "configs/$name.json"
 }
 
 r2a r2a_b_m1024
 r2a r2a_s_m1024
 amp r2a_b_m1024
 amp r2a_s_m1024
-r3
+r3 r3_eft_b16
+r3 r3_lft_b16 r3_eft_b16
 cat "$P/status.txt"

@@ -122,6 +122,7 @@ def train_supervised(model, train_archs, val_archs, cfg: SupervisedConfig,
         (cfg.log_every or max(1, total_steps // 10))
 
     balance_scale_sum, balance_n = None, 0
+    history = {"loss": []}     # wp9 Stage 2 (fine3d R3): the last step's loss per epoch
     step = 0
     start_epoch = 0
     if cfg.ckpt_path and cfg.resume:
@@ -133,6 +134,7 @@ def train_supervised(model, train_archs, val_archs, cfg: SupervisedConfig,
             start_epoch, step, extra = ck
             balance_scale_sum = extra.get("balance_scale_sum")
             balance_n = int(extra.get("balance_n", 0))
+            history = extra.get("history", history)
             print(f"[ckpt] resumed {cfg.desc or 'supervised'} at epoch "
                   f"{start_epoch}/{cfg.epochs} (step {step})", flush=True)
     resumed_from = start_epoch if start_epoch else None
@@ -174,6 +176,7 @@ def train_supervised(model, train_archs, val_archs, cfg: SupervisedConfig,
                 print(f"[sup:{cfg.anchor_mode}{tag}] step {step}/{total_steps} "
                       f"({100.0 * step / total_steps:.0f}%) disp={float(disp):.4f}",
                       flush=True)
+        history["loss"].append(float(disp.detach()))
         due = (cfg.ckpt_path and (_epoch + 1) % max(1, cfg.ckpt_every_epochs) == 0
                and (last_ckpt_t is None or _epoch + 1 == cfg.epochs
                     or _time.monotonic() - last_ckpt_t >= cfg.ckpt_min_interval_s))
@@ -184,7 +187,7 @@ def train_supervised(model, train_archs, val_archs, cfg: SupervisedConfig,
                                   step=step, model=model, opt=opt, sched=sched,
                                   rng=rng,
                                   extra={"balance_scale_sum": balance_scale_sum,
-                                         "balance_n": balance_n})
+                                         "balance_n": balance_n, "history": history})
             last_ckpt_t = _time.monotonic()
         if cfg.stop_after_epoch is not None and _epoch + 1 >= cfg.stop_after_epoch:
             break                              # simulated interruption (tests)
@@ -196,4 +199,5 @@ def train_supervised(model, train_archs, val_archs, cfg: SupervisedConfig,
         out["balance_scale_mean"] = float(balance_scale_sum) / balance_n
     if resumed_from is not None:
         out["resumed_from_epoch"] = int(resumed_from)          # R10 provenance
+    out["history"] = history       # callers that write reports pick their keys
     return out

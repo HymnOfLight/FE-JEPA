@@ -1,8 +1,9 @@
 """fine3d (PREREG_FINE3D Sec. 6-8): the adjudication on synthetic returns built
 from the records -- E2's M = 1,024 report as both R2a arms (S's cells scaled),
-the Phase-2b labelled fine-tuning at 16 as R3's networks (its cells scaled).
-The verdicts follow Sec. 6 condition by condition, the R2b rule is the one
-fixed there, every refusal of Sec. 8 fires, deviations are recorded, and a
+the Phase-2b labelled fine-tuning at 16 as both R3 arms' networks (their cells
+scaled). The verdicts follow Sec. 6 condition by condition, R3's read the
+labelled arm of the session (the record is a reading), the R2b rule is the
+one fixed there, every refusal of Sec. 8 fires, deviations are recorded, and a
 refused part leaves the other's verdicts standing."""
 
 import copy
@@ -92,8 +93,16 @@ def _amp(fine_cstar, inband_cstar=(1.0, 1.0, 1.0), complete=True, report_sha=Non
                       for s, c, ci in zip((3, 4, 5), fine_cstar, inband_cstar)}}
 
 
-def r3(p2b, egap=1.0, vm=1.0, git="prereg-fine3d"):
-    cfg = _cfg("r3_eft_b16")
+def _order(s):
+    """A seed's instance orders (the same in both arms)."""
+    return hashlib.sha256(f"the orders of seed {s}".encode()).hexdigest()
+
+
+def r3(p2b, egap=1.0, vm=1.0, git="prereg-fine3d", arm="energy"):
+    """An R3 arm's report: the recorded labelled fine-tuning at 16 as its fine
+    cells (energy gap and von Mises error scaled), E8's AR cell as its in-band
+    ones."""
+    cfg = _cfg(A.R3_LABELS[arm])
     sha = config_sha256(cfg)
     ft = copy.deepcopy(p2b["results"]["p3_transfer"]["metrics"]["fewshot"]["16"]["finetune"])
     _scale_cell(ft, "energy_gap_rel", egap)
@@ -111,12 +120,15 @@ def r3(p2b, egap=1.0, vm=1.0, git="prereg-fine3d"):
                                           "frac_c_star_gt_1": 0.5}}
             return e
         per[f"s{s}"] = {"seed": s, "git": git, "config_sha256": sha,
+                        "machine": {"start": {"host": "box", "gpu_driver": "575.64"},
+                                    "end": {"host": "box", "gpu_driver": "575.64"}},
                         "source_state": {"sha256": rec[f"s{s}"]["sha256"]},
                         "content_check": {"passed": True, "max_rel_dev": {"fine": 0.0,
                                                                          "inband": 0.0}},
-                        "train": {"files": list(A.R3_TRAIN_FILES), "seed": s, "epochs": 50,
+                        "train": {"loss": A.R3_LOSS[arm], "trainer": A.R3_TRAINER[arm],
+                                  "files": list(A.R3_TRAIN_FILES), "seed": s, "epochs": 50,
                                   "epochs_run": 50, "steps": 800, "loss_by_epoch": [-1.0] * 50,
-                                  "order_sha256": "0" * 64, "resumed_from_epoch": None},
+                                  "order_sha256": _order(s), "resumed_from_epoch": None},
                         "state": {"sha256": "f" * 64},
                         "fine": ev(ft["per_seed_eval"][s]), "inband": ev(inb["per_seed_eval"][s]),
                         "seconds": {}}
@@ -128,8 +140,21 @@ def r3(p2b, egap=1.0, vm=1.0, git="prereg-fine3d"):
             "runtime_policy": dict(p2b["runtime_policy"]), "per_seed": per}
 
 
+def r3pair(p2b, egap=1.0, vm=1.0, lab_egap=1.0, lab_vm=1.0, git="prereg-fine3d"):
+    """R3's two arms: the energy arm's fine energy gap and von Mises error
+    scaled by egap and vm, the labelled arm's by lab_egap and lab_vm."""
+    return {"energy": r3(p2b, egap, vm, git, "energy"),
+            "labelled": r3(p2b, lab_egap, lab_vm, git, "labelled")}
+
+
+def _adj3(pair, p2b, entries=None, **kw):
+    return A.adjudicate_r3(pair["energy"], pair["labelled"], p2b,
+                           entries if entries is not None else _entries(), **kw)
+
+
 def _entries():
-    return {n: config_sha256(_cfg(n)) for n in ("r2a_b_m1024", "r2a_s_m1024", "r3_eft_b16")}
+    return {n: config_sha256(_cfg(n))
+            for n in ("r2a_b_m1024", "r2a_s_m1024", "r3_eft_b16", "r3_lft_b16")}
 
 
 def _adj(b, s, recs, **kw):
@@ -155,19 +180,22 @@ def test_r2a_supported_and_r2b_recommended(recs):
         assert r["instance_resampling_95"]["high"] < 0
 
 
-def test_the_r2b_line_is_half_the_fine_error(recs):
+def test_the_r2b_line_is_forty_percent_of_the_fine_error(recs):
     e2, _ = recs
-    assert A.R2B_FINE_REL_MAX == -0.5
+    assert A.R2B_FINE_REL_MAX == -0.4
     b = r2a(e2, "r2a_b_m1024")
-    yes = _adj(b, r2a(e2, "r2a_s_m1024", fine=0.45), recs)
-    no = _adj(b, r2a(e2, "r2a_s_m1024", fine=0.55), recs)
-    assert yes["verdict"] == no["verdict"] == "SUPPORTED"
+    yes = _adj(b, r2a(e2, "r2a_s_m1024", fine=0.59), recs)
+    no = _adj(b, r2a(e2, "r2a_s_m1024", fine=0.61), recs)
+    edge = _adj(b, r2a(e2, "r2a_s_m1024", fine=0.6), recs)
+    assert yes["verdict"] == no["verdict"] == edge["verdict"] == "SUPPORTED"
     assert yes["r2b"]["recommended"] is True and no["r2b"]["recommended"] is False
-    assert "did not halve" in no["r2b"]["why"]
+    assert "below the R2b line" in no["r2b"]["why"] and "-40%" in no["r2b"]["why"]
+    rel = edge["conditions"]["fine_displacement"]["rel_change"]
+    assert edge["r2b"]["recommended"] is (rel <= -0.4)          # the line itself: rel <= -40%
     # the rule reads the fine error, not the ratio: in-band errors also lower
-    both = _adj(b, r2a(e2, "r2a_s_m1024", fine=0.45, disp=0.7, inband_p3=0.7), recs)
+    both = _adj(b, r2a(e2, "r2a_s_m1024", fine=0.55, disp=0.85, inband_p3=0.85), recs)
     assert both["verdict"] == "SUPPORTED"
-    assert both["conditions"]["fine_over_inband_ratio"]["rel_change"] > -0.5
+    assert both["conditions"]["fine_over_inband_ratio"]["rel_change"] > -0.4
     assert both["r2b"]["recommended"] is True
 
 
@@ -208,9 +236,15 @@ def test_r2a_divergence_and_void(recs):
     b = r2a(e2, "r2a_b_m1024")
     b["results"]["p3_transfer"]["metrics"]["ar"]["fine"]["per_seed_eval"][0]["disp_rel_l2"] = \
         float("nan")
+    b["solve_ledger"] = {"total": 2}
     res = A.adjudicate_fine3d({"b": b, "s": r2a(e2, "r2a_s_m1024")}, None, recs[1], e2,
                               _entries(), s_factor=S_FACTOR)
-    assert res["R2a"]["verdict"].startswith("NOT EVALUATED")
+    assert res["R2a"]["verdict"].startswith("NOT EVALUATED: a per-seed value of the fresh "
+                                            "baseline is not finite: the comparison is void")
+    # the void keeps the rest: deviations, readings and no recommendation
+    assert any("solve ledger 2" in d for d in res["R2a"]["deviations"])
+    assert res["R2a"]["r2b"] == {"recommended": False, "why": "R2a not evaluated"}
+    assert "fine_displacement" in res["R2a"]["robustness"] and res["R2a"]["checks"]["b"]
 
 
 def test_r2a_uninformative_note_and_mechanism(recs):
@@ -313,7 +347,7 @@ def test_r2a_refusals(recs, what):
     factor = 2.0 ** -9 if what == "factor" else S_FACTOR
     with pytest.raises(ValueError, match=R2A_REFUSALS[what]):
         A.adjudicate_r2a(b, s, e2, entries, s_factor=factor)
-    res = A.adjudicate_fine3d({"b": b, "s": s}, r3(recs[1], egap=0.5), recs[1], e2, entries,
+    res = A.adjudicate_fine3d({"b": b, "s": s}, r3pair(recs[1], egap=0.5), recs[1], e2, entries,
                               s_factor=factor)
     assert res["R2a"]["verdict"].startswith("NOT EVALUATED")
     assert res["R3"]["verdicts"]["R3-E"]["verdict"] == "SUPPORTED"    # R3 stands
@@ -323,8 +357,8 @@ def test_any_error_in_a_part_leaves_the_other_standing(recs):
     e2, p2b = recs
     s = r2a(e2, "r2a_s_m1024", fine=0.4)
     del s["provenance"]["seeds"]                               # a malformed report: TypeError
-    res = A.adjudicate_fine3d({"b": r2a(e2, "r2a_b_m1024"), "s": s}, r3(p2b, egap=0.5), p2b, e2,
-                              _entries(), s_factor=S_FACTOR)
+    res = A.adjudicate_fine3d({"b": r2a(e2, "r2a_b_m1024"), "s": s}, r3pair(p2b, egap=0.5), p2b,
+                              e2, _entries(), s_factor=S_FACTOR)
     assert res["R2a"]["verdict"].startswith("NOT EVALUATED: refused: TypeError")
     assert res["R3"]["verdicts"]["R3-E"]["verdict"] == "SUPPORTED"
 
@@ -333,44 +367,131 @@ def test_any_error_in_a_part_leaves_the_other_standing(recs):
 
 def test_r3_verdicts_and_readings(recs):
     _, p2b = recs
-    out = A.adjudicate_r3(r3(p2b, egap=0.5), p2b, _entries())
+    out = _adj3(r3pair(p2b, egap=0.5), p2b)
     v = out["verdicts"]
     assert v["R3-E"]["verdict"] == "SUPPORTED"
     assert math.isclose(v["R3-E"]["guard"]["rel_change"], -0.5, rel_tol=1e-9)
     assert v["R3-V"]["verdict"] == "NOT SUPPORTED"
     rd = out["readings"]
-    assert rd["vs_labelled_ft"]["disp_rel_l2"]["energy_ft_is"] == "within the guard"
+    assert rd["vs_labelled"]["disp_rel_l2"]["new_is"] == "within the guard"
     assert all(math.isclose(x, -0.5, rel_tol=1e-9) for x in
-               rd["vs_labelled_ft"]["energy_gap_rel"]["paired_per_seed_rel"])
-    assert rd["inband_vs_before"]["energy_gap_rel"]["after_is"] == "within the guard"
-    assert rd["vs_zero_shot"]["energy_gap_rel"]["energy_ft_is"] == "better"
+               rd["vs_labelled"]["energy_gap_rel"]["paired_per_seed_rel"])
+    assert rd["inband_vs_labelled"]["energy_gap_rel"]["new_is"] == "within the guard"
+    assert rd["inband_vs_before"]["energy"]["energy_gap_rel"]["new_is"] == "within the guard"
+    assert rd["vs_zero_shot"]["energy"]["energy_gap_rel"]["new_is"] == "better"
+    assert rd["vs_zero_shot"]["labelled"]["disp_rel_l2"]["new_is"] == "better"
+    assert math.isclose(rd["labelled_vs_record"]["energy_gap_rel"]["guard"]["rel_change"], 0.0,
+                        abs_tol=1e-12)
+    assert set(rd["fine_over_inband_disp_ratio_per_seed"]) == {"energy", "labelled"}
     assert rd["robustness"]["R3-E"]["instance_resampling_95"]["high"] < 0
-    assert out["deviations"] == [] and out["notes"] == []
-    worse = A.adjudicate_r3(r3(p2b, vm=2.0), p2b, _entries())
+    assert out["deviations"] == [] and out["notes"] == [] and rd["record_flags"] == []
+    worse = _adj3(r3pair(p2b, vm=2.0), p2b)
     assert worse["verdicts"]["R3-V"]["verdict"] == "NOT SUPPORTED: worse beyond the guard"
     # recall: higher is better
     assert A._direction({"lower": True, "worse": False}, "crit_recall") == "worse"
 
 
+def test_r3_reads_the_labelled_arm_not_the_record(recs):
+    """The labelled arm at twice the record's energy gap, the energy arm at the
+    record's: R3-E reads the labelled arm (rel -50%); the record is a reading,
+    and the labelled arm's difference from it a flag. Conversely, an energy arm
+    below the record but level with the labelled arm is not supported."""
+    _, p2b = recs
+    out = _adj3(r3pair(p2b, lab_egap=2.0), p2b)
+    assert out["verdicts"]["R3-E"]["verdict"] == "SUPPORTED"
+    assert math.isclose(out["verdicts"]["R3-E"]["guard"]["rel_change"], -0.5, rel_tol=1e-9)
+    rd = out["readings"]
+    assert math.isclose(rd["energy_vs_record"]["energy_gap_rel"]["guard"]["rel_change"], 0.0,
+                        abs_tol=1e-12)
+    assert rd["labelled_vs_record"]["energy_gap_rel"]["new_is"] == "worse"
+    assert len(rd["record_flags"]) == 1
+    assert rd["record_flags"][0].startswith("energy_gap_rel: the labelled arm is higher than the "
+                                            "recorded labelled fine-tuning beyond the guard")
+    assert out["notes"] == rd["record_flags"] and out["deviations"] == []
+    level = _adj3(r3pair(p2b, egap=0.5, lab_egap=0.5), p2b)
+    assert level["verdicts"]["R3-E"]["verdict"] == "NOT SUPPORTED"
+    assert level["readings"]["energy_vs_record"]["energy_gap_rel"]["new_is"] == "better"
+
+
+def test_r3_divergence_and_void(recs):
+    """A non-finite per-seed value of the energy arm fails the verdict it
+    enters (diverged); one of the labelled arm voids the verdict whose metric
+    it is, and the other verdict, the readings and the deviations stand."""
+    _, p2b = recs
+    pair = r3pair(p2b, egap=0.5, vm=0.5)
+    pair["energy"]["per_seed"]["s1"]["fine"]["vm_rel_l2"] = float("nan")
+    out = _adj3(pair, p2b)
+    assert out["verdicts"]["R3-V"]["verdict"] == "NOT SUPPORTED (diverged)"
+    assert out["verdicts"]["R3-E"]["verdict"] == "SUPPORTED"
+    for metric, gone, stands in (("energy_gap_rel", "R3-E", "R3-V"),
+                                 ("vm_rel_l2", "R3-V", "R3-E")):
+        pair = r3pair(p2b, egap=0.5, vm=0.5)
+        pair["labelled"]["per_seed"]["s0"]["fine"][metric] = float("inf")
+        pair["energy"]["per_seed"]["s2"]["train"]["resumed_from_epoch"] = 9
+        out = _adj3(pair, p2b)
+        assert out["verdicts"][gone]["verdict"].startswith(
+            f"NOT EVALUATED: the labelled arm's per-seed {metric} ")
+        assert out["verdicts"][gone]["verdict"].endswith("is not finite: the comparison is void")
+        assert out["verdicts"][stands]["verdict"] == "SUPPORTED"
+        assert "R3 energy seed s2: resumed from epoch 9" in out["deviations"]
+        assert "not_evaluated" in out["readings"]["vs_labelled"][metric]["guard"]
+        assert "not_evaluated" not in out["readings"]["vs_labelled"]["disp_rel_l2"]["guard"]
+        paired = out["readings"]["vs_labelled"][metric]["paired_per_seed_rel"]
+        assert paired[0] is None and all(isinstance(x, float) for x in paired[1:])
+    # the labelled arm's displacement error is no verdict's metric: both stand
+    pair = r3pair(p2b, egap=0.5, vm=0.5)
+    pair["labelled"]["per_seed"]["s0"]["fine"]["disp_rel_l2"] = float("nan")
+    assert all(v["verdict"] == "SUPPORTED" for v in _adj3(pair, p2b)["verdicts"].values())
+
+
+def test_r3_machines(recs):
+    """Each seed's host and GPU driver: one machine for both arms, or a
+    deviation naming them."""
+    _, p2b = recs
+    pair = r3pair(p2b, egap=0.5)
+    assert not any("machine" in d for d in _adj3(pair, p2b)["deviations"])
+    pair["labelled"]["per_seed"]["s2"]["machine"]["end"] = {"host": "other",
+                                                             "gpu_driver": "575.64"}
+    out = _adj3(pair, p2b)
+    dev = [d for d in out["deviations"] if "machine" in d]
+    assert len(dev) == 1 and dev[0].startswith("R3: the seeds of the two arms ran on more than "
+                                               "one machine") and '"other"' in dev[0]
+    assert [m["host"] for m in out["checks"]["labelled"]["seeds"]["s2"]["machines"]] == \
+        ["box", "other"]
+    # a seed that started on another driver
+    pair = r3pair(p2b, egap=0.5)
+    pair["energy"]["per_seed"]["s0"]["machine"]["start"] = {"host": "box", "gpu_driver": None}
+    assert any("more than one machine" in d for d in _adj3(pair, p2b)["deviations"])
+    assert out["verdicts"]["R3-E"]["verdict"] == "SUPPORTED"          # a deviation, not a refusal
+
+
 def test_r3_amplitude_readings_are_secondary(recs):
     _, p2b = recs
-    rep = r3(p2b, egap=0.5)
-    del rep["per_seed"]["s1"]["fine"]["amplitude"]
-    out = A.adjudicate_r3(rep, p2b, _entries())
+    pair = r3pair(p2b, egap=0.5)
+    del pair["energy"]["per_seed"]["s1"]["fine"]["amplitude"]
+    out = _adj3(pair, p2b)
     assert out["verdicts"]["R3-E"]["verdict"] == "SUPPORTED"
-    assert "not_evaluated" in out["readings"]["amplitude"]
+    assert "not_evaluated" in out["readings"]["amplitude"]["energy"]
+    assert "not_evaluated" not in out["readings"]["amplitude"]["labelled"]
 
 
 def test_r3_deviations_and_notes(recs):
     _, p2b = recs
-    rep = r3(p2b, egap=0.5)
-    rep["per_seed"]["s0"]["train"]["resumed_from_epoch"] = 7
-    rep["per_seed"]["s2"]["from_disk"] = True
-    rep["runtime_policy"] = dict(rep["runtime_policy"], torch="2.13.0")
-    out = A.adjudicate_r3(rep, p2b, _entries())
-    assert "R3 seed s0: resumed from epoch 7" in out["deviations"]
-    assert any("s2" in d and "earlier attempt" in d for d in out["deviations"])
-    assert out["notes"] and "torch" in out["notes"][0]
+    pair = r3pair(p2b, egap=0.5)
+    e, lab = pair["energy"], pair["labelled"]
+    e["per_seed"]["s0"]["train"]["resumed_from_epoch"] = 7
+    lab["per_seed"]["s2"]["from_disk"] = True
+    e["runtime_policy"] = dict(e["runtime_policy"], torch="2.13.0", gpu="another GPU")
+    lab["runtime_policy"] = dict(lab["runtime_policy"], torch="2.13.0")
+    out = _adj3(pair, p2b)
+    dev = out["deviations"]
+    assert "R3 energy seed s0: resumed from epoch 7" in dev
+    assert any("R3 labelled seed s2" in d and "earlier attempt" in d for d in dev)
+    assert [d for d in dev if d.startswith("R3: the two arms ran with different")] == \
+        [f"R3: the two arms ran with different gpu ('another GPU' / "
+         f"{p2b['runtime_policy']['gpu']!r})"]
+    assert len(out["notes"]) == 1 and "torch" in out["notes"][0]
+    assert "than the recorded labelled fine-tuning" in out["notes"][0]
 
 
 R3_REFUSALS = {"unstamped": "not a stamped", "entries": "verified hash", "git": "ran on",
@@ -380,19 +501,24 @@ R3_REFUSALS = {"unstamped": "not a stamped", "entries": "verified hash", "git": 
                "train seed": "trained with the seed", "seeds": "seeds are",
                "corpus": "another corpus", "evaluation": "per-instance values",
                "fine evaluation": "per-instance values",
-               "label": "another configuration", "schedule": "schedule"}
+               "label": "another configuration", "schedule": "schedule",
+               "objective": "trained with loss", "trainer": "trained with loss",
+               "config loss": "another configuration"}
 
 
+@pytest.mark.parametrize("arm", ["energy", "labelled"])
 @pytest.mark.parametrize("what", sorted(R3_REFUSALS))
-def test_r3_refusals(recs, what):
+def test_r3_refusals(recs, what, arm):
     e2, p2b = recs
-    rep = r3(p2b, egap=0.5)
+    pair = r3pair(p2b, egap=0.5)
+    rep = pair[arm]
+    label = A.R3_LABELS[arm]
     entries = _entries()
     s0 = rep["per_seed"]["s0"]
     if what == "unstamped":
         rep["prereg"] = {}
     elif what == "entries":
-        entries = dict(entries, r3_eft_b16="0" * 64)
+        entries = dict(entries, **{label: "0" * 64})
     elif what == "git":
         rep["provenance"]["git"] = "prereg-w9"
     elif what == "seed git":
@@ -423,28 +549,67 @@ def test_r3_refusals(recs, what):
         rep["per_seed"]["s2"]["fine"]["per_instance"]["crit_recall"] = [1.0] * 255
     elif what == "label":
         rep["config"] = dict(rep["config"], out="runs/fine3d/other/report.json")
-    elif what == "schedule":
+    elif what == "objective":
+        rep["per_seed"]["s1"]["train"]["loss"] = "labels" if arm == "energy" else "ar"
+    elif what == "trainer":
+        rep["per_seed"]["s2"]["train"]["trainer"] = \
+            "train_supervised" if arm == "energy" else "pretrain"
+    elif what in ("schedule", "config loss"):
         rep["config"] = copy.deepcopy(rep["config"])
-        rep["config"]["train"]["epochs"] = 60
+        if what == "schedule":
+            rep["config"]["train"]["epochs"] = 60
+        else:
+            rep["config"]["train"]["loss"] = "labels" if arm == "energy" else "ar"
         sha = config_sha256(rep["config"])
         rep["prereg"]["config_sha256"] = rep["provenance"]["config_sha256"] = sha
         for v in rep["per_seed"].values():
             v["config_sha256"] = sha
-        entries = dict(entries, r3_eft_b16=sha)
+        entries = dict(entries, **{label: sha})
     with pytest.raises(ValueError, match=R3_REFUSALS[what]):
-        A.adjudicate_r3(rep, p2b, entries)
+        _adj3(pair, p2b, entries)
     res = A.adjudicate_fine3d({"b": r2a(e2, "r2a_b_m1024"), "s": r2a(e2, "r2a_s_m1024", fine=0.4)},
-                              rep, p2b, e2, entries, s_factor=S_FACTOR)
+                              pair, p2b, e2, entries, s_factor=S_FACTOR)
     assert all(v["verdict"].startswith("NOT EVALUATED") for v in res["R3"]["verdicts"].values())
+    assert f"R3 {arm}" in res["R3"]["verdicts"]["R3-E"]["verdict"]   # the arm is named
     assert res["R2a"]["verdict"] == "SUPPORTED"                     # R2a stands
+
+
+@pytest.mark.parametrize("what", ["git", "order", "swapped"])
+def test_r3_pair_refusals(recs, what):
+    """The two arms must be one session: the same code, the same instance
+    orders, each in its own place."""
+    e2, p2b = recs
+    pair = r3pair(p2b, egap=0.5)
+    lab = pair["labelled"]
+    if what == "git":
+        lab["provenance"]["git"] = "prereg-fine3d-1-gabc"
+        for v in lab["per_seed"].values():
+            v["git"] = "prereg-fine3d-1-gabc"
+        with pytest.raises(ValueError, match="different code"):
+            _adj3(pair, p2b, expected_git=None)
+    elif what == "order":
+        lab["per_seed"]["s1"]["train"]["order_sha256"] = "0" * 64
+        with pytest.raises(ValueError, match="recorded different epoch orders for seed 1"):
+            _adj3(pair, p2b)
+    else:
+        pair = {"energy": pair["labelled"], "labelled": pair["energy"]}
+        with pytest.raises(ValueError, match="verified hash"):
+            _adj3(pair, p2b)
+        with pytest.raises(ValueError, match="another configuration"):
+            A.adjudicate_r3(pair["energy"], pair["labelled"], p2b, None)
+    res = A.adjudicate_fine3d({"b": r2a(e2, "r2a_b_m1024"), "s": r2a(e2, "r2a_s_m1024", fine=0.4)},
+                              pair, p2b, e2, _entries(), s_factor=S_FACTOR)
+    assert all(v["verdict"].startswith("NOT EVALUATED") for v in res["R3"]["verdicts"].values())
+    assert res["R2a"]["verdict"] == "SUPPORTED"
 
 
 def test_r3_corpus_is_compared_by_manifest_not_by_directory_name(recs):
     _, p2b = recs
-    rep = r3(p2b, egap=0.5)
-    for d in rep["provenance"]["datasets"]:
-        d["dir"] = "/elsewhere/copy_of_" + Path(d["dir"]).name
-    assert A.adjudicate_r3(rep, p2b, _entries())["verdicts"]["R3-E"]["verdict"] == "SUPPORTED"
+    pair = r3pair(p2b, egap=0.5)
+    for rep in pair.values():
+        for d in rep["provenance"]["datasets"]:
+            d["dir"] = "/elsewhere/copy_of_" + Path(d["dir"]).name
+    assert _adj3(pair, p2b)["verdicts"]["R3-E"]["verdict"] == "SUPPORTED"
 
 
 def test_missing_parts_are_not_evaluated(recs):
@@ -458,6 +623,14 @@ def test_missing_parts_are_not_evaluated(recs):
 
 def test_constants_are_the_records(recs):
     e2, p2b = recs
+    spec = importlib.util.spec_from_file_location("make_fine3d_configs",
+                                                  ROOT / "scripts" / "make_fine3d_configs.py")
+    mk = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mk)
+    assert set(A.R3_LABELS.values()) == set(mk.R3_ARMS)
+    for arm, label in A.R3_LABELS.items():
+        assert _cfg(label)["train"]["loss"] == mk.R3_ARMS[label]["loss"] == A.R3_LOSS[arm]
+    assert A.R3_TRAINER == {"energy": "pretrain", "labelled": "train_supervised"}
     assert hashlib.sha256(P2B.read_bytes()).hexdigest() == A.PHASE2B_REPORT_SHA256
     assert e2["provenance"]["config_sha256"] == A.E2_M1024_CONFIG_SHA256
     assert A.R3_TRAIN_FILES == [f"instance_{i:05d}.npz" for i in range(256, 272)]
@@ -495,7 +668,8 @@ def _stamped_copy(tmp_path):
     return pf, text
 
 
-STEPS = ["r2a_b_m1024", "r2a_s_m1024", "amp_r2a_b_m1024", "amp_r2a_s_m1024", "r3_eft_b16"]
+STEPS = ["r2a_b_m1024", "r2a_s_m1024", "amp_r2a_b_m1024", "amp_r2a_s_m1024", "r3_eft_b16",
+         "r3_lft_b16"]
 
 
 def _status(steps, extra=""):
@@ -508,10 +682,12 @@ def test_script_end_to_end(recs, tmp_path):
     pre-registration (the synthetic configurations' hashes)."""
     e2, p2b = recs
     pf, text = _stamped_copy(tmp_path)
-    r3rep = r3(p2b, egap=0.5)
-    r3rep["per_seed"]["s0"]["train"]["resumed_from_epoch"] = 7
-    r3rep["runtime_policy"] = dict(r3rep["runtime_policy"], torch="2.13.0")
-    files = {"b": r2a(e2, "r2a_b_m1024"), "s": r2a(e2, "r2a_s_m1024", fine=0.4), "r3": r3rep}
+    pair = r3pair(p2b, egap=0.5)
+    pair["energy"]["per_seed"]["s0"]["train"]["resumed_from_epoch"] = 7
+    for rep in pair.values():
+        rep["runtime_policy"] = dict(rep["runtime_policy"], torch="2.13.0")
+    files = {"b": r2a(e2, "r2a_b_m1024"), "s": r2a(e2, "r2a_s_m1024", fine=0.4),
+             "r3": pair["energy"], "r3l": pair["labelled"]}
     for k, v in files.items():
         (tmp_path / f"{k}.json").write_text(json.dumps(v))
     b_sha = hashlib.sha256((tmp_path / "b.json").read_bytes()).hexdigest()
@@ -522,7 +698,8 @@ def test_script_end_to_end(recs, tmp_path):
     out = tmp_path / "verdict.json"
     common = ("--r2a-b", str(tmp_path / "b.json"), "--r2a-s", str(tmp_path / "s.json"),
               "--amp-b", str(tmp_path / "amp_b.json"), "--amp-s", str(tmp_path / "amp_s.json"),
-              "--r3", str(tmp_path / "r3.json"), "--prereg", str(pf), "--out", str(out))
+              "--r3", str(tmp_path / "r3.json"), "--r3-labelled", str(tmp_path / "r3l.json"),
+              "--prereg", str(pf), "--out", str(out))
     r = _script(tmp_path, *common, "--status", str(tmp_path / "status.txt"))
     assert r.returncode == 0, r.stderr[-2000:]
     v = json.loads(out.read_text())
@@ -532,7 +709,8 @@ def test_script_end_to_end(recs, tmp_path):
     assert "another report" in v["R2a"]["mechanism"]["s"]["not_evaluated"]
     assert v["attempts"]["r3_eft_b16"] == 2
     dev = v["deviations"]
-    assert "r3_eft_b16: 2 attempts" in dev and "R3 seed s0: resumed from epoch 7" in dev
+    assert "r3_eft_b16: 2 attempts" in dev and "R3 energy seed s0: resumed from epoch 7" in dev
+    assert not any(d.startswith("R3: the two arms") for d in dev)
     assert f"{pf}: its last line does not verify (PREREG_FINE3D_SHA256)" in dev
     # without the tag here (the sandbox), or with it (the stamped commit): either way recorded
     assert ("the adjudicating code and the pre-registration read were not compared with "
@@ -540,9 +718,11 @@ def test_script_end_to_end(recs, tmp_path):
             or f"{pf}: the pre-registration read is not prereg-fine3d's PREREG_FINE3D.md" in dev)
     assert set(v["session_and_code_deviations"]) < set(dev)
     summary = json.loads(r.stdout)
-    assert summary["deviations"] == dev and "R3 seed s0: resumed from epoch 7" in summary["deviations"]
+    assert summary["deviations"] == dev
     assert len(v["notes"]) == 1 and "torch" in v["notes"][0] and summary["notes"] == v["notes"]
-    assert str(pf) in v["inputs"] and len(v["inputs"]) == 9
+    assert "NaN" not in out.read_text() and "Infinity" not in out.read_text()
+    assert str(pf) in v["inputs"] and len(v["inputs"]) == 10
+    assert str(tmp_path / "r3l.json") in v["inputs"]
     adj = v["adjudicator"]
     assert set(adj["files_sha256"]) >= {"src/fejepa/analysis/adjudicate_fine3d.py",
                                         "scripts/adjudicate_fine3d.py", "src/fejepa/report.py",
@@ -569,36 +749,55 @@ def test_script_reads_what_it_can(recs, tmp_path):
     are checked."""
     e2, p2b = recs
     pf, text = _stamped_copy(tmp_path)
+    pair = r3pair(p2b, egap=0.5)
     files = {"b": r2a(e2, "r2a_b_m1024"), "s": r2a(e2, "r2a_s_m1024", fine=0.4),
-             "r3": r3(p2b, egap=0.5)}
+             "r3": pair["energy"], "r3l": pair["labelled"]}
     for k, v in files.items():
         (tmp_path / f"{k}.json").write_text(json.dumps(v))
     out = tmp_path / "verdict.json"
+    both = ("--r3", str(tmp_path / "r3.json"), "--r3-labelled", str(tmp_path / "r3l.json"))
     r = _script(tmp_path, "--r2a-b", str(tmp_path / "b.json"), "--r2a-s", str(tmp_path / "gone.json"),
-                "--r3", str(tmp_path / "r3.json"), "--prereg", str(pf), "--out", str(out))
+                *both, "--prereg", str(pf), "--out", str(out))
     assert r.returncode == 0, r.stderr[-2000:]
     v = json.loads(out.read_text())
-    assert v["R2a"]["verdict"].startswith("NOT EVALUATED: R2a needs both reports")
+    assert v["R2a"]["verdict"] == ("NOT EVALUATED: R2a needs both reports: "
+                                   f"{tmp_path / 'gone.json'} is not in the return")
     assert v["R3"]["verdicts"]["R3-E"]["verdict"] == "SUPPORTED"
+    assert "the session's status file was not given (--status)" in v["deviations"]
+    assert v["attempts"] is None
+    # R3 needs both arms: one not given, or not in the return
+    r = _script(tmp_path, "--r3", str(tmp_path / "r3.json"), "--prereg", str(pf), "--out", str(out))
+    v = json.loads(out.read_text())
+    assert all(x["verdict"] == "NOT EVALUATED: R3 needs both arms' reports: --r3-labelled was "
+               "not given" for x in v["R3"]["verdicts"].values())
+    assert v["R2a"]["verdict"] == ("NOT EVALUATED: R2a needs both reports: --r2a-b was not "
+                                   "given, --r2a-s was not given")
+    r = _script(tmp_path, "--r3", str(tmp_path / "gone.json"), "--r3-labelled",
+                str(tmp_path / "r3l.json"), "--prereg", str(pf), "--out", str(out))
+    v = json.loads(out.read_text())
+    assert all(x["verdict"].endswith(f"{tmp_path / 'gone.json'} is not in the return")
+               for x in v["R3"]["verdicts"].values())
     # truncated files
     (tmp_path / "s_cut.json").write_text((tmp_path / "s.json").read_text()[:5000])
-    (tmp_path / "r3_cut.json").write_text((tmp_path / "r3.json").read_text()[:5000])
+    (tmp_path / "r3l_cut.json").write_text((tmp_path / "r3l.json").read_text()[:5000])
     (tmp_path / "amp_cut.json").write_text(json.dumps(_amp((1.7, 2.0, 1.5)))[:300])
     r = _script(tmp_path, "--r2a-b", str(tmp_path / "b.json"), "--r2a-s", str(tmp_path / "s_cut.json"),
-                "--r3", str(tmp_path / "r3.json"), "--prereg", str(pf), "--out", str(out))
+                *both, "--prereg", str(pf), "--out", str(out))
     assert r.returncode == 0, r.stderr[-2000:]
     v = json.loads(out.read_text())
     assert v["R2a"]["verdict"].startswith("NOT EVALUATED: ") and "is not readable" in \
         v["R2a"]["verdict"]
     assert v["R3"]["verdicts"]["R3-E"]["verdict"] == "SUPPORTED"
     r = _script(tmp_path, "--r2a-b", str(tmp_path / "b.json"), "--r2a-s", str(tmp_path / "s.json"),
-                "--amp-b", str(tmp_path / "amp_cut.json"), "--r3", str(tmp_path / "r3_cut.json"),
-                "--prereg", str(pf), "--out", str(out))
+                "--amp-b", str(tmp_path / "amp_cut.json"), "--r3", str(tmp_path / "r3.json"),
+                "--r3-labelled", str(tmp_path / "r3l_cut.json"), "--prereg", str(pf),
+                "--out", str(out))
     assert r.returncode == 0, r.stderr[-2000:]
     v = json.loads(out.read_text())
     assert v["R2a"]["verdict"] == "SUPPORTED"
     assert "unreadable" in v["R2a"]["mechanism"]["b"]["not_evaluated"]
-    assert all("is not readable" in x["verdict"] for x in v["R3"]["verdicts"].values())
+    assert all("is not readable" in x["verdict"] and "r3l_cut.json" in x["verdict"]
+               for x in v["R3"]["verdicts"].values())
     # the reports must carry the tag: another describe string is refused by default
     for k in ("b", "s"):
         rep = r2a(e2, f"r2a_{k}_m1024", fine=0.4 if k == "s" else 1.0, git="prereg-fine3d-1-gabc")
@@ -615,6 +814,39 @@ def test_script_reads_what_it_can(recs, tmp_path):
     (tmp_path / "draft.md").write_text(text)
     r = _script(tmp_path, "--r3", str(tmp_path / "r3.json"), "--prereg", str(tmp_path / "draft.md"))
     assert r.returncode != 0 and "not stamped" in (r.stderr + r.stdout)
+
+
+def test_the_verdict_file_is_strict_json(recs, tmp_path):
+    """Non-finite values (a diverged energy arm, a void verdict) are written as
+    null: the verdict file parses as strict JSON, and the verdicts say why."""
+    e2, p2b = recs
+    pf, _ = _stamped_copy(tmp_path)
+    pair = r3pair(p2b, egap=0.5)
+    pair["energy"]["per_seed"]["s1"]["fine"]["vm_rel_l2"] = float("nan")
+    pair["labelled"]["per_seed"]["s0"]["fine"]["energy_gap_rel"] = float("inf")
+    for k, rep in (("r3", pair["energy"]), ("r3l", pair["labelled"])):
+        (tmp_path / f"{k}.json").write_text(json.dumps(rep))
+    out = tmp_path / "verdict.json"
+    r = _script(tmp_path, "--r3", str(tmp_path / "r3.json"), "--r3-labelled",
+                str(tmp_path / "r3l.json"), "--prereg", str(pf), "--out", str(out))
+    assert r.returncode == 0, r.stderr[-2000:]
+
+    def no_constants(c):
+        raise ValueError(f"non-standard JSON constant {c}")
+    v = json.loads(out.read_text(), parse_constant=no_constants)
+    json.loads(r.stdout, parse_constant=no_constants)
+    assert v["R3"]["verdicts"]["R3-V"]["verdict"] == "NOT SUPPORTED (diverged)"
+    assert v["R3"]["verdicts"]["R3-E"]["verdict"].startswith("NOT EVALUATED: the labelled arm's")
+    assert v["R3"]["verdicts"]["R3-V"]["guard"]["new_mean"] is None
+
+
+def test_the_adjudicator_knows_the_sessions_steps():
+    """The steps whose attempts the adjudicator counts are the session's, in
+    its order."""
+    S = _adj_script()
+    sess = (ROOT / "scripts" / "fine3d_session.sh").read_text()
+    calls = re.findall(r"^(r2a|amp|r3) (\S+)", sess, re.M)
+    assert tuple(n if f != "amp" else f"amp_{n}" for f, n in calls) == S.STEPS == tuple(STEPS)
 
 
 def _adj_script():
@@ -649,10 +881,13 @@ def test_the_adjudicator_compares_its_code_and_the_prereg_with_the_tag(tmp_path)
     assert rec["tag_available"] and rec["differs_from_tag"] == [] and rec["prereg_is_tags"]
     assert not any("differ" in d or "is not prereg" in d for d in S.code_deviations(rec, pre))
     f = repo / "src" / "fejepa" / "analysis" / "adjudicate_fine3d.py"
-    f.write_text(f.read_text().replace("R2B_FINE_REL_MAX = -0.5", "R2B_FINE_REL_MAX = -0.4"))
+    edited = f.read_text().replace("R2B_FINE_REL_MAX = -0.4", "R2B_FINE_REL_MAX = -0.3")
+    assert edited != f.read_text()
+    f.write_text(edited)
     other = tmp_path / "PREREG_other.md"
-    other.write_text(pre.read_text().replace("rel <= -50% in condition (i)",
-                                             "rel <= -40% in condition (i)"))
+    text = pre.read_text().replace("rel <= -40% in condition (i)", "rel <= -30% in condition (i)")
+    assert text != pre.read_text()
+    other.write_text(text)
     rec = S.adjudicator_record(other, "prereg-fine3d", root=repo)
     assert rec["differs_from_tag"] == ["src/fejepa/analysis/adjudicate_fine3d.py"]
     assert rec["prereg_is_tags"] is False and not rec["prereg_is_repository_file"]

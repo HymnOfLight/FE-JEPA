@@ -1,5 +1,5 @@
 """fine3d: every number PREREG_FINE3D.md quotes is recomputed from the records
-it names; its lines are the three configurations' in the generator's order;
+it names; its lines are the four configurations' in the generator's order;
 it is ASCII; and stamping a copy of the draft does what Sec. 8 says, refusing
 anything else. Every test holds on the draft and on the stamped file."""
 
@@ -152,8 +152,9 @@ def test_r3_content_check_tolerance():
         for name in ("inband", "fine"):
             rep = s[name]["reproduction"]
             assert rep["checked"] and rep["disp_max_rel_dev"] == rep["egap_max_rel_dev"] == 0.0
-    cfg = _j(ROOT / "configs" / "r3_eft_b16.json")["content_check"]
-    assert cfg == {"n_fine": 8, "n_inband": 8, "max_rel_dev": 1e-3}
+    for arm in ("r3_eft_b16", "r3_lft_b16"):
+        cfg = _j(ROOT / "configs" / f"{arm}.json")["content_check"]
+        assert cfg == {"n_fine": 8, "n_inband": 8, "max_rel_dev": 1e-3}
     _has("first 8 fine evaluation instances and the first 8 in-band validation instances",
          "to a relative 1e-3 (wp8's post-hoc pass reproduced them exactly")
 
@@ -189,58 +190,135 @@ def test_section_6_r2a_numbers():
     c = sims["r2a_correlated"]
     _has(f"(rho 0.5: {p('rho 0.5; fine -0%', nd=1, block=c)} without an effect; "
          + " / ".join(p(f"rho 0.5; fine -{d}%", block=c) for d in (20, 30, 50, 70)) + ")")
-    assert sims["r2b_fine_rel_max"] == -0.5
+    assert sims["r2b_fine_rel_max"] == -0.4
     _has("recommendation in "
          + " / ".join(p(f"S spread x1.0; inband unchanged; fine -{d}%", "p_r2b_recommended")
                       for d in (50, 70)) + " of trials with the in-band errors unchanged ("
          + " / ".join(p(f"S spread x1.0; inband 10% lower; fine -{d}%", "p_r2b_recommended")
                       for d in (50, 70)) + " if S also lowers them by 10%; "
          + " / ".join(p(f"S spread x1.0; inband 10% higher; fine -{d}%", "p_r2b_recommended")
-                      for d in (50, 70)) + " if it raises them by 10%), one of 30% in under 0.01%")
-    assert r["S spread x1.0; inband unchanged; fine -30%"]["p_r2b_recommended"] < 1e-4
+                      for d in (50, 70)) + " if it raises them by 10%), one of 30% in "
+         + p("S spread x1.0; inband unchanged; fine -30%", "p_r2b_recommended", nd=1) + ".")
+
+
+def test_section_6_r2b_numbers():
+    """The R2b line and its rationale (`r2b`, `r2b_sensitivity`), from the
+    Phase-2b spreads and wp8's post-hoc records."""
+    from fejepa.analysis.adjudicate_fine3d import R2B_FINE_REL_MAX
+
+    sims = _j(SIMS)
+    assert R2B_FINE_REL_MAX == sims["r2b_fine_rel_max"] == -0.4
+    _has("is at most 60% of the fresh baseline's (rel <= -40% in condition (i))")
+    b = sims["r2b"]
+    p2b = _j(W8 / "e2" / "baseline" / "report_phase2b.json")
+    p3 = p2b["results"]["p3_transfer"]["metrics"]["ar"]
+    e8 = p2b["results"]["e8"]["metrics"]["cells"]["ar"]["1024"]
+
+    def cv(x):
+        x = np.asarray(x, float)
+        return x.std(ddof=1) / x.mean()
+    assert b["cv"]["fine"] == pytest.approx(cv(p3["fine"]["disp_rel_l2"]["per_seed"]))
+    assert b["cv"]["inband_disp"] == pytest.approx(cv(p3["inband"]["disp_rel_l2"]["per_seed"]))
+    assert b["cv"]["inband_egap"] == pytest.approx(cv(e8["energy_gap_rel"]["per_seed"]))
+    a = sims["r2a_cv"]
+    _has(f"coefficients of variation {_pct(b['cv']['fine'])} for the fine displacement error, "
+         f"{_pct(b['cv']['inband_disp'])} and {_pct(b['cv']['inband_egap'])} for the in-band "
+         f"displacement error and energy gap, against the bottleneck's {_pct(a['fine'])}, "
+         f"{_pct(a['inband_disp'])} and {_pct(a['inband_egap'])}")
+    _has("supports a true fine reduction of 30% / 40% / 50% / 70% in "
+         + " / ".join(_pct(b["power"][f"-{d}%"]) for d in (30, 40, 50, 70)) + " of trials")
+    cut = b["c_star_fine_cut"]
+    for name, path in (("transformer", "amp_phase2b.json"), ("bottleneck", "amp_e2_m1024.json")):
+        sm = _j(W8 / "posthoc" / path)["seed_means"]["fine"]
+        assert cut[name] == pytest.approx(1 - sm["disp_c"] / sm["disp"])
+    assert b["k"] == pytest.approx(cut["transformer"] / cut["bottleneck"])
+    _has(f"c* lowers the transformer's fine error by {_pct(cut['transformer'])} and the "
+         f"bottleneck's by {_pct(cut['bottleneck'])} (Sec. 1)",
+         f"is {b['k']:.2f} times its reduction on the bottleneck",
+         f"uniform on 0-80% (about c*'s {_pct(cut['bottleneck'])})")
+    pk, p6, p10 = (b["predicted"][k] for k in ("k", "0.6", "1.0"))
+    sens = sims["r2b_sensitivity"]
+    _has(f"lies within 2.5 points of -40% is followed by a supported R2b in {_pct(pk['-40%'])} of "
+         f"trials (near -30%: {_pct(pk['-30%'])}; near -35%: {_pct(pk['-35%'])}; near -50%: "
+         f"{_pct(pk['-50%'])}; near -40% with the ratio 0.6 or 1.0 instead: {_pct(p6['-40%'])} "
+         f"or {_pct(p10['-40%'])}; with the prior on 0-60%: "
+         f"{_pct(sens['prior 0-60%']['predicted']['-40%'])}; with the transformer's spreads "
+         f"doubled: {_pct(sens['transformer spreads x2']['predicted']['-40%'])})")
+    assert pk["-35%"] < 0.505 < 0.55 < pk["-40%"]               # "passes one half near -35%"
+    gx = sens["transformer spreads x2"]["gates"]
+    _has("With the transformer's spreads doubled, R2b is supported after about half of the "
+         f"recommendations at -40% ({_pct(gx['-40%']['p_supported_given_recommended'])}; "
+         f"{_pct(gx['supported']['p_supported_given_recommended'])} on R2a SUPPORTED alone, "
+         f"{_pct(gx['-50%']['p_supported_given_recommended'])} at -50%)")
+    assert 0.4 < gx["-40%"]["p_supported_given_recommended"] < 0.6   # "about half"
+    g = b["gates"]["k"]
+    _has(f"recommending at -40% (in {_pct(g['-40%']['p_recommended'])} of trials) is followed by "
+         f"a supported R2b in {_pct(g['-40%']['p_supported_given_recommended'])} of the "
+         f"recommendations; recommending on R2a SUPPORTED alone, in "
+         f"{_pct(g['supported']['p_supported_given_recommended'])} "
+         f"({_pct(g['supported']['p_recommended'])} of trials recommended); at -50%, in "
+         f"{_pct(g['-50%']['p_supported_given_recommended'])} "
+         f"({_pct(g['-50%']['p_recommended'])})",
+         f"R2b would be supported but is not recommended in "
+         f"{_pct(g['-40%']['p_not_recommended_supported'])} of trials at -40%, "
+         f"{_pct(g['supported']['p_not_recommended_supported'])} on R2a SUPPORTED alone and "
+         f"{_pct(g['-50%']['p_not_recommended_supported'])} at -50%")
 
 
 def test_section_6_r3_numbers():
     sims = _j(SIMS)
-    rc, fl, fx, q = sims["r3_cv"], sims["r3_tau_floor"], sims["r3_fixed_reference"], sims["r3"]
+    rc, fx, q, pr = sims["r3_cv"], sims["r3_fixed_reference"], sims["r3"], sims["r3_paired"]
     e, v = "energy_gap_rel", "vm_rel_l2"
-    _has(f"fixes tau at {_pct(fl[e], 1)} or more for R3-E and {_pct(fl[v], 1)} or more for R3-V",
-         f"coefficients of variation {_pct(rc[e])} for the energy gap, {_pct(rc[v])} for the "
+    _has(f"coefficients of variation {_pct(rc[e])} for the energy gap, {_pct(rc[v])} for the "
          "von Mises error")
     p2b = _j(W8 / "e2" / "baseline" / "report_phase2b.json")
     ft = p2b["results"]["p3_transfer"]["metrics"]["fewshot"]["16"]["finetune"]
     for metric in (e, v):
         x = np.asarray(ft[metric]["per_seed"])
-        assert fl[metric] == pytest.approx(2 * x.std(ddof=1) / np.sqrt(3) / x.mean())
+        assert rc[metric] == pytest.approx(x.std(ddof=1) / x.mean())
 
-    def f(metric, rec, cv, d, nd=1):
-        return _pct(fx[f"{metric}; record {rec}; new-arm cv {cv}; {d}"], nd)
-    assert f(e, "+0%", "x1", "-0%") == f(v, "+0%", "x1", "-0%")
-    _has(f"occurs in {f(e, '+0%', 'x1', '-0%')} of trials (R3-E and R3-V) if the record equals "
-         f"its expectation, in {f(e, '+5%', 'x1', '-0%')} and {f(v, '+5%', 'x1', '-0%')} if it "
-         f"lies 5% above it, and in {f(e, '+10%', 'x1', '-0%')} and {f(v, '+10%', 'x1', '-0%', 0)} "
-         "if it lies 10% above it")
+    def a(metric, cv, d, nd=0):
+        return _pct(q[f"{metric}; new-arm cv {cv}; {d}"], nd)
+    _has(f"a support without a true effect occurs in {a(e, 'x1', '-0%', 1)} (R3-E) and "
+         f"{a(v, 'x1', '-0%', 1)} (R3-V) of trials, in {a(e, 'x1.5', '-0%', 1)} and "
+         f"{a(v, 'x1.5', '-0%', 1)} if the energy arm spreads 1.5 times as much, and in "
+         f"{a(e, '0.5', '-0%')} and {a(v, '0.5', '-0%')} if it spreads by 50%")
+    zs = p2b["results"]["p3_transfer"]["metrics"]["ar"]["fine"]["energy_gap_rel"]["per_seed"]
+    _has(f"spread by {_pct(rc['zero_shot_energy_gap_rel'])}: " + " / ".join(f"{x:.3f}" for x in zs))
+    _has("A true reduction of 10% / 20% / 30% / 50% is supported in "
+         + " / ".join([a(e, "x1", "-10%"), a(e, "x1", "-20%"), a(e, "x1", "-30%"),
+                       a(e, "x1", "-50%", 1)]) + " of trials (R3-E) and "
+         + " / ".join([a(v, "x1", "-10%"), a(v, "x1", "-20%"), a(v, "x1", "-30%"),
+                       a(v, "x1", "-50%")]) + " (R3-V)")
+
+    def c(metric, d, nd=0):
+        return _pct(pr[f"{metric}; rho 0.5; {d}"], nd)
+    _has(f"a support without an effect occurs in {c(e, '-0%', 1)} (R3-E) and {c(v, '-0%', 1)} "
+         "(R3-V) of trials, and a true reduction of 20% / 30% / 50% is supported in "
+         + " / ".join([c(e, "-20%"), c(e, "-30%"), c(e, "-50%", 1)]) + " (R3-E) and "
+         + " / ".join([c(v, "-20%"), c(v, "-30%", 1), c(v, "-50%")]) + " (R3-V)")
+    assert pr[f"{e}; rho 0.5; -0%"] < q[f"{e}; new-arm cv x1; -0%"]
+    x2 = sims["r3_spread_x2"]
+
+    def w(metric, d, nd=0):
+        return _pct(x2[f"{metric}; both arms' cv x2; {d}"], nd)
+    assert w(e, "-0%", 1) == w(v, "-0%", 1)
+    _has(f"with both arms' spreads twice the record's, a support without an effect occurs in "
+         f"{w(e, '-0%', 1)} of trials (R3-E and R3-V), and a true reduction of 20% / 30% / 50% "
+         "is supported in " + " / ".join(w(e, f"-{d}%") for d in (20, 30, 50)) + " (R3-E) and "
+         + " / ".join(w(v, f"-{d}%") for d in (20, 30, 50)) + " (R3-V)")
+
+    def f(metric, rec, d, nd=1):
+        return _pct(fx[f"{metric}; record {rec}; new-arm cv x1; {d}"], nd)
+    assert f(e, "+0%", "-0%") == f(v, "+0%", "-0%")
+    _has(f"the rule's rate without an effect is {f(e, '+0%', '-0%')} if the record equals its "
+         f"expectation but {f(e, '+10%', '-0%')} (R3-E) and {f(v, '+10%', '-0%', 0)} (R3-V) if it "
+         "lies 10% above it")
     se = {m: np.asarray(ft[m]["per_seed"]).std(ddof=1) / np.sqrt(3) / np.mean(ft[m]["per_seed"])
           for m in (e, v)}
     # the record at 1.10 times the arms' true mean: it exceeds that mean by 0.10 / 1.10 of itself
-    _has(f"(about a {0.10 / 1.10 / se[e]:.1f}- and {0.10 / 1.10 / se[v]:.1f}-standard-error "
-         "event for its mean)")
-    lo_e = min(fx[f"{e}; record {r}; new-arm cv 0.5; -0%"] for r in ("+0%", "+5%", "+10%"))
-    hi_e = max(fx[f"{e}; record {r}; new-arm cv 0.5; -0%"] for r in ("+0%", "+5%", "+10%"))
-    lo_v = min(fx[f"{v}; record {r}; new-arm cv 0.5; -0%"] for r in ("+0%", "+5%", "+10%"))
-    hi_v = max(fx[f"{v}; record {r}; new-arm cv 0.5; -0%"] for r in ("+0%", "+5%", "+10%"))
-    _has(f"in {_pct(lo_e)[:-1]}-{_pct(hi_e)} (R3-E) and {_pct(lo_v)[:-1]}-{_pct(hi_v)} (R3-V)")
-    zs = p2b["results"]["p3_transfer"]["metrics"]["ar"]["fine"]["energy_gap_rel"]["per_seed"]
-    _has(f"spread by {_pct(rc['zero_shot_energy_gap_rel'])}: " + " / ".join(f"{x:.3f}" for x in zs))
-    _has("supported in " + " / ".join([f(e, "+0%", "x1", "-20%", 0), f(e, "+0%", "x1", "-30%", 0),
-                                      f(e, "+0%", "x1", "-50%", 2)]) + " of trials (R3-E) and "
-         + " / ".join([f(v, "+0%", "x1", "-20%", 0), f(v, "+0%", "x1", "-30%", 1),
-                       f(v, "+0%", "x1", "-50%", 0)]) + " (R3-V) with the record at its expectation")
-    _has(f"the rates without an effect are {_pct(q[e + '; new-arm cv x1; -0%'], 1)} (R3-E) and "
-         f"{_pct(q[v + '; new-arm cv x1; -0%'], 1)} (R3-V), "
-         f"{_pct(q[e + '; new-arm cv x1.5; -0%'], 1)} and {_pct(q[v + '; new-arm cv x1.5; -0%'], 1)} "
-         f"at 1.5 times the spread, and {_pct(q[e + '; new-arm cv 0.5; -0%'])} and "
-         f"{_pct(q[v + '; new-arm cv 0.5; -0%'])} at 50%")
+    _has(f"(the excess, {_pct(0.10 / 1.10)} of the record, is about {0.10 / 1.10 / se[e]:.1f} and "
+         f"{0.10 / 1.10 / se[v]:.1f} times the standard error of the record's mean)")
 
 
 def test_section_7_and_9_numbers():
@@ -280,7 +358,7 @@ def test_section_7_and_9_numbers():
 def _draft_of(text, mod):
     from fejepa.report import PREREG_PLACEHOLDER
 
-    m = re.search(r"\*\*Status:\*\* r1, stamped (.+?) before any run: .*?prohibited\.", text)
+    m = re.search(r"\*\*Status:\*\* r\d+, stamped (.+?) before any run: .*?prohibited\.", text)
     if not m:
         return text, None
     text = text.replace(m.group(0), mod.DRAFT_STATUS)
@@ -339,7 +417,7 @@ def test_stamping_refuses_anything_but_the_draft(tmp_path, monkeypatch):
     (cfgs / "r3_eft_b16.json").write_text(json.dumps(c, indent=1) + "\n")
     with pytest.raises(SystemExit, match="not the generator's output"):
         mod.stamp(pf, cfgs, "18 October 2026")
-    edited = draft.replace("rel <= -50% in condition (i)", "rel <= -40% in condition (i)")
+    edited = draft.replace("rel <= -40% in condition (i)", "rel <= -50% in condition (i)")
     assert edited != draft
     pf.write_text(edited, encoding="utf-8")
     with pytest.raises(SystemExit, match="not the approved draft"):
@@ -348,4 +426,4 @@ def test_stamping_refuses_anything_but_the_draft(tmp_path, monkeypatch):
     monkeypatch.setattr(mod, "src_tree_ok", lambda: (False, "b" * 40, "a" * 40))
     with pytest.raises(SystemExit, match="not the tree the regression ran"):
         mod.stamp(pf, ROOT / "configs", "18 October 2026")
-    assert pf.read_text(encoding="utf-8").count("<fill before tagging>") == 3   # untouched
+    assert pf.read_text(encoding="utf-8").count("<fill before tagging>") == 4   # untouched

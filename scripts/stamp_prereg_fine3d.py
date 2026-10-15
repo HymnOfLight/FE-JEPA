@@ -2,7 +2,7 @@
 """fine3d: stamp PREREG_FINE3D.md (its Sec. 8) in one step, refusing anything
 but the approved draft:
 
-  1. the three configurations are the generator's (scripts/make_fine3d_configs.py);
+  1. the four configurations are the generator's (scripts/make_fine3d_configs.py);
   2. the file is the approved draft, byte for byte (DRAFT_SHA256): every
      CONFIG_SHA256 line open, the footer open, the status line the draft's;
   3'. `src` is the tree the cross-branch regression ran (records/wp9/README.md,
@@ -35,11 +35,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-DRAFT_STATUS = ("**Status:** r1 DRAFT (15 October 2026), not stamped; the three CONFIG_SHA256 "
+DRAFT_STATUS = ("**Status:** r2 DRAFT (15 October 2026), not stamped; the four CONFIG_SHA256 "
                 "lines below are open. Stamping fills them all at once, before any run "
                 "(Sec. 8); post-stamp criterion changes are prohibited.")
 FOOTER_OPEN = "PREREG_FINE3D_SHA256 = <record after commit>"
-DRAFT_SHA256 = "cf8e3e3ae223ebdcc8d13328740545e12fd3e634b83c80067e3fa09fbbcb1d3e"
+DRAFT_SHA256 = "a0fc5f5bc9da241b3f50c1e14df7b86e069871913165226cbbde147d636e808e"
 """SHA-256 of the approved draft (PREREG_FINE3D.md as committed before the
 stamp); a test keeps it equal to the committed draft, or to the draft the
 stamped file came from."""
@@ -50,7 +50,7 @@ _DATE = re.compile(r"^[1-9]\d? (January|February|March|April|May|June|July|Augus
 
 
 def stamped_status(date: str) -> str:
-    return (f"**Status:** r1, stamped {date} before any run: the three CONFIG_SHA256 lines "
+    return (f"**Status:** r2, stamped {date} before any run: the four CONFIG_SHA256 lines "
             "below are filled, and the last line is this file's SHA-256 (Sec. 8); "
             "post-stamp criterion changes are prohibited.")
 

@@ -2,7 +2,7 @@
 and options they accept, fetches the branch and the tag directly with a
 bundle route, checks the code with the string every report records, states
 the suite's count, and runs scripts/fine3d_session.sh; the session script
-(run here with stand-ins for git, python and the steps) runs the five steps
+(run here with stand-ins for git, python and the steps) runs the six steps
 in order, skips finished ones, restarts an interrupted R2a arm from its
 states or its checkpoints, moves an unreadable report aside, runs a step
 again until its output is complete, stops before any step when the code is
@@ -23,7 +23,8 @@ RUNBOOK = ROOT / "RUNBOOK_FINE3D.md"
 REFS = ("+refs/heads/wp9-pool:refs/remotes/origin/wp9-pool "
         "+refs/tags/prereg-fine3d:refs/tags/prereg-fine3d")
 ENV = {"PYTHONPATH": str(ROOT / "src"), "PATH": "/usr/bin:/bin:/usr/local/bin"}
-STEPS = ["r2a_b_m1024", "r2a_s_m1024", "amp_r2a_b_m1024", "amp_r2a_s_m1024", "r3_eft_b16"]
+STEPS = ["r2a_b_m1024", "r2a_s_m1024", "amp_r2a_b_m1024", "amp_r2a_s_m1024", "r3_eft_b16",
+         "r3_lft_b16"]
 
 
 def _text():
@@ -48,8 +49,7 @@ def test_ascii():
 def test_the_runbook_names_existing_scripts_configs_and_options():
     text = "\n".join(_blocks(_text())).replace("\\\n", " ")
     scripts = re.findall(r"python (scripts/\S+\.py)([^\n]*)", text)
-    assert {s for s, _ in scripts} == {"scripts/r3_energy_finetune.py",
-                                       "scripts/adjudicate_fine3d.py"}
+    assert {s for s, _ in scripts} == {"scripts/r3_finetune.py", "scripts/adjudicate_fine3d.py"}
     for script, rest in scripts:
         res = subprocess.run([sys.executable, str(ROOT / script), "--help"], capture_output=True,
                              text=True, cwd=ROOT, env=ENV)
@@ -142,9 +142,12 @@ case "$1" in
     out=""; while [ $# -gt 0 ]; do [ "$1" = --out ] && out=$2; shift; done
     mkdir -p "$(dirname "$out")"
     "$REAL_PY" -c 'import json,sys; s={"inband":{"summary":{"complete":True}},"fine":{"summary":{"complete":True}},"remesh":{"rows":[{}]*16}}; json.dump({"seeds":{"s3":s,"s4":s,"s5":s}}, open(sys.argv[1],"w"))' "$out"; exit 0;;
-  scripts/r3_energy_finetune.py)
-    mkdir -p runs/fine3d/r3_eft_b16
-    echo '{"per_seed": {"s0": {}, "s1": {}, "s2": {}}}' > runs/fine3d/r3_eft_b16/report.json; exit 0;;
+  scripts/r3_finetune.py)
+    name=$(basename "$2" .json)
+    [ "${FAIL:-}" = "$name" ] && exit 3
+    mkdir -p runs/fine3d/$name
+    [ "${PARTIAL:-}" = "$name" ] && { echo '{"per_seed": {"s0": {}, "s1": {}}}' > runs/fine3d/$name/report.json; exit 0; }
+    echo '{"per_seed": {"s0": {}, "s1": {}, "s2": {}}}' > runs/fine3d/$name/report.json; exit 0;;
 esac
 exit 9
 """
@@ -186,9 +189,11 @@ def test_session_runs_the_steps_in_order_then_skips_them(box):
     calls = (stub / "calls").read_text().splitlines()
     assert [c.split()[4] if c.split()[1] == "-m" else c.split()[1] for c in calls] == [
         "configs/r2a_b_m1024.json", "configs/r2a_s_m1024.json", "scripts/posthoc_amplitude.py",
-        "scripts/posthoc_amplitude.py", "scripts/r3_energy_finetune.py"]
+        "scripts/posthoc_amplitude.py", "scripts/r3_finetune.py", "scripts/r3_finetune.py"]
     assert all("--reuse-states" not in c for c in calls)
     assert "--label-workers 1" in calls[0] and "--remesh 16" in calls[2]
+    assert calls[4].endswith("scripts/r3_finetune.py configs/r3_eft_b16.json")
+    assert calls[5].endswith("scripts/r3_finetune.py configs/r3_lft_b16.json")
     st = _status(tmp)
     assert [ln.split()[0] for ln in st.splitlines() if "exit=0" in ln] == \
         [f"{s}.log" for s in STEPS]
@@ -196,7 +201,7 @@ def test_session_runs_the_steps_in_order_then_skips_them(box):
     r = _run(box)
     assert not (stub / "calls").exists()                    # nothing ran again
     st = _status(tmp)
-    assert st.count("report exists, skipped") == 3 and st.count("record complete, skipped") == 2
+    assert st.count("report exists, skipped") == 4 and st.count("record complete, skipped") == 2
 
 
 @pytest.mark.parametrize("left", ["ar_p1024_s3.pt", "ar_p1024_s3.ckpt"])
@@ -214,6 +219,33 @@ def test_session_restarts_an_interrupted_arm_from_its_states(box, left):
     assert "r2a_b_m1024: restarting from its states" in _status(tmp)
     assert len(list((tmp / "runs" / "fine3d" / "session").glob("r2a_b_m1024.log.*"))) == 1
     assert len(re.findall(r"^r2a_b_m1024\.log start", _status(tmp), re.M)) == 2
+
+
+def test_session_runs_the_labelled_arm_only_after_a_complete_energy_arm(box):
+    tmp, stub, _ = box
+    _run(box, FAIL="r3_eft_b16")
+    st = _status(tmp)
+    assert "r3_eft_b16.log exit=3" in st
+    assert "r3_lft_b16: not run, r3_eft_b16 has no complete report (R3 needs both arms)" in st
+    assert not any("r3_lft_b16" in c for c in (stub / "calls").read_text().splitlines())
+    (stub / "calls").unlink()
+    r = _run(box)
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert [c.split()[-1] for c in (stub / "calls").read_text().splitlines()] == \
+        ["configs/r3_eft_b16.json", "configs/r3_lft_b16.json"]
+
+
+def test_session_needs_all_three_seeds_of_the_energy_arm(box):
+    """An energy arm's report with two seeds is not complete: the labelled arm
+    does not start, and the energy arm runs again next time."""
+    tmp, stub, _ = box
+    _run(box, PARTIAL="r3_eft_b16")
+    st = _status(tmp)
+    assert "r3_eft_b16.log exit=0" in st and "r3_lft_b16: not run" in st
+    (stub / "calls").unlink()
+    _run(box)
+    assert [c.split()[-1] for c in (stub / "calls").read_text().splitlines()] == \
+        ["configs/r3_eft_b16.json", "configs/r3_lft_b16.json"]
 
 
 def test_session_moves_an_unreadable_report_aside(box):
@@ -244,9 +276,11 @@ def test_session_runs_a_step_again_until_its_output_is_complete(box):
     calls = (stub / "calls").read_text().splitlines()
     assert [c.split()[1] for c in calls] == ["scripts/posthoc_amplitude.py",
                                              "scripts/posthoc_amplitude.py",
-                                             "scripts/r3_energy_finetune.py"]
+                                             "scripts/r3_finetune.py"]
     assert "amp_r2a_b_m1024.json" in calls[0] and "amp_r2a_s_m1024.json" in calls[1]
-    assert _status(tmp).count("report exists, skipped") == 2
+    assert calls[2].endswith("configs/r3_eft_b16.json")          # the labelled arm is complete
+    assert _status(tmp).count("report exists, skipped") == 3
+    assert "r3_lft_b16: report exists, skipped" in _status(tmp)
 
 
 @pytest.mark.parametrize("what,content", [("describe", "prereg-fine3d-1-gabcdef\n"),
@@ -259,7 +293,7 @@ def test_session_stops_when_the_code_is_not_the_tag(box, what, content):
     (stub / what).write_text(content)
     _run(box)
     assert not (stub / "calls").exists()
-    assert _status(tmp).count("STOP before") == 5
+    assert _status(tmp).count("STOP before") == 6
 
 
 def test_session_checks_the_code_before_every_step(box):
@@ -294,5 +328,5 @@ def test_session_needs_a_gpu_unless_rehearsing(box):
     assert not (stub / "calls").exists()
     r = _run(box, STUB_NOGPU="1", FINE3D_REHEARSAL="1")
     assert r.returncode == 0 and "rehearsal: no GPU check" in _status(tmp)
-    assert len((stub / "calls").read_text().splitlines()) == 5
+    assert len((stub / "calls").read_text().splitlines()) == 6
     assert "FINE3D_REHEARSAL" not in RUNBOOK.read_text()

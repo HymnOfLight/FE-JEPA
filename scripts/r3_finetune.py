@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
-"""fine3d (PREREG_FINE3D Sec. 3, R3): label-free fine-tuning at the fine mesh.
+"""fine3d (PREREG_FINE3D Sec. 3, R3): fine-tuning at the fine mesh, one arm
+per configuration -- the energy arm (configs/r3_eft_b16.json: the AR objective,
+label-free) or the labelled arm (configs/r3_lft_b16.json: the displacement
+labels, P3's labelled few-shot fine-tuning run again in the same session).
 
-For each seed of the configuration (configs/r3_eft_b16.json), in order:
+For each seed of the configuration, in order:
   1. the Phase-2b AR state of that seed, checked by SHA-256 against the
      Phase-2b report's record (the report itself checked by SHA-256), loaded
      strictly into the report's own model (its embedded configuration, which
@@ -12,23 +15,30 @@ For each seed of the configuration (configs/r3_eft_b16.json), in order:
      instances reproduce the report's per-instance displacement errors and
      energy gaps (P3's zero-shot AR cell and E8's AR cell) to `max_rel_dev`;
      otherwise it stops before training;
-  3. training: the AR objective (energy only, AR_CONFIG) on the first `n`
-     instances of the fine few-shot prefix -- the instances on which P3's
-     labelled few-shot fine-tuning trained at that budget -- with that
-     fine-tuning's schedule (its epochs and learning rate; AdamW, weight decay
-     1e-4, gradient clip 1.0, 5% linear warm-up then cosine) and its seed,
-     hence the same instance order in every epoch. The training instances'
-     labels are dropped when they are loaded (U_star = None): the objective
-     cannot read them;
+  3. training on the first `n` instances of the fine few-shot prefix -- the
+     instances on which P3's labelled few-shot fine-tuning trained at that
+     budget -- with that fine-tuning's schedule (its epochs and learning rate;
+     AdamW, weight decay 1e-4, gradient clip 1.0, 5% linear warm-up then
+     cosine: SupervisedConfig's defaults, checked) and its seed, hence the same
+     instance order in every epoch. The energy arm: `pretrain()` with
+     AR_CONFIG (energy only); the training instances' labels are dropped when
+     they are loaded (U_star = None), so the objective cannot read them. The
+     labelled arm: `train_supervised()` with anchor_mode "none" (the
+     displacement loss), as P3's unit runs it; every training instance must
+     carry its labels;
   4. the fine-tuned state is saved (its SHA-256 recorded) and evaluated with
      the frozen metric suite and the amplitude readings on the fine
      evaluation set and the in-band validation split (a progress line every
      32 instances).
-Each seed's result records the seed it trained with, the epochs it ran and
-the steps (counted from the trainer's history), the SHA-256 of the instance
+Each seed's result records the arm (its loss and trainer), the seed it
+trained with, the epochs it ran and the steps (counted from the trainer's
+history), the SHA-256 of the instance
 orders that seed determines (`epoch_orders`; tests/test_fine3d_r3.py checks
-that the trainer visits them), the code (`git describe`) and the
-configuration's SHA-256. A seed whose result file is readable, of this seed,
+that the trainer visits them), the code (`git describe`), the
+configuration's SHA-256 and the machine (host and GPU driver) when the seed
+starts and when it ends. Both arms train in fp32 without torch.compile, as
+P3's labelled units did: the source report's `runtime` block must say so
+(P3 read both from it). A seed whose result file is readable, of this seed,
 this code and this configuration, with a passed content check and its state
 on disk at the recorded SHA-256, is not run again (marked `from_disk` in the
 report); any other result file is moved aside and the seed runs again. An
@@ -37,11 +47,13 @@ interrupted training resumes from its epoch checkpoint (written at most every
 moved aside and the seed trains from the start. The report is written when
 every seed has a result.
 
-    python scripts/r3_energy_finetune.py configs/r3_eft_b16.json
+    python scripts/r3_finetune.py configs/r3_eft_b16.json
+    python scripts/r3_finetune.py configs/r3_lft_b16.json
 """
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import hashlib
 import inspect
 import json
@@ -55,6 +67,9 @@ sys.path.insert(0, str(ROOT / "src"))
 
 CHECK_KEYS = ("disp_rel_l2", "energy_gap_rel")
 PROGRESS_EVERY = 32
+ARMS = {"ar": {"name": "energy", "prefix": "eft", "trainer": "pretrain"},
+        "labels": {"name": "labelled", "prefix": "lft", "trainer": "train_supervised"}}
+"""The two arms by `train.loss`: their name, file prefix and trainer."""
 
 
 def _sha256(path) -> str:
@@ -71,6 +86,7 @@ def verify(cfg: dict, label: str) -> dict:
     the report records about them."""
     from fejepa.report import config_sha256, verify_prereg
     from fejepa.train.schedule import make_scheduler
+    from fejepa.train.supervised import SupervisedConfig
 
     out = {"config_sha256": config_sha256(cfg), "prereg": None}
     if cfg.get("prereg_guard"):
@@ -83,13 +99,54 @@ def verify(cfg: dict, label: str) -> dict:
         raise SystemExit(f"{src['report']}: SHA-256 {got[:12]}... is not the source report "
                          f"({src['report_sha256'][:12]}...)")
     tr = cfg["train"]
-    if tr.get("loss") != "ar" or tr.get("set") != "fine_fewshot_prefix":
+    if tr.get("loss") not in ARMS or tr.get("set") != "fine_fewshot_prefix":
         raise SystemExit(f"train: loss {tr.get('loss')!r} / set {tr.get('set')!r} -- this "
-                         "script trains the AR objective on the fine few-shot prefix only")
+                         "script trains the AR objective ('ar') or the displacement labels "
+                         "('labels') on the fine few-shot prefix only")
     wf = inspect.signature(make_scheduler).parameters["warmup_frac"].default
     if float(tr["warmup_frac"]) != float(wf):
         raise SystemExit(f"train.warmup_frac {tr['warmup_frac']} is not the trainer's ({wf})")
+    sd = {f.name: f.default for f in dataclasses.fields(SupervisedConfig)}
+    for k in ("weight_decay", "clip"):
+        if float(tr[k]) != float(sd[k]):
+            raise SystemExit(f"train.{k} {tr[k]} is not the labelled fine-tuning's "
+                             f"(SupervisedConfig's {sd[k]})")
     return out
+
+
+def check_runtime(report: dict) -> None:
+    """The source report's runtime must be fp32 without compile: P3's labelled
+    units took both from it (runner: `runtime.precision`, `runtime.compile`,
+    defaults fp32 and False), and R3 trains with SupervisedConfig's and
+    PretrainConfig's defaults (fp32) and never compiles."""
+    rt = report["config"].get("runtime") or {}
+    if rt.get("precision", "fp32") != "fp32" or bool(rt.get("compile", False)):
+        raise SystemExit(f"the source report's runtime is {rt}: R3 trains in fp32 without "
+                         "compile, so its labelled arm would not repeat P3's labelled units")
+
+
+def machine(tries: int = 2) -> dict:
+    """The host and the GPU driver (the first GPU's; None where there is none,
+    after `tries` attempts)."""
+    import platform
+    import subprocess
+
+    drv = None
+    for i in range(tries):
+        try:
+            r = subprocess.run(["nvidia-smi", "--query-gpu=driver_version",
+                                "--format=csv,noheader"], capture_output=True, text=True,
+                               timeout=60)
+            if r.returncode == 0 and r.stdout.strip():
+                drv = r.stdout.strip().splitlines()[0].strip()
+                break
+        except FileNotFoundError:                         # no tool: no GPU driver to read
+            break
+        except Exception:                                 # noqa: BLE001 (a failed query)
+            pass
+        if i + 1 < tries:
+            time.sleep(5)
+    return {"host": platform.node(), "gpu_driver": drv}
 
 
 def instance_sets(report: dict, cfg: dict, fine_dir=None, inband_dir=None) -> dict:
@@ -172,17 +229,22 @@ def _progress(archs, what: str, every: int = PROGRESS_EVERY):
         yield a
 
 
-def load_training(files: list) -> list:
-    """The training instances, labels dropped (the objective is label-free)."""
+def load_training(files: list, labels: bool) -> list:
+    """The training instances: for the energy arm with their labels dropped
+    (the objective is label-free), for the labelled arm with their labels,
+    which every one must carry."""
     from fejepa.data.archive import load_instance
 
     archs = []
     for f in files:
         a = load_instance(Path(f))
-        a.U_star = None
+        if not labels:
+            a.U_star = None
         archs.append(a)
-    if any(a.labelled for a in archs):
+    if not labels and any(a.labelled for a in archs):
         raise SystemExit("a training instance still carries labels")
+    if labels and not all(a.labelled for a in archs):
+        raise SystemExit("a training instance of the labelled arm carries no labels")
     return archs
 
 
@@ -217,8 +279,10 @@ def run_seed(seed: int, seed_index: int, report: dict, cfg: dict, sets: dict, ou
     from fejepa.train.checkpoint import atomic_torch_save
     from fejepa.train.losses import AR_CONFIG
     from fejepa.train.pretrain import PretrainConfig, pretrain
+    from fejepa.train.supervised import SupervisedConfig, train_supervised
 
     t0 = time.time()
+    m0 = machine()
     model = run_model(report, state_path, seed, device)       # verified config, strict load
     check = content_check(model, report, seed_index, sets, cfg, device)
     print(json.dumps({"seed": seed, "content_check": check}), flush=True)
@@ -228,15 +292,21 @@ def run_seed(seed: int, seed_index: int, report: dict, cfg: dict, sets: dict, ou
                          "training")
     t1 = time.time()
     tr = cfg["train"]
-    archs = load_training(sets["train"])
-    ckpt = out_dir / f"eft_b{tr['n']}_s{seed}.ckpt"
+    arm = ARMS[tr["loss"]]
+    archs = load_training(sets["train"], labels=tr["loss"] == "labels")
+    ckpt = out_dir / f"{arm['prefix']}_b{tr['n']}_s{seed}.ckpt"
     own_checkpoint(ckpt, {"git": _git_describe(), "config_sha256": config_sha256(cfg)})
-    pc = PretrainConfig(
-        epochs=int(tr["epochs"]), lr=float(tr["lr"]), weight_decay=float(tr["weight_decay"]),
-        clip=float(tr["clip"]), seed=int(seed), device=device, loss=AR_CONFIG,
-        desc=f"R3 energy FT b{tr['n']} s{seed}", ckpt_path=str(ckpt), resume=True)
-    hist = pretrain(model, archs, pc)
-    sp = out_dir / f"eft_b{tr['n']}_s{seed}.pt"
+    common = dict(epochs=int(tr["epochs"]), lr=float(tr["lr"]),
+                  weight_decay=float(tr["weight_decay"]), clip=float(tr["clip"]),
+                  seed=int(seed), device=device, desc=f"R3 {arm['name']} FT b{tr['n']} s{seed}",
+                  ckpt_path=str(ckpt), resume=True)
+    if tr["loss"] == "ar":
+        hist = pretrain(model, archs, PretrainConfig(loss=AR_CONFIG, **common))
+    else:                         # P3's labelled unit: the displacement loss, no anchor
+        out = train_supervised(model, archs, archs[:1],
+                               SupervisedConfig(anchor_mode="none", **common))
+        hist = dict(out["history"], resumed_from_epoch=out.get("resumed_from_epoch"))
+    sp = out_dir / f"{arm['prefix']}_b{tr['n']}_s{seed}.pt"
     atomic_torch_save(model.state_dict(), sp)
     n_train = len(archs)
     del archs
@@ -244,12 +314,14 @@ def run_seed(seed: int, seed_index: int, report: dict, cfg: dict, sets: dict, ou
     pred = torch_predictor(model, device)
     amp = bool(cfg["evaluation"].get("amplitude"))
     losses = list(hist.get("loss") or [])
-    orders = epoch_orders(pc.seed, n_train, pc.epochs)
+    orders = epoch_orders(int(seed), n_train, int(tr["epochs"]))
     res = {"seed": seed, "git": _git_describe(), "config_sha256": config_sha256(cfg),
+           "machine": {"start": m0, "end": machine()},
            "source_state": {"path": str(state_path), "sha256": _sha256(state_path)},
            "content_check": check,
-           "train": {"files": [Path(f).name for f in sets["train"]], "seed": int(pc.seed),
-                     "epochs": int(pc.epochs), "epochs_run": len(losses),
+           "train": {"loss": tr["loss"], "trainer": arm["trainer"],
+                     "files": [Path(f).name for f in sets["train"]], "seed": int(seed),
+                     "epochs": int(tr["epochs"]), "epochs_run": len(losses),
                      "steps": len(losses) * n_train,
                      "order_sha256": hashlib.sha256(json.dumps(orders).encode()).hexdigest(),
                      "first_epoch_order": orders[0] if orders else [],
@@ -292,6 +364,7 @@ def run(config_path, device_override: str | None = None, fine_dir=None,
     cfg = json.loads(cp.read_text())
     ver = verify(cfg, cp.stem)
     report = json.loads(_rel(cfg["source"]["report"]).read_text())
+    check_runtime(report)
     device = resolve_device(device_override or cfg.get("device", "auto"))
     seeds = [int(s) for s in cfg["seeds"]]
     rep_seeds = [int(s) for s in report["provenance"]["seeds"]]
@@ -301,7 +374,8 @@ def run(config_path, device_override: str | None = None, fine_dir=None,
     sets = instance_sets(report, cfg, fine_dir, inband_dir)
     out = _rel(cfg["out"])
     out_dir = out.parent
-    plan = {"r3": str(cp), "device": device, "seeds": seeds,
+    plan = {"r3": str(cp), "arm": ARMS[cfg["train"]["loss"]]["name"], "device": device,
+            "seeds": seeds,
             "train": [Path(f).name for f in sets["train"]],
             "n_fine": len(sets["fine"]), "n_inband": len(sets["inband"]),
             "states_verified": len(states), "prereg": ver["prereg"]}
@@ -334,7 +408,8 @@ def run(config_path, device_override: str | None = None, fine_dir=None,
     from fejepa.runtime import setup_torch
 
     policy = setup_torch(device, tf32=bool(report["config"].get("tf32", True)))
-    rep = {"what": "fine3d R3: label-free fine-tuning at the fine mesh (PREREG_FINE3D)",
+    rep = {"what": f"fine3d R3: fine-tuning at the fine mesh, the {ARMS[cfg['train']['loss']]['name']} "
+                   "arm (PREREG_FINE3D)",
            "config": cfg, "prereg": ver["prereg"],
            "provenance": dict(provenance(cfg, [sets["fine_dir"], sets["inband_dir"]], seeds),
                               source_report=cfg["source"]["report"],

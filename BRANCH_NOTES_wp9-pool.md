@@ -1050,3 +1050,123 @@ is stamped and nothing has run on the box.
   `test_fine3d_r3.py`, `test_fine3d_configs.py`, `test_fine3d_adjudication.py`,
   `test_fine3d_records.py`, `test_fine3d_prereg.py`, `test_fine3d_runbook.py`.
 - Suite 579 (455 + 124).
+
+## Stage 2, r2 (15 October 2026) -- PREREG_FINE3D r2 drafted, not stamped: R3 against its labelled fine-tuning run again in the same session; the R2b line at -40%
+
+The PI decided on 15 October 2026 that R3's reference is to be run again in
+the same session, and asked for the R2b line to be evaluated again. Nothing
+is stamped and nothing has run on the box.
+
+- **R3's labelled arm** (`configs/r3_lft_b16.json`): P3's labelled few-shot
+  fine-tuning at 16 run again from the same states, on the same 16
+  instances, with the same schedule, seeds and instance orders, in the same
+  session as the energy arm and after it (the session starts it only once
+  the energy arm's report is complete: R3 needs both). It replaces the
+  Phase-2b record as the reference of R3-E and R3-V; the record is read
+  beside it (every metric with the guard; a difference beyond the guard is a
+  flag), and the energy arm likewise. The two configurations differ only in
+  `_comment`, `out` and `train.loss`.
+- **R3's script**, renamed `scripts/r3_finetune.py` (it was
+  `scripts/r3_energy_finetune.py`): one arm per configuration, chosen by
+  `train.loss` -- `ar`: `pretrain()` with `AR_CONFIG`, the labels dropped on
+  load; `labels`: `train_supervised()` with `anchor_mode = "none"`, as P3's
+  unit runs it, every training instance required to carry its labels. It
+  also checks the weight decay and the clip against `SupervisedConfig`'s
+  defaults and refuses a source report whose runtime is not fp32 without
+  compilation (P3's units took both from it); each result records its loss,
+  trainer and machine (host, GPU driver); the files are `eft_*` and `lft_*`.
+  On the CPU miniature the labelled arm reproduces P3's labelled unit per
+  instance, bit for bit, and its trainer configuration field by field.
+- **`train_supervised`** records the last step's loss of each epoch
+  (`history`, kept in its epoch checkpoint, so that a resumed run counts
+  every epoch). Nothing else changes: the regression against wp8-lejepa,
+  run again on the new `src` tree, is identical (records/wp9/README.md).
+- **Adjudication**: R3 reads both reports (`--r3`, `--r3-labelled`); each is
+  refused as before, and for the other arm's configuration, objective or
+  trainer; the two are refused together if they ran on different code or
+  recorded different epoch orders. Another torch, GPU or TF32 setting
+  between them, or seeds on more than one host or GPU driver, is a
+  deviation; another setting between the labelled arm and the record, a
+  note. A non-finite value of the labelled arm voids the verdict whose
+  metric it is (the other verdict, the readings and the deviations stand);
+  one of the energy arm fails its verdict (diverged). A report not given or
+  not in the return is named; a status file not given is a deviation.
+- **The R2b line** at -40% (it was -50%). `scripts/fine3d_sims.py`'s new
+  `r2b` block simulates R2b itself, R2a's rule on the Phase-2b transformer's
+  spreads, with S's reduction on the transformer taken as 0.87 times the
+  bottleneck's (the ratio of the two c* reductions; 0.6 and 1.0 as
+  alternatives) and the bottleneck's true reduction uniform on 0-80%. An
+  R2a observed near -40% is followed by a supported R2b in 60% of trials
+  (50% near -35%, the point where the prediction passes one half; 79% near
+  -50%); the recommendations at -40% are followed by a supported R2b in 83%
+  of cases (70% on R2a SUPPORTED alone, 87% at -50%), and 17% of trials go
+  unrecommended though R2b would be supported (9% and 25%).
+  `r2b_sensitivity`: 60% with the prior on 0-60%, but 21% with the
+  transformer's spreads doubled, so R2b's own pre-registration should weigh
+  its number of seeds. `r3_paired` correlates the two R3 arms within a seed;
+  `r3_spread_x2` doubles both arms' spreads.
+- **PREREG_FINE3D r2**: Q-R3; Sec. 3 (two arms, why their order cannot
+  favour either), 4, 5, 6 (R3's reference and its properties, unpaired,
+  paired and with doubled spreads, and why the record is not the reference;
+  the R2b rule with its reasons and its sensitivity), 7, 8, 9 (about 39 h)
+  and the revision line; four CONFIG_SHA256 lines. The stamp script expects
+  the r2 draft (its SHA-256 pinned again).
+- **The session and RUNBOOK_FINE3D**: six steps, the two R3 arms last
+  (energy, then labelled once the energy arm is complete); 0d dry-runs both
+  R3 configurations; about 39 h, the balance about 50 h; the return carries
+  `r3_lft_b16`; the adjudication command reads both arms.
+- **Two independent reviews before delivery** (code and statistics;
+  pre-registration and operations), no blocking finding. Changed after them:
+  the R2b rationale's wording (the prediction passes one half near -35%, the
+  line is the first grid point clearly above it; "if judged by R2a's rule";
+  the spreads compared metric by metric; the window and the prior's bound
+  stated) and its sensitivity; R3's properties with both arms' spreads
+  doubled and a weak-evidence sentence; the standard-error convention of the
+  record-held rates; a void verdict per metric, keeping the rest; the
+  machine record and its deviation; the labelled arm only after a complete
+  energy arm; the source report's runtime checked; Sec. 8's R3 refusals as
+  the code has them ("recorded different epoch orders", another corpus);
+  tests for the non-finite paths, the labelled arm's trainer configuration,
+  its reuse, the session's step list as the adjudicator counts it, a status
+  file not given, and the session's energy-first rule.
+- **A third review, of the revision** (no blocking finding). Changed after
+  it: the doubled-spread case of the R2b rationale backed by its gates (R2b
+  supported after 49% of the recommendations at -40%, not "seldom"); each R3
+  seed's machine recorded when it starts and when it ends, the driver query
+  tried twice; a paired reading with a non-finite value is null and the
+  verdict file is strict JSON (non-finite values written as null); R2a's
+  void keeps its readings and deviations, as R3's does; the revision line
+  lists the r2 changes; tests for an energy arm's report with two seeds and
+  for the strict JSON.
+- **Delivery checks** (sandbox, 15 October 2026). The package committed on
+  1060d3c (the old script removed): the full suite passes (pdflatex present:
+  every test runs). Stamped as Sec. 8 says (`scripts/stamp_prereg_fine3d.py`,
+  a commit, an annotated tag `prereg-fine3d`): `git describe --always
+  --dirty --tags` and `git tag --points-at HEAD` print exactly the tag, the
+  full suite passes on that commit and leaves the tree clean. A CPU
+  rehearsal of the session as in Stage 2 (the box's layout, sizes scaled
+  down; a miniature Phase-2b run with three AR seeds as R3's source;
+  miniature configurations from the generator's functions with
+  PREREG_FINE3D stamped over them, committed, tagged and pushed to a bare
+  repository; a single-branch clone at 92dfc93 as the box). From the stamped
+  commit's runbook, verbatim: 0b, 0c without the suite, 0d (both R2a dry runs
+  `verified`; R3's two plans, the energy arm's then the labelled arm's, each
+  with its own line's hash), 1' during the amplitude pass, 2 (the return).
+  The session script was killed after `r2a_s_m1024`'s first seed state,
+  during the energy arm's first seed and during the labelled arm's first
+  seed, then run to the end (that arm restarted with `--reuse-states`, each
+  R3 seed resumed from epoch 1) and once more (every step skipped). The
+  return, unpacked, was adjudicated with the module's sizes set to the
+  miniature's: every part evaluated; the labelled arm, interrupted and
+  resumed, equal to the miniature record of the same fine-tuning in every
+  metric (rel 0); the attempts, the restart and both resumptions recorded as
+  deviations, no note.
+- Tests changed on purpose: `test_fine3d_r3.py` (both arms; the labelled arm
+  against P3's labelled unit; the old script name gone),
+  `test_fine3d_adjudication.py` (two R3 reports, their refusals and pair
+  checks; the reference is the labelled arm, not the record; the R2b line at
+  -40%), `test_fine3d_prereg.py` (r2's numbers, the R2b rationale),
+  `test_fine3d_configs.py` (four configurations; the two arms differ only in
+  their objective), `test_fine3d_runbook.py` (six steps; the energy-first
+  rule).
+- Suite 625 (579 + 46).
