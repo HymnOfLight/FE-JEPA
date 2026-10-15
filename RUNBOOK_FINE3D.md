@@ -81,7 +81,7 @@ object.)
 0c. Checkout, checks and the suite (about 7 min):
 ```bash
 cd ~/autodl-tmp/FE-JEPA
-git checkout -B wp9-pool origin/wp9-pool           # "Switched to ..." or "Reset branch ..."
+git checkout -B wp9-pool origin/wp9-pool           # "Switched to ..." or "Reset branch ...", maybe "set up to track" or "up to date"
 git describe --always --dirty --tags               # must print exactly: prereg-fine3d
 git tag --points-at HEAD                           # must print exactly: prereg-fine3d
 git rev-parse 'HEAD^{tree}'                        # the tree the operator instruction names
@@ -91,13 +91,19 @@ pgrep -af "fejepa|spawn_main|holdout"              # must print nothing (R1 fini
 nvidia-smi --query-gpu=utilization.gpu,memory.used --format=csv,noheader   # about 0 %, under 1,000 MiB
 grep oom_kill /sys/fs/cgroup/memory.events         # note the number: 1' compares with it
 python -c "import torch; print(torch.__version__, torch.cuda.is_available())"   # 2.12.1+cu130 True
+ls -A runs/fine3d 2>/dev/null | grep -vx session || echo "no fine3d run yet"   # must print exactly: no fine3d run yet
 mkdir -p runs/fine3d/session
-python -m pytest -q 2>&1 | tee runs/fine3d/session/pytest.log | tail -n 3   # "624 passed, 1 skipped"
+python -m pytest -q 2>&1 | tee runs/fine3d/session/pytest.log | tail -n 3   # "651 passed, 1 skipped"
 ```
 Any output other than the comments describe: stop and report. The suite's last
-line reads `624 passed, 1 skipped` where `pdflatex` is missing (the box: the
-paper tables' LaTeX build is not compiled), `625 passed` where it is present.
-Anything failed, an error, or another count: stop and report.
+line reads `651 passed, 1 skipped`, then the warnings and the time, where
+`pdflatex` is missing (the box: the paper tables' LaTeX build is not
+compiled); `652 passed` where it is present. Anything failed, an error, or
+another count: stop and report. (`no fine3d run yet`: `runs/fine3d` holds no
+output of a fine3d step, so no step can be skipped as finished by an output of
+other code; 0c itself makes only `runs/fine3d/session`, which the check
+ignores, and the dry runs of 0d write nothing there, so a repeated 0c prints
+the same.)
 
 0d. The inputs and the dry runs (~3 min):
 ```bash

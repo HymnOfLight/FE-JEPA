@@ -177,8 +177,11 @@ def test_r3_runs_reproduces_and_evaluates(done, mini):
             assert r[name]["n_val"] == n and len(r[name]["per_instance"]["vm_rel_l2"]) == n
             assert len(r[name]["amplitude"]["per_instance"]["c_star"]) == n
         assert set(r["seconds"]) == {"load_and_check", "train", "evaluate"}
-        assert set(r["machine"]) == {"start", "end"}
-        assert all(set(m) == {"host", "gpu_driver"} and m["host"] for m in r["machine"].values())
+        m = r["machine"]
+        assert set(m) == {"start", "resumed_on", "end"} and m["resumed_on"] == []
+        assert all(set(x) == {"host", "gpu_driver"} and x["host"] for x in (m["start"], m["end"]))
+        assert t["runtime"] == {"tf32_matmul": False, "tf32_cudnn": False,     # the report's
+                                "float32_matmul_precision": "highest"}         # policy (off)
         assert not r.get("from_disk")
         ck = Path(r["state"]["path"]).with_suffix(".ckpt")
         assert not ck.exists() and not ck.with_name(ck.name + ".json").exists()
@@ -262,7 +265,7 @@ def test_r3_labelled_arm_trains_with_p3s_supervised_configuration(mini, tmp_path
     p3 = json.loads((mini / "p3_cfgs.json").read_text())
     skip = {"desc", "ckpt_path", "resume"}
     assert len(seen) == 2
-    for s, mine in zip((0, 1), seen):
+    for s, mine in zip((0, 1), seen, strict=True):
         theirs = p3[f"P3 finetune b2 s{s}"]
         assert {k: v for k, v in mine.items() if k not in skip} == \
             {k: v for k, v in theirs.items() if k not in skip}
@@ -282,6 +285,107 @@ def test_r3_refuses_a_source_report_not_in_fp32(mini, tmp_path):
         with pytest.raises(SystemExit, match="fp32 without compile"):
             R3.run(_r3cfg(mini, tmp_path / "RT", source=src, train=dict(TRAIN_L)))
     assert not (tmp_path / "RT").exists()
+
+
+def test_r3_energy_arm_trains_with_the_labelled_schedule_and_no_labels(mini, tmp_path,
+                                                                       monkeypatch):
+    """The energy arm's trainer configuration has the labelled unit's schedule
+    field by field (epochs, lr, weight decay, clip, seed, fp32) with the AR
+    objective, and every training instance reaches the trainer without labels."""
+    from fejepa.train import pretrain as pt
+    from fejepa.train.losses import AR_CONFIG
+
+    seen, real = [], pt.pretrain
+
+    def spy(model, archs, cfg, *a, **k):
+        seen.append((dataclasses.asdict(cfg), [x.U_star is None for x in archs]))
+        return real(model, archs, cfg, *a, **k)
+    monkeypatch.setattr(pt, "pretrain", spy)
+    R3.run(_r3cfg(mini, tmp_path / "E", train=dict(TRAIN)))
+    p3 = json.loads((mini / "p3_cfgs.json").read_text())
+    assert len(seen) == 2
+    for s, (cfg, unlabelled) in zip((0, 1), seen, strict=True):
+        theirs = p3[f"P3 finetune b2 s{s}"]
+        assert {k: cfg[k] for k in ("epochs", "lr", "weight_decay", "clip", "seed", "precision")} \
+            == {k: theirs[k] for k in ("epochs", "lr", "weight_decay", "clip", "seed",
+                                       "precision")}
+        assert cfg["loss"] == dataclasses.asdict(AR_CONFIG) and cfg["resume"] is True
+        assert unlabelled == [True, True]
+
+
+def test_r3_content_check_fails_on_non_finite_predictions(mini, tmp_path, monkeypatch):
+    """A NaN prediction is a failed content check (max(0.0, nan) is 0.0 in
+    Python: the check must not let it through)."""
+    import numpy as np
+
+    from fejepa import metrics
+
+    real = metrics.torch_predictor
+
+    def nan_predictor(model, device):
+        f = real(model, device)
+        return lambda a: np.full_like(np.asarray(f(a), dtype=float), np.nan)
+    monkeypatch.setattr(metrics, "torch_predictor", nan_predictor)
+    with pytest.raises(SystemExit, match="do not reproduce"):
+        R3.run(_r3cfg(mini, tmp_path / "NaN", seeds=[0]))
+    assert not list((tmp_path / "NaN").glob("*.pt"))
+
+
+def test_r3_keeps_the_machine_a_seed_started_on_across_a_resumption(mini, tmp_path, monkeypatch):
+    from fejepa.train import pretrain as pt
+
+    real, calls = pt.compute_loss, {"n": 0}
+
+    def boom(*a, **k):
+        calls["n"] += 1
+        if calls["n"] == 3:
+            raise RuntimeError("simulated interruption")
+        return real(*a, **k)
+    monkeypatch.setattr(pt, "compute_loss", boom)
+    a, b = {"host": "A", "gpu_driver": "1"}, {"host": "B", "gpu_driver": "2"}
+    monkeypatch.setattr(R3, "machine", lambda tries=2: dict(a))
+    p = _r3cfg(mini, tmp_path / "M", seeds=[0])
+    with pytest.raises(RuntimeError, match="simulated"):
+        R3.run(p)
+    monkeypatch.setattr(pt, "compute_loss", real)
+    monkeypatch.setattr(R3, "machine", lambda tries=2: dict(b))
+    rep = R3.run(p)
+    assert rep["per_seed"]["s0"]["machine"] == {"start": a, "resumed_on": [b], "end": b}
+
+
+def test_r3_writes_a_seeds_result_before_removing_its_checkpoint(mini, tmp_path, monkeypatch):
+    from fejepa.analysis import common
+
+    real, seen = common.write_json, []
+
+    def spy(path, obj):
+        q = Path(path)
+        if q.name.startswith("seed_"):
+            seen.append((q.parent / f"eft_b2_s{q.stem.split('_')[1]}.ckpt").exists())
+        return real(path, obj)
+    monkeypatch.setattr(common, "write_json", spy)
+    R3.run(_r3cfg(mini, tmp_path / "W", seeds=[0]))
+    assert seen == [True] and not (tmp_path / "W" / "eft_b2_s0.ckpt").exists()
+
+
+def test_r3_stops_when_git_describe_cannot_be_read(mini, tmp_path, monkeypatch):
+    from fejepa import report
+
+    monkeypatch.setattr(report, "_git_describe", lambda: "unavailable")
+    with pytest.raises(SystemExit, match="git describe could not be read"):
+        R3.run(_r3cfg(mini, tmp_path / "G", seeds=[0]))
+    assert not list((tmp_path / "G").glob("*.pt"))
+
+
+def test_r3_records_the_git_describe_read_before_the_first_seed(mini, tmp_path, monkeypatch):
+    """The report records the `git describe` read before the first seed, not a
+    second read at the end of the arm (which could time out)."""
+    from fejepa import report
+
+    reads = iter(["v-first"])
+    monkeypatch.setattr(report, "_git_describe", lambda: next(reads, "unavailable"))
+    rep = R3.run(_r3cfg(mini, tmp_path / "O", seeds=[0]))
+    assert rep["provenance"]["git"] == rep["per_seed"]["s0"]["git"] == "v-first"
 
 
 def test_r3_labelled_arm_needs_labels(mini, tmp_path):
@@ -359,9 +463,9 @@ def test_both_trainers_draw_the_same_order(mini):
         m2 = _build_model({"kind": "fejepa", "model": MODEL, "seed": seed})
         real_loss = losses.compute_loss
 
-        def spy(model, pack, *a, _seen=seen_ar, **k):
+        def spy(model, pack, *a, _seen=seen_ar, _real=real_loss, **k):
             _seen.append(_name(pack))
-            return real_loss(model, pack, *a, **k)
+            return _real(model, pack, *a, **k)
         pt.compute_loss = spy
         try:
             pt.pretrain(m2, archs, pt.PretrainConfig(epochs=3, seed=seed, log_every=-1))
@@ -398,6 +502,7 @@ def test_r3_resumes_an_interrupted_seed(mini, done, done_l, tmp_path, monkeypatc
     first = (done if loss == "ar" else done_l)[0]["per_seed"]["s0"]
     t = rep["per_seed"]["s0"]["train"]
     assert t["resumed_from_epoch"] == 1 and t["epochs_run"] == 2 and t["steps"] == 4
+    assert len(rep["per_seed"]["s0"]["machine"]["resumed_on"]) == 1
     assert t["loss_by_epoch"] == first["train"]["loss_by_epoch"]
     assert rep["per_seed"]["s0"]["state"]["sha256"] == first["state"]["sha256"]
     assert rep["per_seed"]["s1"]["train"]["resumed_from_epoch"] is None

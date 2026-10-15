@@ -35,11 +35,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-DRAFT_STATUS = ("**Status:** r2 DRAFT (15 October 2026), not stamped; the four CONFIG_SHA256 "
+DRAFT_STATUS = ("**Status:** r3 DRAFT (15 October 2026), not stamped; the four CONFIG_SHA256 "
                 "lines below are open. Stamping fills them all at once, before any run "
                 "(Sec. 8); post-stamp criterion changes are prohibited.")
 FOOTER_OPEN = "PREREG_FINE3D_SHA256 = <record after commit>"
-DRAFT_SHA256 = "a0fc5f5bc9da241b3f50c1e14df7b86e069871913165226cbbde147d636e808e"
+DRAFT_SHA256 = "b6a2330dc039cec443a521ba2ab84e74d02c45054ef5cfbbee229e50e884f54e"
 """SHA-256 of the approved draft (PREREG_FINE3D.md as committed before the
 stamp); a test keeps it equal to the committed draft, or to the draft the
 stamped file came from."""
@@ -50,7 +50,7 @@ _DATE = re.compile(r"^[1-9]\d? (January|February|March|April|May|June|July|Augus
 
 
 def stamped_status(date: str) -> str:
-    return (f"**Status:** r2, stamped {date} before any run: the four CONFIG_SHA256 lines "
+    return (f"**Status:** r3, stamped {date} before any run: the four CONFIG_SHA256 lines "
             "below are filled, and the last line is this file's SHA-256 (Sec. 8); "
             "post-stamp criterion changes are prohibited.")
 

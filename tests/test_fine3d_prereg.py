@@ -190,7 +190,11 @@ def test_section_6_r2a_numbers():
     c = sims["r2a_correlated"]
     _has(f"(rho 0.5: {p('rho 0.5; fine -0%', nd=1, block=c)} without an effect; "
          + " / ".join(p(f"rho 0.5; fine -{d}%", block=c) for d in (20, 30, 50, 70)) + ")")
-    assert sims["r2b_fine_rel_max"] == -0.4
+    _has("a seed mean non-finite in only one of P3's in-band pass and E8's cell is refused "
+         "instead (Sec. 8)",
+         "a seed mean finite in one of the two only fails, and one finite in neither, a "
+         "diverged seed, is left to Sec. 6")                  # Sec. 8; the code: adjudication
+    assert sims["r2b_fine_rel_max"] == -0.45
     _has("recommendation in "
          + " / ".join(p(f"S spread x1.0; inband unchanged; fine -{d}%", "p_r2b_recommended")
                       for d in (50, 70)) + " of trials with the in-band errors unchanged ("
@@ -202,13 +206,27 @@ def test_section_6_r2a_numbers():
 
 
 def test_section_6_r2b_numbers():
-    """The R2b line and its rationale (`r2b`, `r2b_sensitivity`), from the
-    Phase-2b spreads and wp8's post-hoc records."""
+    """The R2b line and its reasons (`r2b`, `r2b_sensitivity`, `r2b_line`),
+    from the Phase-2b spreads and wp8's post-hoc records; the decision's
+    assumptions and conclusions are read from the record and the
+    adjudicator's constant, not restated."""
     from fejepa.analysis.adjudicate_fine3d import R2B_FINE_REL_MAX
 
     sims = _j(SIMS)
-    assert R2B_FINE_REL_MAX == sims["r2b_fine_rel_max"] == -0.4
-    _has("is at most 60% of the fresh baseline's (rel <= -40% in condition (i))")
+    line_pct = round(100 * R2B_FINE_REL_MAX)
+    assert R2B_FINE_REL_MAX == sims["r2b_fine_rel_max"] == -0.45
+    from fejepa.analysis.adjudicate_fine3d import R2B_TIE
+
+    _has(f"is **recommended** iff R2a is SUPPORTED and S's fine displacement error is at most "
+         f"{100 + line_pct}% of the fresh baseline's (rel <= {line_pct}% in condition (i), "
+         f"compared to within {R2B_TIE:g} for floating-point rounding). Otherwise it is not "
+         "recommended on this evidence. A recommendation, not a verdict",
+         f"Why {line_pct}% (the same script, `r2b`, `r2b_sensitivity` and `r2b_line`)",
+         "on three fresh seeds each as here: six runs of about 27 h of training, about a week "
+         "of one GPU",
+         "(R2b: the transformer with and without S on three fresh seeds each as simulated in "
+         "Sec. 6, six runs of 27.3 h of training,")
+    assert "27.3 h per seed" in (ROOT / "PREREG_E2.md").read_text()
     b = sims["r2b"]
     p2b = _j(W8 / "e2" / "baseline" / "report_phase2b.json")
     p3 = p2b["results"]["p3_transfer"]["metrics"]["ar"]
@@ -221,48 +239,137 @@ def test_section_6_r2b_numbers():
     assert b["cv"]["inband_disp"] == pytest.approx(cv(p3["inband"]["disp_rel_l2"]["per_seed"]))
     assert b["cv"]["inband_egap"] == pytest.approx(cv(e8["energy_gap_rel"]["per_seed"]))
     a = sims["r2a_cv"]
+    _has("- The decision. R2b is judged by R2a's rule on the seed spreads of the Phase-2b "
+         f"transformer (coefficients of variation {_pct(b['cv']['fine'])} for the fine "
+         "displacement error, "
+         f"{_pct(b['cv']['inband_disp'])} and {_pct(b['cv']['inband_egap'])} for the in-band "
+         f"displacement error and energy gap, against the bottleneck's {_pct(a['fine'])}, "
+         f"{_pct(a['inband_disp'])} and {_pct(a['inband_egap'])}")
     _has(f"coefficients of variation {_pct(b['cv']['fine'])} for the fine displacement error, "
          f"{_pct(b['cv']['inband_disp'])} and {_pct(b['cv']['inband_egap'])} for the in-band "
          f"displacement error and energy gap, against the bottleneck's {_pct(a['fine'])}, "
          f"{_pct(a['inband_disp'])} and {_pct(a['inband_egap'])}")
-    _has("supports a true fine reduction of 30% / 40% / 50% / 70% in "
+    _has("which supports a true fine reduction of 30% / 40% / 50% / 70% in "
          + " / ".join(_pct(b["power"][f"-{d}%"]) for d in (30, 40, 50, 70)) + " of trials")
     cut = b["c_star_fine_cut"]
     for name, path in (("transformer", "amp_phase2b.json"), ("bottleneck", "amp_e2_m1024.json")):
         sm = _j(W8 / "posthoc" / path)["seed_means"]["fine"]
         assert cut[name] == pytest.approx(1 - sm["disp_c"] / sm["disp"])
     assert b["k"] == pytest.approx(cut["transformer"] / cut["bottleneck"])
-    _has(f"c* lowers the transformer's fine error by {_pct(cut['transformer'])} and the "
-         f"bottleneck's by {_pct(cut['bottleneck'])} (Sec. 1)",
-         f"is {b['k']:.2f} times its reduction on the bottleneck",
-         f"uniform on 0-80% (about c*'s {_pct(cut['bottleneck'])})")
-    pk, p6, p10 = (b["predicted"][k] for k in ("k", "0.6", "1.0"))
+    line = sims["r2b_line"]
+    cs = line["cases"]
+    est, drawn = cs["spreads at their estimates"], cs["spreads drawn"]
+    pm = drawn["params"]
+    assert pm["k"] == b["k"] and pm["in_band"] == 0.0 and pm["prior"] == "uniform"
+    assert pm["nb"] == 3 and pm["bottleneck_spreads"] == "estimates"
+    assert pm["spreads"] == {"scale": 2.0, "df": 2, "shared": False, "cap": line["spread_cap"]}
+    assert est["params"]["spreads"] == "estimates"
+    assert line["value_for_the_line"] == 2.0 and line["values"] == [1.5, 2.0, 3.0]
+    _has(f"Assume that S's reduction on the transformer is {b['k']:.2f} times its reduction on "
+         "the bottleneck (the ratio of the two c* "
+         f"reductions, {_pct(cut['transformer'])} and {_pct(cut['bottleneck'])}, Sec. 1), that "
+         f"the bottleneck's true reduction is uniform on 0-{_pct(pm['prior_hi'])} (about c*'s "
+         f"{_pct(cut['bottleneck'])}) and that S leaves the transformer's in-band errors "
+         "unchanged; and value a supported R2b at twice its cost, a NOT SUPPORTED one at nothing",
+         f"lies within {100 * line['window']:g} points of the line, passes one half (R2b more "
+         "likely supported than not), and the line of the largest expected value lies there")
+    near = ("-35%", "-40%", "-45%", "-50%")
     sens = sims["r2b_sensitivity"]
-    _has(f"lies within 2.5 points of -40% is followed by a supported R2b in {_pct(pk['-40%'])} of "
-         f"trials (near -30%: {_pct(pk['-30%'])}; near -35%: {_pct(pk['-35%'])}; near -50%: "
-         f"{_pct(pk['-50%'])}; near -40% with the ratio 0.6 or 1.0 instead: {_pct(p6['-40%'])} "
-         f"or {_pct(p10['-40%'])}; with the prior on 0-60%: "
-         f"{_pct(sens['prior 0-60%']['predicted']['-40%'])}; with the transformer's spreads "
-         f"doubled: {_pct(sens['transformer spreads x2']['predicted']['-40%'])})")
-    assert pk["-35%"] < 0.505 < 0.55 < pk["-40%"]               # "passes one half near -35%"
-    gx = sens["transformer spreads x2"]["gates"]
-    _has("With the transformer's spreads doubled, R2b is supported after about half of the "
-         f"recommendations at -40% ({_pct(gx['-40%']['p_supported_given_recommended'])}; "
-         f"{_pct(gx['supported']['p_supported_given_recommended'])} on R2a SUPPORTED alone, "
-         f"{_pct(gx['-50%']['p_supported_given_recommended'])} at -50%)")
-    assert 0.4 < gx["-40%"]["p_supported_given_recommended"] < 0.6   # "about half"
-    g = b["gates"]["k"]
-    _has(f"recommending at -40% (in {_pct(g['-40%']['p_recommended'])} of trials) is followed by "
-         f"a supported R2b in {_pct(g['-40%']['p_supported_given_recommended'])} of the "
-         f"recommendations; recommending on R2a SUPPORTED alone, in "
-         f"{_pct(g['supported']['p_supported_given_recommended'])} "
-         f"({_pct(g['supported']['p_recommended'])} of trials recommended); at -50%, in "
-         f"{_pct(g['-50%']['p_supported_given_recommended'])} "
-         f"({_pct(g['-50%']['p_recommended'])})",
-         f"R2b would be supported but is not recommended in "
-         f"{_pct(g['-40%']['p_not_recommended_supported'])} of trials at -40%, "
-         f"{_pct(g['supported']['p_not_recommended_supported'])} on R2a SUPPORTED alone and "
-         f"{_pct(g['-50%']['p_not_recommended_supported'])} at -50%")
+    post = line["posterior"]
+    assert post["median_multiplier"] == pytest.approx(np.sqrt(2 / (2 * np.log(2))))
+    assert post["p_more_than_twice"] == pytest.approx(1 - np.exp(-0.5 / 2))   # chi2_2 < 0.5
+    _has("With the transformer's spreads at their three-seed estimates, that support near "
+         "-35% / -40% / -45% / -50% is " + " / ".join(_pct(est["predicted"][x]) for x in near)
+         + ", and the line falls near -35%",
+         "But three seeds estimate a spread poorly, and the support depends strongly on it "
+         f"(near -40%: {_pct(sens['transformer spreads x1.5']['predicted']['-40%'])} with the "
+         "transformer's spreads 1.5 times their estimates, "
+         f"{_pct(sens['transformer spreads x2']['predicted']['-40%'])} with twice)",
+         "With each of the transformer's spreads drawn in every trial from its uncertainty given "
+         "three seeds "
+         f"(sigma^2 = {pm['spreads']['scale']:g} s^2 / chi2_{pm['spreads']['df']}, the posterior "
+         f"under the prior 1/sigma: a spread's median {post['median_multiplier']:.1f} times its "
+         f"estimate, more than twice it in {_pct(post['p_more_than_twice'])} of trials; at most "
+         f"{line['spread_cap']:g} times its estimate), the support is "
+         + " / ".join(_pct(drawn["predicted"][x]) for x in near)
+         + f", it passes one half at {line_pct}%, and {line_pct}% is the line of the largest "
+         "expected value")
+    # "passes one half ... and the line of the largest expected value lies there"
+    for c, want in ((est, -35), (drawn, line_pct)):
+        assert round(c["half"]) == want and c["best"]["2"] == f"{want}%"
+
+    def h(name):
+        return f"{round(cs[name]['half']):d}%"
+    priors = sorted(round(cs[k]["half"]) for k in ("spreads drawn, prior 0-60%",
+                                                   "spreads drawn, prior half at 0",
+                                                   "spreads drawn, prior decreasing"))
+    assert cs["spreads drawn, no cap"]["params"]["spreads"]["cap"] is None
+    assert cs["spreads drawn, at most 3 times"]["params"]["spreads"]["cap"] == 3.0
+    assert cs["spreads drawn, at most 2 times"]["params"]["spreads"]["cap"] == 2.0
+    assert cs["spreads drawn, one draw for the three metrics"]["params"]["spreads"]["shared"]
+    for nm, m in (("spreads drawn, a prior worth 2 more degrees of freedom", 2),
+                  ("spreads drawn, a prior worth 4 more degrees of freedom", 4)):
+        sp = cs[nm]["params"]["spreads"]
+        assert sp["scale"] == sp["df"] == 2 + m
+    sp = cs["spreads drawn, the prior 1/sigma^2"]["params"]["spreads"]
+    assert (sp["scale"], sp["df"]) == (2.0, 3)
+    two = {h("spreads drawn, at most 2 times"), h("spreads drawn, one draw for the three metrics")}
+    assert len(two) == 1
+    _has(f"Sensitivity. The line stays near {line_pct}% without the cap or with it at 3 times "
+         f"({h('spreads drawn, no cap')} and "
+         f"{h('spreads drawn, at most 3 times')}), with the ratio drawn uniform on 0.74-1.0 "
+         f"({h('spreads drawn, k uniform 0.74-1.0')}), with the bottleneck's spreads drawn too "
+         f"({h('spreads drawn, the bottleneck' + chr(39) + 's too')}) and under three other "
+         "priors (0-60%, half the mass at no effect, decreasing to 0 at 80%: "
+         f"{priors[-1]}% to {priors[0]}%)",
+         f"it moves to {h('spreads drawn, in band -10% to +10%')} if S changes the transformer's "
+         f"in-band errors by up to 10% either way, and to {h('spreads drawn, k uniform 0.5-1.0')} "
+         "with a lower ratio (uniform on 0.5-1.0)",
+         f"Milder models of the spreads' uncertainty move it the other way: {two.pop()} with the "
+         "spreads at most 2 times their estimates or one draw for the three metrics, "
+         f"{h('spreads drawn, a prior worth 2 more degrees of freedom')} and "
+         f"{h('spreads drawn, a prior worth 4 more degrees of freedom')} with a prior worth 2 or "
+         f"4 more degrees of freedom at the estimates, {h('spreads drawn, the prior 1/sigma^2')} "
+         "under the prior 1/sigma^2 (sigma^2 = 2 s^2 / chi2_3)")
+    loss = line["loss"]
+    assert sorted(loss["cases"]) == sorted(n for n, c in cs.items() if c["params"]["nb"] == 3)
+    worst = {x: loss["by_line"][x]["max_loss"] for x in loss["by_line"]}
+    assert min(worst, key=worst.get) == f"{line_pct}%"            # the smallest largest loss
+    ev = {g: v["expected_value"]["2"] for g, v in drawn["gates"].items()}
+    _has(f"Over these {len(loss['cases'])} three-seed cases, {line_pct}% loses at most "
+         f"{_pct(worst['-45%'])} of a case's best expected value, -40% up to "
+         f"{_pct(worst['-40%'])} and -50% up to {_pct(worst['-50%'])}; in the main case the "
+         f"expected value is flat near its peak (-40% and -50% reach "
+         f"{_pct(min(ev['-40%'], ev['-50%']) / ev['-45%'])} of it)",
+         f"The value assumed moves the line most: with a supported R2b worth three times its "
+         f"cost the best line is {drawn['best']['3']}, with 1.5 times about "
+         f"{drawn['best']['1.5']}")
+    # "moves the line most": more than any other assumption of the three-seed cases
+    shift_v = max(abs(int(drawn["best"][v][:-1]) - line_pct) for v in ("1.5", "3"))
+    shift_c = max(abs(round(cs[n]["half"]) - line_pct) for n in loss["cases"])
+    assert shift_v > shift_c
+    assert int(worst["-50%"] * 100 + 0.5) == 16 and drawn["best"]["1.5"] == "-60%"
+    g = drawn["gates"]
+
+    def rates(x):
+        return (_pct(g[x]["p_recommended"]), _pct(g[x]["p_supported_given_recommended"]),
+                _pct(g[x]["p_not_recommended_supported"]))
+    r45, r40, r50 = rates("-45%"), rates("-40%"), rates("-50%")
+    _has(f"At {line_pct}% (the spreads drawn, the 0-80% prior) R2b is recommended in {r45[0]} of "
+         f"trials and supported after {r45[1]} of the recommendations, and it would be supported "
+         f"but is not recommended in {r45[2]} of trials (at -40%: {r40[0]}, {r40[1]} and "
+         f"{r40[2]}; at -50%: {r50[0]}, {r50[1]} and {r50[2]})")
+    five = cs["spreads drawn, R2b five seeds"]
+    assert five["params"]["nb"] == 5
+    _has("Five seeds per arm (ten runs) raise the supported share of the recommendations ("
+         f"{_pct(five['gates']['-45%']['p_supported_given_recommended'])} at -45%, the spreads "
+         "drawn) but lower the expected value at every line, with a supported R2b worth 1.5 to 3 "
+         "times the cost of six runs: R2b's own pre-registration should weigh its number of "
+         "seeds against its cost.")
+    for x, v in g.items():
+        assert five["gates"][x]["p_supported_given_recommended"] > v["p_supported_given_recommended"]
+        for val in ("1.5", "2", "3"):
+            assert five["gates"][x]["expected_value"][val] < v["expected_value"][val]
 
 
 def test_section_6_r3_numbers():
@@ -417,7 +524,7 @@ def test_stamping_refuses_anything_but_the_draft(tmp_path, monkeypatch):
     (cfgs / "r3_eft_b16.json").write_text(json.dumps(c, indent=1) + "\n")
     with pytest.raises(SystemExit, match="not the generator's output"):
         mod.stamp(pf, cfgs, "18 October 2026")
-    edited = draft.replace("rel <= -40% in condition (i)", "rel <= -50% in condition (i)")
+    edited = draft.replace("rel <= -45% in condition (i)", "rel <= -50% in condition (i)")
     assert edited != draft
     pf.write_text(edited, encoding="utf-8")
     with pytest.raises(SystemExit, match="not the approved draft"):

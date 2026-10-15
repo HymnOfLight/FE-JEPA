@@ -28,6 +28,7 @@ from pathlib import Path
 import numpy as np
 
 from ..metrics import FIELD_KEYS
+from ..report import config_sha256
 from .adjudicate import require_stamped
 from .adjudicate_w9 import _soft, config_diff, guard, instance_bootstrap, welch_interval
 
@@ -60,13 +61,29 @@ UNINFORMATIVE_RATIO_MIN, UNINFORMATIVE_CSTAR_MIN = 1.5, 1.10
 in-band ratio of seed means is below 1.5, or whose median c* on the fine set
 (the seed mean of each seed's median) is below 1.10, does not show the
 deficit S is meant to remove."""
-R2B_FINE_REL_MAX = -0.4
+R2B_FINE_REL_MAX = -0.45
 """PREREG_FINE3D Sec. 6: R2b is recommended iff R2a is SUPPORTED and S's fine
-displacement error is at most 60% of the fresh baseline's (rel <= -40% in
-condition (i)): from there R2b, on the transformer, is predicted to be
-SUPPORTED more often than not (records/wp9/fine3d/simulations.json, `r2b`)."""
+displacement error is at most 55% of the fresh baseline's (rel <= -45% in
+condition (i)): the line of the largest expected value with a supported R2b
+worth twice its cost and the transformer's spreads drawn from their
+uncertainty (records/wp9/fine3d/simulations.json, `r2b_line`). Compared with
+a tolerance of R2B_TIE (a ratio of seed means of exactly 0.55 gives the float
+rel -0.44999999999999996)."""
+R2B_TIE = 1e-12
 HIGHER_BETTER = ("crit_recall",)
 RUNTIME_KEYS = ("torch", "gpu", "tf32")
+P3_E8_MAX_REL_DEV = 1e-3
+"""PREREG_FINE3D Sec. 8: P3's in-band pass and E8's AR cell evaluate the same
+states on the same split; their seed means must agree to this relative
+deviation (E2's bottleneck on the box: 3e-5, the transformer's: 0), or P3 did
+not evaluate what E8 trained. A seed mean finite in one of the two only fails;
+one finite in neither (a diverged seed) is left to the verdict's rules."""
+REMESH_N = 16
+"""The remesh geometries of the post-hoc pass (the session's --remesh 16)."""
+AMP_REPRODUCTION_MAX = 0.05
+"""A post-hoc amplitude record whose predictions differ from the report's by
+more than this (relative, per instance) is a deviation (E2's bottleneck on the
+box: up to 0.011, its CUDA scatter-mean being order-nondeterministic)."""
 
 
 def _sha256(path) -> str:
@@ -144,6 +161,9 @@ def check_r2a(role: str, rep: dict, e2: dict, prereg_entries: dict | None,
     label = R2A_LABELS[role]
     require_stamped(rep, f"R2a {role} report", PREREG_NAME)
     cfg = rep["config"]
+    if config_sha256(cfg) != rep["provenance"].get("config_sha256"):
+        raise ValueError(f"the R2a {role} report's configuration does not hash to its recorded "
+                         "config_sha256")
     if Path(cfg["out"]).parent.name != label:
         raise ValueError(f"the R2a {role} report is {Path(cfg['out']).parent.name}'s, "
                          f"not {label}'s")
@@ -189,13 +209,41 @@ def check_r2a(role: str, rep: dict, e2: dict, prereg_entries: dict | None,
     _cells_ok(e8_cell(rep), n, N_INBAND, f"the R2a {role} report's E8 AR cell")
     _cells_ok(p3_cell(rep, "fine"), n, N_FINE, f"the R2a {role} report's P3 fine cell")
     _cells_ok(p3_cell(rep, "inband"), n, N_INBAND, f"the R2a {role} report's P3 in-band cell")
+    p3_e8 = p3_e8_deviation(rep)
+    if not p3_e8 <= P3_E8_MAX_REL_DEV:
+        raise ValueError(f"the R2a {role} report's P3 in-band pass does not reproduce its E8 AR "
+                         f"cell (seed means differ by up to {p3_e8:.3g}, more than "
+                         f"{P3_E8_MAX_REL_DEV:g}"
+                         + ("; finite in one of the two only" if math.isinf(p3_e8) else "")
+                         + "): P3 did not evaluate the states E8 trained")
     d9 = rep["results"]["e8"]["metrics"]["d9_restart"]
     return {"label": label, "config_sha256": prov["config_sha256"], "git": prov.get("git"),
             "states": {k: v.get("sha256") for k, v in d9["ar_states"].items()},
             "resumed": d9.get("units_resumed_from_epoch") or {},
+            "reused": sorted(k for k, v in d9["ar_states"].items() if v.get("reused")),
             "reuse_states": bool(rep.get("d9_reuse_states")),
+            "p3_vs_e8_max_rel_dev": p3_e8,
             "ledger_total": int((rep.get("solve_ledger") or {}).get("total", 0)),
             "timestamp_utc": prov.get("timestamp_utc"), **_runtime(rep)}
+
+
+def p3_e8_deviation(rep: dict) -> float:
+    """The largest relative difference between P3's in-band seed means and
+    E8's AR cell's (displacement error and energy gap): the same states on
+    the same split. inf if a seed mean is finite in one of the two only; a
+    pair finite in neither (a diverged seed) is skipped: the verdict's rules
+    judge it (PREREG_FINE3D Sec. 6)."""
+    worst = 0.0
+    for m in ("disp_rel_l2", "energy_gap_rel"):
+        for a, b in zip(seed_means(p3_cell(rep, "inband"), m), seed_means(e8_cell(rep), m),
+                        strict=True):
+            fa, fb = math.isfinite(a), math.isfinite(b)
+            if not (fa or fb):
+                continue
+            if fa != fb:
+                return math.inf
+            worst = max(worst, abs(a - b) / max(abs(b), 1e-30))
+    return worst
 
 
 def r2a_values(rep: dict) -> dict:
@@ -244,19 +292,23 @@ def r2b_recommendation(v: dict) -> dict:
     if v["verdict"] != "SUPPORTED":
         return {"recommended": False, "why": "R2a is not SUPPORTED"}
     rel = v["fine_displacement"]["rel_change"]
-    if rel <= R2B_FINE_REL_MAX:
+    if rel <= R2B_FINE_REL_MAX + R2B_TIE:
         return {"recommended": True,
-                "why": f"R2a SUPPORTED and S's fine displacement error rel {rel:+.1%} <= "
+                "why": f"R2a SUPPORTED and S's fine displacement error rel {rel:+.2%} <= "
                        f"{R2B_FINE_REL_MAX:+.0%}"}
     return {"recommended": False,
-            "why": f"R2a SUPPORTED but S's fine displacement error rel {rel:+.1%} > "
+            "why": f"R2a SUPPORTED but S's fine displacement error rel {rel:+.2%} > "
                    f"{R2B_FINE_REL_MAX:+.0%} (the reduction is below the R2b line)"}
 
 
-def check_amp(amp: dict, rep_sha: str | None) -> None:
-    """A post-hoc amplitude record of this report (when its SHA-256 is given),
-    every set of every seed complete. `{"unreadable": why}` stands for a record
-    the script could not parse."""
+def check_amp(amp: dict, rep_sha: str | None) -> dict:
+    """A post-hoc amplitude record of this report (when its SHA-256 is given)
+    with every seed's in-band and fine passes complete and their reproduction
+    checked; `{"unreadable": why}` stands for a record the script could not
+    parse. Returns the largest reproduction deviation and, when a seed's
+    remesh pass is short of REMESH_N geometries or has a failed one, why the
+    remesh readings are not read (`remesh_not_evaluated`; the in-band and
+    fine readings are)."""
     if "unreadable" in amp:
         raise ValueError(f"the amplitude record is unreadable: {amp['unreadable']}")
     if rep_sha is not None and amp.get("report_sha256") != rep_sha:
@@ -264,15 +316,30 @@ def check_amp(amp: dict, rep_sha: str | None) -> None:
     seeds = amp.get("seeds") or {}
     if not seeds:
         raise ValueError("the amplitude record holds no seed")
+    worst, short = 0.0, []
     for s, v in seeds.items():
         for name in ("inband", "fine"):
             summ = (v.get(name) or {}).get("summary") or {}
-            if not summ.get("complete"):
+            rep = (v.get(name) or {}).get("reproduction") or {}
+            if not summ.get("complete") or rep.get("checked") is not True:
                 raise ValueError(f"the amplitude record's {s} {name} pass is incomplete")
+            for k in ("disp_max_rel_dev", "egap_max_rel_dev"):
+                d = float(rep.get(k, float("nan")))
+                worst = max(worst, d) if math.isfinite(d) else float("inf")
+        rem = v.get("remesh") or {}
+        if int(rem.get("n_geometries", 0)) != REMESH_N or int(rem.get("n_failed", 1)) != 0 \
+                or len(rem.get("rows") or ()) != REMESH_N:
+            short.append(f"{s}: no remesh pass" if not rem else
+                         f"{s}: {rem.get('n_geometries')} of {REMESH_N} geometries, "
+                         f"{rem.get('n_failed')} failed, {len(rem.get('rows') or ())} rows")
+    return {"reproduction_max_rel_dev": worst,
+            "remesh_not_evaluated": ("the remesh pass is incomplete (" + "; ".join(short) + ")"
+                                     if short else None)}
 
 
-def mechanism(amp: dict) -> dict:
-    """Seed means of the amplitude readings, and the remesh pass by lc."""
+def mechanism(amp: dict, remesh_not_evaluated: str | None = None) -> dict:
+    """Seed means of the amplitude readings, and the remesh pass by lc (unless
+    `remesh_not_evaluated` says why not)."""
     seeds = sorted(amp["seeds"])
     out = {}
     for name in ("inband", "fine"):
@@ -284,10 +351,16 @@ def mechanism(amp: dict) -> dict:
         out[name]["reproduction"] = {s: amp["seeds"][s][name].get("reproduction")
                                      for s in seeds}
     rem = [amp["seeds"][s].get("remesh") for s in seeds]
-    if all(isinstance(r, dict) and "c_battery_median_by_lc" in r for r in rem):
+    if remesh_not_evaluated:
+        out["remesh"] = {"not_evaluated": remesh_not_evaluated}
+    elif all(isinstance(r, dict) and "c_battery_median_by_lc" in r for r in rem):
         out["remesh"] = {k: {lc: float(np.mean([r[k][lc] for r in rem])) for lc in rem[0][k]}
-                         for k in ("c_battery_median_by_lc", "u_norm_K_ratio_median_by_lc",
-                                   "fscale_ratio_median_by_lc")}
+                         for k in ("c_battery_median_by_lc", "u_norm_K_ratio_median_by_lc")}
+        # the post-hoc pass's `fscale` is max|F| for every model (S's decode scale,
+        # 2^-10 x sum|F|, does not change with the mesh): named for what it is
+        out["remesh"]["max_abs_F_ratio_median_by_lc"] = {
+            lc: float(np.mean([r["fscale_ratio_median_by_lc"][lc] for r in rem]))
+            for lc in rem[0]["fscale_ratio_median_by_lc"]}
         out["remesh"]["n_geometries"] = [int(r.get("n_geometries", 0)) for r in rem]
     return out
 
@@ -389,8 +462,9 @@ def adjudicate_r2a(b: dict, s: dict, e2: dict, prereg_entries: dict | None = Non
             mech[role] = {"not_evaluated": "no amplitude record given"}
             continue
         try:
-            check_amp(amp, sha)
-            mech[role] = mechanism(amp)
+            chk = check_amp(amp, sha)
+            mech[role] = dict(mechanism(amp, chk["remesh_not_evaluated"]),
+                              reproduction_max_rel_dev=chk["reproduction_max_rel_dev"])
         except Exception as exc:                          # noqa: BLE001
             mech[role] = {"not_evaluated": f"{type(exc).__name__}: {exc}"}
     out = {"verdict": verdict["verdict"], "conditions": verdict, "values": {"b": vb, "s": vs}}
@@ -406,13 +480,17 @@ def adjudicate_r2a(b: dict, s: dict, e2: dict, prereg_entries: dict | None = Non
         out["uninformative_note"] = None
     deviations = [f"R2a {r}: solve ledger {c['ledger_total']} (expected 0)"
                   for r, c in checks.items() if c["ledger_total"]]
-    deviations += [f"R2a {r}: restarted (units resumed {c['resumed']}, reuse_states "
-                   f"{c['reuse_states']})"
-                   for r, c in checks.items() if c["resumed"] or c["reuse_states"]]
+    deviations += [f"R2a {r}: restarted (units resumed {c['resumed']}, states reused "
+                   f"{c['reused']}, reuse_states {c['reuse_states']})"
+                   for r, c in checks.items() if c["resumed"] or c["reuse_states"] or c["reused"]]
     diff = [k for k in RUNTIME_KEYS if checks["b"][k] != checks["s"][k]]
     if diff:
         deviations.append("R2a: the two arms ran with different " + ", ".join(
             f"{k} ({checks['b'][k]!r} / {checks['s'][k]!r})" for k in diff))
+    deviations += [f"R2a {r}: the amplitude record's predictions differ from the report's by up "
+                   f"to {m['reproduction_max_rel_dev']:.3g} (more than {AMP_REPRODUCTION_MAX:g})"
+                   for r, m in mech.items() if "not_evaluated" not in m
+                   and not m["reproduction_max_rel_dev"] <= AMP_REPRODUCTION_MAX]
     out.update({"r2b": ({"recommended": False, "why": "R2a not evaluated"}
                         if verdict.get("void") else r2b_recommendation(verdict)),
                 "robustness": r2a_robustness(b, s),
@@ -430,6 +508,9 @@ def check_r3(rep: dict, p2b: dict, prereg_entries: dict | None,
     label = R3_LABELS[arm]
     pr = rep.get("prereg") or {}
     prov = rep["provenance"]
+    if config_sha256(rep["config"]) != prov.get("config_sha256"):
+        raise ValueError(f"the R3 {arm} report's configuration does not hash to its recorded "
+                         "config_sha256")
     if not pr.get("config_sha256") or pr["config_sha256"] != prov.get("config_sha256") \
             or Path(str(pr.get("file", ""))).name != PREREG_NAME:
         raise ValueError(f"the R3 {arm} report is not a stamped, guard-verified run of "
@@ -494,15 +575,17 @@ def check_r3(rep: dict, p2b: dict, prereg_entries: dict | None,
                                  "from_disk": bool(r.get("from_disk")),
                                  "order_sha256": t.get("order_sha256"),
                                  "machines": _machines(r.get("machine")),
+                                 "train_runtime": t.get("runtime"),
                                  "seconds": r.get("seconds")}
     out.update(_runtime(rep))
     return out
 
 
 def _machines(m) -> list:
-    """A seed's machines (host, GPU driver) at its start and its end."""
-    if isinstance(m, dict) and set(m) == {"start", "end"}:
-        return [m["start"], m["end"]]
+    """A seed's machines (host, GPU driver): where it started, any it resumed
+    on, where it ended."""
+    if isinstance(m, dict) and {"start", "end"} <= set(m):
+        return [m["start"], *(m.get("resumed_on") or ()), m["end"]]
     return [m]
 
 
@@ -517,7 +600,7 @@ def check_r3_pair(ce: dict, cl: dict) -> list:
         if ce["seeds"][f"s{s}"]["order_sha256"] != cl["seeds"][f"s{s}"]["order_sha256"]:
             raise ValueError(f"R3's arms recorded different epoch orders for seed {s}")
     diff = [k for k in RUNTIME_KEYS if ce[k] != cl[k]]
-    dev = ([f"R3: the two arms ran with different " + ", ".join(
+    dev = (["R3: the two arms ran with different " + ", ".join(
         f"{k} ({ce[k]!r} / {cl[k]!r})" for k in diff)] if diff else [])
     machines = {json.dumps(m, sort_keys=True)
                 for c in (ce, cl) for s in R3_SEEDS for m in c["seeds"][f"s{s}"]["machines"]}
@@ -576,7 +659,7 @@ def _compare(ref: dict, new: dict, paired: bool = False) -> dict:
         g = _soft(guard, seed_means(ref, m), seed_means(new, m))
         out[m] = {"guard": g, "new_is": _direction(g, m)}
         if paired:                                  # None where either value is not finite
-            out[m]["paired_per_seed_rel"] = _soft(lambda: [
+            out[m]["paired_per_seed_rel"] = _soft(lambda m=m: [
                 float(n / r - 1) if math.isfinite(n) and math.isfinite(r) and r else None
                 for r, n in zip(seed_means(ref, m), seed_means(new, m), strict=True)])
     return out
@@ -621,7 +704,14 @@ def adjudicate_r3(energy: dict, labelled: dict, p2b: dict, prereg_entries: dict 
     checks = {"energy": check_r3(energy, p2b, prereg_entries, expected_git, "energy"),
               "labelled": check_r3(labelled, p2b, prereg_entries, expected_git, "labelled")}
     dev = check_r3_pair(checks["energy"], checks["labelled"])
+    want = bool(p2b["config"].get("tf32", True))
     for arm, c in checks.items():
+        for s, x in c["seeds"].items():
+            rt = x.get("train_runtime") or {}
+            if rt.get("tf32_matmul") is not want or rt.get("tf32_cudnn") is not want:
+                dev.append(f"R3 {arm} seed {s}: trained with TF32 matmul "
+                           f"{rt.get('tf32_matmul')!r} and cuDNN {rt.get('tf32_cudnn')!r}, not "
+                           f"the source report's {want!r}")
         dev += [f"R3 {arm} seed {s}: resumed from epoch {x['resumed_from_epoch']}"
                 for s, x in c["seeds"].items() if x["resumed_from_epoch"]]
         dev += [f"R3 {arm} seed {s}: taken from an earlier attempt's result on disk"

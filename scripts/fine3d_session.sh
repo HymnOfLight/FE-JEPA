@@ -78,13 +78,15 @@ amp() {
   if [ ! -f "$rep" ]; then
     echo "amp_$name: no report of $name, skipped" | tee -a "$P/status.txt"; return 1
   fi
-  if [ -f "$out" ] && python - "$out" <<'PY' 2>/dev/null
-import json, sys
+  if [ -f "$out" ] && python - "$out" "$rep" <<'PY' 2>/dev/null
+import hashlib, json, sys
 d = json.load(open(sys.argv[1]))
 seeds = list(d["seeds"].values())
 ok = bool(seeds) and all((v.get(s) or {}).get("summary", {}).get("complete")
                          for v in seeds for s in ("inband", "fine"))
 ok = ok and all(len((v.get("remesh") or {}).get("rows", [])) == 16 for v in seeds)
+# measured on this report (an R2a arm run again leaves a record of the old one)
+ok = ok and d.get("report_sha256") == hashlib.sha256(open(sys.argv[2], "rb").read()).hexdigest()
 sys.exit(0 if ok else 1)
 PY
   then

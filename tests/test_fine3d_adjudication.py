@@ -54,6 +54,32 @@ def _scale_cell(cell, metric, k):
         cell[metric] = {"mean": float(np.mean(ps)), "std": float(np.std(ps)), "per_seed": ps}
 
 
+def _set_seed_means(cell, metric, values):
+    """Per-seed means set directly (each seed's per-instance values scaled to
+    match)."""
+    for e, v in zip(cell["per_seed_eval"], values, strict=True):
+        k = float(v) / e[metric]
+        e["per_instance"][metric] = [x * k for x in e["per_instance"][metric]]
+        e[metric] = float(v)
+
+
+def _set_r2a(rep, fine, inband):
+    """An R2a report's per-seed fine and in-band displacement errors (P3's
+    in-band pass and E8's cell alike: the same states on the same split)."""
+    p3 = rep["results"]["p3_transfer"]["metrics"]["ar"]
+    _set_seed_means(p3["fine"], "disp_rel_l2", fine)
+    _set_seed_means(p3["inband"], "disp_rel_l2", inband)
+    _set_seed_means(rep["results"]["e8"]["metrics"]["cells"]["ar"]["1024"], "disp_rel_l2", inband)
+
+
+def _hand_guard(base, new):
+    """PREREG_FINE3D Sec. 6, computed here: rel and tau."""
+    base, new = np.asarray(base, float), np.asarray(new, float)
+    rel = new.mean() / base.mean() - 1
+    se = np.sqrt(base.var(ddof=1) / len(base) + new.var(ddof=1) / len(new)) / base.mean()
+    return float(rel), float(max(0.10, 2 * se))
+
+
 def _restamp(r):
     sha = config_sha256(r["config"])
     r["provenance"]["config_sha256"] = sha
@@ -64,7 +90,8 @@ def _restamp(r):
 def r2a(e2, name, fine=1.0, egap=1.0, disp=1.0, inband_p3=None, git="prereg-fine3d",
         seeds=(3, 4, 5)):
     """`disp` scales E8's in-band displacement and, unless `inband_p3` is
-    given, P3's in-band pass alike (the same states on the same split)."""
+    given, P3's in-band pass alike (the same states on the same split);
+    `egap` scales the in-band energy gap of both alike."""
     r = copy.deepcopy(e2)
     r["config"] = _cfg(name)
     _restamp(r)
@@ -73,24 +100,28 @@ def r2a(e2, name, fine=1.0, egap=1.0, disp=1.0, inband_p3=None, git="prereg-fine
     p3 = r["results"]["p3_transfer"]["metrics"]["ar"]
     _scale_cell(p3["fine"], "disp_rel_l2", fine)
     _scale_cell(p3["inband"], "disp_rel_l2", disp if inband_p3 is None else inband_p3)
+    _scale_cell(p3["inband"], "energy_gap_rel", egap)
     c = r["results"]["e8"]["metrics"]["cells"]["ar"]["1024"]
     _scale_cell(c, "energy_gap_rel", egap)
     _scale_cell(c, "disp_rel_l2", disp)
     return r
 
 
-def _amp(fine_cstar, inband_cstar=(1.0, 1.0, 1.0), complete=True, report_sha=None):
+def _amp(fine_cstar, inband_cstar=(1.0, 1.0, 1.0), complete=True, report_sha=None,
+         repro=0.002, remesh_n=16, failed=0):
     def summ(c):
         return {"c_star_median": c, "c_battery_median": c, "amp_ratio_median": c,
                 "disp": 0.5, "disp_c": 0.1, "egap": 0.3, "egap_c": 0.05, "complete": complete}
+    rep = {"checked": True, "disp_max_rel_dev": repro, "egap_max_rel_dev": repro / 2}
     rem = {"c_battery_median_by_lc": {"0.0906": 1.0, "0.0374": 1.5},
            "u_norm_K_ratio_median_by_lc": {"0.0906": 1.0, "0.0374": 0.5},
-           "fscale_ratio_median_by_lc": {"0.0906": 1.0, "0.0374": 0.19}, "n_geometries": 16}
+           "fscale_ratio_median_by_lc": {"0.0906": 1.0, "0.0374": 0.19},
+           "n_geometries": remesh_n, "n_failed": failed, "rows": [{}] * (remesh_n + failed)}
     return {"report_sha256": report_sha,
-            "seeds": {f"s{s}": {"inband": {"summary": summ(ci), "reproduction": {}},
-                                "fine": {"summary": summ(c), "reproduction": {}},
+            "seeds": {f"s{s}": {"inband": {"summary": summ(ci), "reproduction": dict(rep)},
+                                "fine": {"summary": summ(c), "reproduction": dict(rep)},
                                 "remesh": rem}
-                      for s, c, ci in zip((3, 4, 5), fine_cstar, inband_cstar)}}
+                      for s, c, ci in zip((3, 4, 5), fine_cstar, inband_cstar, strict=True)}}
 
 
 def _order(s):
@@ -121,6 +152,7 @@ def r3(p2b, egap=1.0, vm=1.0, git="prereg-fine3d", arm="energy"):
             return e
         per[f"s{s}"] = {"seed": s, "git": git, "config_sha256": sha,
                         "machine": {"start": {"host": "box", "gpu_driver": "575.64"},
+                                    "resumed_on": [],
                                     "end": {"host": "box", "gpu_driver": "575.64"}},
                         "source_state": {"sha256": rec[f"s{s}"]["sha256"]},
                         "content_check": {"passed": True, "max_rel_dev": {"fine": 0.0,
@@ -128,7 +160,9 @@ def r3(p2b, egap=1.0, vm=1.0, git="prereg-fine3d", arm="energy"):
                         "train": {"loss": A.R3_LOSS[arm], "trainer": A.R3_TRAINER[arm],
                                   "files": list(A.R3_TRAIN_FILES), "seed": s, "epochs": 50,
                                   "epochs_run": 50, "steps": 800, "loss_by_epoch": [-1.0] * 50,
-                                  "order_sha256": _order(s), "resumed_from_epoch": None},
+                                  "order_sha256": _order(s), "resumed_from_epoch": None,
+                                  "runtime": {"tf32_matmul": True, "tf32_cudnn": True,
+                                              "float32_matmul_precision": "high"}},
                         "state": {"sha256": "f" * 64},
                         "fine": ev(ft["per_seed_eval"][s]), "inband": ev(inb["per_seed_eval"][s]),
                         "seconds": {}}
@@ -180,23 +214,83 @@ def test_r2a_supported_and_r2b_recommended(recs):
         assert r["instance_resampling_95"]["high"] < 0
 
 
-def test_the_r2b_line_is_forty_percent_of_the_fine_error(recs):
+def test_the_r2b_line_is_minus_forty_five_percent_of_the_fine_error(recs):
     e2, _ = recs
-    assert A.R2B_FINE_REL_MAX == -0.4
+    assert A.R2B_FINE_REL_MAX == -0.45
     b = r2a(e2, "r2a_b_m1024")
-    yes = _adj(b, r2a(e2, "r2a_s_m1024", fine=0.59), recs)
-    no = _adj(b, r2a(e2, "r2a_s_m1024", fine=0.61), recs)
-    edge = _adj(b, r2a(e2, "r2a_s_m1024", fine=0.6), recs)
+    yes = _adj(b, r2a(e2, "r2a_s_m1024", fine=0.54), recs)
+    no = _adj(b, r2a(e2, "r2a_s_m1024", fine=0.56), recs)
+    edge = _adj(b, r2a(e2, "r2a_s_m1024", fine=0.55), recs)
     assert yes["verdict"] == no["verdict"] == edge["verdict"] == "SUPPORTED"
     assert yes["r2b"]["recommended"] is True and no["r2b"]["recommended"] is False
-    assert "below the R2b line" in no["r2b"]["why"] and "-40%" in no["r2b"]["why"]
+    assert "below the R2b line" in no["r2b"]["why"] and "-45%" in no["r2b"]["why"]
     rel = edge["conditions"]["fine_displacement"]["rel_change"]
-    assert edge["r2b"]["recommended"] is (rel <= -0.4)          # the line itself: rel <= -40%
+    assert abs(rel + 0.45) < 1e-12 and edge["r2b"]["recommended"] is True   # at the line
     # the rule reads the fine error, not the ratio: in-band errors also lower
-    both = _adj(b, r2a(e2, "r2a_s_m1024", fine=0.55, disp=0.85, inband_p3=0.85), recs)
+    both = _adj(b, r2a(e2, "r2a_s_m1024", fine=0.5, disp=0.85, inband_p3=0.85), recs)
     assert both["verdict"] == "SUPPORTED"
-    assert both["conditions"]["fine_over_inband_ratio"]["rel_change"] > -0.4
+    assert both["conditions"]["fine_over_inband_ratio"]["rel_change"] > -0.45
     assert both["r2b"]["recommended"] is True
+
+
+def test_r2a_rule_by_hand(recs):
+    """Seed-specific values, rel and tau computed here from Sec. 6's formulas:
+    (ii) is the mean of the per-seed ratios (not the ratio of the seed means),
+    the guard's band is 10% and its k 2, and the E2 reading's base is E2."""
+    e2, _ = recs
+    b, s = r2a(e2, "r2a_b_m1024"), r2a(e2, "r2a_s_m1024")
+    fb, ib = [0.50, 0.60, 0.70], [0.090, 0.080, 0.100]
+    fs, is_ = [0.30, 0.42, 0.35], [0.095, 0.085, 0.090]
+    _set_r2a(b, fb, ib)
+    _set_r2a(s, fs, is_)
+    c = _adj(b, s, recs)["conditions"]
+    for key, base, new in (("fine_displacement", fb, fs),
+                           ("fine_over_inband_ratio", np.divide(fb, ib), np.divide(fs, is_)),
+                           ("K1_inband_displacement", ib, is_)):
+        rel, tau = _hand_guard(base, new)
+        assert math.isclose(c[key]["rel_change"], rel, rel_tol=1e-12), key
+        assert math.isclose(c[key]["threshold"], tau, rel_tol=1e-12), key
+        assert c[key]["lower"] is (rel < -tau) and c[key]["worse"] is (rel > tau), key
+    of_means = (np.mean(fs) / np.mean(is_)) / (np.mean(fb) / np.mean(ib)) - 1
+    assert abs(c["fine_over_inband_ratio"]["rel_change"] - of_means) > 1e-3
+    out = _adj(b, s, recs)
+    e2f = [e["disp_rel_l2"] for e in
+           e2["results"]["p3_transfer"]["metrics"]["ar"]["fine"]["per_seed_eval"]]
+    rel, tau = _hand_guard(e2f, fb)
+    g = out["fresh_baseline_vs_e2"]["fine_displacement"]
+    assert math.isclose(g["rel_change"], rel, rel_tol=1e-12)
+    assert math.isclose(g["threshold"], tau, rel_tol=1e-12)
+    # the uninformative note reads the ratio of the seed means (1.2), not the
+    # mean of the per-seed ratios (1.72)
+    u, v = r2a(e2, "r2a_b_m1024"), r2a(e2, "r2a_s_m1024")
+    for rep in (u, v):
+        _set_r2a(rep, [0.40, 0.10, 0.10], [0.40, 0.04, 0.06])
+    out = _adj(u, v, recs)
+    assert out["verdict"].startswith("NOT SUPPORTED")
+    assert "fine / in-band ratio of seed means 1.2 < 1.5" in out["uninformative_note"]
+
+
+def test_the_r2b_line_includes_minus_forty_five_percent(recs):
+    """S's fine error exactly 55% of the baseline's (0.55 against 1.0, no
+    spread) is recommended: the line is rel <= -45%, not rel < -45%, and the
+    float rel = 0.55 / 1.0 - 1 = -0.44999999999999996 counts as -45%; a rel
+    1e-9 above the line does not."""
+    e2, _ = recs
+    b, s = r2a(e2, "r2a_b_m1024"), r2a(e2, "r2a_s_m1024")
+    _set_r2a(b, [1.0] * 3, [0.5] * 3)
+    _set_r2a(s, [0.55] * 3, [0.5] * 3)
+    out = _adj(b, s, recs)
+    assert out["verdict"] == "SUPPORTED"
+    assert out["conditions"]["fine_displacement"]["rel_change"] == 0.55 / 1.0 - 1 > -0.45
+    assert out["r2b"]["recommended"] is True
+    v = {"verdict": "SUPPORTED", "fine_displacement": {"rel_change": -0.45}}
+    assert A.r2b_recommendation(v)["recommended"] is True
+    v["fine_displacement"]["rel_change"] = -0.45 + 1e-9
+    no = A.r2b_recommendation(v)
+    assert no["recommended"] is False and "-45.00% > -45%" in no["why"]
+    v["verdict"] = "NOT SUPPORTED: (ii)"
+    v["fine_displacement"]["rel_change"] = -0.9
+    assert A.r2b_recommendation(v) == {"recommended": False, "why": "R2a is not SUPPORTED"}
 
 
 def test_r2a_not_supported_names_the_failing_conditions(recs):
@@ -212,17 +306,21 @@ def test_r2a_not_supported_names_the_failing_conditions(recs):
     k1 = _adj(b, r2a(e2, "r2a_s_m1024", fine=0.4, egap=1.6), recs)
     assert [f[:5] for f in k1["conditions"]["failing"]] == ["(iii)"]
     assert "energy gap" in k1["conditions"]["failing"][0]
-    # K1: E8's in-band displacement worse, P3's in-band pass unchanged
-    kd = _adj(b, r2a(e2, "r2a_s_m1024", fine=0.4, disp=1.6, inband_p3=1.0), recs)
-    assert [f[:5] for f in kd["conditions"]["failing"]] == ["(iii)"]
-    assert "displacement error" in kd["conditions"]["failing"][0]
-    assert "energy gap" not in kd["conditions"]["failing"][0]
+    # K1 reads E8's cell: E8's in-band displacement worse, P3's in-band pass
+    # unchanged (a pair the adjudication refuses, so through the verdict itself)
+    kd = A.r2a_verdict(A.r2a_values(b),
+                       A.r2a_values(r2a(e2, "r2a_s_m1024", fine=0.4, disp=1.6, inband_p3=1.0)))
+    assert [f[:5] for f in kd["failing"]] == ["(iii)"]
+    assert "displacement error" in kd["failing"][0] and "energy gap" not in kd["failing"][0]
 
 
 def test_condition_ii_reads_p3s_in_band_pass(recs):
+    """Through the verdict itself: a P3 in-band pass that differs from E8's
+    cell is refused by the adjudication (test_r2a_refusals, "p3 vs e8")."""
     e2, _ = recs
-    out = _adj(r2a(e2, "r2a_b_m1024"), r2a(e2, "r2a_s_m1024", fine=0.4, inband_p3=0.5), recs)
-    assert math.isclose(out["conditions"]["fine_over_inband_ratio"]["rel_change"], -0.2,
+    out = A.r2a_verdict(A.r2a_values(r2a(e2, "r2a_b_m1024")),
+                        A.r2a_values(r2a(e2, "r2a_s_m1024", fine=0.4, inband_p3=0.5)))
+    assert math.isclose(out["fine_over_inband_ratio"]["rel_change"], -0.2,
                         rel_tol=1e-9)                     # E8's cell would give -0.6
 
 
@@ -245,6 +343,40 @@ def test_r2a_divergence_and_void(recs):
     assert any("solve ledger 2" in d for d in res["R2a"]["deviations"])
     assert res["R2a"]["r2b"] == {"recommended": False, "why": "R2a not evaluated"}
     assert "fine_displacement" in res["R2a"]["robustness"] and res["R2a"]["checks"]["b"]
+
+
+def _diverge(rep, i):
+    """Seed index i diverged in training: its states are NaN, so every value of
+    E8's AR cell and of both P3 passes is."""
+    for c in (rep["results"]["e8"]["metrics"]["cells"]["ar"]["1024"],
+              rep["results"]["p3_transfer"]["metrics"]["ar"]["inband"],
+              rep["results"]["p3_transfer"]["metrics"]["ar"]["fine"]):
+        e = c["per_seed_eval"][i]
+        for m, vals in e["per_instance"].items():
+            e["per_instance"][m] = [float("nan")] * len(vals)
+            if m in e:
+                e[m] = float("nan")
+
+
+def test_r2a_a_diverged_seed_is_judged_not_refused(recs):
+    """A seed that diverged in training passes the P3 / E8 check (NaN in both)
+    and is judged by Sec. 6: in S's arm, NOT SUPPORTED (diverged); in the
+    fresh baseline, R2a void with its deviations and readings kept."""
+    e2, _ = recs
+    s = r2a(e2, "r2a_s_m1024", fine=0.4)
+    _diverge(s, 1)
+    out = _adj(r2a(e2, "r2a_b_m1024"), s, recs)
+    assert out["verdict"].startswith("NOT SUPPORTED") and "diverged" in out["verdict"]
+    assert out["checks"]["s"]["p3_vs_e8_max_rel_dev"] <= A.P3_E8_MAX_REL_DEV
+    b = r2a(e2, "r2a_b_m1024")
+    _diverge(b, 0)
+    b["solve_ledger"] = {"total": 2}
+    out = _adj(b, r2a(e2, "r2a_s_m1024", fine=0.4), recs)
+    assert out["verdict"].startswith("NOT EVALUATED: a per-seed value of the fresh baseline is "
+                                     "not finite: the comparison is void")
+    assert any("solve ledger 2" in d for d in out["deviations"])
+    assert out["r2b"] == {"recommended": False, "why": "R2a not evaluated"}
+    assert "fine_displacement" in out["robustness"] and out["checks"]["b"]
 
 
 def test_r2a_uninformative_note_and_mechanism(recs):
@@ -282,12 +414,48 @@ def test_r2a_deviations(recs):
     b, s = r2a(e2, "r2a_b_m1024"), r2a(e2, "r2a_s_m1024", fine=0.4)
     b["solve_ledger"] = {"total": 4}
     s["results"]["e8"]["metrics"]["d9_restart"]["units_resumed_from_epoch"] = {"ar s3": 12}
+    s["results"]["e8"]["metrics"]["d9_restart"]["ar_states"]["s1"]["reused"] = True
     s["d9_reuse_states"] = True
     s["runtime_policy"] = dict(s["runtime_policy"], gpu="another GPU")
     dev = _adj(b, s, recs)["deviations"]
     assert any("solve ledger 4" in d for d in dev)
-    assert any("R2a s: restarted" in d and "ar s3" in d for d in dev)
+    assert any("R2a s: restarted" in d and "ar s3" in d and "states reused ['s1']" in d
+               for d in dev)
     assert any("different gpu" in d for d in dev)
+
+
+def test_r2a_amplitude_records_are_read_only_when_complete(recs):
+    """A record whose in-band or fine pass is unfinished or whose reproduction
+    was not checked is not read; one whose remesh pass did not cover all 16
+    geometries, or lost one, is read without its remesh readings; one whose
+    predictions differ from the report's by more than 5% is read with a
+    deviation; the remesh field is named for what it is (max|F|)."""
+    e2, _ = recs
+    b, s = r2a(e2, "r2a_b_m1024"), r2a(e2, "r2a_s_m1024", fine=0.4)
+    out = _adj(b, s, recs, amp_b=_amp((1.7, 2.0, 1.5)), amp_s=_amp((1.0, 1.0, 1.0)))
+    rem = out["mechanism"]["b"]["remesh"]
+    assert "max_abs_F_ratio_median_by_lc" in rem and "fscale_ratio_median_by_lc" not in rem
+    assert out["mechanism"]["b"]["reproduction_max_rel_dev"] == 0.002
+    assert not any("amplitude record" in d for d in out["deviations"])
+    for kw, why in (({"remesh_n": 10}, "s3: 10 of 16 geometries, 0 failed, 10 rows"),
+                    ({"remesh_n": 15, "failed": 1}, "s3: 15 of 16 geometries, 1 failed, 16 rows")):
+        out = _adj(b, s, recs, amp_b=_amp((1.7, 2.0, 1.5), **kw))
+        m = out["mechanism"]["b"]
+        assert "not_evaluated" not in m and m["reproduction_max_rel_dev"] == 0.002
+        assert math.isclose(m["fine"]["c_star_median"]["seed_mean"], (1.7 + 2.0 + 1.5) / 3)
+        assert m["remesh"] == {"not_evaluated": "the remesh pass is incomplete ("
+                               + "; ".join(why.replace("s3", x) for x in ("s3", "s4", "s5")) + ")"}
+    # the uninformative note still reads the fine c* of such a record
+    u = _adj(b, r2a(e2, "r2a_s_m1024"), recs,
+             amp_b=_amp((1.05, 1.0, 1.08), remesh_n=15, failed=1))
+    assert "c*" in u["uninformative_note"] and "uninformative_cstar" not in u
+    amp = _amp((1.7, 2.0, 1.5))
+    amp["seeds"]["s4"]["fine"]["reproduction"] = {"checked": False}
+    assert "incomplete" in _adj(b, s, recs, amp_b=amp)["mechanism"]["b"]["not_evaluated"]
+    out = _adj(b, s, recs, amp_s=_amp((1.0, 1.0, 1.0), repro=0.2))
+    assert "fine" in out["mechanism"]["s"]
+    assert ("R2a s: the amplitude record's predictions differ from the report's by up to 0.2 "
+            "(more than 0.05)") in out["deviations"]
 
 
 R2A_REFUSALS = {"unstamped": "not a stamped", "git": "ran on", "seeds": "seeds are",
@@ -296,7 +464,12 @@ R2A_REFUSALS = {"unstamped": "not a stamped", "git": "ran on", "seeds": "seeds a
                 "not s": "is not S", "no load density": "is not S",
                 "entries": "verified hash", "corpus": "another corpus",
                 "cells": "per-instance values", "e8 cell": "E8 AR cell",
-                "label": "not r2a_s_m1024", "factor": "is not S"}
+                "label": "not r2a_s_m1024", "factor": "is not S",
+                "p3 vs e8": "does not reproduce its E8 AR cell",
+                "p3 vs e8 egap": "does not reproduce its E8 AR cell",
+                "p3 vs e8 one finite": "finite in one of the two only",
+                "p3 vs e8 one finite e8": "finite in one of the two only",
+                "config hash": "does not hash to its recorded"}
 
 
 @pytest.mark.parametrize("what", sorted(R2A_REFUSALS))
@@ -344,6 +517,21 @@ def test_r2a_refusals(recs, what):
     elif what == "label":
         s["config"]["out"] = "runs/fine3d/r2a_x/report.json"
         _restamp(s)
+    elif what == "p3 vs e8":
+        s = r2a(e2, "r2a_s_m1024", fine=0.4, inband_p3=1.002)     # 0.2%: beyond 1e-3
+    elif what == "p3 vs e8 egap":                                  # the energy gap alone
+        _scale_cell(s["results"]["p3_transfer"]["metrics"]["ar"]["inband"], "energy_gap_rel",
+                    1.002)
+    elif what == "p3 vs e8 one finite":                            # P3's in band only
+        e = s["results"]["p3_transfer"]["metrics"]["ar"]["inband"]["per_seed_eval"][1]
+        e["per_instance"]["disp_rel_l2"][0] = float("nan")
+        e["disp_rel_l2"] = float("nan")
+    elif what == "p3 vs e8 one finite e8":                         # E8's cell only
+        e = s["results"]["e8"]["metrics"]["cells"]["ar"]["1024"]["per_seed_eval"][2]
+        e["per_instance"]["energy_gap_rel"][0] = float("inf")
+        e["energy_gap_rel"] = float("inf")
+    elif what == "config hash":
+        s["config"]["experiments"]["e8"]["ar_epochs"] = 201          # not restamped
     factor = 2.0 ** -9 if what == "factor" else S_FACTOR
     with pytest.raises(ValueError, match=R2A_REFUSALS[what]):
         A.adjudicate_r2a(b, s, e2, entries, s_factor=factor)
@@ -465,6 +653,25 @@ def test_r3_machines(recs):
     assert out["verdicts"]["R3-E"]["verdict"] == "SUPPORTED"          # a deviation, not a refusal
 
 
+def test_r3_training_runtime_and_resumed_machines(recs):
+    """Each seed's TF32 setting during training against the source report's
+    policy, and every machine a seed ran on (a resumption included)."""
+    _, p2b = recs
+    pair = r3pair(p2b, egap=0.5)
+    assert not any("TF32" in d or "machine" in d for d in _adj3(pair, p2b)["deviations"])
+    pair["labelled"]["per_seed"]["s1"]["train"]["runtime"]["tf32_matmul"] = False
+    del pair["energy"]["per_seed"]["s2"]["train"]["runtime"]
+    pair["energy"]["per_seed"]["s0"]["machine"]["resumed_on"] = [{"host": "other",
+                                                                  "gpu_driver": "575.64"}]
+    out = _adj3(pair, p2b)
+    dev = out["deviations"]
+    assert ("R3 labelled seed s1: trained with TF32 matmul False and cuDNN True, not the source "
+            "report's True") in dev
+    assert any(d.startswith("R3 energy seed s2: trained with TF32 matmul None") for d in dev)
+    assert any("more than one machine" in d and '"other"' in d for d in dev)
+    assert out["verdicts"]["R3-E"]["verdict"] == "SUPPORTED"          # deviations, not refusals
+
+
 def test_r3_amplitude_readings_are_secondary(recs):
     _, p2b = recs
     pair = r3pair(p2b, egap=0.5)
@@ -495,7 +702,8 @@ def test_r3_deviations_and_notes(recs):
 
 
 R3_REFUSALS = {"unstamped": "not a stamped", "entries": "verified hash", "git": "ran on",
-               "seed git": "not the report's", "source": "another source report",
+               "seed git": "not the report's", "seed config": "not the report's",
+               "source": "another source report",
                "state": "Phase-2b state", "check": "content check", "files": "trained on",
                "steps": "trained on", "epochs run": "trained on", "loss": "trained on",
                "train seed": "trained with the seed", "seeds": "seeds are",
@@ -503,7 +711,8 @@ R3_REFUSALS = {"unstamped": "not a stamped", "entries": "verified hash", "git": 
                "fine evaluation": "per-instance values",
                "label": "another configuration", "schedule": "schedule",
                "objective": "trained with loss", "trainer": "trained with loss",
-               "config loss": "another configuration"}
+               "config loss": "another configuration",
+               "config hash": "does not hash to its recorded"}
 
 
 @pytest.mark.parametrize("arm", ["energy", "labelled"])
@@ -523,6 +732,8 @@ def test_r3_refusals(recs, what, arm):
         rep["provenance"]["git"] = "prereg-w9"
     elif what == "seed git":
         s0["git"] = "prereg-fine3d-2-gabc"
+    elif what == "seed config":
+        s0["config_sha256"] = "0" * 64
     elif what == "source":
         rep["provenance"]["source_report_sha256"] = "0" * 64
     elif what == "state":
@@ -547,17 +758,19 @@ def test_r3_refusals(recs, what, arm):
         s0["inband"]["per_instance"]["vm_rel_l2"] = [0.1] * 10
     elif what == "fine evaluation":
         rep["per_seed"]["s2"]["fine"]["per_instance"]["crit_recall"] = [1.0] * 255
-    elif what == "label":
-        rep["config"] = dict(rep["config"], out="runs/fine3d/other/report.json")
+    elif what == "config hash":
+        rep["config"] = dict(rep["config"], seeds=[0, 1, 3])          # not restamped
     elif what == "objective":
         rep["per_seed"]["s1"]["train"]["loss"] = "labels" if arm == "energy" else "ar"
     elif what == "trainer":
         rep["per_seed"]["s2"]["train"]["trainer"] = \
             "train_supervised" if arm == "energy" else "pretrain"
-    elif what in ("schedule", "config loss"):
+    elif what in ("schedule", "config loss", "label"):
         rep["config"] = copy.deepcopy(rep["config"])
         if what == "schedule":
             rep["config"]["train"]["epochs"] = 60
+        elif what == "label":
+            rep["config"]["out"] = "runs/fine3d/other/report.json"
         else:
             rep["config"]["train"]["loss"] = "labels" if arm == "energy" else "ar"
         sha = config_sha256(rep["config"])
@@ -881,11 +1094,11 @@ def test_the_adjudicator_compares_its_code_and_the_prereg_with_the_tag(tmp_path)
     assert rec["tag_available"] and rec["differs_from_tag"] == [] and rec["prereg_is_tags"]
     assert not any("differ" in d or "is not prereg" in d for d in S.code_deviations(rec, pre))
     f = repo / "src" / "fejepa" / "analysis" / "adjudicate_fine3d.py"
-    edited = f.read_text().replace("R2B_FINE_REL_MAX = -0.4", "R2B_FINE_REL_MAX = -0.3")
+    edited = f.read_text().replace("R2B_FINE_REL_MAX = -0.45", "R2B_FINE_REL_MAX = -0.3")
     assert edited != f.read_text()
     f.write_text(edited)
     other = tmp_path / "PREREG_other.md"
-    text = pre.read_text().replace("rel <= -40% in condition (i)", "rel <= -30% in condition (i)")
+    text = pre.read_text().replace("rel <= -45% in condition (i)", "rel <= -30% in condition (i)")
     assert text != pre.read_text()
     other.write_text(text)
     rec = S.adjudicator_record(other, "prereg-fine3d", root=repo)

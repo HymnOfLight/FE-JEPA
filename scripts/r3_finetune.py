@@ -35,10 +35,16 @@ trained with, the epochs it ran and the steps (counted from the trainer's
 history), the SHA-256 of the instance
 orders that seed determines (`epoch_orders`; tests/test_fine3d_r3.py checks
 that the trainer visits them), the code (`git describe`), the
-configuration's SHA-256 and the machine (host and GPU driver) when the seed
-starts and when it ends. Both arms train in fp32 without torch.compile, as
-P3's labelled units did: the source report's `runtime` block must say so
-(P3 read both from it). A seed whose result file is readable, of this seed,
+configuration's SHA-256, the TF32 setting the training ran with, and the
+machines (host and GPU driver) the seed ran on: where it started (kept in its
+checkpoint's sidecar across a resumption), any it resumed on, and where it
+ended. Both arms train in fp32 without torch.compile, as P3's labelled units
+did: the source report's `runtime` block must say so (P3 read both from it).
+The code's `git describe` is read before the first seed, and the report and
+every seed record that reading; a run that cannot read it stops. A content
+check fails on any non-finite prediction or deviation. A seed's result file
+is written before its checkpoint is removed. A seed whose
+result file is readable, of this seed,
 this code and this configuration, with a passed content check and its state
 on disk at the recorded SHA-256, is not run again (marked `from_disk` in the
 report); any other result file is moved aside and the seed runs again. An
@@ -57,6 +63,7 @@ import dataclasses
 import hashlib
 import inspect
 import json
+import math
 import sys
 import time
 from pathlib import Path
@@ -202,7 +209,8 @@ def content_check(model, report: dict, seed_index: int, sets: dict, cfg: dict,
             vals = evaluate_fields(pred(a), a)
             for k in CHECK_KEYS:
                 r = float(ref[k][i])
-                worst = max(worst, abs(float(vals[k]) - r) / max(abs(r), 1e-30))
+                d = abs(float(vals[k]) - r) / max(abs(r), 1e-30)
+                worst = max(worst, d if math.isfinite(d) else math.inf)   # NaN fails
         dev[which] = worst
     ok = all(v <= float(cc["max_rel_dev"]) for v in dev.values())
     return {"max_rel_dev": dev, "tolerance": float(cc["max_rel_dev"]), "passed": bool(ok),
@@ -252,37 +260,63 @@ def _sidecar(ckpt: Path) -> Path:
     return ckpt.with_name(ckpt.name + ".json")
 
 
-def own_checkpoint(ckpt: Path, mine: dict) -> None:
+def own_checkpoint(ckpt: Path, mine: dict, here: dict) -> list:
     """An epoch checkpoint is resumed only by the code and configuration that
-    wrote it (its sidecar file records both); any other is moved aside and the
-    seed trains from the start. Then the sidecar names this run."""
+    wrote it (its sidecar file records both, and the machines the seed has run
+    on); any other is moved aside and the seed trains from the start. Then the
+    sidecar names this run. Returns the machines of this seed's training: the
+    first is where it started, the last (`here`) where it runs now."""
+    machines = []
     if ckpt.exists():
         try:
-            ok = json.loads(_sidecar(ckpt).read_text()) == mine
-        except (OSError, ValueError):
-            ok = False
-        if not ok:
+            side = json.loads(_sidecar(ckpt).read_text())
+            ok = {k: side.get(k) for k in mine} == mine
+        except (OSError, ValueError, AttributeError):
+            side, ok = {}, False
+        if ok:
+            machines = [m for m in side.get("machines") or () if isinstance(m, dict)]
+        else:
             aside = ckpt.with_name(f"{ckpt.name}.unusable.{time.strftime('%Y%m%d-%H%M%S')}")
             ckpt.rename(aside)
             print(f"[r3] {ckpt.name} was written by another code or configuration (moved to "
                   f"{aside.name}); training from the start", flush=True)
-    _sidecar(ckpt).write_text(json.dumps(mine))
+    machines.append(here)
+    _sidecar(ckpt).write_text(json.dumps(dict(mine, machines=machines)))
+    return machines
+
+
+def ckpt_path(out_dir: Path, cfg: dict, seed: int) -> Path:
+    """A seed's epoch checkpoint (its sidecar: the same name + .json)."""
+    tr = cfg["train"]
+    return out_dir / f"{ARMS[tr['loss']]['prefix']}_b{tr['n']}_s{seed}.ckpt"
+
+
+def train_runtime() -> dict:
+    """The TF32 setting the training runs with (set by run_model from the
+    source report's policy)."""
+    import torch
+
+    return {"tf32_matmul": bool(torch.backends.cuda.matmul.allow_tf32),
+            "tf32_cudnn": bool(torch.backends.cudnn.allow_tf32),
+            "float32_matmul_precision": torch.get_float32_matmul_precision()}
 
 
 def run_seed(seed: int, seed_index: int, report: dict, cfg: dict, sets: dict, out_dir: Path,
-             device: str, state_path: Path) -> dict:
+             device: str, state_path: Path, git: str) -> dict:
+    """One seed: load, check, train, save, evaluate. The caller writes the
+    result file and then removes the seed's checkpoint."""
     from fejepa.analysis.posthoc import run_model
     from fejepa.data.archive import LazyArchives
     from fejepa.experiments.w9_eval import evaluate_model_w9
     from fejepa.metrics import torch_predictor
-    from fejepa.report import _git_describe, config_sha256
+    from fejepa.report import config_sha256
     from fejepa.train.checkpoint import atomic_torch_save
     from fejepa.train.losses import AR_CONFIG
     from fejepa.train.pretrain import PretrainConfig, pretrain
     from fejepa.train.supervised import SupervisedConfig, train_supervised
 
     t0 = time.time()
-    m0 = machine()
+    here = machine()
     model = run_model(report, state_path, seed, device)       # verified config, strict load
     check = content_check(model, report, seed_index, sets, cfg, device)
     print(json.dumps({"seed": seed, "content_check": check}), flush=True)
@@ -294,8 +328,9 @@ def run_seed(seed: int, seed_index: int, report: dict, cfg: dict, sets: dict, ou
     tr = cfg["train"]
     arm = ARMS[tr["loss"]]
     archs = load_training(sets["train"], labels=tr["loss"] == "labels")
-    ckpt = out_dir / f"{arm['prefix']}_b{tr['n']}_s{seed}.ckpt"
-    own_checkpoint(ckpt, {"git": _git_describe(), "config_sha256": config_sha256(cfg)})
+    ckpt = ckpt_path(out_dir, cfg, seed)
+    machines = own_checkpoint(ckpt, {"git": git, "config_sha256": config_sha256(cfg)}, here)
+    runtime = train_runtime()
     common = dict(epochs=int(tr["epochs"]), lr=float(tr["lr"]),
                   weight_decay=float(tr["weight_decay"]), clip=float(tr["clip"]),
                   seed=int(seed), device=device, desc=f"R3 {arm['name']} FT b{tr['n']} s{seed}",
@@ -315,8 +350,8 @@ def run_seed(seed: int, seed_index: int, report: dict, cfg: dict, sets: dict, ou
     amp = bool(cfg["evaluation"].get("amplitude"))
     losses = list(hist.get("loss") or [])
     orders = epoch_orders(int(seed), n_train, int(tr["epochs"]))
-    res = {"seed": seed, "git": _git_describe(), "config_sha256": config_sha256(cfg),
-           "machine": {"start": m0, "end": machine()},
+    res = {"seed": seed, "git": git, "config_sha256": config_sha256(cfg),
+           "machine": {"start": machines[0], "resumed_on": machines[1:], "end": machine()},
            "source_state": {"path": str(state_path), "sha256": _sha256(state_path)},
            "content_check": check,
            "train": {"loss": tr["loss"], "trainer": arm["trainer"],
@@ -325,14 +360,12 @@ def run_seed(seed: int, seed_index: int, report: dict, cfg: dict, sets: dict, ou
                      "steps": len(losses) * n_train,
                      "order_sha256": hashlib.sha256(json.dumps(orders).encode()).hexdigest(),
                      "first_epoch_order": orders[0] if orders else [],
-                     "loss_by_epoch": losses,
+                     "loss_by_epoch": losses, "runtime": runtime,
                      "resumed_from_epoch": hist.get("resumed_from_epoch")},
            "state": {"path": str(sp), "sha256": _sha256(sp)},
            "fine": evaluate_model_w9(pred, _progress(LazyArchives(sets["fine"]), "fine"), amp),
            "inband": evaluate_model_w9(pred, _progress(LazyArchives(sets["inband"]), "in band"),
                                        amp)}
-    ckpt.unlink(missing_ok=True)                                  # unit complete
-    _sidecar(ckpt).unlink(missing_ok=True)
     res["seconds"] = {"load_and_check": round(t1 - t0, 1), "train": round(t2 - t1, 1),
                       "evaluate": round(time.time() - t2, 1)}
     return res
@@ -384,6 +417,9 @@ def run(config_path, device_override: str | None = None, fine_dir=None,
         return {"dry_run": True, **plan}
     out_dir.mkdir(parents=True, exist_ok=True)
     per_seed, git = {}, _git_describe()
+    if git == "unavailable":
+        raise SystemExit("git describe could not be read: the code this run uses cannot be "
+                         "recorded; stopped before training")
     for s in seeds:
         rf = out_dir / f"seed_{s}.json"
         if rf.is_file():
@@ -396,8 +432,11 @@ def run(config_path, device_override: str | None = None, fine_dir=None,
             rf.rename(aside)
             print(f"[r3] seed {s}: {rf.name} unusable (moved to {aside.name}); run again",
                   flush=True)
-        res = run_seed(s, rep_seeds.index(s), report, cfg, sets, out_dir, device, states[s])
-        write_json(rf, res)
+        res = run_seed(s, rep_seeds.index(s), report, cfg, sets, out_dir, device, states[s], git)
+        write_json(rf, res)                       # the result first, then the checkpoint goes
+        ck = ckpt_path(out_dir, cfg, s)
+        ck.unlink(missing_ok=True)
+        _sidecar(ck).unlink(missing_ok=True)
         per_seed[f"s{s}"] = res
         f, b = res["fine"], res["inband"]
         print(json.dumps({"seed": s, "fine": {k: f[k] for k in ("disp_rel_l2", "energy_gap_rel",
@@ -412,6 +451,7 @@ def run(config_path, device_override: str | None = None, fine_dir=None,
                    "arm (PREREG_FINE3D)",
            "config": cfg, "prereg": ver["prereg"],
            "provenance": dict(provenance(cfg, [sets["fine_dir"], sets["inband_dir"]], seeds),
+                              git=git,            # the reading before the first seed
                               source_report=cfg["source"]["report"],
                               source_report_sha256=_sha256(_rel(cfg["source"]["report"])),
                               source_config_sha256=report["provenance"]["config_sha256"]),

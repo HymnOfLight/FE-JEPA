@@ -1170,3 +1170,129 @@ is stamped and nothing has run on the box.
   their objective), `test_fine3d_runbook.py` (six steps; the energy-first
   rule).
 - Suite 625 (579 + 46).
+
+## Stage 2, r3 (15 October 2026) -- PREREG_FINE3D r3 drafted, not stamped: the code checked in full before the stamp; the R2b line at -45%
+
+After r2 was pushed (7eaf4f6) the PI asked for the R2b line to be evaluated
+again and for the whole code to be checked again. Nothing is stamped and
+nothing has run on the box.
+
+- **Three independent reviews of everything the session runs or the
+  adjudication reads**, on the pushed commit: R2a's path (configurations,
+  runner, bottleneck with S, P3, the post-hoc pass, the adjudicator's R2a
+  half); R3's path (the script, the trainers, checkpoints, evaluation, the
+  adjudicator's R3 half); the runbook, session script, stamp, adjudication
+  script, simulations and tests (the stamp, a box-like single-branch flow and
+  the suite simulated). Found and changed:
+  - R3's content check let a NaN prediction through (`max(0.0, nan)` is 0.0
+    in Python): any non-finite prediction or deviation now fails it.
+  - A resumed R3 seed recorded the machine it resumed on as the one it
+    started on: the start machine is kept in the checkpoint's sidecar, and the
+    result records the start, every resumption and the end.
+  - An amplitude record with an incomplete pass was read: a record is read
+    only with every seed's in-band and fine passes complete and their
+    reproduction checked, its remesh readings only with all 16 geometries and
+    none failed; a reproduction beyond 5% is a deviation; the remesh field
+    `fscale` is reported as what it is (max|F|, for S as for the baseline).
+  - A P3 pass on a model built otherwise than E8's (without S, say) would
+    have gone unnoticed: the adjudication refuses an R2a report whose P3
+    in-band pass does not reproduce its E8 AR cell (seed means to 1e-3; the
+    box's E2 runs: 3e-5); a test runs the exact R2a path (the generator's S
+    configuration through run-config on gmsh3d miniature corpora) and the
+    amplitude pass on its report; a test hooks the bottleneck's decoder and
+    checks that S's scale is applied once.
+  - Reports whose configuration does not hash to their recorded SHA-256 are
+    refused (R2a and R3); R2a's restart deviation names the states reused.
+  - R3 records each seed's TF32 setting during training (another than the
+    source report's is a deviation), reads `git describe` once per run and
+    stops if it cannot, and writes a seed's result before it removes the
+    checkpoint.
+  - The session runs the amplitude pass again when its record was measured on
+    another report of the arm. RUNBOOK 0c checks that no fine3d run is on the
+    box yet and names the checkout's and the suite's normal output in full
+    (the operator would otherwise have stopped at "set up to track").
+  - PREREG Sec. 2: 57 of the 64 remesh meshes have the box's node counts and
+    the other 7 differ by 1 to 21 nodes (it said the sandbox meshed them as
+    the box did); a test pins it.
+  - Tests for the energy arm's trainer configuration field by field and its
+    unlabelled instances, the R2a rule by hand with seed-specific values, the
+    amplitude record rules, the per-seed TF32 setting and resumed machines,
+    and the second-copy lock without a fixed wait; mutation checks confirm
+    that each catches its fault.
+- **Two independent reviews of that revision** (its code; its statistics and
+  documents), found and changed:
+  - The new P3 / E8 refusal turned a seed that diverged in training (NaN in
+    E8's cell and in both P3 passes) into a refusal of the whole report,
+    against Sec. 6's rules for divergence: a seed mean finite in neither is
+    left to Sec. 6, one finite in one of the two only fails; tests diverge a
+    seed in each arm, and test the rule's energy-gap half.
+  - A failed remesh geometry discarded the whole amplitude record, which the
+    session counts as complete and does not run again: the in-band and fine
+    readings are read, the remesh readings are not evaluated.
+  - R3's report read `git describe` again at the end of the arm (a timeout
+    there would have refused the arm): it records the one read before the
+    first seed.
+  - Sec. 8 states the refusal of an R3 seed of another configuration than its
+    report (r2's code); RUNBOOK 0c's new check ignores `runs/fine3d/session`,
+    which 0c itself makes, so a repeated 0c passes; stale docstrings.
+  - The reasons given for keeping the R2b line at -40% were selective (the
+    R2b item below).
+- **Two more independent reviews, of those fixes** (code; statistics and
+  documents), found and changed: the refusal of an R3 seed of another
+  configuration than its report had no test, nor the P3 / E8 rule's other
+  direction (E8's value not finite) or a `session_old` entry in 0c's check;
+  the R2b rule compares with a tolerance of 1e-12, so that S's fine error at
+  exactly 55% of the baseline's (the float rel -0.44999999999999996) is
+  recommended as Sec. 6 says, and prints rel to 0.01%; Sec. 6 names the
+  refusal of a seed mean non-finite in only one of P3's in-band pass and E8's
+  cell (Sec. 8); the R2b line's dependence on the model of the spreads'
+  uncertainty is recorded and stated, and its test reads the decision's
+  assumptions from the record (eleven phrases of the paragraph could change
+  without failing it); wording.
+- **The R2b line at -45% instead of -40%.** R2b's cost corrected: with a
+  fresh baseline as in R2a it is six transformer runs, about a week of one
+  GPU (the text said three seeds). The line is set as a decision: recommend
+  where R2b's predicted support passes one half, the line of the largest
+  expected value with a supported R2b worth twice its cost (`r2b_line`, new).
+  With the transformer's spreads at their three-seed estimates it falls near
+  -35%; three seeds estimate a spread poorly and the support depends strongly
+  on it, and with each spread drawn in every trial from its uncertainty
+  (sigma^2 = 2 s^2 / chi2_2, at most 4 times the estimate) it falls at -45%:
+  from -44% to -46% uncapped or capped at 3 times, with the ratio of the
+  effects uncertain around 0.87, the bottleneck's spreads drawn too or the
+  other priors; at -47% with an in-band effect of S and -53% with a lower
+  ratio; from -35% to -42% under milder models of the spreads' uncertainty
+  (a cap at 2 times, one draw for the three metrics, a prior worth 2 or 4
+  more degrees of freedom, the prior 1/sigma^2). Over these 16 three-seed
+  cases -45% loses at most 8% of a case's best expected value, -40% up to
+  25% and -50% up to 16%: the smallest largest loss of the lines simulated.
+  The expected value is flat near its peak (in the main case -40% and -50%
+  reach about 97% of it); with a supported R2b worth three times its cost the
+  line would be -35%. Five seeds per arm raise the supported share of the
+  recommendations but lower the expected value at every line, with a
+  supported R2b worth 1.5 to 3 times the cost of six runs. r3's first draft
+  kept -40% as lying between the line near -35% and the one with the ratio
+  uniform on 0.5-1.0 (whose mean is 0.75): both held the spreads at their
+  estimates.
+- A final independent check of those changes found the uncapped case's line
+  rounded twice (its crossing -45.45% kept as -45.5, quoted as -46%): the
+  record keeps the crossings to 0.001 and the text says -45%. Sec. 6 states
+  the R2b rule's tolerance of 1e-12; the test reads whole sentences of the
+  R2b paragraph and checks Sec. 6's new R2a clause; an incomplete remesh pass
+  is named with its row count.
+- The simulation record: `r2b_line` new (18 cases with their parameters, and
+  each line's largest loss over the three-seed cases); `r2b_sensitivity`
+  gains the ratio drawn uniform on 0.5-1.0, the spreads 1.5 times, R2b on
+  five seeds (with the spreads as recorded and 1.5 times) and two other
+  priors; the blocks
+  before r3 are unchanged but for the R2a blocks' `p_r2b_recommended` (the
+  line) and the record's `what` and `r2b_fine_rel_max`.
+- Tests changed on purpose: `test_fine3d_adjudication.py` (condition (ii)
+  and K1 read through the verdict itself, since the adjudication now refuses
+  a P3 in-band pass that differs from E8's cell; the amplitude helper writes
+  complete records; the R2b line at -45%, its inclusive edge fed to the
+  rule directly), `test_fine3d_p3_offset.py` (a record without its remesh
+  pass is read without its remesh readings), `test_fine3d_prereg.py` (the
+  R2b paragraph, its decision and its assumptions read from the record),
+  `test_fine3d_runbook.py` (the stub records the report it measured).
+- Suite 652 (625 + 27).

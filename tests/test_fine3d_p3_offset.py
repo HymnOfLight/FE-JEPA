@@ -143,7 +143,11 @@ def test_the_amplitude_pass_reads_the_offset_seeds(world, tmp_path):
             rpr = s[name]["reproduction"]
             assert rpr["checked"] and rpr["disp_max_rel_dev"] == rpr["egap_max_rel_dev"] == 0.0
             assert s[name]["summary"]["complete"] and len(s[name]["per_instance"]) == n
-    A.check_amp(amp, _sha(rp))
+    chk = A.check_amp(amp, _sha(rp))           # the session's records carry the remesh pass
+    assert chk["reproduction_max_rel_dev"] == 0.0
+    assert chk["remesh_not_evaluated"].startswith("the remesh pass is incomplete (s3: ")
+    mech = A.mechanism(amp, chk["remesh_not_evaluated"])
+    assert mech["remesh"] == {"not_evaluated": chk["remesh_not_evaluated"]}
     mech = A.mechanism(amp)
     assert set(mech) == {"inband", "fine"}
     assert len(mech["fine"]["c_star_median"]["per_seed"]) == 2

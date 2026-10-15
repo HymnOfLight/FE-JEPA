@@ -1,12 +1,12 @@
 {
- "what": "fine3d: properties of the R2a and R3 rules by simulation (scripts/fine3d_sims.py); log-normal seed values, three seeds per arm",
+ "what": "fine3d: properties of the R2a and R3 rules by simulation (scripts/fine3d_sims.py); log-normal seed values, three seeds per arm unless stated",
  "trials": 200000,
  "seed": 20261015,
  "guard": {
   "band": 0.1,
   "k": 2.0
  },
- "r2b_fine_rel_max": -0.4,
+ "r2b_fine_rel_max": -0.45,
  "r2a_cv": {
   "fine": 0.10367453953326085,
   "inband_disp": 0.1077565617029265,
@@ -29,15 +29,15 @@
   },
   "S spread x1.0; inband unchanged; fine -20%": {
    "p_supported": 0.377865,
-   "p_r2b_recommended": 0.000265
+   "p_r2b_recommended": 5e-06
   },
   "S spread x1.0; inband unchanged; fine -30%": {
    "p_supported": 0.703015,
-   "p_r2b_recommended": 0.03072
+   "p_r2b_recommended": 0.00184
   },
   "S spread x1.0; inband unchanged; fine -50%": {
    "p_supported": 0.894945,
-   "p_r2b_recommended": 0.88131
+   "p_r2b_recommended": 0.78021
   },
   "S spread x1.0; inband unchanged; fine -70%": {
    "p_supported": 0.89657,
@@ -49,15 +49,15 @@
   },
   "S spread x1.0; inband 10% lower; fine -20%": {
    "p_supported": 0.20687,
-   "p_r2b_recommended": 0.000315
+   "p_r2b_recommended": 5e-06
   },
   "S spread x1.0; inband 10% lower; fine -30%": {
    "p_supported": 0.5422,
-   "p_r2b_recommended": 0.03138
+   "p_r2b_recommended": 0.00208
   },
   "S spread x1.0; inband 10% lower; fine -50%": {
    "p_supported": 0.970465,
-   "p_r2b_recommended": 0.957165
+   "p_r2b_recommended": 0.848915
   },
   "S spread x1.0; inband 10% lower; fine -70%": {
    "p_supported": 0.981355,
@@ -69,15 +69,15 @@
   },
   "S spread x1.0; inband 10% higher; fine -20%": {
    "p_supported": 0.36913,
-   "p_r2b_recommended": 0.000255
+   "p_r2b_recommended": 0.0
   },
   "S spread x1.0; inband 10% higher; fine -30%": {
    "p_supported": 0.57692,
-   "p_r2b_recommended": 0.022155
+   "p_r2b_recommended": 0.00147
   },
   "S spread x1.0; inband 10% higher; fine -50%": {
    "p_supported": 0.6474,
-   "p_r2b_recommended": 0.637315
+   "p_r2b_recommended": 0.56409
   },
   "S spread x1.0; inband 10% higher; fine -70%": {
    "p_supported": 0.647015,
@@ -89,15 +89,15 @@
   },
   "S spread x1.5; inband unchanged; fine -20%": {
    "p_supported": 0.272735,
-   "p_r2b_recommended": 0.00335
+   "p_r2b_recommended": 0.00022
   },
   "S spread x1.5; inband unchanged; fine -30%": {
    "p_supported": 0.557355,
-   "p_r2b_recommended": 0.06855
+   "p_r2b_recommended": 0.012255
   },
   "S spread x1.5; inband unchanged; fine -50%": {
    "p_supported": 0.88658,
-   "p_r2b_recommended": 0.853285
+   "p_r2b_recommended": 0.73283
   },
   "S spread x1.5; inband unchanged; fine -70%": {
    "p_supported": 0.906825,
@@ -109,15 +109,15 @@
   },
   "S spread x1.5; inband 10% lower; fine -20%": {
    "p_supported": 0.162545,
-   "p_r2b_recommended": 0.00308
+   "p_r2b_recommended": 0.000225
   },
   "S spread x1.5; inband 10% lower; fine -30%": {
    "p_supported": 0.4088,
-   "p_r2b_recommended": 0.065535
+   "p_r2b_recommended": 0.01219
   },
   "S spread x1.5; inband 10% lower; fine -50%": {
    "p_supported": 0.91909,
-   "p_r2b_recommended": 0.89047
+   "p_r2b_recommended": 0.774355
   },
   "S spread x1.5; inband 10% lower; fine -70%": {
    "p_supported": 0.97638,
@@ -125,19 +125,19 @@
   },
   "S spread x1.5; inband 10% higher; fine -0%": {
    "p_supported": 0.023915,
-   "p_r2b_recommended": 5e-06
+   "p_r2b_recommended": 0.0
   },
   "S spread x1.5; inband 10% higher; fine -20%": {
    "p_supported": 0.30387,
-   "p_r2b_recommended": 0.002825
+   "p_r2b_recommended": 0.000205
   },
   "S spread x1.5; inband 10% higher; fine -30%": {
    "p_supported": 0.545485,
-   "p_r2b_recommended": 0.05752
+   "p_r2b_recommended": 0.009785
   },
   "S spread x1.5; inband 10% higher; fine -50%": {
    "p_supported": 0.73214,
-   "p_r2b_recommended": 0.702245
+   "p_r2b_recommended": 0.60045
   },
   "S spread x1.5; inband 10% higher; fine -70%": {
    "p_supported": 0.735625,
@@ -179,35 +179,35 @@
  "r2a_sensitivity": {
   "E2 spreads x2; fine -0%": {
    "p_supported": 0.014205,
-   "p_r2b_recommended": 0.000585
+   "p_r2b_recommended": 0.000115
   },
   "E2 spreads x2; fine -30%": {
    "p_supported": 0.248225,
-   "p_r2b_recommended": 0.10419
+   "p_r2b_recommended": 0.05033
   },
   "E2 spreads x2; fine -50%": {
    "p_supported": 0.65867,
-   "p_r2b_recommended": 0.611585
+   "p_r2b_recommended": 0.5314
   },
   "E2 spreads x2; fine -70%": {
    "p_supported": 0.873945,
-   "p_r2b_recommended": 0.87393
+   "p_r2b_recommended": 0.873855
   },
   "E2 M = 512 spreads; fine -0%": {
    "p_supported": 0.00465,
-   "p_r2b_recommended": 3.5e-05
+   "p_r2b_recommended": 0.0
   },
   "E2 M = 512 spreads; fine -30%": {
    "p_supported": 0.110295,
-   "p_r2b_recommended": 0.036425
+   "p_r2b_recommended": 0.01436
   },
   "E2 M = 512 spreads; fine -50%": {
    "p_supported": 0.332145,
-   "p_r2b_recommended": 0.315245
+   "p_r2b_recommended": 0.27919
   },
   "E2 M = 512 spreads; fine -70%": {
    "p_supported": 0.64187,
-   "p_r2b_recommended": 0.64187
+   "p_r2b_recommended": 0.641865
   }
  },
  "r2a_correlated": {
@@ -217,15 +217,15 @@
   },
   "rho 0.5; fine -20%": {
    "p_supported": 0.517365,
-   "p_r2b_recommended": 0.000325
+   "p_r2b_recommended": 0.0
   },
   "rho 0.5; fine -30%": {
    "p_supported": 0.850435,
-   "p_r2b_recommended": 0.03329
+   "p_r2b_recommended": 0.00204
   },
   "rho 0.5; fine -50%": {
    "p_supported": 0.903935,
-   "p_r2b_recommended": 0.89358
+   "p_r2b_recommended": 0.802155
   },
   "rho 0.5; fine -70%": {
    "p_supported": 0.90425,
@@ -237,15 +237,15 @@
   },
   "rho 0.8; fine -20%": {
    "p_supported": 0.670515,
-   "p_r2b_recommended": 0.00034
+   "p_r2b_recommended": 5e-06
   },
   "rho 0.8; fine -30%": {
    "p_supported": 0.892685,
-   "p_r2b_recommended": 0.033845
+   "p_r2b_recommended": 0.002115
   },
   "rho 0.8; fine -50%": {
    "p_supported": 0.915755,
-   "p_r2b_recommended": 0.909805
+   "p_r2b_recommended": 0.830645
   },
   "rho 0.8; fine -70%": {
    "p_supported": 0.91682,
@@ -594,6 +594,2319 @@
      "p_supported_given_recommended": 0.8377678986132308,
      "p_recommended_not_supported": 0.02445,
      "p_not_recommended_supported": 0.297525
+    }
+   }
+  },
+  "k uniform 0.5-1.0": {
+   "predicted": {
+    "-30%": 0.30223475808201344,
+    "-35%": 0.38284382284382285,
+    "-40%": 0.48178581210627225,
+    "-45%": 0.5798654152647423,
+    "-50%": 0.6525082714835018,
+    "-55%": 0.7224121307739504,
+    "-60%": 0.7661893182022876
+   },
+   "gates": {
+    "supported": {
+     "p_recommended": 0.650125,
+     "p_supported_given_recommended": 0.6072832147663911,
+     "p_recommended_not_supported": 0.255315,
+     "p_not_recommended_supported": 0.076995
+    },
+    "-30%": {
+     "p_recommended": 0.555615,
+     "p_supported_given_recommended": 0.6748647894675269,
+     "p_recommended_not_supported": 0.18065,
+     "p_not_recommended_supported": 0.09684
+    },
+    "-40%": {
+     "p_recommended": 0.45097,
+     "p_supported_given_recommended": 0.7409583786061157,
+     "p_recommended_not_supported": 0.11682,
+     "p_not_recommended_supported": 0.137655
+    },
+    "-45%": {
+     "p_recommended": 0.395385,
+     "p_supported_given_recommended": 0.7706918573036408,
+     "p_recommended_not_supported": 0.090665,
+     "p_not_recommended_supported": 0.167085
+    },
+    "-50%": {
+     "p_recommended": 0.338415,
+     "p_supported_given_recommended": 0.7961526528079429,
+     "p_recommended_not_supported": 0.068985,
+     "p_not_recommended_supported": 0.202375
+    }
+   }
+  },
+  "transformer spreads x1.5": {
+   "predicted": {
+    "-30%": 0.2042824699902671,
+    "-35%": 0.2632986343233693,
+    "-40%": 0.34097108565193673,
+    "-45%": 0.42233872400924116,
+    "-50%": 0.5226726057906459,
+    "-55%": 0.6100053314377111,
+    "-60%": 0.6866933689363596
+   },
+   "gates": {
+    "supported": {
+     "p_recommended": 0.648585,
+     "p_supported_given_recommended": 0.5219593422604593,
+     "p_recommended_not_supported": 0.31005,
+     "p_not_recommended_supported": 0.062365
+    },
+    "-30%": {
+     "p_recommended": 0.55448,
+     "p_supported_given_recommended": 0.5857830760352042,
+     "p_recommended_not_supported": 0.229675,
+     "p_not_recommended_supported": 0.076095
+    },
+    "-40%": {
+     "p_recommended": 0.450745,
+     "p_supported_given_recommended": 0.6587982118492718,
+     "p_recommended_not_supported": 0.153795,
+     "p_not_recommended_supported": 0.10395
+    },
+    "-45%": {
+     "p_recommended": 0.395205,
+     "p_supported_given_recommended": 0.6981060462291722,
+     "p_recommended_not_supported": 0.11931,
+     "p_not_recommended_supported": 0.125005
+    },
+    "-50%": {
+     "p_recommended": 0.33856,
+     "p_supported_given_recommended": 0.7358223062381852,
+     "p_recommended_not_supported": 0.08944,
+     "p_not_recommended_supported": 0.15178
+    }
+   }
+  },
+  "R2b five seeds": {
+   "predicted": {
+    "-30%": 0.554310712761417,
+    "-35%": 0.6919201520912548,
+    "-40%": 0.8019890690798316,
+    "-45%": 0.8757342973339358,
+    "-50%": 0.9110326566637246,
+    "-55%": 0.925399803448584,
+    "-60%": 0.9312745448054266
+   },
+   "gates": {
+    "supported": {
+     "p_recommended": 0.64847,
+     "p_supported_given_recommended": 0.801448023809891,
+     "p_recommended_not_supported": 0.128755,
+     "p_not_recommended_supported": 0.11207
+    },
+    "-30%": {
+     "p_recommended": 0.554605,
+     "p_supported_given_recommended": 0.8726571163260338,
+     "p_recommended_not_supported": 0.070625,
+     "p_not_recommended_supported": 0.147805
+    },
+    "-40%": {
+     "p_recommended": 0.450195,
+     "p_supported_given_recommended": 0.9147924788147358,
+     "p_recommended_not_supported": 0.03836,
+     "p_not_recommended_supported": 0.21995
+    },
+    "-45%": {
+     "p_recommended": 0.39402,
+     "p_supported_given_recommended": 0.9247880818232577,
+     "p_recommended_not_supported": 0.029635,
+     "p_not_recommended_supported": 0.2674
+    },
+    "-50%": {
+     "p_recommended": 0.337985,
+     "p_supported_given_recommended": 0.9297897835702768,
+     "p_recommended_not_supported": 0.02373,
+     "p_not_recommended_supported": 0.31753
+    }
+   }
+  },
+  "R2b five seeds, transformer spreads x1.5": {
+   "predicted": {
+    "-30%": 0.2978632932922292,
+    "-35%": 0.3975382248293105,
+    "-40%": 0.5089463220675944,
+    "-45%": 0.621824686940966,
+    "-50%": 0.7258758451137062,
+    "-55%": 0.8147520513735284,
+    "-60%": 0.8680797781951525
+   },
+   "gates": {
+    "supported": {
+     "p_recommended": 0.64959,
+     "p_supported_given_recommended": 0.6580458443017904,
+     "p_recommended_not_supported": 0.22213,
+     "p_not_recommended_supported": 0.077325
+    },
+    "-30%": {
+     "p_recommended": 0.55475,
+     "p_supported_given_recommended": 0.7362235241099594,
+     "p_recommended_not_supported": 0.14633,
+     "p_not_recommended_supported": 0.096365
+    },
+    "-40%": {
+     "p_recommended": 0.450695,
+     "p_supported_given_recommended": 0.8137210308523503,
+     "p_recommended_not_supported": 0.083955,
+     "p_not_recommended_supported": 0.138045
+    },
+    "-45%": {
+     "p_recommended": 0.39426,
+     "p_supported_given_recommended": 0.8488180388576066,
+     "p_recommended_not_supported": 0.059605,
+     "p_not_recommended_supported": 0.17013
+    },
+    "-50%": {
+     "p_recommended": 0.338385,
+     "p_supported_given_recommended": 0.8774029581689495,
+     "p_recommended_not_supported": 0.041485,
+     "p_not_recommended_supported": 0.207885
+    }
+   }
+  },
+  "prior half at 0": {
+   "predicted": {
+    "-30%": 0.3765008576329331,
+    "-35%": 0.49342982289087794,
+    "-40%": 0.590999099909991,
+    "-45%": 0.6926638176638177,
+    "-50%": 0.7814776274713839,
+    "-55%": 0.844743935309973,
+    "-60%": 0.8725561187545257
+   },
+   "gates": {
+    "supported": {
+     "p_recommended": 0.329925,
+     "p_supported_given_recommended": 0.6787300143972115,
+     "p_recommended_not_supported": 0.105995,
+     "p_not_recommended_supported": 0.05805
+    },
+    "-30%": {
+     "p_recommended": 0.276235,
+     "p_supported_given_recommended": 0.7657610367983781,
+     "p_recommended_not_supported": 0.064705,
+     "p_not_recommended_supported": 0.07045
+    },
+    "-40%": {
+     "p_recommended": 0.223865,
+     "p_supported_given_recommended": 0.8303441806445849,
+     "p_recommended_not_supported": 0.03798,
+     "p_not_recommended_supported": 0.096095
+    },
+    "-45%": {
+     "p_recommended": 0.195955,
+     "p_supported_given_recommended": 0.8565486974050165,
+     "p_recommended_not_supported": 0.02811,
+     "p_not_recommended_supported": 0.114135
+    },
+    "-50%": {
+     "p_recommended": 0.1673,
+     "p_supported_given_recommended": 0.8763897190675434,
+     "p_recommended_not_supported": 0.02068,
+     "p_not_recommended_supported": 0.13536
+    }
+   }
+  },
+  "prior decreasing": {
+   "predicted": {
+    "-30%": 0.3729096989966555,
+    "-35%": 0.4747634069400631,
+    "-40%": 0.5859535967033952,
+    "-45%": 0.6923541247484909,
+    "-50%": 0.7802096532657528,
+    "-55%": 0.8352613240418119,
+    "-60%": 0.8706299911268855
+   },
+   "gates": {
+    "supported": {
+     "p_recommended": 0.4848,
+     "p_supported_given_recommended": 0.5571472772277227,
+     "p_recommended_not_supported": 0.214695,
+     "p_not_recommended_supported": 0.08821
+    },
+    "-30%": {
+     "p_recommended": 0.348395,
+     "p_supported_given_recommended": 0.6776073135377948,
+     "p_recommended_not_supported": 0.11232,
+     "p_not_recommended_supported": 0.12224
+    },
+    "-40%": {
+     "p_recommended": 0.22943,
+     "p_supported_given_recommended": 0.7832236411977509,
+     "p_recommended_not_supported": 0.049735,
+     "p_not_recommended_supported": 0.17862
+    },
+    "-45%": {
+     "p_recommended": 0.176475,
+     "p_supported_given_recommended": 0.8242810596401756,
+     "p_recommended_not_supported": 0.03101,
+     "p_not_recommended_supported": 0.21285
+    },
+    "-50%": {
+     "p_recommended": 0.12992,
+     "p_supported_given_recommended": 0.8549491995073891,
+     "p_recommended_not_supported": 0.018845,
+     "p_not_recommended_supported": 0.24724
+    }
+   }
+  }
+ },
+ "r2b_line": {
+  "spread_cap": 4.0,
+  "values": [
+   1.5,
+   2.0,
+   3.0
+  ],
+  "value_for_the_line": 2.0,
+  "window": 0.025,
+  "posterior": {
+   "what": "the spread's multiplier sqrt(2 / chi2_2): its median and P(more than twice the estimate)",
+   "median_multiplier": 1.2011224087864498,
+   "p_more_than_twice": 0.22119921692859512
+  },
+  "cases": {
+   "spreads drawn": {
+    "predicted": {
+     "-30%": 0.28709711732794385,
+     "-35%": 0.3607419447365905,
+     "-40%": 0.4341042584434655,
+     "-45%": 0.4981286758153627,
+     "-50%": 0.5595772787318362,
+     "-55%": 0.6340892728581713,
+     "-60%": 0.6781081796523427
+    },
+    "half": -45.152,
+    "gates": {
+     "-30%": {
+      "p_recommended": 0.55277,
+      "p_supported_given_recommended": 0.6027642599996382,
+      "p_recommended_not_supported": 0.21958,
+      "p_not_recommended_supported": 0.08998,
+      "expected_value": {
+       "1.5": -0.052985,
+       "2": 0.11361,
+       "3": 0.4468
+      }
+     },
+     "-35%": {
+      "p_recommended": 0.50329,
+      "p_supported_given_recommended": 0.6308986866418963,
+      "p_recommended_not_supported": 0.185765,
+      "p_not_recommended_supported": 0.105645,
+      "expected_value": {
+       "1.5": -0.0270025,
+       "2": 0.13176,
+       "3": 0.449285
+      }
+     },
+     "-40%": {
+      "p_recommended": 0.44903,
+      "p_supported_given_recommended": 0.658486069973053,
+      "p_recommended_not_supported": 0.15335,
+      "p_not_recommended_supported": 0.12749,
+      "expected_value": {
+       "1.5": -0.00551,
+       "2": 0.14233,
+       "3": 0.43801
+      }
+     },
+     "-45%": {
+      "p_recommended": 0.393455,
+      "p_supported_given_recommended": 0.6858471743909723,
+      "p_recommended_not_supported": 0.123605,
+      "p_not_recommended_supported": 0.15332,
+      "expected_value": {
+       "1.5": 0.01132,
+       "2": 0.146245,
+       "3": 0.416095
+      }
+     },
+     "-50%": {
+      "p_recommended": 0.33721,
+      "p_supported_given_recommended": 0.7102992200705792,
+      "p_recommended_not_supported": 0.09769,
+      "p_not_recommended_supported": 0.18365,
+      "expected_value": {
+       "1.5": 0.02207,
+       "2": 0.14183,
+       "3": 0.38135
+      }
+     },
+     "-55%": {
+      "p_recommended": 0.28091,
+      "p_supported_given_recommended": 0.7342565234416717,
+      "p_recommended_not_supported": 0.07465,
+      "p_not_recommended_supported": 0.21691,
+      "expected_value": {
+       "1.5": 0.02848,
+       "2": 0.13161,
+       "3": 0.33787
+      }
+     },
+     "-60%": {
+      "p_recommended": 0.225155,
+      "p_supported_given_recommended": 0.7547245231063046,
+      "p_recommended_not_supported": 0.055225,
+      "p_not_recommended_supported": 0.25324,
+      "expected_value": {
+       "1.5": 0.02974,
+       "2": 0.114705,
+       "3": 0.284635
+      }
+     }
+    },
+    "best": {
+     "1.5": "-60%",
+     "2": "-45%",
+     "3": "-35%"
+    },
+    "params": {
+     "k": 0.8697758470700758,
+     "spreads": {
+      "scale": 2.0,
+      "df": 2,
+      "shared": false,
+      "cap": 4.0
+     },
+     "bottleneck_spreads": "estimates",
+     "in_band": 0.0,
+     "prior": "uniform",
+     "prior_hi": 0.8,
+     "nb": 3
+    }
+   },
+   "spreads at their estimates": {
+    "predicted": {
+     "-30%": 0.3884209403987632,
+     "-35%": 0.4962369741412582,
+     "-40%": 0.6041460117169897,
+     "-45%": 0.7020560085076214,
+     "-50%": 0.780160390516039,
+     "-55%": 0.8377208799134511,
+     "-60%": 0.8735519515237925
+    },
+    "half": -35.174,
+    "gates": {
+     "-30%": {
+      "p_recommended": 0.5559,
+      "p_supported_given_recommended": 0.7702284583558194,
+      "p_recommended_not_supported": 0.12773,
+      "p_not_recommended_supported": 0.11594,
+      "expected_value": {
+       "1.5": 0.086355,
+       "2": 0.30044,
+       "3": 0.72861
+      }
+     },
+     "-35%": {
+      "p_recommended": 0.505875,
+      "p_supported_given_recommended": 0.8020558438349394,
+      "p_recommended_not_supported": 0.100135,
+      "p_not_recommended_supported": 0.13837,
+      "expected_value": {
+       "1.5": 0.102735,
+       "2": 0.305605,
+       "3": 0.711345
+      }
+     },
+     "-40%": {
+      "p_recommended": 0.45161,
+      "p_supported_given_recommended": 0.8327760678461504,
+      "p_recommended_not_supported": 0.07552,
+      "p_not_recommended_supported": 0.16802,
+      "expected_value": {
+       "1.5": 0.112525,
+       "2": 0.30057,
+       "3": 0.67666
+      }
+     },
+     "-45%": {
+      "p_recommended": 0.39636,
+      "p_supported_given_recommended": 0.8578312645070139,
+      "p_recommended_not_supported": 0.05635,
+      "p_not_recommended_supported": 0.2041,
+      "expected_value": {
+       "1.5": 0.113655,
+       "2": 0.28366,
+       "3": 0.62367
+      }
+     },
+     "-50%": {
+      "p_recommended": 0.339305,
+      "p_supported_given_recommended": 0.8761144103387808,
+      "p_recommended_not_supported": 0.042035,
+      "p_not_recommended_supported": 0.24684,
+      "expected_value": {
+       "1.5": 0.1066,
+       "2": 0.255235,
+       "3": 0.552505
+      }
+     },
+     "-55%": {
+      "p_recommended": 0.282435,
+      "p_supported_given_recommended": 0.8899746844406677,
+      "p_recommended_not_supported": 0.031075,
+      "p_not_recommended_supported": 0.29275,
+      "expected_value": {
+       "1.5": 0.094605,
+       "2": 0.220285,
+       "3": 0.471645
+      }
+     },
+     "-60%": {
+      "p_recommended": 0.22681,
+      "p_supported_given_recommended": 0.8970944843701777,
+      "p_recommended_not_supported": 0.02334,
+      "p_not_recommended_supported": 0.34064,
+      "expected_value": {
+       "1.5": 0.078395,
+       "2": 0.18013,
+       "3": 0.3836
+      }
+     }
+    },
+    "best": {
+     "1.5": "-45%",
+     "2": "-35%",
+     "3": "-30%"
+    },
+    "params": {
+     "k": 0.8697758470700758,
+     "spreads": "estimates",
+     "bottleneck_spreads": "estimates",
+     "in_band": 0.0,
+     "prior": "uniform",
+     "prior_hi": 0.8,
+     "nb": 3
+    }
+   },
+   "spreads drawn, at most 3 times": {
+    "predicted": {
+     "-30%": 0.2833424358274167,
+     "-35%": 0.3589866615487957,
+     "-40%": 0.4281927050004571,
+     "-45%": 0.5105153894755844,
+     "-50%": 0.588141592920354,
+     "-55%": 0.64147440997083,
+     "-60%": 0.6944542253521127
+    },
+    "half": -44.361,
+    "gates": {
+     "-30%": {
+      "p_recommended": 0.55442,
+      "p_supported_given_recommended": 0.6171855272176329,
+      "p_recommended_not_supported": 0.21224,
+      "p_not_recommended_supported": 0.09095,
+      "expected_value": {
+       "1.5": -0.04115,
+       "2": 0.12994,
+       "3": 0.47212
+      }
+     },
+     "-35%": {
+      "p_recommended": 0.50453,
+      "p_supported_given_recommended": 0.6465125958813153,
+      "p_recommended_not_supported": 0.178345,
+      "p_not_recommended_supported": 0.106945,
+      "expected_value": {
+       "1.5": -0.0152525,
+       "2": 0.14784,
+       "3": 0.474025
+      }
+     },
+     "-40%": {
+      "p_recommended": 0.450925,
+      "p_supported_given_recommended": 0.6767200754005656,
+      "p_recommended_not_supported": 0.145775,
+      "p_not_recommended_supported": 0.12798,
+      "expected_value": {
+       "1.5": 0.0068,
+       "2": 0.159375,
+       "3": 0.464525
+      }
+     },
+     "-45%": {
+      "p_recommended": 0.395935,
+      "p_supported_given_recommended": 0.7059239521638653,
+      "p_recommended_not_supported": 0.116435,
+      "p_not_recommended_supported": 0.15363,
+      "expected_value": {
+       "1.5": 0.023315,
+       "2": 0.163065,
+       "3": 0.442565
+      }
+     },
+     "-50%": {
+      "p_recommended": 0.340275,
+      "p_supported_given_recommended": 0.7305414738079494,
+      "p_recommended_not_supported": 0.09169,
+      "p_not_recommended_supported": 0.184545,
+      "expected_value": {
+       "1.5": 0.0326025,
+       "2": 0.156895,
+       "3": 0.40548
+      }
+     },
+     "-55%": {
+      "p_recommended": 0.283525,
+      "p_supported_given_recommended": 0.7533021779384534,
+      "p_recommended_not_supported": 0.069945,
+      "p_not_recommended_supported": 0.21955,
+      "expected_value": {
+       "1.5": 0.036845,
+       "2": 0.143635,
+       "3": 0.357215
+      }
+     },
+     "-60%": {
+      "p_recommended": 0.226335,
+      "p_supported_given_recommended": 0.774847018799567,
+      "p_recommended_not_supported": 0.05096,
+      "p_not_recommended_supported": 0.257755,
+      "expected_value": {
+       "1.5": 0.0367275,
+       "2": 0.124415,
+       "3": 0.29979
+      }
+     }
+    },
+    "best": {
+     "1.5": "-55%",
+     "2": "-45%",
+     "3": "-35%"
+    },
+    "params": {
+     "k": 0.8697758470700758,
+     "spreads": {
+      "scale": 2.0,
+      "df": 2,
+      "shared": false,
+      "cap": 3.0
+     },
+     "bottleneck_spreads": "estimates",
+     "in_band": 0.0,
+     "prior": "uniform",
+     "prior_hi": 0.8,
+     "nb": 3
+    }
+   },
+   "spreads drawn, k uniform 0.74-1.0": {
+    "predicted": {
+     "-30%": 0.2760449819647783,
+     "-35%": 0.3567207579026358,
+     "-40%": 0.422670071128944,
+     "-45%": 0.4989346590909091,
+     "-50%": 0.552056383263449,
+     "-55%": 0.6208098685974792,
+     "-60%": 0.677214624117279
+    },
+    "half": -45.1,
+    "gates": {
+     "-30%": {
+      "p_recommended": 0.554045,
+      "p_supported_given_recommended": 0.5978756238211698,
+      "p_recommended_not_supported": 0.222795,
+      "p_not_recommended_supported": 0.089875,
+      "expected_value": {
+       "1.5": -0.05717,
+       "2": 0.108455,
+       "3": 0.439705
+      }
+     },
+     "-35%": {
+      "p_recommended": 0.50398,
+      "p_supported_given_recommended": 0.625560538116592,
+      "p_recommended_not_supported": 0.18871,
+      "p_not_recommended_supported": 0.105855,
+      "expected_value": {
+       "1.5": -0.031075,
+       "2": 0.12656,
+       "3": 0.44183
+      }
+     },
+     "-40%": {
+      "p_recommended": 0.44928,
+      "p_supported_given_recommended": 0.6544916310541311,
+      "p_recommended_not_supported": 0.15523,
+      "p_not_recommended_supported": 0.127075,
+      "expected_value": {
+       "1.5": -0.008205,
+       "2": 0.13882,
+       "3": 0.43287
+      }
+     },
+     "-45%": {
+      "p_recommended": 0.39382,
+      "p_supported_given_recommended": 0.6809836981362044,
+      "p_recommended_not_supported": 0.125635,
+      "p_not_recommended_supported": 0.15294,
+      "expected_value": {
+       "1.5": 0.0084575,
+       "2": 0.14255,
+       "3": 0.410735
+      }
+     },
+     "-50%": {
+      "p_recommended": 0.337215,
+      "p_supported_given_recommended": 0.7079607965244725,
+      "p_recommended_not_supported": 0.09848,
+      "p_not_recommended_supported": 0.18239,
+      "expected_value": {
+       "1.5": 0.0208875,
+       "2": 0.140255,
+       "3": 0.37899
+      }
+     },
+     "-55%": {
+      "p_recommended": 0.281075,
+      "p_supported_given_recommended": 0.7323134394734502,
+      "p_recommended_not_supported": 0.07524,
+      "p_not_recommended_supported": 0.21529,
+      "expected_value": {
+       "1.5": 0.0276775,
+       "2": 0.130595,
+       "3": 0.33643
+      }
+     },
+     "-60%": {
+      "p_recommended": 0.22508,
+      "p_supported_given_recommended": 0.7511329305135952,
+      "p_recommended_not_supported": 0.056015,
+      "p_not_recommended_supported": 0.25206,
+      "expected_value": {
+       "1.5": 0.0285175,
+       "2": 0.11305,
+       "3": 0.282115
+      }
+     }
+    },
+    "best": {
+     "1.5": "-60%",
+     "2": "-45%",
+     "3": "-35%"
+    },
+    "params": {
+     "k": [
+      "uniform",
+      0.74,
+      1.0
+     ],
+     "spreads": {
+      "scale": 2.0,
+      "df": 2,
+      "shared": false,
+      "cap": 4.0
+     },
+     "bottleneck_spreads": "estimates",
+     "in_band": 0.0,
+     "prior": "uniform",
+     "prior_hi": 0.8,
+     "nb": 3
+    }
+   },
+   "spreads drawn, k uniform 0.5-1.0": {
+    "predicted": {
+     "-30%": 0.2262671821305842,
+     "-35%": 0.2875461433844958,
+     "-40%": 0.34529791816223976,
+     "-45%": 0.4169665347247211,
+     "-50%": 0.4751847940865892,
+     "-55%": 0.5177198409191339,
+     "-60%": 0.5810482783421739
+    },
+    "half": -52.917,
+    "gates": {
+     "-30%": {
+      "p_recommended": 0.554855,
+      "p_supported_given_recommended": 0.5147200619981797,
+      "p_recommended_not_supported": 0.26926,
+      "p_not_recommended_supported": 0.075205,
+      "expected_value": {
+       "1.5": -0.1264625,
+       "2": 0.016335,
+       "3": 0.30193
+      }
+     },
+     "-35%": {
+      "p_recommended": 0.505175,
+      "p_supported_given_recommended": 0.5405255604493492,
+      "p_recommended_not_supported": 0.232115,
+      "p_not_recommended_supported": 0.08774,
+      "expected_value": {
+       "1.5": -0.095585,
+       "2": 0.040945,
+       "3": 0.314005
+      }
+     },
+     "-40%": {
+      "p_recommended": 0.451025,
+      "p_supported_given_recommended": 0.5668754503630619,
+      "p_recommended_not_supported": 0.19535,
+      "p_not_recommended_supported": 0.105125,
+      "expected_value": {
+       "1.5": -0.0675125,
+       "2": 0.060325,
+       "3": 0.316
+      }
+     },
+     "-45%": {
+      "p_recommended": 0.39489,
+      "p_supported_given_recommended": 0.5932284940109904,
+      "p_recommended_not_supported": 0.16063,
+      "p_not_recommended_supported": 0.12654,
+      "expected_value": {
+       "1.5": -0.0435,
+       "2": 0.07363,
+       "3": 0.30789
+      }
+     },
+     "-50%": {
+      "p_recommended": 0.33927,
+      "p_supported_given_recommended": 0.6177675597606626,
+      "p_recommended_not_supported": 0.12968,
+      "p_not_recommended_supported": 0.15121,
+      "expected_value": {
+       "1.5": -0.024885,
+       "2": 0.07991,
+       "3": 0.2895
+      }
+     },
+     "-55%": {
+      "p_recommended": 0.282895,
+      "p_supported_given_recommended": 0.6416161473338164,
+      "p_recommended_not_supported": 0.101385,
+      "p_not_recommended_supported": 0.17929,
+      "expected_value": {
+       "1.5": -0.01063,
+       "2": 0.080125,
+       "3": 0.261635
+      }
+     },
+     "-60%": {
+      "p_recommended": 0.22583,
+      "p_supported_given_recommended": 0.6659212682106009,
+      "p_recommended_not_supported": 0.075445,
+      "p_not_recommended_supported": 0.210415,
+      "expected_value": {
+       "1.5": -0.0002525,
+       "2": 0.07494,
+       "3": 0.225325
+      }
+     }
+    },
+    "best": {
+     "1.5": "-60%",
+     "2": "-55%",
+     "3": "-40%"
+    },
+    "params": {
+     "k": [
+      "uniform",
+      0.5,
+      1.0
+     ],
+     "spreads": {
+      "scale": 2.0,
+      "df": 2,
+      "shared": false,
+      "cap": 4.0
+     },
+     "bottleneck_spreads": "estimates",
+     "in_band": 0.0,
+     "prior": "uniform",
+     "prior_hi": 0.8,
+     "nb": 3
+    }
+   },
+   "spreads drawn, the bottleneck's too": {
+    "predicted": {
+     "-30%": 0.288213931990756,
+     "-35%": 0.3533730433578058,
+     "-40%": 0.41764350453172205,
+     "-45%": 0.49099692577953447,
+     "-50%": 0.5608163265306122,
+     "-55%": 0.6198637001403087,
+     "-60%": 0.6663470757430489
+    },
+    "half": -45.645,
+    "gates": {
+     "-30%": {
+      "p_recommended": 0.48597,
+      "p_supported_given_recommended": 0.61556268905488,
+      "p_recommended_not_supported": 0.186825,
+      "p_not_recommended_supported": 0.124965,
+      "expected_value": {
+       "1.5": -0.0372525,
+       "2": 0.11232,
+       "3": 0.411465
+      }
+     },
+     "-35%": {
+      "p_recommended": 0.452535,
+      "p_supported_given_recommended": 0.6377628249748638,
+      "p_recommended_not_supported": 0.163925,
+      "p_not_recommended_supported": 0.1355,
+      "expected_value": {
+       "1.5": -0.01962,
+       "2": 0.124685,
+       "3": 0.413295
+      }
+     },
+     "-40%": {
+      "p_recommended": 0.41362,
+      "p_supported_given_recommended": 0.6608964750253856,
+      "p_recommended_not_supported": 0.14026,
+      "p_not_recommended_supported": 0.15075,
+      "expected_value": {
+       "1.5": -0.00358,
+       "2": 0.1331,
+       "3": 0.40646
+      }
+     },
+     "-45%": {
+      "p_recommended": 0.37037,
+      "p_supported_given_recommended": 0.6855711855711856,
+      "p_recommended_not_supported": 0.116455,
+      "p_not_recommended_supported": 0.170195,
+      "expected_value": {
+       "1.5": 0.0105025,
+       "2": 0.13746,
+       "3": 0.391375
+      }
+     },
+     "-50%": {
+      "p_recommended": 0.322735,
+      "p_supported_given_recommended": 0.7084914868235549,
+      "p_recommended_not_supported": 0.09408,
+      "p_not_recommended_supported": 0.195455,
+      "expected_value": {
+       "1.5": 0.0202475,
+       "2": 0.134575,
+       "3": 0.36323
+      }
+     },
+     "-55%": {
+      "p_recommended": 0.273405,
+      "p_supported_given_recommended": 0.7305462592125236,
+      "p_recommended_not_supported": 0.07367,
+      "p_not_recommended_supported": 0.224375,
+      "expected_value": {
+       "1.5": 0.0261975,
+       "2": 0.126065,
+       "3": 0.3258
+      }
+     },
+     "-60%": {
+      "p_recommended": 0.222175,
+      "p_supported_given_recommended": 0.7498368403285698,
+      "p_recommended_not_supported": 0.05558,
+      "p_not_recommended_supported": 0.257515,
+      "expected_value": {
+       "1.5": 0.0277175,
+       "2": 0.111015,
+       "3": 0.27761
+      }
+     }
+    },
+    "best": {
+     "1.5": "-60%",
+     "2": "-45%",
+     "3": "-35%"
+    },
+    "params": {
+     "k": 0.8697758470700758,
+     "spreads": {
+      "scale": 2.0,
+      "df": 2,
+      "shared": false,
+      "cap": 4.0
+     },
+     "bottleneck_spreads": {
+      "scale": 2.0,
+      "df": 2,
+      "shared": false,
+      "cap": 4.0
+     },
+     "in_band": 0.0,
+     "prior": "uniform",
+     "prior_hi": 0.8,
+     "nb": 3
+    }
+   },
+   "spreads drawn, in band -10% to +10%": {
+    "predicted": {
+     "-30%": 0.26624472573839664,
+     "-35%": 0.34457464037344004,
+     "-40%": 0.4026033550279586,
+     "-45%": 0.4679238632358125,
+     "-50%": 0.5343101565344012,
+     "-55%": 0.603413029952893,
+     "-60%": 0.64308190236447
+    },
+    "half": -47.416,
+    "gates": {
+     "-30%": {
+      "p_recommended": 0.55231,
+      "p_supported_given_recommended": 0.5763973131031486,
+      "p_recommended_not_supported": 0.23396,
+      "p_not_recommended_supported": 0.084145,
+      "expected_value": {
+       "1.5": -0.074785,
+       "2": 0.08439,
+       "3": 0.40274
+      }
+     },
+     "-35%": {
+      "p_recommended": 0.502055,
+      "p_supported_given_recommended": 0.6033601896206591,
+      "p_recommended_not_supported": 0.199135,
+      "p_not_recommended_supported": 0.099575,
+      "expected_value": {
+       "1.5": -0.047675,
+       "2": 0.103785,
+       "3": 0.406705
+      }
+     },
+     "-40%": {
+      "p_recommended": 0.448175,
+      "p_supported_given_recommended": 0.6304568527918781,
+      "p_recommended_not_supported": 0.16562,
+      "p_not_recommended_supported": 0.11994,
+      "expected_value": {
+       "1.5": -0.0243425,
+       "2": 0.116935,
+       "3": 0.39949
+      }
+     },
+     "-45%": {
+      "p_recommended": 0.392075,
+      "p_supported_given_recommended": 0.6586749984059173,
+      "p_recommended_not_supported": 0.133825,
+      "p_not_recommended_supported": 0.144245,
+      "expected_value": {
+       "1.5": -0.0047,
+       "2": 0.124425,
+       "3": 0.382675
+      }
+     },
+     "-50%": {
+      "p_recommended": 0.33652,
+      "p_supported_given_recommended": 0.6849370022584096,
+      "p_recommended_not_supported": 0.106025,
+      "p_not_recommended_supported": 0.172,
+      "expected_value": {
+       "1.5": 0.0092225,
+       "2": 0.12447,
+       "3": 0.354965
+      }
+     },
+     "-55%": {
+      "p_recommended": 0.28101,
+      "p_supported_given_recommended": 0.7080530941959361,
+      "p_recommended_not_supported": 0.08204,
+      "p_not_recommended_supported": 0.203525,
+      "expected_value": {
+       "1.5": 0.017445,
+       "2": 0.11693,
+       "3": 0.3159
+      }
+     },
+     "-60%": {
+      "p_recommended": 0.22495,
+      "p_supported_given_recommended": 0.7278284063125139,
+      "p_recommended_not_supported": 0.061225,
+      "p_not_recommended_supported": 0.23877,
+      "expected_value": {
+       "1.5": 0.0206375,
+       "2": 0.1025,
+       "3": 0.266225
+      }
+     }
+    },
+    "best": {
+     "1.5": "-60%",
+     "2": "-50%",
+     "3": "-35%"
+    },
+    "params": {
+     "k": 0.8697758470700758,
+     "spreads": {
+      "scale": 2.0,
+      "df": 2,
+      "shared": false,
+      "cap": 4.0
+     },
+     "bottleneck_spreads": "estimates",
+     "in_band": [
+      "uniform",
+      -0.1,
+      0.1
+     ],
+     "prior": "uniform",
+     "prior_hi": 0.8,
+     "nb": 3
+    }
+   },
+   "spreads drawn, prior 0-60%": {
+    "predicted": {
+     "-30%": 0.2829120484809824,
+     "-35%": 0.34536668561682776,
+     "-40%": 0.4297982551799346,
+     "-45%": 0.5018947083502504,
+     "-50%": 0.5712540716612378,
+     "-55%": 0.6169047442824366,
+     "-60%": 0.654080238479692
+    },
+    "half": -44.869,
+    "gates": {
+     "-30%": {
+      "p_recommended": 0.43846,
+      "p_supported_given_recommended": 0.49584910824248507,
+      "p_recommended_not_supported": 0.22105,
+      "p_not_recommended_supported": 0.093945,
+      "expected_value": {
+       "1.5": -0.112345,
+       "2": -0.00364,
+       "3": 0.21377
+      }
+     },
+     "-35%": {
+      "p_recommended": 0.37175,
+      "p_supported_given_recommended": 0.5289710827168796,
+      "p_recommended_not_supported": 0.175105,
+      "p_not_recommended_supported": 0.11471,
+      "expected_value": {
+       "1.5": -0.0767825,
+       "2": 0.02154,
+       "3": 0.218185
+      }
+     },
+     "-40%": {
+      "p_recommended": 0.29928,
+      "p_supported_given_recommended": 0.5635692328254478,
+      "p_recommended_not_supported": 0.130615,
+      "p_not_recommended_supported": 0.14269,
+      "expected_value": {
+       "1.5": -0.0462825,
+       "2": 0.03805,
+       "3": 0.206715
+      }
+     },
+     "-45%": {
+      "p_recommended": 0.224945,
+      "p_supported_given_recommended": 0.5945231056480473,
+      "p_recommended_not_supported": 0.09121,
+      "p_not_recommended_supported": 0.17762,
+      "expected_value": {
+       "1.5": -0.0243425,
+       "2": 0.042525,
+       "3": 0.17626
+      }
+     },
+     "-50%": {
+      "p_recommended": 0.15112,
+      "p_supported_given_recommended": 0.6223861831656962,
+      "p_recommended_not_supported": 0.057065,
+      "p_not_recommended_supported": 0.2173,
+      "expected_value": {
+       "1.5": -0.0100375,
+       "2": 0.03699,
+       "3": 0.131045
+      }
+     },
+     "-55%": {
+      "p_recommended": 0.07875,
+      "p_supported_given_recommended": 0.6446349206349207,
+      "p_recommended_not_supported": 0.027985,
+      "p_not_recommended_supported": 0.26059,
+      "expected_value": {
+       "1.5": -0.0026025,
+       "2": 0.02278,
+       "3": 0.073545
+      }
+     },
+     "-60%": {
+      "p_recommended": 0.021235,
+      "p_supported_given_recommended": 0.6741229102896162,
+      "p_recommended_not_supported": 0.00692,
+      "p_not_recommended_supported": 0.29704,
+      "expected_value": {
+       "1.5": 0.0002375,
+       "2": 0.007395,
+       "3": 0.02171
+      }
+     }
+    },
+    "best": {
+     "1.5": "-60%",
+     "2": "-45%",
+     "3": "-35%"
+    },
+    "params": {
+     "k": 0.8697758470700758,
+     "spreads": {
+      "scale": 2.0,
+      "df": 2,
+      "shared": false,
+      "cap": 4.0
+     },
+     "bottleneck_spreads": "estimates",
+     "in_band": 0.0,
+     "prior": "uniform",
+     "prior_hi": 0.6,
+     "nb": 3
+    }
+   },
+   "spreads drawn, prior half at 0": {
+    "predicted": {
+     "-30%": 0.2774044519109618,
+     "-35%": 0.34992313604919295,
+     "-40%": 0.42754689223979403,
+     "-45%": 0.49857142857142855,
+     "-50%": 0.5789285714285715,
+     "-55%": 0.6252217098261795,
+     "-60%": 0.6834481540363894
+    },
+    "half": -45.089,
+    "gates": {
+     "-30%": {
+      "p_recommended": 0.27754,
+      "p_supported_given_recommended": 0.60427325790877,
+      "p_recommended_not_supported": 0.10983,
+      "p_not_recommended_supported": 0.05663,
+      "expected_value": {
+       "1.5": -0.025975,
+       "2": 0.05788,
+       "3": 0.22559
+      }
+     },
+     "-35%": {
+      "p_recommended": 0.25264,
+      "p_supported_given_recommended": 0.6327184927169094,
+      "p_recommended_not_supported": 0.09279,
+      "p_not_recommended_supported": 0.06449,
+      "expected_value": {
+       "1.5": -0.012865,
+       "2": 0.06706,
+       "3": 0.22691
+      }
+     },
+     "-40%": {
+      "p_recommended": 0.22566,
+      "p_supported_given_recommended": 0.6625675795444474,
+      "p_recommended_not_supported": 0.076145,
+      "p_not_recommended_supported": 0.074825,
+      "expected_value": {
+       "1.5": -0.0013875,
+       "2": 0.07337,
+       "3": 0.222885
+      }
+     },
+     "-45%": {
+      "p_recommended": 0.19799,
+      "p_supported_given_recommended": 0.6900095964442648,
+      "p_recommended_not_supported": 0.061375,
+      "p_not_recommended_supported": 0.087725,
+      "expected_value": {
+       "1.5": 0.0069325,
+       "2": 0.07524,
+       "3": 0.211855
+      }
+     },
+     "-50%": {
+      "p_recommended": 0.170005,
+      "p_supported_given_recommended": 0.7147142731096144,
+      "p_recommended_not_supported": 0.0485,
+      "p_not_recommended_supported": 0.102835,
+      "expected_value": {
+       "1.5": 0.0122525,
+       "2": 0.073005,
+       "3": 0.19451
+      }
+     },
+     "-55%": {
+      "p_recommended": 0.142125,
+      "p_supported_given_recommended": 0.7369569041336851,
+      "p_recommended_not_supported": 0.037385,
+      "p_not_recommended_supported": 0.1196,
+      "expected_value": {
+       "1.5": 0.014985,
+       "2": 0.067355,
+       "3": 0.172095
+      }
+     },
+     "-60%": {
+      "p_recommended": 0.113545,
+      "p_supported_given_recommended": 0.7562200008807081,
+      "p_recommended_not_supported": 0.02768,
+      "p_not_recommended_supported": 0.138475,
+      "expected_value": {
+       "1.5": 0.0152525,
+       "2": 0.058185,
+       "3": 0.14405
+      }
+     }
+    },
+    "best": {
+     "1.5": "-60%",
+     "2": "-45%",
+     "3": "-35%"
+    },
+    "params": {
+     "k": 0.8697758470700758,
+     "spreads": {
+      "scale": 2.0,
+      "df": 2,
+      "shared": false,
+      "cap": 4.0
+     },
+     "bottleneck_spreads": "estimates",
+     "in_band": 0.0,
+     "prior": "half at 0",
+     "prior_hi": 0.8,
+     "nb": 3
+    }
+   },
+   "spreads drawn, prior decreasing": {
+    "predicted": {
+     "-30%": 0.2717482752818442,
+     "-35%": 0.3387243924691051,
+     "-40%": 0.41959434987323435,
+     "-45%": 0.4880233494363929,
+     "-50%": 0.5606936416184971,
+     "-55%": 0.6112277754444911,
+     "-60%": 0.6730331172244612
+    },
+    "half": -45.824,
+    "gates": {
+     "-30%": {
+      "p_recommended": 0.34673,
+      "p_supported_given_recommended": 0.5023937934415827,
+      "p_recommended_not_supported": 0.172535,
+      "p_not_recommended_supported": 0.092865,
+      "expected_value": {
+       "1.5": -0.0854375,
+       "2": 0.00166,
+       "3": 0.175855
+      }
+     },
+     "-35%": {
+      "p_recommended": 0.286495,
+      "p_supported_given_recommended": 0.5447040960575228,
+      "p_recommended_not_supported": 0.13044,
+      "p_not_recommended_supported": 0.111005,
+      "expected_value": {
+       "1.5": -0.0524125,
+       "2": 0.025615,
+       "3": 0.18167
+      }
+     },
+     "-40%": {
+      "p_recommended": 0.228025,
+      "p_supported_given_recommended": 0.5866681284946826,
+      "p_recommended_not_supported": 0.09425,
+      "p_not_recommended_supported": 0.133285,
+      "expected_value": {
+       "1.5": -0.0273625,
+       "2": 0.039525,
+       "3": 0.1733
+      }
+     },
+     "-45%": {
+      "p_recommended": 0.175605,
+      "p_supported_given_recommended": 0.627231570855044,
+      "p_recommended_not_supported": 0.06546,
+      "p_not_recommended_supported": 0.156915,
+      "expected_value": {
+       "1.5": -0.0103875,
+       "2": 0.044685,
+       "3": 0.15483
+      }
+     },
+     "-50%": {
+      "p_recommended": 0.129235,
+      "p_supported_given_recommended": 0.6616628622277246,
+      "p_recommended_not_supported": 0.043725,
+      "p_not_recommended_supported": 0.18155,
+      "expected_value": {
+       "1.5": -0.00097,
+       "2": 0.041785,
+       "3": 0.127295
+      }
+     },
+     "-55%": {
+      "p_recommended": 0.09039,
+      "p_supported_given_recommended": 0.6935501714791459,
+      "p_recommended_not_supported": 0.0277,
+      "p_not_recommended_supported": 0.20437,
+      "expected_value": {
+       "1.5": 0.003645,
+       "2": 0.03499,
+       "3": 0.09768
+      }
+     },
+     "-60%": {
+      "p_recommended": 0.058475,
+      "p_supported_given_recommended": 0.7233860624198375,
+      "p_recommended_not_supported": 0.016175,
+      "p_not_recommended_supported": 0.22476,
+      "expected_value": {
+       "1.5": 0.004975,
+       "2": 0.026125,
+       "3": 0.068425
+      }
+     }
+    },
+    "best": {
+     "1.5": "-60%",
+     "2": "-45%",
+     "3": "-35%"
+    },
+    "params": {
+     "k": 0.8697758470700758,
+     "spreads": {
+      "scale": 2.0,
+      "df": 2,
+      "shared": false,
+      "cap": 4.0
+     },
+     "bottleneck_spreads": "estimates",
+     "in_band": 0.0,
+     "prior": "decreasing",
+     "prior_hi": 0.8,
+     "nb": 3
+    }
+   },
+   "spreads drawn, R2b five seeds": {
+    "predicted": {
+     "-30%": 0.3881016765819362,
+     "-35%": 0.47780925401322,
+     "-40%": 0.5643330609279942,
+     "-45%": 0.6468637992831541,
+     "-50%": 0.704014272970562,
+     "-55%": 0.7571893413068331,
+     "-60%": 0.7989106170193767
+    },
+    "half": -36.282,
+    "gates": {
+     "-30%": {
+      "p_recommended": 0.553175,
+      "p_supported_given_recommended": 0.7220499841822208,
+      "p_recommended_not_supported": 0.153755,
+      "p_not_recommended_supported": 0.11334,
+      "expected_value": {
+       "1.5": -0.3228283333333334,
+       "2": -0.1231183333333334,
+       "3": 0.2763016666666666
+      }
+     },
+     "-35%": {
+      "p_recommended": 0.50343,
+      "p_supported_given_recommended": 0.7509186977335479,
+      "p_recommended_not_supported": 0.125395,
+      "p_not_recommended_supported": 0.134725,
+      "expected_value": {
+       "1.5": -0.27199750000000006,
+       "2": -0.08298000000000005,
+       "3": 0.2950549999999999
+      }
+     },
+     "-40%": {
+      "p_recommended": 0.44904,
+      "p_supported_given_recommended": 0.7784273115980759,
+      "p_recommended_not_supported": 0.099495,
+      "p_not_recommended_supported": 0.163215,
+      "expected_value": {
+       "1.5": -0.22408250000000007,
+       "2": -0.049310000000000034,
+       "3": 0.300235
+      }
+     },
+     "-45%": {
+      "p_recommended": 0.393785,
+      "p_supported_given_recommended": 0.8029762433815407,
+      "p_recommended_not_supported": 0.077585,
+      "p_not_recommended_supported": 0.19656,
+      "expected_value": {
+       "1.5": -0.18200833333333336,
+       "2": -0.023908333333333368,
+       "3": 0.2922916666666666
+      }
+     },
+     "-50%": {
+      "p_recommended": 0.33797,
+      "p_supported_given_recommended": 0.8240820191141226,
+      "p_recommended_not_supported": 0.059455,
+      "p_not_recommended_supported": 0.234245,
+      "expected_value": {
+       "1.5": -0.14551083333333337,
+       "2": -0.00625333333333336,
+       "3": 0.2722616666666666
+      }
+     },
+     "-55%": {
+      "p_recommended": 0.281525,
+      "p_supported_given_recommended": 0.8412751975845839,
+      "p_recommended_not_supported": 0.044685,
+      "p_not_recommended_supported": 0.27592,
+      "expected_value": {
+       "1.5": -0.11394833333333336,
+       "2": 0.0044716666666666455,
+       "3": 0.24131166666666665
+      }
+     },
+     "-60%": {
+      "p_recommended": 0.224205,
+      "p_supported_given_recommended": 0.8586784416047814,
+      "p_recommended_not_supported": 0.031685,
+      "p_not_recommended_supported": 0.32024,
+      "expected_value": {
+       "1.5": -0.08489500000000001,
+       "2": 0.011364999999999984,
+       "3": 0.203885
+      }
+     }
+    },
+    "best": {
+     "1.5": "-60%",
+     "2": "-60%",
+     "3": "-40%"
+    },
+    "params": {
+     "k": 0.8697758470700758,
+     "spreads": {
+      "scale": 2.0,
+      "df": 2,
+      "shared": false,
+      "cap": 4.0
+     },
+     "bottleneck_spreads": "estimates",
+     "in_band": 0.0,
+     "prior": "uniform",
+     "prior_hi": 0.8,
+     "nb": 5
+    }
+   },
+   "spreads at their estimates, R2b five seeds": {
+    "predicted": {
+     "-30%": 0.5564849126521969,
+     "-35%": 0.6768979120561917,
+     "-40%": 0.794989446636689,
+     "-45%": 0.8732229620298723,
+     "-50%": 0.9118641053006048,
+     "-55%": 0.9247752858015533,
+     "-60%": 0.9309634670487106
+    },
+    "half": null,
+    "gates": {
+     "-30%": {
+      "p_recommended": 0.5531,
+      "p_supported_given_recommended": 0.8701048634966552,
+      "p_recommended_not_supported": 0.071845,
+      "p_not_recommended_supported": 0.14754,
+      "expected_value": {
+       "1.5": -0.19995083333333338,
+       "2": 0.04067666666666662,
+       "3": 0.5219316666666666
+      }
+     },
+     "-35%": {
+      "p_recommended": 0.503505,
+      "p_supported_given_recommended": 0.8954628057318199,
+      "p_recommended_not_supported": 0.052635,
+      "p_not_recommended_supported": 0.177925,
+      "expected_value": {
+       "1.5": -0.16287000000000004,
+       "2": 0.06256499999999995,
+       "3": 0.513435
+      }
+     },
+     "-40%": {
+      "p_recommended": 0.449775,
+      "p_supported_given_recommended": 0.914468345283753,
+      "p_recommended_not_supported": 0.03847,
+      "p_not_recommended_supported": 0.21749,
+      "expected_value": {
+       "1.5": -0.13266750000000005,
+       "2": 0.07298499999999997,
+       "3": 0.48429
+      }
+     },
+     "-45%": {
+      "p_recommended": 0.39501,
+      "p_supported_given_recommended": 0.9249765828713197,
+      "p_recommended_not_supported": 0.029635,
+      "p_not_recommended_supported": 0.26342,
+      "expected_value": {
+       "1.5": -0.11028750000000004,
+       "2": 0.07239999999999998,
+       "3": 0.4377749999999999
+      }
+     },
+     "-50%": {
+      "p_recommended": 0.338705,
+      "p_supported_given_recommended": 0.9294814071241936,
+      "p_recommended_not_supported": 0.023885,
+      "p_not_recommended_supported": 0.313975,
+      "expected_value": {
+       "1.5": -0.09227833333333335,
+       "2": 0.06513166666666664,
+       "3": 0.3799516666666666
+      }
+     },
+     "-55%": {
+      "p_recommended": 0.28183,
+      "p_supported_given_recommended": 0.9309512826881453,
+      "p_recommended_not_supported": 0.01946,
+      "p_not_recommended_supported": 0.366425,
+      "expected_value": {
+       "1.5": -0.0761616666666667,
+       "2": 0.05502333333333331,
+       "3": 0.3173933333333333
+      }
+     },
+     "-60%": {
+      "p_recommended": 0.225015,
+      "p_supported_given_recommended": 0.9318267671044153,
+      "p_recommended_not_supported": 0.01534,
+      "p_not_recommended_supported": 0.41912,
+      "expected_value": {
+       "1.5": -0.06051250000000002,
+       "2": 0.04432499999999998,
+       "3": 0.254
+      }
+     }
+    },
+    "best": {
+     "1.5": "-60%",
+     "2": "-40%",
+     "3": "-30%"
+    },
+    "params": {
+     "k": 0.8697758470700758,
+     "spreads": "estimates",
+     "bottleneck_spreads": "estimates",
+     "in_band": 0.0,
+     "prior": "uniform",
+     "prior_hi": 0.8,
+     "nb": 5
+    }
+   },
+   "spreads drawn, no cap": {
+    "predicted": {
+     "-30%": 0.2785202608788624,
+     "-35%": 0.3468472858395868,
+     "-40%": 0.4217760897088081,
+     "-45%": 0.494032775204845,
+     "-50%": 0.5599113082039912,
+     "-55%": 0.6149680397727273,
+     "-60%": 0.667787610619469
+    },
+    "half": -45.453,
+    "gates": {
+     "-30%": {
+      "p_recommended": 0.554835,
+      "p_supported_given_recommended": 0.5908062757396343,
+      "p_recommended_not_supported": 0.227035,
+      "p_not_recommended_supported": 0.0876,
+      "expected_value": {
+       "1.5": -0.063135,
+       "2": 0.100765,
+       "3": 0.428565
+      }
+     },
+     "-35%": {
+      "p_recommended": 0.50501,
+      "p_supported_given_recommended": 0.6183936951743529,
+      "p_recommended_not_supported": 0.192715,
+      "p_not_recommended_supported": 0.103105,
+      "expected_value": {
+       "1.5": -0.0365675,
+       "2": 0.11958,
+       "3": 0.431875
+      }
+     },
+     "-40%": {
+      "p_recommended": 0.45168,
+      "p_supported_given_recommended": 0.6458776124690047,
+      "p_recommended_not_supported": 0.15995,
+      "p_not_recommended_supported": 0.12367,
+      "expected_value": {
+       "1.5": -0.014085,
+       "2": 0.13178,
+       "3": 0.42351
+      }
+     },
+     "-45%": {
+      "p_recommended": 0.394875,
+      "p_supported_given_recommended": 0.6725039569484014,
+      "p_recommended_not_supported": 0.12932,
+      "p_not_recommended_supported": 0.149845,
+      "expected_value": {
+       "1.5": 0.0034575,
+       "2": 0.136235,
+       "3": 0.40179
+      }
+     },
+     "-50%": {
+      "p_recommended": 0.339275,
+      "p_supported_given_recommended": 0.6962640925502911,
+      "p_recommended_not_supported": 0.10305,
+      "p_not_recommended_supported": 0.179175,
+      "expected_value": {
+       "1.5": 0.0150625,
+       "2": 0.133175,
+       "3": 0.3694
+      }
+     },
+     "-55%": {
+      "p_recommended": 0.282815,
+      "p_supported_given_recommended": 0.7181549776355568,
+      "p_recommended_not_supported": 0.07971,
+      "p_not_recommended_supported": 0.212295,
+      "expected_value": {
+       "1.5": 0.0218425,
+       "2": 0.123395,
+       "3": 0.3265
+      }
+     },
+     "-60%": {
+      "p_recommended": 0.226285,
+      "p_supported_given_recommended": 0.737808515809709,
+      "p_recommended_not_supported": 0.05933,
+      "p_not_recommended_supported": 0.248445,
+      "expected_value": {
+       "1.5": 0.0241475,
+       "2": 0.107625,
+       "3": 0.27458
+      }
+     }
+    },
+    "best": {
+     "1.5": "-60%",
+     "2": "-45%",
+     "3": "-35%"
+    },
+    "params": {
+     "k": 0.8697758470700758,
+     "spreads": {
+      "scale": 2.0,
+      "df": 2,
+      "shared": false,
+      "cap": null
+     },
+     "bottleneck_spreads": "estimates",
+     "in_band": 0.0,
+     "prior": "uniform",
+     "prior_hi": 0.8,
+     "nb": 3
+    }
+   },
+   "spreads drawn, at most 2 times": {
+    "predicted": {
+     "-30%": 0.3105972207489127,
+     "-35%": 0.38334434897554526,
+     "-40%": 0.47268793942671716,
+     "-45%": 0.5509126700071582,
+     "-50%": 0.6202576950608447,
+     "-55%": 0.6956169561695617,
+     "-60%": 0.7543401996941621
+    },
+    "half": -41.746,
+    "gates": {
+     "-30%": {
+      "p_recommended": 0.552755,
+      "p_supported_given_recommended": 0.6588542844479018,
+      "p_recommended_not_supported": 0.18857,
+      "p_not_recommended_supported": 0.09703,
+      "expected_value": {
+       "1.5": -0.0064775,
+       "2": 0.175615,
+       "3": 0.5398
+      }
+     },
+     "-35%": {
+      "p_recommended": 0.50187,
+      "p_supported_given_recommended": 0.6902185825014446,
+      "p_recommended_not_supported": 0.15547,
+      "p_not_recommended_supported": 0.114815,
+      "expected_value": {
+       "1.5": 0.01773,
+       "2": 0.19093,
+       "3": 0.53733
+      }
+     },
+     "-40%": {
+      "p_recommended": 0.447355,
+      "p_supported_given_recommended": 0.7219993070380347,
+      "p_recommended_not_supported": 0.124365,
+      "p_not_recommended_supported": 0.138225,
+      "expected_value": {
+       "1.5": 0.03713,
+       "2": 0.198625,
+       "3": 0.521615
+      }
+     },
+     "-45%": {
+      "p_recommended": 0.391235,
+      "p_supported_given_recommended": 0.7523355528007464,
+      "p_recommended_not_supported": 0.096895,
+      "p_not_recommended_supported": 0.166875,
+      "expected_value": {
+       "1.5": 0.050275,
+       "2": 0.197445,
+       "3": 0.491785
+      }
+     },
+     "-50%": {
+      "p_recommended": 0.335535,
+      "p_supported_given_recommended": 0.7792480665206313,
+      "p_recommended_not_supported": 0.07407,
+      "p_not_recommended_supported": 0.19975,
+      "expected_value": {
+       "1.5": 0.0566625,
+       "2": 0.187395,
+       "3": 0.44886
+      }
+     },
+     "-55%": {
+      "p_recommended": 0.27992,
+      "p_supported_given_recommended": 0.8034259788511003,
+      "p_recommended_not_supported": 0.055025,
+      "p_not_recommended_supported": 0.23632,
+      "expected_value": {
+       "1.5": 0.0574225,
+       "2": 0.16987,
+       "3": 0.394765
+      }
+     },
+     "-60%": {
+      "p_recommended": 0.22366,
+      "p_supported_given_recommended": 0.8237503353304122,
+      "p_recommended_not_supported": 0.03942,
+      "p_not_recommended_supported": 0.276975,
+      "expected_value": {
+       "1.5": 0.0527,
+       "2": 0.14482,
+       "3": 0.32906
+      }
+     }
+    },
+    "best": {
+     "1.5": "-55%",
+     "2": "-40%",
+     "3": "-30%"
+    },
+    "params": {
+     "k": 0.8697758470700758,
+     "spreads": {
+      "scale": 2.0,
+      "df": 2,
+      "shared": false,
+      "cap": 2.0
+     },
+     "bottleneck_spreads": "estimates",
+     "in_band": 0.0,
+     "prior": "uniform",
+     "prior_hi": 0.8,
+     "nb": 3
+    }
+   },
+   "spreads drawn, one draw for the three metrics": {
+    "predicted": {
+     "-30%": 0.33263598326359833,
+     "-35%": 0.40103468097336653,
+     "-40%": 0.4772069464544139,
+     "-45%": 0.5467414529914529,
+     "-50%": 0.6124202693125443,
+     "-55%": 0.6513321492007105,
+     "-60%": 0.691125212262043
+    },
+    "half": -41.639,
+    "gates": {
+     "-30%": {
+      "p_recommended": 0.55449,
+      "p_supported_given_recommended": 0.6272520694692421,
+      "p_recommended_not_supported": 0.206685,
+      "p_not_recommended_supported": 0.1003,
+      "expected_value": {
+       "1.5": -0.0327825,
+       "2": 0.14112,
+       "3": 0.488925
+      }
+     },
+     "-35%": {
+      "p_recommended": 0.504005,
+      "p_supported_given_recommended": 0.6533863751351673,
+      "p_recommended_not_supported": 0.174695,
+      "p_not_recommended_supported": 0.118795,
+      "expected_value": {
+       "1.5": -0.01004,
+       "2": 0.154615,
+       "3": 0.483925
+      }
+     },
+     "-40%": {
+      "p_recommended": 0.449675,
+      "p_supported_given_recommended": 0.6785233779952188,
+      "p_recommended_not_supported": 0.14456,
+      "p_not_recommended_supported": 0.14299,
+      "expected_value": {
+       "1.5": 0.0079975,
+       "2": 0.160555,
+       "3": 0.46567
+      }
+     },
+     "-45%": {
+      "p_recommended": 0.39361,
+      "p_supported_given_recommended": 0.7026625339803358,
+      "p_recommended_not_supported": 0.117035,
+      "p_not_recommended_supported": 0.17153,
+      "expected_value": {
+       "1.5": 0.0212525,
+       "2": 0.15954,
+       "3": 0.436115
+      }
+     },
+     "-50%": {
+      "p_recommended": 0.337295,
+      "p_supported_given_recommended": 0.7233134200032613,
+      "p_recommended_not_supported": 0.093325,
+      "p_not_recommended_supported": 0.204135,
+      "expected_value": {
+       "1.5": 0.02866,
+       "2": 0.150645,
+       "3": 0.394615
+      }
+     },
+     "-55%": {
+      "p_recommended": 0.281555,
+      "p_supported_given_recommended": 0.7409031983093889,
+      "p_recommended_not_supported": 0.07295,
+      "p_not_recommended_supported": 0.2395,
+      "expected_value": {
+       "1.5": 0.0313525,
+       "2": 0.135655,
+       "3": 0.34426
+      }
+     },
+     "-60%": {
+      "p_recommended": 0.22484,
+      "p_supported_given_recommended": 0.7573830279309731,
+      "p_recommended_not_supported": 0.05455,
+      "p_not_recommended_supported": 0.277815,
+      "expected_value": {
+       "1.5": 0.030595,
+       "2": 0.11574,
+       "3": 0.28603
+      }
+     }
+    },
+    "best": {
+     "1.5": "-55%",
+     "2": "-40%",
+     "3": "-30%"
+    },
+    "params": {
+     "k": 0.8697758470700758,
+     "spreads": {
+      "scale": 2.0,
+      "df": 2,
+      "shared": true,
+      "cap": 4.0
+     },
+     "bottleneck_spreads": "estimates",
+     "in_band": 0.0,
+     "prior": "uniform",
+     "prior_hi": 0.8,
+     "nb": 3
+    }
+   },
+   "spreads drawn, a prior worth 2 more degrees of freedom": {
+    "predicted": {
+     "-30%": 0.33215434083601286,
+     "-35%": 0.41920979623074717,
+     "-40%": 0.5020460125488769,
+     "-45%": 0.5802349200741853,
+     "-50%": 0.6621896262260316,
+     "-55%": 0.7190569744597249,
+     "-60%": 0.7778764204545454
+    },
+    "half": -39.877,
+    "gates": {
+     "-30%": {
+      "p_recommended": 0.554065,
+      "p_supported_given_recommended": 0.6818784799617373,
+      "p_recommended_not_supported": 0.17626,
+      "p_not_recommended_supported": 0.10208,
+      "expected_value": {
+       "1.5": 0.0126425,
+       "2": 0.201545,
+       "3": 0.57935
+      }
+     },
+     "-35%": {
+      "p_recommended": 0.50368,
+      "p_supported_given_recommended": 0.7130618646759848,
+      "p_recommended_not_supported": 0.144525,
+      "p_not_recommended_supported": 0.12073,
+      "expected_value": {
+       "1.5": 0.0350525,
+       "2": 0.21463,
+       "3": 0.573785
+      }
+     },
+     "-40%": {
+      "p_recommended": 0.450055,
+      "p_supported_given_recommended": 0.7425981268956017,
+      "p_recommended_not_supported": 0.115845,
+      "p_not_recommended_supported": 0.145675,
+      "expected_value": {
+       "1.5": 0.05126,
+       "2": 0.218365,
+       "3": 0.552575
+      }
+     },
+     "-45%": {
+      "p_recommended": 0.393655,
+      "p_supported_given_recommended": 0.771843365383394,
+      "p_recommended_not_supported": 0.089815,
+      "p_not_recommended_supported": 0.176045,
+      "expected_value": {
+       "1.5": 0.062105,
+       "2": 0.214025,
+       "3": 0.517865
+      }
+     },
+     "-50%": {
+      "p_recommended": 0.337345,
+      "p_supported_given_recommended": 0.7965139545569077,
+      "p_recommended_not_supported": 0.068645,
+      "p_not_recommended_supported": 0.211185,
+      "expected_value": {
+       "1.5": 0.065705,
+       "2": 0.200055,
+       "3": 0.468755
+      }
+     },
+     "-55%": {
+      "p_recommended": 0.280865,
+      "p_supported_given_recommended": 0.8172609616719776,
+      "p_recommended_not_supported": 0.051325,
+      "p_not_recommended_supported": 0.250345,
+      "expected_value": {
+       "1.5": 0.063445,
+       "2": 0.178215,
+       "3": 0.407755
+      }
+     },
+     "-60%": {
+      "p_recommended": 0.225255,
+      "p_supported_given_recommended": 0.8340769350291891,
+      "p_recommended_not_supported": 0.037375,
+      "p_not_recommended_supported": 0.292005,
+      "expected_value": {
+       "1.5": 0.056565,
+       "2": 0.150505,
+       "3": 0.338385
+      }
+     }
+    },
+    "best": {
+     "1.5": "-50%",
+     "2": "-40%",
+     "3": "-30%"
+    },
+    "params": {
+     "k": 0.8697758470700758,
+     "spreads": {
+      "scale": 4.0,
+      "df": 4,
+      "shared": false,
+      "cap": 4.0
+     },
+     "bottleneck_spreads": "estimates",
+     "in_band": 0.0,
+     "prior": "uniform",
+     "prior_hi": 0.8,
+     "nb": 3
+    }
+   },
+   "spreads drawn, a prior worth 4 more degrees of freedom": {
+    "predicted": {
+     "-30%": 0.34536416684676896,
+     "-35%": 0.43322719610413934,
+     "-40%": 0.5360609634400798,
+     "-45%": 0.6230932954948564,
+     "-50%": 0.702169802827046,
+     "-55%": 0.7668070914516412,
+     "-60%": 0.7988562237512287
+    },
+    "half": -38.247,
+    "gates": {
+     "-30%": {
+      "p_recommended": 0.55488,
+      "p_supported_given_recommended": 0.7114781574394463,
+      "p_recommended_not_supported": 0.160095,
+      "p_not_recommended_supported": 0.105545,
+      "expected_value": {
+       "1.5": 0.0372975,
+       "2": 0.23469,
+       "3": 0.629475
+      }
+     },
+     "-35%": {
+      "p_recommended": 0.504315,
+      "p_supported_given_recommended": 0.7441777460515749,
+      "p_recommended_not_supported": 0.129015,
+      "p_not_recommended_supported": 0.12503,
+      "expected_value": {
+       "1.5": 0.058635,
+       "2": 0.246285,
+       "3": 0.621585
+      }
+     },
+     "-40%": {
+      "p_recommended": 0.44989,
+      "p_supported_given_recommended": 0.775745182155638,
+      "p_recommended_not_supported": 0.10089,
+      "p_not_recommended_supported": 0.15133,
+      "expected_value": {
+       "1.5": 0.07361,
+       "2": 0.24811,
+       "3": 0.59711
+      }
+     },
+     "-45%": {
+      "p_recommended": 0.393755,
+      "p_supported_given_recommended": 0.8032151972673363,
+      "p_recommended_not_supported": 0.077485,
+      "p_not_recommended_supported": 0.18406,
+      "expected_value": {
+       "1.5": 0.08065,
+       "2": 0.238785,
+       "3": 0.555055
+      }
+     },
+     "-50%": {
+      "p_recommended": 0.3375,
+      "p_supported_given_recommended": 0.8261185185185185,
+      "p_recommended_not_supported": 0.058685,
+      "p_not_recommended_supported": 0.221515,
+      "expected_value": {
+       "1.5": 0.0807225,
+       "2": 0.22013,
+       "3": 0.498945
+      }
+     },
+     "-55%": {
+      "p_recommended": 0.28173,
+      "p_supported_given_recommended": 0.843875341639158,
+      "p_recommended_not_supported": 0.043985,
+      "p_not_recommended_supported": 0.262585,
+      "expected_value": {
+       "1.5": 0.0748875,
+       "2": 0.19376,
+       "3": 0.431505
+      }
+     },
+     "-60%": {
+      "p_recommended": 0.224925,
+      "p_supported_given_recommended": 0.8590419028565077,
+      "p_recommended_not_supported": 0.031705,
+      "p_not_recommended_supported": 0.30711,
+      "expected_value": {
+       "1.5": 0.064905,
+       "2": 0.161515,
+       "3": 0.354735
+      }
+     }
+    },
+    "best": {
+     "1.5": "-50%",
+     "2": "-40%",
+     "3": "-30%"
+    },
+    "params": {
+     "k": 0.8697758470700758,
+     "spreads": {
+      "scale": 6.0,
+      "df": 6,
+      "shared": false,
+      "cap": 4.0
+     },
+     "bottleneck_spreads": "estimates",
+     "in_band": 0.0,
+     "prior": "uniform",
+     "prior_hi": 0.8,
+     "nb": 3
+    }
+   },
+   "spreads drawn, the prior 1/sigma^2": {
+    "predicted": {
+     "-30%": 0.4096591516187627,
+     "-35%": 0.5038707827582911,
+     "-40%": 0.5924373576309795,
+     "-45%": 0.6571733713065148,
+     "-50%": 0.7163279985614098,
+     "-55%": 0.7707958228303925,
+     "-60%": 0.8138731396172927
+    },
+    "half": -34.795,
+    "gates": {
+     "-30%": {
+      "p_recommended": 0.553305,
+      "p_supported_given_recommended": 0.7309621275788218,
+      "p_recommended_not_supported": 0.14886,
+      "p_not_recommended_supported": 0.119455,
+      "expected_value": {
+       "1.5": 0.0533625,
+       "2": 0.255585,
+       "3": 0.66003
+      }
+     },
+     "-35%": {
+      "p_recommended": 0.50325,
+      "p_supported_given_recommended": 0.758320914058619,
+      "p_recommended_not_supported": 0.121625,
+      "p_not_recommended_supported": 0.142275,
+      "expected_value": {
+       "1.5": 0.0691875,
+       "2": 0.26,
+       "3": 0.641625
+      }
+     },
+     "-40%": {
+      "p_recommended": 0.449235,
+      "p_supported_given_recommended": 0.7835653945039901,
+      "p_recommended_not_supported": 0.09723,
+      "p_not_recommended_supported": 0.171895,
+      "expected_value": {
+       "1.5": 0.0787725,
+       "2": 0.254775,
+       "3": 0.60678
+      }
+     },
+     "-45%": {
+      "p_recommended": 0.393225,
+      "p_supported_given_recommended": 0.8057727764002798,
+      "p_recommended_not_supported": 0.076375,
+      "p_not_recommended_supported": 0.20705,
+      "expected_value": {
+       "1.5": 0.08205,
+       "2": 0.240475,
+       "3": 0.557325
+      }
+     },
+     "-50%": {
+      "p_recommended": 0.337505,
+      "p_supported_given_recommended": 0.8248322247077821,
+      "p_recommended_not_supported": 0.05912,
+      "p_not_recommended_supported": 0.245515,
+      "expected_value": {
+       "1.5": 0.0800725,
+       "2": 0.219265,
+       "3": 0.49765
+      }
+     },
+     "-55%": {
+      "p_recommended": 0.28223,
+      "p_supported_given_recommended": 0.8404492789568792,
+      "p_recommended_not_supported": 0.04503,
+      "p_not_recommended_supported": 0.2867,
+      "expected_value": {
+       "1.5": 0.07357,
+       "2": 0.19217,
+       "3": 0.42937
+      }
+     },
+     "-60%": {
+      "p_recommended": 0.22563,
+      "p_supported_given_recommended": 0.8524354030935603,
+      "p_recommended_not_supported": 0.033295,
+      "p_not_recommended_supported": 0.331565,
+      "expected_value": {
+       "1.5": 0.0628725,
+       "2": 0.15904,
+       "3": 0.351375
+      }
+     }
+    },
+    "best": {
+     "1.5": "-45%",
+     "2": "-35%",
+     "3": "-30%"
+    },
+    "params": {
+     "k": 0.8697758470700758,
+     "spreads": {
+      "scale": 2.0,
+      "df": 3,
+      "shared": false,
+      "cap": 4.0
+     },
+     "bottleneck_spreads": "estimates",
+     "in_band": 0.0,
+     "prior": "uniform",
+     "prior_hi": 0.8,
+     "nb": 3
+    }
+   }
+  },
+  "loss": {
+   "what": "per line, the largest share of a three-seed case's best expected value lost at that line (a supported R2b worth twice its cost)",
+   "cases": [
+    "spreads drawn",
+    "spreads at their estimates",
+    "spreads drawn, at most 3 times",
+    "spreads drawn, k uniform 0.74-1.0",
+    "spreads drawn, k uniform 0.5-1.0",
+    "spreads drawn, the bottleneck's too",
+    "spreads drawn, in band -10% to +10%",
+    "spreads drawn, prior 0-60%",
+    "spreads drawn, prior half at 0",
+    "spreads drawn, prior decreasing",
+    "spreads drawn, no cap",
+    "spreads drawn, at most 2 times",
+    "spreads drawn, one draw for the three metrics",
+    "spreads drawn, a prior worth 2 more degrees of freedom",
+    "spreads drawn, a prior worth 4 more degrees of freedom",
+    "spreads drawn, the prior 1/sigma^2"
+   ],
+   "by_line": {
+    "-30%": {
+     "max_loss": 1.0855967078189301,
+     "case": "spreads drawn, prior 0-60%"
+    },
+    "-35%": {
+     "max_loss": 0.4934744268077601,
+     "case": "spreads drawn, prior 0-60%"
+    },
+    "-40%": {
+     "max_loss": 0.2471138845553823,
+     "case": "spreads drawn, k uniform 0.5-1.0"
+    },
+    "-45%": {
+     "max_loss": 0.08106084243369738,
+     "case": "spreads drawn, k uniform 0.5-1.0"
+    },
+    "-50%": {
+     "max_loss": 0.16482060175717028,
+     "case": "spreads at their estimates"
+    },
+    "-55%": {
+     "max_loss": 0.4643151087595532,
+     "case": "spreads drawn, prior 0-60%"
+    },
+    "-60%": {
+     "max_loss": 0.8261022927689594,
+     "case": "spreads drawn, prior 0-60%"
     }
    }
   }

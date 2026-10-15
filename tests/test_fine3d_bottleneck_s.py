@@ -115,6 +115,22 @@ def test_s_pack_carries_both_halves_of_s():
         assert torch.equal(pack[k], ref[k])
 
 
+def test_s_decode_applies_the_scale_once():
+    """The decoded field is the decoder's raw output, masked, times the pack's
+    scale (2^-10 x sum|F|) once (hooked at the decoder)."""
+    torch = pytest.importorskip("torch")
+    a = _gmsh3d(6)
+    m = _model(_s_model_cfg()).eval()
+    pack = m.prepare_instance(a, "cpu")
+    raw = {}
+    hook = m.dec.register_forward_hook(lambda mod, inp, out: raw.__setitem__("u", out.detach()))
+    with torch.no_grad():
+        u = m.forward_instance(pack)
+    hook.remove()
+    assert float(pack["fscale"]) == float(np.float32(2.0 ** -10 * battery_l1(a.F)))
+    assert torch.equal(u, raw["u"].reshape(raw["u"].shape[0], -1) * pack["free"] * pack["fscale"])
+
+
 def test_s_inputs_do_not_change_with_the_mesh():
     """One geometry and its loads meshed at two sizes: S's decode scale and
     load summary agree (to the gravity load's discretisation of the cavities),
@@ -131,7 +147,7 @@ def test_s_inputs_do_not_change_with_the_mesh():
         vals = [np.unique(np.round(dd.density[li][dd.measure[li] > 0] / dd.dscale, 9), axis=0)
                 for dd in dds]
         assert all(len(v) == 1 for v in vals) and np.allclose(vals[0], vals[1], atol=1e-9)
-        s = [density_load_summary(a.F, li, dd, 3) for a, dd in zip(archs, dds)]
+        s = [density_load_summary(a.F, li, dd, 3) for a, dd in zip(archs, dds, strict=True)]
         assert np.allclose(s[0], s[1], rtol=0.03, atol=1e-3)
 
 

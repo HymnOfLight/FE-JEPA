@@ -60,6 +60,27 @@ def test_remesh_medians_are_the_boxs_for_the_same_geometries():
                 {float(k): v["max_abs_F_ratio_median"] for k, v in rec["remesh"].items()}, name
 
 
+def test_remesh_meshes_against_the_boxs(tmp_path):
+    """As PREREG_FINE3D Sec. 2 and records/wp9/README.md state them: max|F| of
+    every mesh is the box's; 57 of the 64 meshes have the box's node counts and
+    the other 7 differ by 1 to 21 nodes."""
+    rec = json.loads((REC / "scale_factor_3d.json").read_text())
+    amp = json.loads((ROOT / "records" / "wp8" / "posthoc" / "amp_e2_m1024.json").read_text())
+    box = {(r["geometry"], float(b["lc"])): (b["n_nodes"], b["fscale"])
+           for r in amp["seeds"]["s0"]["remesh"]["rows"] for b in r["by_lc"]}
+    diffs = []
+    for g, per in enumerate(rec["remesh_per_geometry"]):
+        for lc, (max_f, _, n_nodes) in per.items():
+            bn, bf = box[(g, float(lc))]
+            assert max_f == bf
+            diffs.append(abs(n_nodes - bn))
+    assert len(diffs) == 64 and diffs.count(0) == 57
+    assert min(d for d in diffs if d) == 1 and max(diffs) == 21
+    text = " ".join((ROOT / "PREREG_FINE3D.md").read_text().split())
+    assert "57 of the 64 meshes have the box's node counts, and the other 7 differ from it by 1 " \
+           "to 21 nodes" in text
+
+
 def test_simulations_record_is_the_scripts_output(tmp_path):
     out = tmp_path / "sims.json"
     r = subprocess.run([sys.executable, str(ROOT / "scripts" / "fine3d_sims.py"), "--out",

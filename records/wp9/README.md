@@ -6,7 +6,7 @@
 `regression_wp8_e2_m1024.json` are the summaries
 `scripts/regress_against_branch.py` wrote in the sandbox (CPU, one thread,
 each side in its own process importing its own source tree; a fresh pass and
-a restart pass), last on 15 October 2026 on the Stage 2 r2 code. The first two
+a restart pass), last on 15 October 2026 on the Stage 2 r3 code. The first two
 were first run on 2 October 2026 on the Stage 0b and 0c code (`src` trees
 `f300ac0c27ecaec63bca9fb0b32b2e1d4f124226` and
 `710ccb32a703bb99355d0e797895698fa2155300`), with the same result; the third
@@ -14,7 +14,7 @@ is new with Stage 2 (PREREG_FINE3D Sec. 9):
 
 | | source tree (`git rev-parse <commit>:src`) |
 |---|---|
-| this side | the Stage 2 r2 code: `src` = tree `ef21afa89ed8bfbe302e6a71a2c77d9ac1a0e6b5` |
+| this side | the Stage 2 r3 code: `src` = tree `74ed4f56d78ff5b93e77f08f4ae2ae3434c001e0` |
 | the other side | `wp8-lejepa` at `5f8e2df`: `src` = tree `5be6357b912cad058121092f274e6a322169b9f6` |
 
 `tests/test_w9_records.py` checks that a committed `src` without local
@@ -32,9 +32,9 @@ again and this table updated.
   WP6 and E6 disabled as stamped, since they probe the FE-JEPA interface; gate
   G2) -- 1,042 numbers and 2 state files, identical. Stage 2 changed the
   bottleneck (S), P3 (E8's seed offset; progress lines in its zero-shot pass)
-  and the runner's checks, and its r2 the supervised trainer (a per-epoch
-  loss history, kept in its checkpoint); with the defaults every number and
-  state is wp8-lejepa's.
+  and the runner's checks, its r2 the supervised trainer (a per-epoch loss
+  history, kept in its checkpoint) and its r3 only the adjudication; with the
+  defaults every number and state is wp8-lejepa's.
 
 Each summary names the two sides by these trees (`this_src_tree`,
 `other_src_tree`: git tree ids computed from the files by
@@ -75,7 +75,8 @@ times it). 16 geometries (the wp8 post-hoc remesh geometries, generator 90000
 0.186 times its 0.0906 value (median; range 0.168-0.210), sum|F| unchanged to
 within 0.07%. These max|F| medians equal, to the last digit, the box's in
 wp8's post-hoc records for the same geometries (`records/wp8/posthoc/amp_*.json`):
-the sandbox meshed them as the box did. `tests/test_fine3d_records.py`
+57 of the 64 meshes have the box's node counts and the other 7 differ by 1 to 21
+nodes. `tests/test_fine3d_records.py`
 recomputes the summary from the record's own rows and checks these facts.
 
 ## fine3d: operating characteristics (PREREG_FINE3D Sec. 6)
@@ -83,8 +84,11 @@ recomputes the summary from the record's own rows and checks these facts.
 `fine3d/simulations.json`: `scripts/fine3d_sims.py` (fixed seed; seconds), the
 source of every simulated number PREREG_FINE3D quotes: R2a's three conditions
 and the R2b rule on E2's seed spreads; R2b's own rule on the Phase-2b
-transformer's spreads, with what an R2a result predicts for it, behind the R2b
-line (`r2b`); and R3-E and R3-V on the labelled fine-tuning's spreads (and
+transformer's spreads, with what an R2a result predicts for it (`r2b`, its
+sensitivity in `r2b_sensitivity`), and the R2b line as a decision, with the
+transformer's spreads drawn from their three-seed uncertainty and the expected
+value of each line (`r2b_line`; three seeds per arm unless a case says five);
+and R3-E and R3-V on the labelled fine-tuning's spreads (and
 larger ones), both arms drawn afresh, independent or correlated within a seed
 (`r3`, `r3_paired`; r1's record-held reference in `r3_fixed_reference`). The
 test re-runs the script and compares the bytes.

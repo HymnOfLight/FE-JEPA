@@ -9,7 +9,6 @@ again until its output is complete, stops before any step when the code is
 not the tag alone and unmodified, and refuses a second copy."""
 
 import json
-import os
 import re
 import stat
 import subprocess
@@ -65,6 +64,29 @@ def test_the_runbook_names_existing_scripts_configs_and_options():
     res = subprocess.run([sys.executable, str(ROOT / "scripts" / "posthoc_amplitude.py"), "--help"],
                          capture_output=True, text=True, cwd=ROOT, env=ENV)
     assert all(o in res.stdout for o in ("--report", "--states-dir", "--remesh", "--out"))
+
+
+def test_0c_finds_no_fine3d_run_and_can_be_repeated(tmp_path):
+    """0c's check prints exactly its comment's line on a box without a fine3d
+    run, also once 0c has made runs/fine3d/session (a repeated 0c), and
+    otherwise names what is there."""
+    line = next(l for l in _blocks(_text())[3].splitlines() if "runs/fine3d" in l
+                and "mkdir" not in l)
+    cmd, want = line.split("#")[0].strip(), line.split("must print exactly: ")[1].strip()
+
+    def out():
+        return subprocess.run(["bash", "-c", cmd], cwd=tmp_path, capture_output=True, text=True,
+                              env=ENV).stdout
+    (tmp_path / "runs" / "e2_m1024").mkdir(parents=True)        # other runs on the box
+    assert out() == want + "\n"
+    (tmp_path / "runs" / "fine3d" / "session").mkdir(parents=True)
+    (tmp_path / "runs" / "fine3d" / "session" / "pytest.log").write_text("x")
+    assert out() == want + "\n"
+    (tmp_path / "runs" / "fine3d" / "session_old").mkdir()     # not the session's own
+    assert out() == "session_old\n"
+    (tmp_path / "runs" / "fine3d" / "session_old").rmdir()
+    (tmp_path / "runs" / "fine3d" / "r2a_b_m1024").mkdir()
+    assert out() == "r2a_b_m1024\n"
 
 
 def test_the_fetch_is_direct_with_a_bundle_route():
@@ -139,9 +161,9 @@ if [ "$1" = "-m" ]; then                               # run-config configs/<nam
 fi
 case "$1" in
   scripts/posthoc_amplitude.py)
-    out=""; while [ $# -gt 0 ]; do [ "$1" = --out ] && out=$2; shift; done
+    out=""; rep=""; while [ $# -gt 0 ]; do [ "$1" = --out ] && out=$2; [ "$1" = --report ] && rep=$2; shift; done
     mkdir -p "$(dirname "$out")"
-    "$REAL_PY" -c 'import json,sys; s={"inband":{"summary":{"complete":True}},"fine":{"summary":{"complete":True}},"remesh":{"rows":[{}]*16}}; json.dump({"seeds":{"s3":s,"s4":s,"s5":s}}, open(sys.argv[1],"w"))' "$out"; exit 0;;
+    "$REAL_PY" -c 'import hashlib,json,sys; s={"inband":{"summary":{"complete":True}},"fine":{"summary":{"complete":True}},"remesh":{"rows":[{}]*16}}; json.dump({"report_sha256":hashlib.sha256(open(sys.argv[2],"rb").read()).hexdigest(),"seeds":{"s3":s,"s4":s,"s5":s}}, open(sys.argv[1],"w"))' "$out" "$rep"; exit 0;;
   scripts/r3_finetune.py)
     name=$(basename "$2" .json)
     [ "${FAIL:-}" = "$name" ] && exit 3
@@ -248,6 +270,21 @@ def test_session_needs_all_three_seeds_of_the_energy_arm(box):
         ["configs/r3_eft_b16.json", "configs/r3_lft_b16.json"]
 
 
+def test_session_runs_the_amplitude_pass_again_for_a_new_report(box):
+    """An amplitude record measured on an earlier report of the arm (the arm
+    run again) is not a finished step: the pass runs again on the new one."""
+    tmp, stub, _ = box
+    _run(box)
+    rep = tmp / "runs" / "fine3d" / "r2a_s_m1024" / "report.json"
+    rep.write_text('{"provenance": {"again": true}}')
+    (stub / "calls").unlink()
+    _run(box)
+    calls = (stub / "calls").read_text().splitlines()
+    assert [c.split()[1] for c in calls] == ["scripts/posthoc_amplitude.py"]
+    assert "amp_r2a_s_m1024.json" in calls[0]
+    assert "amp_r2a_b_m1024: record complete, skipped" in _status(tmp)
+
+
 def test_session_moves_an_unreadable_report_aside(box):
     tmp, stub, _ = box
     d = tmp / "runs" / "fine3d" / "r2a_b_m1024"
@@ -307,14 +344,19 @@ def test_session_checks_the_code_before_every_step(box):
 
 
 def test_session_refuses_a_second_copy(box):
+    import time
+
     tmp, _, env = box
     lock = tmp / "runs" / "fine3d" / "session"
     lock.mkdir(parents=True)
     holder = subprocess.Popen(["flock", str(lock / ".lock"), "sleep", "30"])
     try:
-        import time
-
-        time.sleep(0.5)
+        for _ in range(200):                       # wait until the holder has the lock
+            if subprocess.run(["flock", "-n", str(lock / ".lock"), "true"]).returncode != 0:
+                break
+            time.sleep(0.05)
+        else:
+            pytest.fail("the lock holder did not take the lock within 10 s")
         r = _run(box)
         assert r.returncode == 1 and "already running" in r.stdout
     finally:
