@@ -20,7 +20,8 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from .features import FeatureSpec, battery_fscale, battery_l1, build_features_battery
+from .features import (FeatureSpec, build_features_battery, check_decode_scale,
+                       decode_scale_value)
 
 
 # ------------------------------------------------------------ region masking --
@@ -106,15 +107,7 @@ class FEJEPAConfig:
     features: FeatureSpec = field(default_factory=FeatureSpec)
 
     def __post_init__(self):
-        if self.decode_scale not in ("max", "l1"):
-            raise ValueError(f"decode_scale {self.decode_scale!r}: 'max' or 'l1'")
-        if self.decode_scale == "l1" and not self.scale_decode:
-            raise ValueError("decode_scale 'l1' needs scale_decode = true (the scale is "
-                             "applied in decode)")
-        if not float(self.decode_scale_factor) > 0:
-            raise ValueError(f"decode_scale_factor {self.decode_scale_factor!r} must be > 0")
-        if self.decode_scale == "max" and float(self.decode_scale_factor) != 1.0:
-            raise ValueError("decode_scale_factor applies to decode_scale 'l1' only")
+        check_decode_scale(self.decode_scale, self.decode_scale_factor, self.scale_decode)
 
     def to_dict(self) -> dict:
         return {"dim": self.dim, "depth": self.depth, "heads": self.heads,
@@ -248,8 +241,8 @@ def build_fejepa(cfg: FEJEPAConfig):
             feats = torch.as_tensor(build_features_battery(arch, cfg.features),
                                     device=device)
             free = torch.as_tensor(arch.free_mask, device=device).float()
-            scale = (battery_fscale(arch.F) if cfg.decode_scale == "max"
-                     else float(cfg.decode_scale_factor) * battery_l1(arch.F))   # wp9 S
+            scale = decode_scale_value(arch.F, cfg.decode_scale,          # wp9 S
+                                       cfg.decode_scale_factor)
             fscale = torch.as_tensor(scale, dtype=feats.dtype, device=device)
             return {"feats": feats, "free": free, "fscale": fscale,
                     "arch": arch}

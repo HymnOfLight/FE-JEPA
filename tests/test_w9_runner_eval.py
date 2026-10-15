@@ -291,9 +291,16 @@ def test_configurations_the_wp9_additions_do_not_support_are_refused(world, tmp_
             "report": str(tmp / "A" / "report.json"), "states_dir": str(tmp / "A" / "e8_states")}))
     p = _cfg(tmp_path, "K3", data, ev)
     c = json.loads(p.read_text())
-    c["model"] = {**MODEL, "kind": "bottleneck", "n_tokens": 4, "decode_scale": "l1"}
+    # fine3d: S is implemented by the FE-JEPA transformer and the bottleneck only
+    c["model"] = {**MODEL, "kind": "mgn", "decode_scale": "l1"}
     p.write_text(json.dumps(c))
-    with pytest.raises(SystemExit, match="fejepa' only"):
+    with pytest.raises(SystemExit, match="implemented for model kinds"):
+        run_config(p)
+    p = _cfg(tmp_path, "K4", data, ev)
+    c = json.loads(p.read_text())
+    c["experiments"]["p3_transfer"] = {"enabled": False, "seed_offset": 3}
+    p.write_text(json.dumps(c))
+    with pytest.raises(SystemExit, match="takes E8's seed offset"):
         run_config(p)
 
 

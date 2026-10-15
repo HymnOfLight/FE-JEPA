@@ -43,6 +43,32 @@ def battery_l1(F: np.ndarray) -> float:
     return float(np.abs(F).sum() + 1e-12)
 
 
+DECODE_SCALES = ("max", "l1")
+
+
+def check_decode_scale(decode_scale: str, factor: float, scale_decode: bool) -> None:
+    """wp9 S: the decode-scale settings, shared by the FE-JEPA transformer and
+    (fine3d) the token bottleneck. "max" = `battery_fscale` (the WP7 3D-P0.5
+    scale); "l1" = `factor` x `battery_l1`, applied in decode (so it needs
+    scale_decode); the factor applies to "l1" only. Raises ValueError."""
+    if decode_scale not in DECODE_SCALES:
+        raise ValueError(f"decode_scale {decode_scale!r}: 'max' or 'l1'")
+    if decode_scale == "l1" and not scale_decode:
+        raise ValueError("decode_scale 'l1' needs scale_decode = true (the scale is "
+                         "applied in decode)")
+    if not float(factor) > 0:
+        raise ValueError(f"decode_scale_factor {factor!r} must be > 0")
+    if decode_scale == "max" and float(factor) != 1.0:
+        raise ValueError("decode_scale_factor applies to decode_scale 'l1' only")
+
+
+def decode_scale_value(F: np.ndarray, decode_scale: str = "max", factor: float = 1.0) -> float:
+    """wp9 S: the scale the decoded field is multiplied by -- `battery_fscale(F)`
+    ("max", the default and every pre-wp9 model's) or `factor` x `battery_l1(F)`
+    ("l1")."""
+    return battery_fscale(F) if decode_scale == "max" else float(factor) * battery_l1(F)
+
+
 def base_dim(spatial_dim: int = 2) -> int:
     """Coords + Dirichlet flags + load components: 3 * spatial_dim (2D: 6, 3D: 9)."""
     return 3 * int(spatial_dim)

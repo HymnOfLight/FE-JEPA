@@ -30,6 +30,12 @@ equidistant to two seeds within ~1e-16 in unit-box coordinates).
 Interface: `needs_pack = True` -- encode/decode take the instance pack
 (token assignment lives there); `compute_loss` and the instruments pass it
 when the flag is set and leave the legacy call path untouched.
+
+fine3d (PREREG_FINE3D, R2a): wp9's S on the bottleneck -- `decode_scale` and
+`decode_scale_factor` as FEJEPAConfig has them (shared validation and value,
+`features.check_decode_scale` / `decode_scale_value`) and the load-density
+features (`features.load_density`, built by the shared feature code). The
+defaults ("max", 1.0, no load densities) are the E2 model bit for bit.
 """
 
 from __future__ import annotations
@@ -38,7 +44,8 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from .features import FeatureSpec, battery_fscale, build_features_battery
+from .features import (FeatureSpec, build_features_battery, check_decode_scale,
+                       decode_scale_value)
 
 
 @dataclass
@@ -49,7 +56,12 @@ class BottleneckConfig:
     n_tokens: int = 512
     scale_decode: bool = True
     decode_k: int = 6                      # tokens blended per node (1 = hard; Stage 1.33: 6)
+    decode_scale: str = "max"              # fine3d: wp9 S ("l1"), see FEJEPAConfig
+    decode_scale_factor: float = 1.0
     features: FeatureSpec = field(default_factory=FeatureSpec)
+
+    def __post_init__(self):
+        check_decode_scale(self.decode_scale, self.decode_scale_factor, self.scale_decode)
 
     @classmethod
     def from_dict(cls, d: dict) -> "BottleneckConfig":
@@ -57,10 +69,8 @@ class BottleneckConfig:
         feats = d.pop("features", None)
         spec = FeatureSpec(**feats) if isinstance(feats, dict) else (feats or FeatureSpec())
         keep = {k: d[k] for k in ("dim", "depth", "heads", "n_tokens", "scale_decode",
-                                  "decode_k") if k in d}
-        if spec.load_density:          # wp9 S pairs the features with decode_scale
-            raise ValueError("features.load_density (wp9 S) is implemented for model "
-                             "kind 'fejepa' only")
+                                  "decode_k", "decode_scale", "decode_scale_factor")
+                if k in d}
         return cls(features=spec, **keep)
 
 
@@ -212,7 +222,9 @@ def build_bottleneck(cfg: BottleneckConfig):
         def prepare_instance(self, arch, device):
             feats = torch.as_tensor(build_features_battery(arch, spec), device=device)
             free = torch.as_tensor(arch.free_mask, device=device).float()
-            fscale = torch.as_tensor(battery_fscale(arch.F), dtype=feats.dtype, device=device)
+            fscale = torch.as_tensor(decode_scale_value(arch.F, cfg.decode_scale,   # fine3d
+                                                        cfg.decode_scale_factor),
+                                     dtype=feats.dtype, device=device)
             xyz = np.asarray(arch.nodes, dtype=np.float64)
             if xyz.shape[1] != sd:
                 raise ValueError(f"bottleneck: features.spatial_dim={sd} but the mesh has "

@@ -1,0 +1,14 @@
+{
+ "this_src_tree": "7db9fb309a6147a3da9397326f6f04049c4d5503",
+ "other_src_tree": "5be6357b912cad058121092f274e6a322169b9f6",
+ "config": "configs/e2_m1024.json",
+ "floats_compared": 1042,
+ "differences": [],
+ "n_differences": 0,
+ "state_files": 2,
+ "state_files_identical": {
+  "ar_p64_s0.pt": true,
+  "ar_p64_s1.pt": true
+ },
+ "identical": true
+}

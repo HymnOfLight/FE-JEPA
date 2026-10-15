@@ -22,6 +22,10 @@ rev-parse <commit>:src` prints for a commit of those files), not by a path.
     python scripts/regress_against_branch.py --other ../FE-JEPA-wp7/src \
         --work runs/regress_wp7 --out runs/regress_wp7/summary.json
 
+wp9 Stage 2 runs it on E2's M = 1,024 configuration as well (the bottleneck
+and P3 zero-shot: PREREG_FINE3D Sec. 9); its miniature keeps WP6 and E6
+disabled, as stamped, because they probe the FE-JEPA interface only.
+
 wp9 Stage 0b runs it on E1's 2D base configuration against wp8-lejepa (the
 reuse of E1's states for C1's 1,024-instance arm rests on it):
 
@@ -109,9 +113,12 @@ def miniature(cfg: dict, work: Path, n: int = 80, n_fine: int = 7) -> dict:
                       mgn_budgets=[64])
     if "p3_transfer" in exps:
         exps["p3_transfer"].update(fewshot_budgets=[2, 4], fewshot_epochs=2, naive_budget=64)
-    if "wp6" in exps:
+    # WP6 and E6 probe the FE-JEPA interface: under another model kind (E2's
+    # bottleneck) the runner refuses them, so they stay as stamped (disabled)
+    fe = str(m["model"].get("kind", "fejepa")) == "fejepa"
+    if "wp6" in exps and fe:
         exps["wp6"].update(enabled=True, n_check=2)
-    if "e6" in exps:
+    if "e6" in exps and fe:
         exps["e6"].update(enabled=True, pool_size=8, pre_epochs=2)
     if m.get("gate_g2"):
         m["gate_g2"].update(decision_budget=64, sanity_min_budget=64)

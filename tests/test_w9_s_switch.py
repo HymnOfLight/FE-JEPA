@@ -140,15 +140,16 @@ def test_invalid_settings_are_refused():
     from fejepa.models.fejepa import FEJEPAConfig
     from fejepa.models.gnn import build_mesh_gnn
 
-    with pytest.raises(ValueError, match="decode_scale"):
-        FEJEPAConfig(decode_scale="mean")
-    with pytest.raises(ValueError, match="scale_decode"):
-        FEJEPAConfig(decode_scale="l1", scale_decode=False)
+    for cls in (FEJEPAConfig, BottleneckConfig):      # fine3d: the same validation
+        with pytest.raises(ValueError, match="decode_scale"):
+            cls(decode_scale="mean")
+        with pytest.raises(ValueError, match="scale_decode"):
+            cls(decode_scale="l1", scale_decode=False)
     pytest.importorskip("torch")
-    with pytest.raises(ValueError, match="fejepa' only"):
+    with pytest.raises(ValueError, match="not for the MGN baseline"):
         build_mesh_gnn(features=FeatureSpec(load_density=True))
-    with pytest.raises(ValueError, match="fejepa' only"):
-        BottleneckConfig.from_dict({"features": {"load_density": True}})
+    # fine3d (R2a): the bottleneck implements S (tests/test_fine3d_bottleneck_s.py)
+    assert BottleneckConfig.from_dict({"features": {"load_density": True}}).features.load_density
 
 
 # ------------------------------------------------------------ geometry -------

@@ -254,20 +254,25 @@ def _pool_need_in_memory(exps: dict) -> int:
 _W9_RUNNER_KEYS = ("holdouts", "amplitude", "eval_only_states", "reuse_provenance")
 
 
+S_MODEL_KINDS = ("fejepa", "bottleneck")
+"""Model kinds that implement wp9's S (the bottleneck since fine3d, R2a)."""
+
+
 def _w9_checks(cfg: dict) -> None:
     """wp9: refuse, before anything runs, what the wp9 additions do not support:
-    the S keys outside an FE-JEPA model (or with supervised MGN units), the
-    runner-provided E8 keys written into a configuration (they would bypass the
-    holdout and state verification), and an evaluation-only E8 together with
-    P3 or the supervised grid."""
+    the S keys outside a model that implements them (S_MODEL_KINDS) or with
+    supervised MGN units, the runner-provided E8 keys written into a
+    configuration (they would bypass the holdout and state verification), a
+    seed offset written into P3's block (P3 takes E8's: its states are E8's),
+    and an evaluation-only E8 together with P3 or the supervised grid."""
     m = cfg.get("model") or {}
     exps = cfg.get("experiments") or {}
     e8 = exps.get("e8") or {}
     s_keys = (m.get("decode_scale", "max") != "max" or "decode_scale_factor" in m
               or bool((m.get("features") or {}).get("load_density")))
-    if s_keys and str(m.get("kind", "fejepa")) != "fejepa":
+    if s_keys and str(m.get("kind", "fejepa")) not in S_MODEL_KINDS:
         raise SystemExit("model.decode_scale / decode_scale_factor / features.load_density "
-                         "(wp9 S) are implemented for model kind 'fejepa' only")
+                         f"(wp9 S) are implemented for model kinds {S_MODEL_KINDS} only")
     if s_keys and e8.get("enabled") and e8.get("include_mgn") and not e8.get("ar_only"):
         raise SystemExit("features.load_density (wp9 S) with E8's MGN units: the MGN "
                          "baseline does not implement S")
@@ -275,8 +280,9 @@ def _w9_checks(cfg: dict) -> None:
     if bad:
         raise SystemExit(f"experiments.e8 carries runner-provided keys {bad}: use the "
                          "`evaluation` block and e8.reuse_from")
-    if int(e8.get("seed_offset", 0) or 0) and (exps.get("p3_transfer") or {}).get("enabled"):
-        raise SystemExit("e8.seed_offset (wp9) is not supported with P3 (it reads seeds 0..n-1)")
+    if "seed_offset" in (exps.get("p3_transfer") or {}):
+        raise SystemExit("experiments.p3_transfer.seed_offset: P3 evaluates E8's states "
+                         "and takes E8's seed offset (fine3d); set e8.seed_offset only")
     if e8.get("reuse_from"):
         if not e8.get("ar_only"):
             raise SystemExit("e8.reuse_from (evaluation only) needs e8.ar_only = true")
@@ -604,6 +610,10 @@ def run_config(path, device_override: str | None = None,
 
         fine_eval_archs = LazyArchives(fine_eval_files)
         e8c = exps.get("e8") or {}
+        # fine3d (R2a): E8's seed offset (wp9) reaches P3 only when set, so that
+        # every configuration without one passes exactly the block it did before
+        p3_offset = ({"seed_offset": int(e8c["seed_offset"])}
+                     if int(e8c.get("seed_offset", 0) or 0) else {})
         results["p3_transfer"] = run_p3(
             model_cfg, split.pool_files, val_archs, fine_eval_archs,
             fine_eval_files, fine_prefix_files,
@@ -614,7 +624,7 @@ def run_config(path, device_override: str | None = None,
              "bmax": max(e8c.get("budgets", [1024])),
              # seed count follows E8 (single source: the shared checkpoints
              # exist exactly for E8's seeds)
-             "seeds": e8c.get("seeds", 3)})
+             "seeds": e8c.get("seeds", 3), **p3_offset})
 
     if (exps.get("wp6") or {}).get("enabled"):
         from ..theory import run_theory_checks

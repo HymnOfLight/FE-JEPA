@@ -39,7 +39,8 @@ def test_regression_summaries_ran_the_trees_named():
     want = [re.search(rf"\| {side} \| [^|]*`src` = tree `([0-9a-f]{{40}})` \|", readme)
             for side in ("this side", "the other side")]
     assert all(want), "records/wp9/README.md names no src tree for a side"
-    for name in ("regression_wp8_e1_2d_base.json", "regression_wp8_phase2b.json"):
+    for name in ("regression_wp8_e1_2d_base.json", "regression_wp8_phase2b.json",
+                 "regression_wp8_e2_m1024.json"):                  # fine3d: E2's arm
         rec = json.loads((ROOT / "records" / "wp9" / name).read_text())
         assert [rec["this_src_tree"], rec["other_src_tree"]] == [m.group(1) for m in want], name
         assert rec["identical"] is True and rec["n_differences"] == 0, name

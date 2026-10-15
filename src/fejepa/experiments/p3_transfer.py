@@ -40,6 +40,25 @@ def _load_state_model(kind: str, model_cfg: dict, seed: int, state_path,
     return model
 
 
+class _Progress:
+    """The instances of `archs`, with a progress line every `every` of them (wp9
+    Stage 2: on the fine set the zero-shot pass is otherwise silent for about an
+    hour on the box). Iteration and length are `archs`' own; prints only."""
+
+    def __init__(self, archs, what: str, every: int = 32):
+        self.archs, self.what, self.every = archs, what, int(every)
+
+    def __len__(self):
+        return len(self.archs)
+
+    def __iter__(self):
+        n = len(self.archs)
+        for i, a in enumerate(self.archs):
+            if i % self.every == 0:
+                print(f"[p3] zero-shot {self.what}: {i}/{n}", flush=True)
+            yield a
+
+
 def _mm(evals: list[dict], key: str = "disp_rel_l2") -> float:
     return float(np.mean([e[key] for e in evals]))
 
@@ -54,7 +73,9 @@ def _row(evals: list[dict]) -> dict:
 def run_p3(model_cfg: dict, pool_files, val_archs, fine_eval_archs,
            fine_eval_files, fine_prefix_files, cfg: dict) -> dict:
     fe_kind = str(model_cfg.get("kind", "fejepa"))   # wp8: config-driven architecture
-    seeds = seeds_list(cfg.get("seeds", 3))
+    # fine3d (R2a): E8's seed offset (wp9), passed by the runner when set: P3
+    # reads the states E8 trained, ar_p<pool>_s<offset + i>; 0 = seeds 0..n-1
+    seeds = [int(cfg.get("seed_offset", 0) or 0) + s for s in seeds_list(cfg.get("seeds", 3))]
     device = cfg.get("device", "cpu")
     workers = int(cfg.get("workers", 1))
     tf32 = bool(cfg.get("tf32", True))
@@ -76,8 +97,8 @@ def run_p3(model_cfg: dict, pool_files, val_archs, fine_eval_archs,
                 return None
             model = _load_state_model(kind, model_cfg, s, sp, device)
             pf = torch_predictor(model, device)
-            fine.append(evaluate_model(pf, fine_eval_archs))
-            inb.append(evaluate_model(pf, val_archs))
+            fine.append(evaluate_model(pf, _Progress(fine_eval_archs, f"{kind} s{s} fine")))
+            inb.append(evaluate_model(pf, _Progress(val_archs, f"{kind} s{s} in band")))
         return {"fine": _row(fine), "inband": _row(inb),
                 "fine_disp_mean": _mm(fine), "inband_disp_mean": _mm(inb)}
 

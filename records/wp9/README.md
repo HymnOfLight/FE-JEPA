@@ -2,16 +2,19 @@
 
 ## Default path against wp8-lejepa (PREREG_W9 Sec. 9)
 
-`regression_wp8_e1_2d_base.json` and `regression_wp8_phase2b.json` are the
-summaries `scripts/regress_against_branch.py` wrote in the sandbox on 2 October
-2026 (CPU, one thread, each side in its own process importing its own source
-tree; a fresh pass and a restart pass), last on the Stage 0c code (the Stage
-0b code, `src` tree `f300ac0c27ecaec63bca9fb0b32b2e1d4f124226`, gave the same
-result):
+`regression_wp8_e1_2d_base.json`, `regression_wp8_phase2b.json` and
+`regression_wp8_e2_m1024.json` are the summaries
+`scripts/regress_against_branch.py` wrote in the sandbox (CPU, one thread,
+each side in its own process importing its own source tree; a fresh pass and
+a restart pass), last on 15 October 2026 on the Stage 2 code. The first two
+were first run on 2 October 2026 on the Stage 0b and 0c code (`src` trees
+`f300ac0c27ecaec63bca9fb0b32b2e1d4f124226` and
+`710ccb32a703bb99355d0e797895698fa2155300`), with the same result; the third
+is new with Stage 2 (PREREG_FINE3D Sec. 9):
 
 | | source tree (`git rev-parse <commit>:src`) |
 |---|---|
-| this side | the Stage 0c code: `src` = tree `710ccb32a703bb99355d0e797895698fa2155300` |
+| this side | the Stage 2 code: `src` = tree `7db9fb309a6147a3da9397326f6f04049c4d5503` |
 | the other side | `wp8-lejepa` at `5f8e2df`: `src` = tree `5be6357b912cad058121092f274e6a322169b9f6` |
 
 `tests/test_w9_records.py` checks that a committed `src` without local
@@ -24,6 +27,13 @@ again and this table updated.
 - `regression_wp8_phase2b.json`: a miniature of `configs/phase2b_v1.json`
   (E8 with labels, labels_anchor, AR and MGN; P3; WP6; E6; gate G2) -- 2,590
   numbers and 6 state files, identical.
+- `regression_wp8_e2_m1024.json`: a miniature of `configs/e2_m1024.json` (E2's
+  token bottleneck: E8 AR only; P3 zero-shot and, in the miniature, few-shot;
+  WP6 and E6 disabled as stamped, since they probe the FE-JEPA interface; gate
+  G2) -- 1,042 numbers and 2 state files, identical. Stage 2 changed the
+  bottleneck (S), P3 (E8's seed offset; progress lines in its zero-shot pass)
+  and the runner's checks; with the defaults every number and state is
+  wp8-lejepa's.
 
 Each summary names the two sides by these trees (`this_src_tree`,
 `other_src_tree`: git tree ids computed from the files by
@@ -49,6 +59,31 @@ correlation 0.67 with the instance's mesh size. 16 of these geometries meshed
 again at R's mesh sizes (geometry, material and loads unchanged): from h =
 0.12 to 0.025, max|F| scales by 0.213 (median over the geometries; range
 0.204-0.225; h itself by 0.208), sum|F| by 1.000 (largest deviation 0.29%).
+
+## fine3d: S's three-dimensional factor (PREREG_FINE3D Sec. 2)
+
+`fine3d/scale_factor_3d.json`: `scripts/fine3d_scale_factor.py`, 15 October
+2026, sandbox (gmsh 4.15.2; 15 min). 256 instances drawn afresh from the
+three-dimensional training family's sampler (E2's corpus settings, lc uniform
+in 0.0579-0.0906, one generator from seed 93000, which no corpus or set has
+used; assembly only, no labels, no network): max|F| / sum|F| has median
+0.00113 (10th-90th percentile 0.00068-0.00190), rank correlation 0.62 with
+lc; the power of two nearest the median is 2^-10, S's factor (median 1.16
+times it). 16 geometries (the wp8 post-hoc remesh geometries, generator 90000
++ g) meshed at lc 0.0906, 0.0742, 0.0579 and 0.0374: at 0.0374, max|F| is
+0.186 times its 0.0906 value (median; range 0.168-0.210), sum|F| unchanged to
+within 0.07%. These max|F| medians equal, to the last digit, the box's in
+wp8's post-hoc records for the same geometries (`records/wp8/posthoc/amp_*.json`):
+the sandbox meshed them as the box did. `tests/test_fine3d_records.py`
+recomputes the summary from the record's own rows and checks these facts.
+
+## fine3d: operating characteristics (PREREG_FINE3D Sec. 6)
+
+`fine3d/simulations.json`: `scripts/fine3d_sims.py` (fixed seed; seconds), the
+source of every simulated number PREREG_FINE3D quotes: R2a's three conditions
+and the R2b rule on E2's seed spreads, and R3-E and R3-V on the labelled
+fine-tuning's spreads (and larger ones). The test re-runs the script and
+compares the bytes.
 
 ## Operating characteristics (PREREG_W9 Sec. 6-7)
 

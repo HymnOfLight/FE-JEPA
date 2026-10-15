@@ -900,3 +900,153 @@ adjudicating code.
   Not changed: the returns keep the box's file names and trailing
   whitespace, as received.
 - Suite 455 (445 + 10).
+
+## Stage 2 (15 October 2026) -- PREREG_FINE3D r1 drafted, not stamped: S on the token bottleneck (R2a) and label-free fine-tuning at the fine mesh (R3)
+
+The PI chose on 14 October 2026 to run R1 (cmame-paper, PREREG_HOLDOUT), R2a
+and R3 in one box visit, R3 at the budget of 16 only, and to stamp when the
+run is about to start. This stage writes everything R2a and R3 need; nothing
+is stamped and nothing has run on the box.
+
+- **PREREG_FINE3D.md** (r1 draft; its three CONFIG_SHA256 lines open). R2a:
+  E2's M = 1,024 bottleneck trained again on fresh seeds 3-5 (the reference)
+  against the same with S; SUPPORTED iff the fine displacement error and the
+  fine / in-band ratio are lower beyond the E-series guard and K1 in band
+  holds (W9's H2, in 3D). The R2b rule, fixed before R2a runs: the
+  transformer with S is recommended iff R2a is SUPPORTED and S's fine
+  displacement error is at most half the fresh baseline's. R3: the Phase-2b
+  AR states fine-tuned with the AR objective on the 16 fine instances on
+  which P3's labelled fine-tuning trained, with its schedule and seeds; R3-E
+  and R3-V: the fine energy gap and von Mises error lower than the labelled
+  fine-tuning's beyond the guard. That reference is the recorded run (the
+  Phase-2b report), not trained again: the rules' properties are given with
+  the reference held at its record. Properties of all three rules by
+  simulation (`records/wp9/fine3d/simulations.json`).
+- **S on the bottleneck** (`src/fejepa/models/bottleneck.py`):
+  `decode_scale`, `decode_scale_factor` and `features.load_density` with the
+  transformer's validation and values, now shared in
+  `fejepa.models.features` (`check_decode_scale`, `decode_scale_value`);
+  `FEJEPAConfig` and the transformer's pack call the same two functions (same
+  messages, same values). The runner accepts S for the kinds `fejepa` and
+  `bottleneck` (`runner.S_MODEL_KINDS`); the MGN baseline still refuses it.
+- **P3 takes E8's seed offset** (`p3_transfer.run_p3`, the runner passes it
+  only when set): the zero-shot rows and few-shot units read
+  `ar_p<pool>_s<offset + i>` and record those seeds. The refusal of an offset
+  with P3 is gone; an offset written into P3's own block is refused. The
+  zero-shot pass prints a line every 32 instances (`[p3] zero-shot ...`): in
+  E2's run on the box it went about an hour without output, which the
+  runbook's health check would have read as a stalled session. Prints only.
+- **The 3D factor** (`scripts/fine3d_scale_factor.py`,
+  `records/wp9/fine3d/scale_factor_3d.json`): 2^-10, the power of two nearest
+  the median 0.00113 of max|F| / sum|F| over 256 fresh training-family
+  instances (seed 93000, so that E2's corpus and R1's 720-instance holdout
+  are not read). The remesh medians equal the box's in wp8's post-hoc
+  records: the sandbox's gmsh meshes these geometries as the box's.
+- **Configurations** (`scripts/make_fine3d_configs.py`): `r2a_b_m1024`,
+  `r2a_s_m1024` from E2's stamped file (refused unless its SHA-256 is
+  PREREG_E2's line), `r3_eft_b16` from the Phase-2b report (refused unless its
+  SHA-256 is the one PREREG_E2 records).
+- **R3's script** (`scripts/r3_energy_finetune.py`): verifies the guard, the
+  source report, the states and both corpora; a content check of each state
+  against the report's arrays (relative 1e-3) before it trains; drops the
+  training instances' labels on load; trains with `pretrain()` and
+  `AR_CONFIG`; evaluates both sets with the amplitude readings; records per
+  seed the seed it trained with, the epochs run and the steps (counted from
+  the trainer's history), the SHA-256 of the instance orders its seed
+  determines, the code (`git describe`) and the configuration's SHA-256;
+  skips a finished seed of the same code and configuration, moves any other
+  result aside and runs that seed again, resumes an interrupted seed from a
+  checkpoint the same code and configuration wrote (its sidecar file says
+  which; any other is moved aside and the seed trains from the start);
+  `--dry-run` checks and stops.
+- **The session** (`scripts/fine3d_session.sh`, `RUNBOOK_FINE3D.md`): the two
+  R2a arms, the post-hoc amplitude pass on each (`--remesh 16`), then R3; a
+  finished step is skipped, an interrupted R2a arm restarts with
+  `--reuse-states`; before every step the checkout must still be the tag
+  alone and unmodified (`git describe --always --dirty --tags`, the string
+  every report records, prints exactly the tag, and no other tag is on HEAD).
+- **Stamping** (`scripts/stamp_prereg_fine3d.py`): refuses anything but the
+  approved draft (its SHA-256 pinned in the script) and a `src` other than
+  the tree the regression ran; fills the three CONFIG_SHA256 lines, the
+  status line and the footer (the file's own SHA-256) in one step.
+- **Adjudication** (`src/fejepa/analysis/adjudicate_fine3d.py`,
+  `scripts/adjudicate_fine3d.py`): the verdicts of PREREG_FINE3D Sec. 6, the
+  readings of Sec. 7, the refusals of Sec. 8; R2a and R3 independently (a
+  part whose report is missing, unreadable or refused is NOT EVALUATED, the
+  other is adjudicated). The verdict file records the inputs' SHA-256, the
+  session's attempts, and the adjudicating code and the pre-registration it
+  read against the tag's (a difference, or no tag to compare with, is a
+  deviation); its "deviations" collect the session's, the code's, R2a's and
+  R3's.
+- **Two independent reviews before delivery** (code and statistics;
+  pre-registration and operations). Changed after them: the R3 reference
+  stated as a recorded run, with its rules' properties held at the record
+  (the floor its own spread puts under tau, and a record above its
+  expectation); R2a's sensitivity to larger or correlated seed spreads
+  simulated; the R2b rule moved from the ratio to the fine error;
+  condition (ii) reads P3's in-band pass and K1 both in-band metrics, as
+  the text says; the amplitude record is read only when complete and of
+  the same report; R3's report records the fields above and the
+  adjudicator refuses a seed trained otherwise; the session's code check is
+  the reports' string; the stamp pinned to the draft; the regression run
+  again on the final `src`.
+- **A third review, of the revision.** It found the suite failing on the
+  stamped commit (a test still assumed the draft's open footer: the box's 0c
+  would have stopped), the R2a arms' silent P3 pass against the health check
+  and their time (about 8.5 h, not 8 h), and the adjudicator comparing the
+  repository's pre-registration with the tag's instead of the one it read.
+  Changed: that test; P3's progress lines; the times; the comparison, with the
+  tag's absence a deviation and three more files compared; unreadable inputs
+  leave only their part unevaluated; a missing status file is one deviation;
+  R3 reuses a seed's result only from the same code and configuration; the
+  order record described as what the seed determines; "about a 1.0- and
+  1.6-standard-error event"; the runbook's tmux step after R1, FETCH-FAILED
+  taking the bundle route and 0c's time, as the operator's Chinese text had
+  them; tests for the rules it found unpinned.
+- **A fourth review, of that revision** (no blocking finding). Changed after
+  it: R3's reuse test writes the result it plants with the configuration it
+  re-runs, with a control that must be reused (five of its six cases had
+  passed on the configuration hash alone); a test that the run's own P3
+  pass prints; R3 resumes only a checkpoint of its own code and
+  configuration; the temporary repository's git configuration isolated;
+  the verdict file's notes pinned; PREREG Sec. 4 cites the overlap record
+  it rests on; the runbook's order of the log lines; the delivery checks
+  below recorded.
+- **Delivery checks** (sandbox, 15 October 2026). The package committed on
+  2f35f2d: the full suite passes (pdflatex present: every test runs).
+  Stamped as Sec. 8 says (`scripts/stamp_prereg_fine3d.py`, a commit, an
+  annotated tag `prereg-fine3d`): `git describe --always --dirty --tags` and
+  `git tag --points-at HEAD` print exactly the tag, the full suite passes on
+  that commit and leaves the tree clean. A CPU rehearsal of the session (not
+  committed; the box's layout with sizes scaled down): gmsh3d corpora of 24
+  and 10 instances at the box's paths, a miniature Phase-2b run as R3's
+  source, miniature configurations from the generator's functions with
+  PREREG_FINE3D stamped over them, committed, tagged (annotated) and pushed
+  to a bare repository; a single-branch clone at 92dfc93 as the box. From
+  the stamped commit's runbook, verbatim: 0b (FETCH-OK, both lines the
+  commit), 0c without the suite (describe and tags exact, status empty), 0d
+  (both dry runs `verified`, R3's plan), 1' during the amplitude pass, 2
+  (the return). The session script (`FINE3D_REHEARSAL=1`) was killed after
+  `r2a_s_m1024`'s first seed state, run again (that arm restarted with
+  `--reuse-states`), killed during R3's first seed, run to the end (that seed
+  resumed from epoch 1) and run once more (every step skipped but R3, which
+  took both seeds from disk: the miniature has two seeds, the skip rule asks
+  for s0-s2). The return, unpacked, was adjudicated with the module's sizes
+  set to the miniature's: every part evaluated; the attempts, the restart,
+  the resumption and the seeds taken from disk recorded as deviations.
+- `scripts/regress_against_branch.py`: a miniature of a non-FE-JEPA
+  configuration keeps WP6 and E6 disabled (the runner refuses them for the
+  bottleneck). The regression against wp8-lejepa, run again on the new src
+  tree for E1's and Phase-2b's configurations and newly for E2's, is
+  identical (`records/wp9/regression_wp8_*.json`, README).
+- tet3d: wp9-pool keeps `structured_tet_mesh`'s five-tetrahedron split
+  (cmame-paper Stage 9 and main replaced it with the Kuhn split); neither R2a
+  nor R3 uses it (both read gmsh3d corpora), so the fix is not carried here.
+- Tests changed on purpose: `test_w9_s_switch.py` (the bottleneck now accepts
+  S; the shared validation is checked on both configs) and
+  `test_w9_runner_eval.py` (the refusal now names the MGN kind; the P3-block
+  offset refused); `test_w9_records.py` reads the third regression record.
+- New tests (124): `test_fine3d_bottleneck_s.py`, `test_fine3d_p3_offset.py`,
+  `test_fine3d_r3.py`, `test_fine3d_configs.py`, `test_fine3d_adjudication.py`,
+  `test_fine3d_records.py`, `test_fine3d_prereg.py`, `test_fine3d_runbook.py`.
+- Suite 579 (455 + 124).
