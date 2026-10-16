@@ -14,6 +14,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -22,14 +23,23 @@ import numpy as np
 from .data.archive import load_manifest, manifest_sha256
 
 
-def _git_describe() -> str:
-    try:
-        out = subprocess.run(["git", "describe", "--always", "--dirty", "--tags"],
-                             capture_output=True, text=True, timeout=5,
-                             cwd=Path(__file__).resolve().parent)
-        return out.stdout.strip() or "unavailable"
-    except Exception:
-        return "unavailable"
+def _git_describe(tries: int = 3, timeout: float = 30.0, pause: float = 2.0) -> str:
+    """`git describe --always --dirty --tags` of this checkout, the string every
+    report records; tried up to `tries` times, `pause` seconds apart (a busy
+    disk or a passing lock can delay git), and "unavailable" only when no
+    attempt prints it."""
+    for i in range(tries):
+        if i:
+            time.sleep(pause)
+        try:
+            out = subprocess.run(["git", "describe", "--always", "--dirty", "--tags"],
+                                 capture_output=True, text=True, timeout=timeout,
+                                 cwd=Path(__file__).resolve().parent)
+        except Exception:
+            continue
+        if out.stdout.strip():
+            return out.stdout.strip()
+    return "unavailable"
 
 
 def config_sha256(config: dict) -> str:

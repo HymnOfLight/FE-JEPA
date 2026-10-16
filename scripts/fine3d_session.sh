@@ -11,7 +11,8 @@
 # (<step>.log.<time>), and status.txt time-stamps each attempt. Before every step
 # the checkout must still be the tag, unmodified: `git describe --always --dirty
 # --tags` (what every report records) prints exactly the tag, and it is the only
-# tag on HEAD.
+# tag on HEAD; and before every step that runs, the GPU must still be there (a
+# step started without it would run on the CPU).
 set -u
 WANT=prereg-fine3d
 P=runs/fine3d/session
@@ -54,6 +55,18 @@ code_ok() {
   fi
 }
 
+gpu_ok() {
+  # before every step that runs, as before the session
+  [ "${FINE3D_REHEARSAL:-}" = 1 ] && return 0
+  timeout 300 python - <<'PY' >/dev/null 2>&1 && return 0
+import sys
+import torch
+sys.exit(0 if torch.cuda.is_available() else 1)
+PY
+  echo "STOP before $1: no GPU" | tee -a "$P/status.txt"
+  return 1
+}
+
 r2a() {
   local name=$1 rep="runs/fine3d/$1/report.json" extra=""
   code_ok "$name" || return 1
@@ -65,6 +78,7 @@ r2a() {
     mv "$rep" "$rep.unreadable.$(date +%Y%m%d-%H%M%S)"
     echo "$name: unreadable report moved aside" | tee -a "$P/status.txt"
   fi
+  gpu_ok "$name" || return 1
   if ls "runs/fine3d/$name/e8_states/"*.pt >/dev/null 2>&1 \
       || ls "runs/fine3d/$name/e8_states/"*.ckpt >/dev/null 2>&1; then
     extra="--reuse-states"; echo "$name: restarting from its states" | tee -a "$P/status.txt"
@@ -92,6 +106,7 @@ PY
   then
     echo "amp_$name: record complete, skipped" | tee -a "$P/status.txt"; return 0
   fi
+  gpu_ok "amp_$name" || return 1
   run "amp_$name.log" python scripts/posthoc_amplitude.py --report "$rep" \
       --states-dir "runs/fine3d/$name/e8_states" --remesh 16 --out "$out"
 }
@@ -113,6 +128,7 @@ r3() {
     echo "$name: not run, $need has no complete report (R3 needs both arms)" \
       | tee -a "$P/status.txt"; return 1
   fi
+  gpu_ok "$name" || return 1
   run "$name.log" python scripts/r3_finetune.py "configs/$name.json"
 }
 

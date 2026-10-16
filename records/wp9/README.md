@@ -6,7 +6,7 @@
 `regression_wp8_e2_m1024.json` are the summaries
 `scripts/regress_against_branch.py` wrote in the sandbox (CPU, one thread,
 each side in its own process importing its own source tree; a fresh pass and
-a restart pass), last on 15 October 2026 on the Stage 2 r3 code. The first two
+a restart pass), last on 16 October 2026 on the Stage 2 r4 code. The first two
 were first run on 2 October 2026 on the Stage 0b and 0c code (`src` trees
 `f300ac0c27ecaec63bca9fb0b32b2e1d4f124226` and
 `710ccb32a703bb99355d0e797895698fa2155300`), with the same result; the third
@@ -14,7 +14,7 @@ is new with Stage 2 (PREREG_FINE3D Sec. 9):
 
 | | source tree (`git rev-parse <commit>:src`) |
 |---|---|
-| this side | the Stage 2 r3 code: `src` = tree `74ed4f56d78ff5b93e77f08f4ae2ae3434c001e0` |
+| this side | the Stage 2 r4 code: `src` = tree `ff7d8b39751479a1892b369de2e015cb55f05184` |
 | the other side | `wp8-lejepa` at `5f8e2df`: `src` = tree `5be6357b912cad058121092f274e6a322169b9f6` |
 
 `tests/test_w9_records.py` checks that a committed `src` without local
@@ -33,8 +33,9 @@ again and this table updated.
   G2) -- 1,042 numbers and 2 state files, identical. Stage 2 changed the
   bottleneck (S), P3 (E8's seed offset; progress lines in its zero-shot pass)
   and the runner's checks, its r2 the supervised trainer (a per-epoch loss
-  history, kept in its checkpoint) and its r3 only the adjudication; with the
-  defaults every number and state is wp8-lejepa's.
+  history, kept in its checkpoint), its r3 only the adjudication and its r4
+  the adjudication and the retries of `git describe`; with the defaults every
+  number and state is wp8-lejepa's.
 
 Each summary names the two sides by these trees (`this_src_tree`,
 `other_src_tree`: git tree ids computed from the files by

@@ -9,11 +9,14 @@ CONFIG_SHA256 lines are read from PREREG_FINE3D.md, and every report must have
 run on the tag. A part whose report is not given, not in the return or not
 readable is NOT EVALUATED; the other is still adjudicated (an unreadable
 amplitude record leaves the mechanism readings unevaluated). The verdict file
-records the inputs' SHA-256, the session's attempts (with `--status`), and the
-adjudicating code: its `git describe`, its files' SHA-256 and whether they and
-the pre-registration read are the tag's. A difference, a tag that cannot be
-read, a footer that does not verify, a status file not given or not in the
-return, repeated or missing steps are deviations; "deviations" holds them with R2a's and R3's own.
+records the inputs' SHA-256, the session's attempts and each step's last exit
+(with `--status`), and the adjudicating code: its `git describe`, its files'
+SHA-256 and whether they and the pre-registration read are the tag's. A
+difference, a tag that cannot be read, a footer that does not verify, a status
+file not given or not in the return, repeated or missing steps and a step
+whose last attempt did not exit 0 are deviations; "deviations" holds them with
+R2a's and R3's own, and "notes" R2a's notes (the uninformative note, the flags
+against E2's seeds 0-2) with R3's.
 
     python scripts/adjudicate_fine3d.py \
         --r2a-b <return>/r2a_b_m1024/report.json --r2a-s <return>/r2a_s_m1024/report.json \
@@ -130,6 +133,22 @@ def attempts(status_text: str) -> dict:
     return out
 
 
+def last_exits(status_text: str) -> dict:
+    """{step: the exit status of its last attempt}, None for a last attempt
+    without an exit line (interrupted), from the session's status file."""
+    out = {}
+    for line in status_text.splitlines():
+        s = line.strip()
+        m = re.match(r"(\S+)\.log start ", s)
+        if m:
+            out[m.group(1)] = None
+            continue
+        m = re.match(r"(\S+)\.log exit=(-?\d+)", s)
+        if m:
+            out[m.group(1)] = int(m.group(2))
+    return out
+
+
 def main() -> None:
     from fejepa.analysis.adjudicate_fine3d import (PHASE2B_REPORT_SHA256, TAG,
                                                    adjudicate_fine3d, load_json)
@@ -172,8 +191,10 @@ def main() -> None:
             return None, f"{p} is not readable ({type(exc).__name__}: {exc})"
 
     def amp(p):
+        if not p:
+            return None                                   # not given
         if not present(p):
-            return None
+            return {"unreadable": f"{p} is not in the return"}
         rec, why = read(p)
         return rec if why is None else {"unreadable": why}
 
@@ -213,20 +234,29 @@ def main() -> None:
     dev = code_deviations(rec, a.prereg)
     if a.status:
         if present(a.status):
-            att = attempts(Path(a.status).read_text())
-            res["attempts"] = att
+            text = Path(a.status).read_text()
+            att, ends = attempts(text), last_exits(text)
+            res["attempts"], res["last_exits"] = att, ends
             dev += [f"{k}: {v} attempts" for k, v in att.items() if v > 1]
             dev += [f"{k}: not started" for k in STEPS if k not in att]
+            dev += [f"{k}: its last attempt has no exit line (interrupted)" if v is None
+                    else f"{k}: its last attempt exited {v}"
+                    for k, v in ends.items() if v != 0]
         else:
-            res["attempts"] = None
+            res["attempts"] = res["last_exits"] = None
             dev.append(f"the session's status file is not in the return ({a.status})")
     else:
-        res["attempts"] = None
+        res["attempts"] = res["last_exits"] = None
         dev.append("the session's status file was not given (--status)")
     res["session_and_code_deviations"] = dev
     res["deviations"] = (dev + list(res["R2a"].get("deviations") or [])
                          + list(res["R3"].get("deviations") or []))
-    res["notes"] = list(res["R3"].get("notes") or [])
+    r2a_out = res["R2a"]
+    notes = [f"R2a: {r2a_out['uninformative_note']}"] if r2a_out.get("uninformative_note") else []
+    if r2a_out.get("uninformative_cstar"):
+        notes.append(f"R2a: the uninformative note's c* reading is {r2a_out['uninformative_cstar']}")
+    notes += [f"R2a: {f}" for f in (r2a_out.get("fresh_baseline_vs_e2") or {}).get("flags") or []]
+    res["notes"] = notes + list(res["R3"].get("notes") or [])
     res["inputs"] = {str(p): _sha256(p) for p in (a.r2a_b, a.r2a_s, a.amp_b, a.amp_s, a.r3,
                                                   a.r3_labelled,
                                                   a.status, a.phase2b, a.e2, a.prereg)

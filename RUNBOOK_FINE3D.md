@@ -10,8 +10,10 @@ session, through `scripts/fine3d_session.sh`. In the sandbox, a
 miniature laid out like the box (sizes scaled down, CPU) ran Sec. 0b-0d (0c
 without the suite), the session script interrupted three times (in R2a, in
 R3's energy arm and in its labelled arm) and restarted, 1', the return and
-the adjudication (BRANCH_NOTES Stage 2, r2); the suite on the GPU, the GPU
-checks and the real corpora were not run there.
+the adjudication; and from a checkout of branch cmame-paper on which R1's
+suite had run, Sec. 0b and 0c switched to this branch (BRANCH_NOTES Stage 2,
+r4). The suite on the GPU, the GPU checks and the real corpora were not run
+there.
 
 Roles: **box** = the GPU machine; **repo** = code, records, pre-registration,
 adjudication.
@@ -22,7 +24,8 @@ states (`runs/phase2/e8_states/ar_p1024_s*.pt`) and the two corpora
 does not change (the runs buy no labels: R2a's solve ledgers read 0, R3 solves
 nothing). It touches no other run's directory. The branch is frozen from the
 stamp until the session has returned: Sec. 0c checks that HEAD is exactly the
-tagged commit, and the session script checks it again before every step.
+tagged commit, and the session script checks it again before every step, and
+the GPU before every step it runs.
 
 Order with R1: when the same visit also runs R1 (branch cmame-paper,
 RUNBOOK_CMAME Sec. E), R1 runs first, and its return is packed and sent before
@@ -93,12 +96,12 @@ grep oom_kill /sys/fs/cgroup/memory.events         # note the number: 1' compare
 python -c "import torch; print(torch.__version__, torch.cuda.is_available())"   # 2.12.1+cu130 True
 ls -A runs/fine3d 2>/dev/null | grep -vx session || echo "no fine3d run yet"   # must print exactly: no fine3d run yet
 mkdir -p runs/fine3d/session
-python -m pytest -q 2>&1 | tee runs/fine3d/session/pytest.log | tail -n 3   # "651 passed, 1 skipped"
+python -m pytest -q 2>&1 | tee runs/fine3d/session/pytest.log | tail -n 3   # "659 passed, 1 skipped"
 ```
 Any output other than the comments describe: stop and report. The suite's last
-line reads `651 passed, 1 skipped`, then the warnings and the time, where
+line reads `659 passed, 1 skipped`, then the warnings and the time, where
 `pdflatex` is missing (the box: the paper tables' LaTeX build is not
-compiled); `652 passed` where it is present. Anything failed, an error, or
+compiled); `660 passed` where it is present. Anything failed, an error, or
 another count: stop and report. (`no fine3d run yet`: `runs/fine3d` holds no
 output of a fine3d step, so no step can be skipped as finished by an output of
 other code; 0c itself makes only `runs/fine3d/session`, which the check
@@ -194,6 +197,8 @@ not restart.
   script once as above; if the step fails again, go to Sec. 2 and report.
 - `STOP before <step>: the code is ...` in `status.txt`: the checkout changed
   during the session; go to Sec. 2 and report.
+- `STOP before <step>: no GPU` in `status.txt`: the GPU was lost during the
+  session (the step would have run on the CPU); go to Sec. 2 and report.
 - Never delete anything under `runs/fine3d/`.
 
 ## 2. Return (box; minutes)
@@ -243,7 +248,7 @@ It reads the Phase-2b report and E2's M = 1,024 report from `records/wp8/`
 requires every report to have run on `prereg-fine3d`. R2a, the R2b
 recommendation, R3-E and R3-V (the energy arm against the labelled arm) per
 PREREG_FINE3D Sec. 6, the secondary readings of Sec. 7, refusals and
-deviations; the inputs' SHA-256, the session's attempts
+deviations; the inputs' SHA-256, the session's attempts and their last exits,
 and the adjudicating code (its files against the tag's) are recorded in the
 verdict file. A part whose report is refused or not in the return is NOT
 EVALUATED (R3 needs both arms); the other is still adjudicated.

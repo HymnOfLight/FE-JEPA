@@ -155,6 +155,17 @@ def test_the_amplitude_pass_reads_the_offset_seeds(world, tmp_path):
         A.check_amp(amp, "0" * 64)
 
 
+def test_the_post_hoc_model_refuses_a_configuration_that_does_not_hash_to_its_record():
+    """run_model (R3's content check, the post-hoc pass) builds the report's
+    own model only from a configuration that hashes to the report's record."""
+    from fejepa.analysis.posthoc import run_model
+
+    rep = json.loads((ROOT / "records" / "wp8" / "e2" / "e2_m1024" / "report.json").read_text())
+    rep["config"] = dict(rep["config"], workers=7)
+    with pytest.raises(SystemExit, match="does not hash to its recorded config_sha256"):
+        run_model(rep, ROOT / "no_such_state.pt", 0, "cpu")
+
+
 def test_p3_zero_shot_prints_its_progress(capsys):
     """P3's zero-shot pass prints a line every 32 instances (RUNBOOK_FINE3D
     Sec. 1: the R2a logs stay alive through it); what it evaluates is

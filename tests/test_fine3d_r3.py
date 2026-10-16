@@ -388,6 +388,58 @@ def test_r3_records_the_git_describe_read_before_the_first_seed(mini, tmp_path, 
     assert rep["provenance"]["git"] == rep["per_seed"]["s0"]["git"] == "v-first"
 
 
+def test_git_describe_is_retried_before_it_is_unavailable(monkeypatch):
+    """Every report records `git describe`: a slow first answer is retried, and
+    "unavailable" means that no attempt printed it."""
+    import subprocess as sp
+
+    from fejepa import report
+
+    calls, pauses = [], []
+    monkeypatch.setattr(report.time, "sleep", pauses.append)
+
+    def slow(*a, **k):
+        calls.append(k.get("timeout"))
+        if len(calls) == 1:
+            raise sp.TimeoutExpired(a[0], k.get("timeout"))
+        if len(calls) == 2:                        # a passing lock: no output
+            return sp.CompletedProcess(a[0], 128, stdout="", stderr="index.lock")
+        return sp.CompletedProcess(a[0], 0, stdout="prereg-fine3d\n", stderr="")
+    monkeypatch.setattr(report.subprocess, "run", slow)
+    assert report._git_describe() == "prereg-fine3d" and len(calls) == 3
+    assert calls[0] >= 30 and len(pauses) == 2 and all(p > 0 for p in pauses)
+
+    def never(*a, **k):
+        raise sp.TimeoutExpired(a[0], k.get("timeout"))
+    monkeypatch.setattr(report.subprocess, "run", never)
+    assert report._git_describe() == "unavailable"
+
+
+def test_r3_reads_only_its_training_and_evaluation_instances(mini, tmp_path, monkeypatch):
+    """PREREG_FINE3D Sec. 4: R3 opens its training instances and the instances
+    of the two evaluation sets (the content check reads the first ones), and
+    no other instance of either corpus."""
+    from fejepa.data import archive
+
+    read, real = [], archive.load_instance
+
+    def spy(path, *a, **k):
+        read.append(Path(path).resolve())
+        return real(path, *a, **k)
+    monkeypatch.setattr(archive, "load_instance", spy)
+    p = _r3cfg(mini, tmp_path / "Q", seeds=[0])
+    cfg = json.loads(p.read_text())
+    sets = R3.instance_sets(json.loads(Path(cfg["source"]["report"]).read_text()), cfg, None,
+                            None)
+    R3.run(p)
+    allowed = {Path(f).resolve() for k in ("train", "fine", "inband") for f in sets[k]}
+    assert set(read) <= allowed
+    assert {Path(f).resolve() for f in sets["train"]} <= set(read)
+    corpora = {f.resolve() for d in ("fine_dir", "inband_dir")
+               for f in archive.instance_files(Path(sets[d]))}
+    assert corpora - allowed                     # other instances exist, and stay unread
+
+
 def test_r3_labelled_arm_needs_labels(mini, tmp_path):
     """One training instance's labels deleted on disk (a copy of the fine
     corpus, manifest unchanged): the labelled arm refuses before training."""

@@ -146,7 +146,9 @@ _PY = r"""#!/usr/bin/env bash
 if [ "$1" = "-" ]; then
   body=$(cat)
   if printf '%s' "$body" | grep -q "torch.cuda.is_available"; then
+    n=$(( $(cat "$STUB_DIR/gpu_checks" 2>/dev/null || echo 0) + 1 )); echo $n > "$STUB_DIR/gpu_checks"
     [ -n "${STUB_NOGPU:-}" ] && { echo "torch stub | cuda False"; exit 1; }
+    [ -n "${STUB_NOGPU_AFTER:-}" ] && [ "$n" -gt "$STUB_NOGPU_AFTER" ] && { echo "torch stub | cuda False"; exit 1; }
     echo "torch stub | cuda True"; exit 0; fi
   printf '%s' "$body" | "$REAL_PY" - "${@:2}"; exit $?
 fi
@@ -361,6 +363,39 @@ def test_session_refuses_a_second_copy(box):
         assert r.returncode == 1 and "already running" in r.stdout
     finally:
         holder.kill()
+
+
+def test_session_checks_the_gpu_before_every_step_it_runs(box):
+    """A GPU lost after the first step: every later step that would run stops
+    with a line in the status file (none starts on the CPU); steps with nothing
+    to do are reported as before."""
+    tmp, stub, _ = box
+    r = _run(box, STUB_NOGPU_AFTER="2")        # the session's own check and the first step's
+    assert r.returncode == 0
+    st = _status(tmp)
+    assert "r2a_b_m1024.log exit=0" in st
+    assert re.findall(r"STOP before (\S+): no GPU", st) == ["r2a_s_m1024", "amp_r2a_b_m1024",
+                                                            "r3_eft_b16"]
+    assert "amp_r2a_s_m1024: no report of r2a_s_m1024, skipped" in st
+    assert "r3_lft_b16: not run, r3_eft_b16 has no complete report" in st
+    assert len((stub / "calls").read_text().splitlines()) == 1
+    assert int((stub / "gpu_checks").read_text()) == 5
+
+
+def test_session_restarts_nothing_without_the_gpu(box):
+    """An R2a arm that failed and left its states, the session run again with
+    the GPU lost: the arm is not restarted, and the status file says why (not
+    that it is restarting); a finished arm is still skipped."""
+    tmp, stub, _ = box
+    _run(box, FAIL="r2a_b_m1024")                              # leaves a state, exits 3
+    before = _status(tmp)
+    (stub / "gpu_checks").write_text("0")
+    _run(box, STUB_NOGPU_AFTER="1")                            # the session's own check only
+    new = _status(tmp)[len(before):]
+    assert "STOP before r2a_b_m1024: no GPU" in new
+    assert "restarting from its states" not in new
+    assert "r2a_s_m1024: report exists, skipped" in new         # finished in the first run
+    assert "STOP before r2a_s_m1024" not in new
 
 
 def test_session_needs_a_gpu_unless_rehearsing(box):

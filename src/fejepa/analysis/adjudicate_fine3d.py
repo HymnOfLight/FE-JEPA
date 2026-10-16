@@ -310,7 +310,7 @@ def check_amp(amp: dict, rep_sha: str | None) -> dict:
     remesh readings are not read (`remesh_not_evaluated`; the in-band and
     fine readings are)."""
     if "unreadable" in amp:
-        raise ValueError(f"the amplitude record is unreadable: {amp['unreadable']}")
+        raise ValueError(f"the amplitude record cannot be read: {amp['unreadable']}")
     if rep_sha is not None and amp.get("report_sha256") != rep_sha:
         raise ValueError("the amplitude record was measured on another report")
     seeds = amp.get("seeds") or {}
@@ -491,6 +491,10 @@ def adjudicate_r2a(b: dict, s: dict, e2: dict, prereg_entries: dict | None = Non
                    f"to {m['reproduction_max_rel_dev']:.3g} (more than {AMP_REPRODUCTION_MAX:g})"
                    for r, m in mech.items() if "not_evaluated" not in m
                    and not m["reproduction_max_rel_dev"] <= AMP_REPRODUCTION_MAX]
+    deviations += [f"R2a {r}: the amplitude record's remesh readings are not evaluated: "
+                   f"{m['remesh']['not_evaluated']}"
+                   for r, m in mech.items() if "not_evaluated" not in m
+                   and "not_evaluated" in (m.get("remesh") or {})]
     out.update({"r2b": ({"recommended": False, "why": "R2a not evaluated"}
                         if verdict.get("void") else r2b_recommendation(verdict)),
                 "robustness": r2a_robustness(b, s),

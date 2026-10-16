@@ -152,7 +152,9 @@ def measure_instance(models: dict, a, device: str) -> dict:
 
 def reproduction(rows: list, cell: dict | None, seed_index: int) -> dict:
     """Max relative deviation of the uncorrected per-instance values from the
-    report's own per-instance arrays for that seed (None: not recorded)."""
+    report's own per-instance arrays for that seed (None: not recorded). An
+    instance non-finite in both (a diverged state) is not compared, and
+    counted; one finite in one of the two only deviates by inf."""
     try:
         per = cell["per_seed_eval"][seed_index]["per_instance"]
     except (TypeError, KeyError, IndexError):
@@ -161,7 +163,12 @@ def reproduction(rows: list, cell: dict | None, seed_index: int) -> dict:
     for k, rk in (("disp", "disp_rel_l2"), ("egap", "energy_gap_rel")):
         ref = np.asarray(per[rk][:len(rows)], dtype=float)
         got = np.asarray([r[k] for r in rows], dtype=float)
-        out[f"{k}_max_rel_dev"] = float(np.max(np.abs(got - ref) / np.maximum(np.abs(ref), 1e-30)))
+        both = ~np.isfinite(ref) & ~np.isfinite(got)
+        with np.errstate(invalid="ignore"):
+            dev = np.abs(got - ref) / np.maximum(np.abs(ref), 1e-30)
+        dev = np.where(both, 0.0, np.where(np.isfinite(dev), dev, np.inf))
+        out[f"{k}_max_rel_dev"] = float(np.max(dev)) if dev.size else 0.0
+        out[f"{k}_not_finite_in_both"] = int(both.sum())
     return out
 
 

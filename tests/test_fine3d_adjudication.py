@@ -22,6 +22,7 @@ import numpy as np
 import pytest
 
 from fejepa.analysis import adjudicate_fine3d as A
+from fejepa.metrics import FIELD_KEYS
 from fejepa.report import config_sha256
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -409,6 +410,25 @@ def test_r2a_uninformative_note_and_mechanism(recs):
     assert out["fresh_baseline_vs_e2"]["flags"]                # lower than E2's beyond the guard
 
 
+def test_r2a_comparisons_read_every_metric_with_its_direction(recs):
+    """Sec. 7: every metric on the fine set, P3's in-band pass and E8's cell, S
+    against the fresh baseline with the guard, and its direction (the critical
+    recall is higher-better)."""
+    e2, _ = recs
+    out = _adj(r2a(e2, "r2a_b_m1024"), r2a(e2, "r2a_s_m1024", fine=0.4), recs)
+    c = out["comparisons"]
+    assert set(c) == {"fine", "p3_inband", "e8_inband"}
+    assert all(set(c[k]) == set(FIELD_KEYS) for k in c)
+    assert c["fine"]["disp_rel_l2"]["S_is"] == "better"
+    assert c["p3_inband"]["disp_rel_l2"]["S_is"] == c["fine"]["vm_rel_l2"]["S_is"] == \
+        "within the guard"
+    s = r2a(e2, "r2a_s_m1024", fine=0.4)
+    _scale_cell(s["results"]["p3_transfer"]["metrics"]["ar"]["fine"], "crit_recall", 0.5)
+    c = _adj(r2a(e2, "r2a_b_m1024"), s, recs)["comparisons"]
+    assert c["fine"]["crit_recall"]["S_is"] == "worse"
+    assert c["fine"]["crit_recall"]["guard"]["lower"]
+
+
 def test_r2a_deviations(recs):
     e2, _ = recs
     b, s = r2a(e2, "r2a_b_m1024"), r2a(e2, "r2a_s_m1024", fine=0.4)
@@ -445,6 +465,8 @@ def test_r2a_amplitude_records_are_read_only_when_complete(recs):
         assert math.isclose(m["fine"]["c_star_median"]["seed_mean"], (1.7 + 2.0 + 1.5) / 3)
         assert m["remesh"] == {"not_evaluated": "the remesh pass is incomplete ("
                                + "; ".join(why.replace("s3", x) for x in ("s3", "s4", "s5")) + ")"}
+        assert ("R2a b: the amplitude record's remesh readings are not evaluated: "
+                + m["remesh"]["not_evaluated"]) in out["deviations"]
     # the uninformative note still reads the fine c* of such a record
     u = _adj(b, r2a(e2, "r2a_s_m1024"), recs,
              amp_b=_amp((1.05, 1.0, 1.08), remesh_n=15, failed=1))
@@ -953,6 +975,49 @@ def test_script_end_to_end(recs, tmp_path):
     assert v["attempts"] is None and not any("not started" in d for d in v["deviations"])
     assert f"the session's status file is not in the return ({tmp_path / 'gone.txt'})" in \
         v["deviations"]
+    # a step whose last attempt failed, or has no exit line; one that recovered is not
+    (tmp_path / "status3.txt").write_text(
+        _status(STEPS, (
+            "amp_r2a_s_m1024.log start 2026-10-19 09:00:00\n"
+            "amp_r2a_s_m1024.log exit=1 2026-10-19 09:10:00\n"
+            "r2a_b_m1024.log start 2026-10-19 10:00:00\nr2a_b_m1024.log exit=0 2026-10-19 11:00:00\n"
+            "r3_eft_b16.log start 2026-10-19 12:00:00\n"))
+        .replace("r2a_b_m1024.log exit=0 2026-10-18 11:00:00", "r2a_b_m1024.log exit=3 2026-10-18 11:00:00"))
+    _script(tmp_path, *common, "--status", str(tmp_path / "status3.txt"))
+    v = json.loads(out.read_text())
+    assert v["last_exits"]["amp_r2a_s_m1024"] == 1 and v["last_exits"]["r3_eft_b16"] is None
+    dev = v["deviations"]
+    assert "amp_r2a_s_m1024: its last attempt exited 1" in dev
+    assert "r3_eft_b16: its last attempt has no exit line (interrupted)" in dev
+    assert v["last_exits"]["r2a_b_m1024"] == 0                  # failed once, then recovered
+    assert "r2a_b_m1024: 2 attempts" in dev and not any(
+        d.startswith("r2a_b_m1024: its last") for d in dev)
+    # no amplitude record given at all
+    _script(tmp_path, "--r2a-b", str(tmp_path / "b.json"), "--r2a-s", str(tmp_path / "s.json"),
+            "--r3", str(tmp_path / "r3.json"), "--r3-labelled", str(tmp_path / "r3l.json"),
+            "--prereg", str(pf), "--out", str(out))
+    v = json.loads(out.read_text())
+    assert v["R2a"]["mechanism"] == {"b": {"not_evaluated": "no amplitude record given"},
+                                     "s": {"not_evaluated": "no amplitude record given"}}
+    # R2a's notes are listed with R3's; an amplitude record given but not in the return
+    for k, f in (("b", 0.2), ("s", 0.2)):
+        (tmp_path / f"{k}_flat.json").write_text(json.dumps(r2a(e2, f"r2a_{k}_m1024", fine=f)))
+    r = _script(tmp_path, "--r2a-b", str(tmp_path / "b_flat.json"), "--r2a-s",
+                str(tmp_path / "s_flat.json"), "--amp-b", str(tmp_path / "gone_amp.json"),
+                "--r3", str(tmp_path / "r3.json"), "--r3-labelled", str(tmp_path / "r3l.json"),
+                "--prereg", str(pf), "--out", str(out))
+    v = json.loads(out.read_text())
+    assert v["R2a"]["verdict"].startswith("NOT SUPPORTED")
+    assert v["R2a"]["mechanism"]["b"]["not_evaluated"].endswith(
+        f"{tmp_path / 'gone_amp.json'} is not in the return")
+    notes = v["notes"]
+    assert notes[0] == "R2a: " + v["R2a"]["uninformative_note"]
+    assert notes[1] == "R2a: the uninformative note's c* reading is " + \
+        v["R2a"]["uninformative_cstar"]
+    assert notes[2:2 + len(v["R2a"]["fresh_baseline_vs_e2"]["flags"])] == [
+        "R2a: " + f for f in v["R2a"]["fresh_baseline_vs_e2"]["flags"]]
+    assert len(v["R2a"]["fresh_baseline_vs_e2"]["flags"]) >= 1
+    assert json.loads(r.stdout)["notes"] == notes
 
 
 def test_script_reads_what_it_can(recs, tmp_path):
@@ -1008,7 +1073,8 @@ def test_script_reads_what_it_can(recs, tmp_path):
     assert r.returncode == 0, r.stderr[-2000:]
     v = json.loads(out.read_text())
     assert v["R2a"]["verdict"] == "SUPPORTED"
-    assert "unreadable" in v["R2a"]["mechanism"]["b"]["not_evaluated"]
+    assert "the amplitude record cannot be read: " in v["R2a"]["mechanism"]["b"]["not_evaluated"]
+    assert "amp_cut.json is not readable" in v["R2a"]["mechanism"]["b"]["not_evaluated"]
     assert all("is not readable" in x["verdict"] and "r3l_cut.json" in x["verdict"]
                for x in v["R3"]["verdicts"].values())
     # the reports must carry the tag: another describe string is refused by default
@@ -1023,6 +1089,11 @@ def test_script_reads_what_it_can(recs, tmp_path):
     bad.write_text(E2.read_text() + " ")
     r = _script(tmp_path, "--r3", str(tmp_path / "r3.json"), "--prereg", str(pf), "--e2", str(bad))
     assert r.returncode != 0 and "not E2's" in (r.stderr + r.stdout)
+    bad = tmp_path / "p2b_copy.json"
+    bad.write_text(P2B.read_text() + " ")
+    r = _script(tmp_path, "--r3", str(tmp_path / "r3.json"), "--prereg", str(pf),
+                "--phase2b", str(bad))
+    assert r.returncode != 0 and "not the Phase-2b report" in (r.stderr + r.stdout)
     # the draft (unstamped) is refused
     (tmp_path / "draft.md").write_text(text)
     r = _script(tmp_path, "--r3", str(tmp_path / "r3.json"), "--prereg", str(tmp_path / "draft.md"))

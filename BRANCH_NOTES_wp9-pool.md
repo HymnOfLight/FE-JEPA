@@ -1296,3 +1296,80 @@ nothing has run on the box.
   R2b paragraph, its decision and its assumptions read from the record),
   `test_fine3d_runbook.py` (the stub records the report it measured).
 - Suite 652 (625 + 27).
+
+## Stage 2, r4 (16 October 2026) -- PREREG_FINE3D r4 drafted, not stamped: every requirement checked against the code; the new GPU paths measured at full size; R1 then fine3d on one checkout
+
+After r3 was pushed (bffc66d) the PI asked for the code to be checked again
+for whether everything it must do is implemented. Nothing is stamped and
+nothing has run on the box.
+
+- **Every requirement traced** (an independent audit): each statement of
+  PREREG_FINE3D Sec. 2-9 and RUNBOOK_FINE3D mapped to the code that
+  implements it and to the test or run that exercises it; on a stamped and
+  tagged scratch copy, a return built from the records (R2a reports from
+  E2's, amplitude records from wp8's box record measured again on them, R3
+  reports as scripts/r3_finetune.py writes them) packed by RUNBOOK Sec. 2 and
+  adjudicated by Sec. 3's command, word for word, with faults injected one at
+  a time. Nothing was missing; changed:
+  - An amplitude record whose remesh pass is incomplete lost its remesh
+    readings silently: now a deviation. The remesh pass on the bottleneck
+    with S is tested (one geometry, the miniature's S run).
+  - R2a's report reads `git describe` when it is written, after about 8.5 h,
+    with a 5 s timeout, and a report recorded as unavailable would be
+    refused: `git describe` is tried three times, 30 s each and 2 s apart,
+    for every report and record.
+  - A seed that diverged gave its amplitude record a deviation of inf (NaN
+    in both the record and the report): instances non-finite in both are not
+    compared, and are counted.
+  - R2a's uninformative note and its flags against E2's seeds 0-2 were in
+    R2a's section of the verdict file but not in its notes: listed there,
+    with R3's. An amplitude record given but missing from the return is named
+    so.
+  - A step whose last attempt did not exit 0, or has no exit line, is a
+    deviation.
+  - Tests for the readings compared, the script's check of the Phase-2b
+    record, the post-hoc model's refusal of a configuration that does not
+    hash to its record, and the instances each experiment opens: R2a none of
+    the pool files after its pool (the tail R1's holdout is drawn from), R3
+    only its training and evaluation instances.
+- **The new GPU paths at full size** (an independent measurement on CPU, the
+  real configurations, instances of 6,860 to 70,674 nodes from the project's
+  generator): the bottleneck with S, R3's energy arm and the amplitude pass
+  with S cost the same memory and step time as the paths the box already ran
+  (the bottleneck without S, P3's labelled fine-tuning, the amplitude pass
+  without S): ratios 1.00 in memory, 0.97-1.09 in time. Projected from wp8's
+  bench of the same step on the box, R3's energy step needs about 8 GiB at
+  the fine set's largest instance (71,749 nodes) on the 32 GB card, and 800
+  steps take about 3.0 h per seed and arm (5-95%: 2.3-3.8 h for a draw of 16
+  fine instances; PREREG Sec. 9: 3.3 h). S adds about 11-15 min of instance
+  preparation to its arm and about 3 min to its amplitude pass. On the CPU
+  the transformer's evaluation builds the full attention matrix (the GPU's
+  fused kernel does not), so R3 cannot evaluate at full size on the CPU.
+- **The session checks the GPU before every step it runs** (at most 300 s;
+  after its skip decisions, before an R2a arm says it restarts): a GPU lost
+  during the session would have let the next step start on the CPU (R2a for
+  days, R3 out of memory at its first fine instance). The step is not
+  started, `STOP before <step>: no GPU` is in the status file, and RUNBOOK
+  Sec. 1c says what to do.
+- **R1, then fine3d, on one checkout**: a clone of cmame-paper after R1's
+  suite (683 passed, 3 deselected) and with outputs under runs/holdout ran
+  RUNBOOK 0b and 0c of the stamped wp9-pool word for word (r3's code; r4
+  changes neither block but for the suite's count): the checkout switched
+  cleanly (no tracked or unignored file left by R1), `git describe` and the
+  tag read prereg-fine3d, no fine3d run was found, and the suite passed
+  there. R1 writes its labels under runs/holdout, not into the
+  corpora, so the manifests R2a and R3 check are unchanged.
+- **An independent review of these changes**, with mutation checks and the
+  adjudication of built returns: nothing blocking; changed: the GPU check
+  moved before an R2a arm's "restarting from its states" line, with a 300 s
+  limit; Sec. 8 says that a step without the GPU is not started (the session
+  goes on to check the next); `git describe`'s tries are 2 s apart; tests
+  for a finished arm with the GPU lost, a failed attempt followed by one that
+  exits 0, no amplitude record given and a `git describe` without output;
+  docstrings and the runbook's wording.
+- **Delivery checks of r3 and r4** (r3's entry did not record them): the
+  package committed on the pushed base, the suite with and without
+  pdflatex, the stamp, an annotated tag, the suite on the stamped commit, and
+  the CPU rehearsal of the session (three interruptions, the restarts, the
+  return, the adjudication). RUNBOOK's header names this entry.
+- Suite 660 (652 + 8).
