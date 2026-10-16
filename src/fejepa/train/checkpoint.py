@@ -72,9 +72,17 @@ def save_epoch_checkpoint(path, *, epochs_done: int, step: int, model, opt,
 
 
 def load_epoch_checkpoint(path, *, model, opt, sched, rng, device):
-    """Restore the loop state in place. Returns (epochs_done, step, extra) or
-    None when no usable checkpoint exists (a corrupt file is removed and
-    reported, and training starts from scratch)."""
+    """Restore the loop state in place. Returns (epochs_done, step, extra), or
+    None when no checkpoint exists or its file cannot be read: such a file is
+    moved aside (<name>.unusable.<time>) and reported, nothing has been
+    restored, and training starts from scratch. A file that reads but cannot be
+    restored (a state of another model, or an error on the device, e.g. a
+    failing GPU) raises: the run stops and the checkpoint stays for the next
+    attempt (fine3d r5: restoring part of it and then training "from scratch"
+    would train from a mixed state, and a device error would discard hours of
+    training)."""
+    import time
+
     import torch
 
     path = Path(path)
@@ -82,19 +90,24 @@ def load_epoch_checkpoint(path, *, model, opt, sched, rng, device):
         return None
     try:
         ck = torch.load(str(path), map_location="cpu", weights_only=False)
-        model.load_state_dict(ck["model"], strict=True)
-        model.to(device)
-        opt.load_state_dict(ck["opt"])
-        if sched is not None and ck.get("sched") is not None:
-            sched.load_state_dict(ck["sched"])
-        rng.bit_generator.state = ck["np_rng"]
-        _restore_rng_states(ck["rng"])
-        return int(ck["epochs_done"]), int(ck["step"]), dict(ck.get("extra") or {})
+        state = (int(ck["epochs_done"]), int(ck["step"]), ck["model"], ck["opt"],
+                 ck.get("sched"), ck["np_rng"], ck["rng"], dict(ck.get("extra") or {}))
     except Exception as exc:                                  # noqa: BLE001
-        print(f"[ckpt] {path}: unusable ({type(exc).__name__}: {exc}); "
-              f"removed, training restarts from scratch", flush=True)
+        aside = path.with_name(f"{path.name}.unusable.{time.strftime('%Y%m%d-%H%M%S')}")
         try:
-            path.unlink()
+            os.replace(path, aside)
+            where = f"moved to {aside.name}"
         except OSError:
-            pass
+            where = "left in place (overwritten at the next checkpoint)"
+        print(f"[ckpt] {path}: unusable ({type(exc).__name__}: {exc}); {where}, "
+              f"training restarts from scratch", flush=True)
         return None
+    epochs_done, step, model_sd, opt_sd, sched_sd, np_rng, rng_states, extra = state
+    model.load_state_dict(model_sd, strict=True)
+    model.to(device)
+    opt.load_state_dict(opt_sd)
+    if sched is not None and sched_sd is not None:
+        sched.load_state_dict(sched_sd)
+    rng.bit_generator.state = np_rng
+    _restore_rng_states(rng_states)
+    return epochs_done, step, extra

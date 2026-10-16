@@ -123,7 +123,11 @@ def seed_medians(c: dict, metric: str) -> list:
 
 
 def ratio_per_seed(num: list, den: list) -> list:
-    return [x / y if y else float("nan") for x, y in zip(num, den, strict=True)]
+    """Per seed num / den: NaN unless both are finite and den is not 0, so that
+    a non-finite value of either fails the condition the ratio enters (Sec. 6;
+    fine3d r5: finite / inf gave 0)."""
+    return [x / y if math.isfinite(x) and math.isfinite(y) and y else float("nan")
+            for x, y in zip(num, den, strict=True)]
 
 
 def _cells_ok(c: dict, n_seeds: int, n: int, what: str) -> None:
@@ -471,11 +475,16 @@ def adjudicate_r2a(b: dict, s: dict, e2: dict, prereg_entries: dict | None = Non
     if verdict.get("void"):
         out["uninformative_note"] = None
     elif verdict["verdict"] != "SUPPORTED":
-        ok_b = "not_evaluated" not in mech["b"]
-        out["uninformative_note"] = _uninformative(vb, mech["b"] if ok_b else None)
-        if not ok_b:
-            out["uninformative_cstar"] = ("not evaluated: no usable amplitude record of the "
-                                          "fresh baseline (" + mech["b"]["not_evaluated"] + ")")
+        if "not_evaluated" in mech["b"]:
+            why = ("no usable amplitude record of the fresh baseline ("
+                   + mech["b"]["not_evaluated"] + ")")
+        elif not math.isfinite(mech["b"]["fine"]["c_star_median"]["seed_mean"]):
+            why = "the fresh baseline's median c* on the fine set is not finite"
+        else:
+            why = None
+        out["uninformative_note"] = _uninformative(vb, None if why else mech["b"])
+        if why:
+            out["uninformative_cstar"] = "not evaluated: " + why
     else:
         out["uninformative_note"] = None
     deviations = [f"R2a {r}: solve ledger {c['ledger_total']} (expected 0)"
@@ -597,7 +606,9 @@ def check_r3_pair(ce: dict, cl: dict) -> list:
     """The two arms as one session: the same code and the same recorded epoch
     orders per seed (the orders each seed determines; refused otherwise).
     Returns the deviations: another torch, GPU or TF32 setting between the
-    arms, or seeds run on more than one machine (host, GPU driver)."""
+    arms, seeds run on more than one machine (host, GPU driver; a driver that
+    could not be read is not counted as another), and machine records whose
+    driver could not be read beside records whose driver was."""
     if ce["git"] != cl["git"]:
         raise ValueError(f"R3's arms ran on different code ({ce['git']!r} / {cl['git']!r})")
     for s in R3_SEEDS:
@@ -606,11 +617,20 @@ def check_r3_pair(ce: dict, cl: dict) -> list:
     diff = [k for k in RUNTIME_KEYS if ce[k] != cl[k]]
     dev = (["R3: the two arms ran with different " + ", ".join(
         f"{k} ({ce[k]!r} / {cl[k]!r})" for k in diff)] if diff else [])
-    machines = {json.dumps(m, sort_keys=True)
-                for c in (ce, cl) for s in R3_SEEDS for m in c["seeds"][f"s{s}"]["machines"]}
-    if len(machines) > 1:
-        dev.append("R3: the seeds of the two arms ran on more than one machine: "
-                   + "; ".join(sorted(machines)))
+    recs = [m for c in (ce, cl) for s in R3_SEEDS for m in c["seeds"][f"s{s}"]["machines"]]
+    bad = sorted({json.dumps(m, sort_keys=True) for m in recs if not isinstance(m, dict)})
+    if bad:
+        dev.append("R3: machine records of its seeds that cannot be read: " + "; ".join(bad))
+    recs = [m for m in recs if isinstance(m, dict)]
+    hosts = sorted({str(m.get("host")) for m in recs})
+    drivers = sorted({str(m["gpu_driver"]) for m in recs if m.get("gpu_driver") is not None})
+    if len(hosts) > 1 or len(drivers) > 1:
+        dev.append("R3: the seeds of the two arms ran on more than one machine: hosts "
+                   + ", ".join(hosts) + "; GPU drivers " + (", ".join(drivers) or "none read"))
+    unread = sum(1 for m in recs if m.get("gpu_driver") is None)
+    if 0 < unread < len(recs):     # none read at all: no GPU driver to read (the CPU rehearsal)
+        dev.append(f"R3: the GPU driver could not be read in {unread} of the {len(recs)} "
+                   "machine records of its seeds (nvidia-smi); those are compared by host only")
     return dev
 
 

@@ -636,7 +636,7 @@ def test_r3_reuses_only_a_usable_result(mini, tmp_path, what):
     assert json.loads(rf.read_text())["seed"] == 0
 
 
-def test_r3_resumes_only_its_own_checkpoint(mini, tmp_path, monkeypatch):
+def test_r3_resumes_only_its_own_checkpoint(mini, done, tmp_path, monkeypatch):
     """An interrupted seed's checkpoint written by another code (its sidecar
     says so) is moved aside and the seed trains from the start."""
     from fejepa.train import pretrain as pt
@@ -655,6 +655,7 @@ def test_r3_resumes_only_its_own_checkpoint(mini, tmp_path, monkeypatch):
         R3.run(cfgp)
     side = out / "eft_b2_s0.ckpt.json"
     assert (out / "eft_b2_s0.ckpt").exists() and json.loads(side.read_text())["git"]
+    assert json.loads(side.read_text())["seed"] == 0          # r5: the record names the seed
     side.write_text(json.dumps(dict(json.loads(side.read_text()), git="prereg-fine3d-1-gabcdef")))
     monkeypatch.setattr(pt, "compute_loss", real)
     rep = R3.run(cfgp)

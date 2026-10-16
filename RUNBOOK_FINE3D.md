@@ -12,7 +12,9 @@ without the suite), the session script interrupted three times (in R2a, in
 R3's energy arm and in its labelled arm) and restarted, 1', the return and
 the adjudication; and from a checkout of branch cmame-paper on which R1's
 suite had run, Sec. 0b and 0c switched to this branch (BRANCH_NOTES Stage 2,
-r4). The suite on the GPU, the GPU checks and the real corpora were not run
+r4); the session script was interrupted at random in several hundred runs
+with its steps stood in for, and the R3 and R2a steps on miniatures (Stage 2,
+r5). The suite on the GPU, the GPU checks and the real corpora were not run
 there.
 
 Roles: **box** = the GPU machine; **repo** = code, records, pre-registration,
@@ -33,13 +35,14 @@ this branch is checked out (the two branches share the checkout and `runs/`).
 Do not shut the instance down after R1's return: this session follows at once.
 R1's result does not gate this session.
 
-Time: about 39 h -- R2a about 8.5 h per arm (E2's M = 1,024 arm: its three AR
+Time: about 41 h -- R2a about 8.5 h per arm (E2's M = 1,024 arm: its three AR
 units took 7 h 24 min, then about an hour went to P3's zero-shot pass; S's arm
 somewhat longer), the two post-hoc passes about 20 and 12 min (the
 first also meshes the 64 remesh instances: wp8's first pass took 542 s for
-them), R3 about 3.5 h per seed and arm (800 steps at the transformer's 14.8 s
-per fine step, then its evaluations; two arms of three seeds). The instance's
-balance must cover about 50 h (one re-run of a step, Sec. 1c, included).
+them), R3 about 3.8 h per seed and arm (800 steps at the transformer's 14.8 s
+per fine step, then about half an hour of evaluation, mostly on the CPU; two
+arms of three seeds). The instance's
+balance must cover about 53 h (one re-run of a step, Sec. 1c, included).
 Nothing else may use the GPU meanwhile.
 
 ## 0. Preconditions (box, once)
@@ -96,12 +99,12 @@ grep oom_kill /sys/fs/cgroup/memory.events         # note the number: 1' compare
 python -c "import torch; print(torch.__version__, torch.cuda.is_available())"   # 2.12.1+cu130 True
 ls -A runs/fine3d 2>/dev/null | grep -vx session || echo "no fine3d run yet"   # must print exactly: no fine3d run yet
 mkdir -p runs/fine3d/session
-python -m pytest -q 2>&1 | tee runs/fine3d/session/pytest.log | tail -n 3   # "659 passed, 1 skipped"
+python -m pytest -q 2>&1 | tee runs/fine3d/session/pytest.log | tail -n 3   # "704 passed, 1 skipped"
 ```
 Any output other than the comments describe: stop and report. The suite's last
-line reads `659 passed, 1 skipped`, then the warnings and the time, where
+line reads `704 passed, 1 skipped`, then the warnings and the time, where
 `pdflatex` is missing (the box: the paper tables' LaTeX build is not
-compiled); `660 passed` where it is present. Anything failed, an error, or
+compiled); `705 passed` where it is present. Anything failed, an error, or
 another count: stop and report. (`no fine3d run yet`: `runs/fine3d` holds no
 output of a fine3d step, so no step can be skipped as finished by an output of
 other code; 0c itself makes only `runs/fine3d/session`, which the check
@@ -133,15 +136,17 @@ the hash of PREREG_FINE3D's `CONFIG_SHA256[r3_eft_b16]` line (the first) and
 `CONFIG_SHA256[r3_lft_b16]` line (the second). Anything else (a traceback,
 `would refuse`, `null`, another hash or count): stop and report.
 
-## 1. The session (box; about 39 h; the same tmux window)
+## 1. The session (box; about 41 h; the same tmux window)
 ```bash
 cd ~/autodl-tmp/FE-JEPA
 bash scripts/fine3d_session.sh
 ```
 Steps, in order: `r2a_b_m1024` (about 8.5 h), `r2a_s_m1024` (about 8.5 h),
 `amp_r2a_b_m1024` and `amp_r2a_s_m1024` (about 20 and 12 min), `r3_eft_b16`
-(about 10.5 h), `r3_lft_b16` (about 10.5 h). Normal signs:
-- the script first prints the torch version and `cuda True`;
+(about 11.5 h), `r3_lft_b16` (about 11.5 h). Normal signs:
+- the script first prints the torch version and its CUDA build
+  (`torch 2.12.1+cu130 | CUDA build 13.0`), then checks the GPU (an allocation;
+  it must be free) before the session and before every step;
 - each R2a log (`runs/fine3d/session/r2a_*.log`) starts with `[prereg] verified
   against PREREG_FINE3D.md`, prints the validation set's labelling lines (it
   is already labelled: no solve), a training line every ~15 min and one line
@@ -172,7 +177,9 @@ Healthy: one step process; the GPU in use (memory well above 1,000 MiB); a
 file under `runs/fine3d/` written within the last 45 min (a log, a checkpoint,
 a state or a record: during training a checkpoint at most every 5 min);
 `oom_kill` unchanged since 0c. Otherwise: Ctrl-C in window 0, wait for the
-prompt, and send this output plus `tail -n 60` of the running step's log; do
+prompt (the script stops once the command it interrupted has ended and writes
+`session interrupted` to `status.txt`; if a step starts instead, press Ctrl-C
+again), and send this output plus `tail -n 60` of the running step's log; do
 not restart.
 
 ### 1c. Interruptions and crashes
@@ -197,8 +204,15 @@ not restart.
   script once as above; if the step fails again, go to Sec. 2 and report.
 - `STOP before <step>: the code is ...` in `status.txt`: the checkout changed
   during the session; go to Sec. 2 and report.
-- `STOP before <step>: no GPU` in `status.txt`: the GPU was lost during the
-  session (the step would have run on the CPU); go to Sec. 2 and report.
+- `STOP: ...` at the start, or `STOP before <step>: ...` in `status.txt`, with
+  `no GPU`, `the GPU does not work (...)` or `the GPU is in use (...)`: the
+  GPU is missing, failing or used by another process, and that step did not
+  start (it would have run on the CPU, or failed restoring what an earlier
+  attempt left); go to Sec. 2 and report.
+- `STOP before <step>: the check of its report failed (exit ...)` (or of its
+  record, or of another arm's report) in `status.txt`: a check of a step's
+  output could not run (out of memory, a killed process, a disk error);
+  nothing was moved or run; go to Sec. 2 and report.
 - Never delete anything under `runs/fine3d/`.
 
 ## 2. Return (box; minutes)

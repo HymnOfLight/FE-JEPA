@@ -171,6 +171,8 @@ def provenance(config: dict, data_dirs: list, seeds: list[int]) -> dict:
 
 class _Encoder(json.JSONEncoder):
     def default(self, o):
+        if isinstance(o, np.bool_):                       # fine3d r5: before int (not a subclass)
+            return bool(o)
         if isinstance(o, (np.integer,)):
             return int(o)
         if isinstance(o, (np.floating,)):

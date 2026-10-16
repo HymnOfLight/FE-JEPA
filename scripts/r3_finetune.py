@@ -49,7 +49,7 @@ this code and this configuration, with a passed content check and its state
 on disk at the recorded SHA-256, is not run again (marked `from_disk` in the
 report); any other result file is moved aside and the seed runs again. An
 interrupted training resumes from its epoch checkpoint (written at most every
-5 minutes) if this code and configuration wrote it; any other checkpoint is
+5 minutes) if this code, configuration and seed wrote it; any other checkpoint is
 moved aside and the seed trains from the start. The report is written when
 every seed has a result.
 
@@ -261,27 +261,32 @@ def _sidecar(ckpt: Path) -> Path:
 
 
 def own_checkpoint(ckpt: Path, mine: dict, here: dict) -> list:
-    """An epoch checkpoint is resumed only by the code and configuration that
-    wrote it (its sidecar file records both, and the machines the seed has run
-    on); any other is moved aside and the seed trains from the start. Then the
-    sidecar names this run. Returns the machines of this seed's training: the
-    first is where it started, the last (`here`) where it runs now."""
+    """An epoch checkpoint is resumed only by the code, configuration and seed
+    that wrote it (its sidecar file records them, and the machines the seed has
+    run on); any other, or one whose sidecar cannot be read, is moved aside and
+    the seed trains from the start. Then the sidecar, written atomically, names
+    this run. Returns the machines of this seed's training: the first is where
+    it started, the last (`here`) where it runs now."""
+    from fejepa.analysis.common import write_json
+
     machines = []
     if ckpt.exists():
         try:
             side = json.loads(_sidecar(ckpt).read_text())
-            ok = {k: side.get(k) for k in mine} == mine
-        except (OSError, ValueError, AttributeError):
+            ok = isinstance(side, dict) and {k: side.get(k) for k in mine} == mine
+        except (OSError, ValueError):
             side, ok = {}, False
         if ok:
-            machines = [m for m in side.get("machines") or () if isinstance(m, dict)]
+            ms = side.get("machines")
+            machines = [m for m in ms if isinstance(m, dict)] if isinstance(ms, list) else []
         else:
             aside = ckpt.with_name(f"{ckpt.name}.unusable.{time.strftime('%Y%m%d-%H%M%S')}")
             ckpt.rename(aside)
-            print(f"[r3] {ckpt.name} was written by another code or configuration (moved to "
-                  f"{aside.name}); training from the start", flush=True)
+            print(f"[r3] {ckpt.name} was not written by this code, configuration and seed, or "
+                  f"its record cannot be read (moved to {aside.name}); training from the start",
+                  flush=True)
     machines.append(here)
-    _sidecar(ckpt).write_text(json.dumps(dict(mine, machines=machines)))
+    write_json(_sidecar(ckpt), dict(mine, machines=machines))      # temp file + os.replace
     return machines
 
 
@@ -329,7 +334,8 @@ def run_seed(seed: int, seed_index: int, report: dict, cfg: dict, sets: dict, ou
     arm = ARMS[tr["loss"]]
     archs = load_training(sets["train"], labels=tr["loss"] == "labels")
     ckpt = ckpt_path(out_dir, cfg, seed)
-    machines = own_checkpoint(ckpt, {"git": git, "config_sha256": config_sha256(cfg)}, here)
+    machines = own_checkpoint(ckpt, {"git": git, "config_sha256": config_sha256(cfg),
+                                     "seed": int(seed)}, here)
     runtime = train_runtime()
     common = dict(epochs=int(tr["epochs"]), lr=float(tr["lr"]),
                   weight_decay=float(tr["weight_decay"]), clip=float(tr["clip"]),

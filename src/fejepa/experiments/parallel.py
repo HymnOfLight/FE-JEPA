@@ -413,16 +413,29 @@ def pretrain_unit(payload: dict) -> dict:
         # D9: consume a state produced by an earlier attempt of the SAME stamped
         # configuration (identical configurations are trained once); the file's
         # SHA-256 is returned so the report can chain attempt-1 -> attempt-2.
-        # R9a: a corrupt (e.g. truncated) file is removed and retrained.
+        # R9a: a file that cannot be read (e.g. truncated) is moved aside
+        # (<name>.unusable.<time>) and retrained. One that reads but does not load
+        # into this model, or an error on the device (e.g. a failing GPU), stops
+        # the run with the state kept (fine3d r5: it was removed and retrained).
+        import time
+
         try:
             sd = clean_state(torch.load(str(sp), map_location="cpu", weights_only=True))
+        except Exception as exc:                              # noqa: BLE001
+            sd = None
+            aside = sp.with_name(f"{sp.name}.unusable.{time.strftime('%Y%m%d-%H%M%S')}")
+            try:
+                os.replace(sp, aside)
+                where = f"moved to {aside.name}"
+            except OSError:
+                sp.unlink(missing_ok=True)
+                where = "removed"
+            print(f"[d9] {sp}: unusable state ({type(exc).__name__}); {where}, retraining",
+                  flush=True)
+        if sd is not None:
             model.load_state_dict(sd, strict=True)
             model.to(pre.get("device", "cpu"))
             reused = True
-        except Exception as exc:                              # noqa: BLE001
-            print(f"[d9] {sp}: unusable state ({type(exc).__name__}); removed, "
-                  f"retraining", flush=True)
-            sp.unlink(missing_ok=True)
     if not reused:
         from ..train.checkpoint import atomic_torch_save
 

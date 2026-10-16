@@ -410,6 +410,42 @@ def test_r2a_uninformative_note_and_mechanism(recs):
     assert out["fresh_baseline_vs_e2"]["flags"]                # lower than E2's beyond the guard
 
 
+def test_r2a_note_with_a_median_c_star_that_is_not_finite(recs):
+    """fine3d r5 (review A, F4): a usable record whose median c* on the fine
+    set is not finite leaves the note's c* part not evaluated (NaN < 1.10 read
+    as "not below")."""
+    e2, _ = recs
+    b, s = r2a(e2, "r2a_b_m1024"), r2a(e2, "r2a_s_m1024")
+    out = _adj(b, s, recs, amp_b=_amp((math.nan, 1.0, 1.08)), amp_s=_amp((1.0, 1.0, 1.0)))
+    assert out["verdict"].startswith("NOT SUPPORTED")
+    assert out["uninformative_cstar"] == ("not evaluated: the fresh baseline's median c* on "
+                                          "the fine set is not finite")
+    assert not out["uninformative_note"] or "c*" not in out["uninformative_note"]
+    ok = _adj(b, s, recs, amp_b=_amp((1.05, 1.0, 1.08)), amp_s=_amp((1.0, 1.0, 1.0)))
+    assert "uninformative_cstar" not in ok and "c*" in ok["uninformative_note"]
+
+
+def test_r2a_condition_ii_reads_a_non_finite_in_band_value_of_s(recs):
+    """fine3d r5 (review A, F1): a seed of S whose P3 in-band mean is infinite
+    (and E8's, as Sec. 8 requires) while its fine mean is finite: its ratio is
+    not finite, so (ii) fails, diverged (finite / inf gave 0, and (ii) was
+    computed as if nothing had diverged)."""
+    e2, _ = recs
+    assert A.ratio_per_seed([0.2, 0.2, math.inf, 1.0, 1.0],
+                            [0.1, math.inf, 0.1, 0.0, math.nan])[0] == 2.0
+    assert all(math.isnan(x) for x in A.ratio_per_seed([0.2, math.inf, 1.0, 1.0],
+                                                       [math.inf, 0.1, 0.0, math.nan]))
+    b, s = r2a(e2, "r2a_b_m1024"), r2a(e2, "r2a_s_m1024", fine=0.4)
+    for cell in (A.p3_cell(s, "inband"), A.e8_cell(s)):
+        cell["per_seed_eval"][1]["disp_rel_l2"] = math.inf
+    out = _adj(b, s, recs)
+    fails = out["conditions"]["failing"]
+    assert out["verdict"].startswith("NOT SUPPORTED")
+    assert any(f.startswith("(ii)") and f.endswith("-- diverged") for f in fails)
+    assert any(f.startswith("(iii)") for f in fails)
+    assert not any(f.startswith("(i) ") for f in fails)
+
+
 def test_r2a_comparisons_read_every_metric_with_its_direction(recs):
     """Sec. 7: every metric on the fine set, P3's in-band pass and E8's cell, S
     against the fresh baseline with the guard, and its direction (the critical
@@ -664,15 +700,45 @@ def test_r3_machines(recs):
                                                              "gpu_driver": "575.64"}
     out = _adj3(pair, p2b)
     dev = [d for d in out["deviations"] if "machine" in d]
-    assert len(dev) == 1 and dev[0].startswith("R3: the seeds of the two arms ran on more than "
-                                               "one machine") and '"other"' in dev[0]
+    assert dev == ["R3: the seeds of the two arms ran on more than one machine: hosts box, "
+                   "other; GPU drivers 575.64"]
     assert [m["host"] for m in out["checks"]["labelled"]["seeds"]["s2"]["machines"]] == \
         ["box", "other"]
     # a seed that started on another driver
     pair = r3pair(p2b, egap=0.5)
-    pair["energy"]["per_seed"]["s0"]["machine"]["start"] = {"host": "box", "gpu_driver": None}
-    assert any("more than one machine" in d for d in _adj3(pair, p2b)["deviations"])
+    pair["energy"]["per_seed"]["s0"]["machine"]["start"] = {"host": "box", "gpu_driver": "580.1"}
+    assert any("more than one machine" in d and "575.64, 580.1" in d
+               for d in _adj3(pair, p2b)["deviations"])
     assert out["verdicts"]["R3-E"]["verdict"] == "SUPPORTED"          # a deviation, not a refusal
+
+
+def test_r3_machine_records_whose_driver_was_not_read(recs):
+    """fine3d r5 (review B, N2; review C, F3): a driver that nvidia-smi could
+    not read is not another machine (no false "more than one machine"); records
+    without it beside records with it are a deviation of their own, and the
+    hosts are still compared. A record that is not a machine record is a
+    deviation."""
+    _, p2b = recs
+    pair = r3pair(p2b, egap=0.5)
+    pair["energy"]["per_seed"]["s0"]["machine"]["end"] = {"host": "box", "gpu_driver": None}
+    dev = [d for d in _adj3(pair, p2b)["deviations"] if "machine" in d or "driver" in d]
+    assert dev == ["R3: the GPU driver could not be read in 1 of the 12 machine records of its "
+                   "seeds (nvidia-smi); those are compared by host only"]
+    pair["labelled"]["per_seed"]["s1"]["machine"]["start"] = {"host": "other", "gpu_driver": None}
+    dev = [d for d in _adj3(pair, p2b)["deviations"] if "machine" in d or "driver" in d]
+    assert dev[0] == ("R3: the seeds of the two arms ran on more than one machine: hosts box, "
+                      "other; GPU drivers 575.64") and "in 2 of the 12" in dev[1]
+    pair = r3pair(p2b, egap=0.5)
+    pair["energy"]["per_seed"]["s2"]["machine"]["resumed_on"] = ["box"]
+    dev = _adj3(pair, p2b)["deviations"]
+    assert 'R3: machine records of its seeds that cannot be read: "box"' in dev
+    # no driver read anywhere (no GPU driver to read, as in the CPU rehearsal): no deviation
+    pair = r3pair(p2b, egap=0.5)
+    for arm in pair.values():
+        for r in arm["per_seed"].values():
+            r["machine"] = {"start": {"host": "box", "gpu_driver": None},
+                            "end": {"host": "box", "gpu_driver": None}}
+    assert not any("machine" in d or "driver" in d for d in _adj3(pair, p2b)["deviations"])
 
 
 def test_r3_training_runtime_and_resumed_machines(recs):
@@ -690,7 +756,7 @@ def test_r3_training_runtime_and_resumed_machines(recs):
     assert ("R3 labelled seed s1: trained with TF32 matmul False and cuDNN True, not the source "
             "report's True") in dev
     assert any(d.startswith("R3 energy seed s2: trained with TF32 matmul None") for d in dev)
-    assert any("more than one machine" in d and '"other"' in d for d in dev)
+    assert any("more than one machine" in d and "hosts box, other" in d for d in dev)
     assert out["verdicts"]["R3-E"]["verdict"] == "SUPPORTED"          # deviations, not refusals
 
 

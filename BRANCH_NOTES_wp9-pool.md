@@ -1373,3 +1373,157 @@ nothing has run on the box.
   the CPU rehearsal of the session (three interruptions, the restarts, the
   return, the adjudication). RUNBOOK's header names this entry.
 - Suite 660 (652 + 8).
+
+## Stage 2, r5 (16 October 2026) -- PREREG_FINE3D r5 drafted, not stamped: five more independent checks; Ctrl-C, the GPU check, the session's checks, the remesh pass and checkpoint restores made safe
+
+After r4 was pushed (b7dcd6e) the PI asked for the code to be checked again.
+Nothing is stamped and nothing has run on the box. Five independent checks,
+each from an angle the earlier rounds had not taken, then an independent
+review of the changes, after which three of the five checks were run again
+on them.
+
+- **The rules from the text alone** (review A): Sec. 6 implemented again from
+  PREREG_FINE3D and the pre-registrations it cites before any code was read,
+  frozen, then compared with the adjudication in 1,020,242 comparisons
+  (116,380 R2a cases and 55,542 R3 cases; 1,000 of each through the real
+  adjudication on reports built from the records). Every case these metrics
+  can produce gives the text's verdicts; rel, SE_rel and tau agree to 1e-12.
+  Changed:
+  - A seed of S whose P3 in-band mean is infinite while its fine mean is
+    finite gave a ratio of 0 (finite / inf), so condition (ii) was computed
+    as if nothing had diverged. The verdict could not change (Sec. 8 makes
+    E8's value non-finite as well, so (iii) fails), but the failing
+    conditions named were wrong. The ratio is now NaN unless both values are
+    finite.
+  - A usable amplitude record whose median c* on the fine set is not finite
+    read as "not below 1.10": the note's c* part is now not evaluated, as
+    Sec. 7 says.
+  - Not changed (unreachable with these metrics): the guard's denominators
+    regularised at a reference mean of 0 or below; an overflow above about
+    1e154 would leave a part not evaluated; the P3/E8 check against an E8
+    mean of exactly 0; last-bit differences exactly at a threshold.
+- **Failures only the GPU would show** (review B): every kernel the six steps
+  use already ran on the box at these sizes (P3's labelled fine-tuning at 16
+  covers R3's attention and memory; the energy objective adds about
+  0.1 GiB); R3's content check and the P3/E8 rule run under the policy and
+  code path of their references (the transformer reproduced bit for bit on
+  the box, the bottleneck within 3.1e-5). Changed:
+  - A CUDA error while a D9 state or an epoch checkpoint was restored (a
+    failing GPU, or one taken by another process) was caught as a corrupt
+    file: the file was deleted (up to an R2a unit's or an R3 seed's
+    training) and the run went on from scratch. Now only a file that cannot
+    be read is moved aside (`<name>.unusable.<time>`) and trained again; one
+    that reads but cannot be restored stops the step and is kept. The
+    session's GPU check also allocates, synchronises and needs 90% of the
+    GPU's memory free (an idle card leaves about 98%), and says why it
+    fails.
+  - A CUDA error in the remesh pass was recorded as a failed geometry, every
+    later geometry failed in turn, the pass exited 0 and the session skipped
+    it from then on. An error while the states are evaluated now stops the
+    pass; a geometry that cannot be meshed is still recorded and the pass
+    goes on.
+  - An nvidia-smi query that failed gave a driver of None, which the
+    adjudication counted as another machine. A driver not read is no longer
+    another machine; records without it beside records with it are a
+    deviation of their own (none read anywhere, as on the CPU, is not).
+  - R3's evaluations take about half an hour per seed and arm on the box
+    (the metric suite runs on the CPU), not about 13 min: about 41 h in all.
+  - Not changed: the amplitude record's 5% reproduction line (the concern
+    that S's smaller energy gaps would trip it does not hold on E2's
+    records: at in-band gaps of 0.006 to 0.05 the relative deviation is at
+    most 0.5%); the steps' device stays "auto", the GPU check running
+    seconds before each step.
+- **The code no test executed** (review C): branch coverage with subprocesses
+  over the 18 files the session and the adjudication run, 92.3% from the
+  suite (pretrain.py 100%, the adjudication 98%); every unexecuted line the
+  session can reach was read, and 35 tests were written for those that
+  matter. pyflakes and shellcheck clean. Changed: a restore that failed
+  after part of the state was loaded returned "from scratch" with the
+  restored weights, optimiser or scheduler left in place (the fix above); a
+  checkpoint record whose machines field is not a list stopped every rerun
+  of its seed; the report encoder writes numpy booleans.
+- **Interruptions at random** (review D): 420 trials of the session (1,652
+  runs, 814 kills: SIGKILL, SIGTERM, SIGINT and SIGHUP to the session's
+  group, the step alone, torn writes, injected crashes), then 30 trials of
+  the real R3 script and 26 of run-config on miniatures, each against an
+  uninterrupted run (bit for bit on CPU). The design held, except:
+  - Ctrl-C did not reliably stop the session: the per-step GPU check ran
+    under timeout, whose child is in its own process group and never had
+    the SIGINT, so the next step started; and a check interrupted while
+    Python started exits 1, which the session read as an incomplete output
+    (a complete R2a report moved aside and the arm run again, a step run
+    again, a false `STOP: no GPU`). The session now traps SIGINT (it stops
+    once the command it interrupts has ended, with `session interrupted` in
+    the status file; a minimal trap covers the lines before the lock) and runs the GPU
+    check with `timeout --foreground`.
+  - A kill of the session's group during that check left it holding the
+    session's lock: the restart was refused for up to 300 s. The check now
+    stays in the group, and the subshell it runs in closes the lock.
+  - A completeness check that died on its own (the OOM killer, a failed
+    fork, an I/O error) read as an incomplete output: a complete report
+    could be moved aside and its arm run again, or the labelled arm left
+    out as if the energy arm were incomplete. Each check now exits 0
+    (complete) or 3 (not); any other exit stops that step, with
+    `STOP before <step>: the check of ... failed (exit N)`, and moves or
+    runs nothing.
+  - R3's checkpoint record was written in place; a kill mid-write made the
+    next attempt discard a valid checkpoint. It is now written atomically
+    and names the seed (a checkpoint planted from another seed was
+    accepted).
+  - Not changed: attempts within one second share a log name (impossible on
+    the box); a kill between a step's exit 0 and its exit line reads as
+    interrupted (conservative); a checkpoint that cannot be read after its
+    record was accepted lists a resumption with no resumed epoch (only a
+    planted file does this).
+- **The suite under the box's versions** (Python 3.12.3, torch 2.12.1+cu130,
+  numpy 2.4.6, scipy 1.18.0): r4's suite passed, 659 passed and 1 skipped
+  without LaTeX (two tests that read the free disk space failed while the
+  sandbox's disk was short and passed once it was freed).
+- **An independent review of these changes**, then reviews B, C and D run
+  again on them: D's 240 trials (1,095 runs, 604 kills) and 32 + 10 trials
+  on miniatures held every invariant, B's CUDA-error reproducers now stop
+  with the files kept, and C's coverage of the changed lines is complete
+  but for one unreachable branch. Changed after the review:
+  - Two of the new tests needed a machine without a GPU to raise ("the
+    device" cases): on the box they would have failed RUNBOOK 0c's suite.
+    The device failure is now simulated on any machine.
+  - The amplitude record with a geometry that could not be meshed was
+    briefly treated as incomplete; a second pass would not mesh it either,
+    and a rerun that failed could replace a usable record. A record with
+    its 16 rows is complete again.
+  - Ctrl-C can still be missed in the microseconds while a command
+    substitution's process exits (a bash race), so the texts no longer say
+    that nothing runs after it; the runbook says to press it again if a
+    step starts instead. The instance's balance must cover about 53 h (one
+    re-run of an R3 arm included). R3 resumes a checkpoint of its own code,
+    configuration and seed (Sec. 8 and the script's docstring say so).
+  - Tests made behavioural: the GPU check's process group and the lock
+    (each fails with `--foreground` or the lock's closing removed), each
+    completeness check killed on its own, the seed in R3's checkpoint
+    record where the script writes it; a test that depended on the order of
+    the R3 tests now asks for its fixture.
+- **A review of those changes** (the same reviewer), and D's harness run
+  again on the final script (180 random trials with 454 kills and 83
+  targeted ones, 500 Ctrl-Cs with the real interpreter: no violation).
+  Changed after it:
+  - The completeness checks caught OSError with the parse errors, so an I/O
+    error while reading a complete output still read as "not complete" (a
+    complete report moved aside, a step run again). They now catch only
+    what a missing key or a malformed file raises; an I/O error stops the
+    step, as the texts say.
+  - A remesh geometry was recorded as failed when its cache file could not
+    be written, or when memory ran out, though a second pass could mesh it:
+    a cache file that cannot be written is now skipped with a line, and
+    running out of memory stops the pass; only what gmsh cannot mesh is a
+    failed geometry (Sec. 8 says so).
+  - The GPU check refuses to run outside `$(...)`, where closing the lock
+    would release the session's own.
+  - Tests for the trap before the lock (a slow stand-in for flock), the
+    probe's own code against a stand-in torch (each message, and the
+    refusal), an I/O error in each check, the lock message, a cache file
+    that cannot be written and a memory error while meshing; each fails on
+    the code before its change.
+- The regression against wp8-lejepa run again on the r5 src tree
+  (e120b37d): E1, Phase-2b and E2 identical. The src tree did not change
+  after it (round 3 changed the scripts and tests only).
+- Suite 705 (660 + 45).

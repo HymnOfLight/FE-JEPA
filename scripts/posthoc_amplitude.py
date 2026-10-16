@@ -196,40 +196,52 @@ def remesh_instance(g: int, lc: float, cache: Path | None):
             path.unlink(missing_ok=True)
     a = gmsh3d_instance(np.random.default_rng(90000 + g), lc=lc, labelled=False)
     if path is not None:
-        save_instance(a, path)                             # atomic (temp + replace)
+        try:
+            save_instance(a, path)                         # atomic (temp + replace)
+        except OSError as exc:      # fine3d r5: not the geometry's failure; it is not cached
+            print(json.dumps({"remesh_cache": str(path),
+                              "not written": f"{type(exc).__name__}: {exc}"}), flush=True)
     return a, False
 
 
 def remesh_rows(models: dict, n: int, device: str, cache: Path | None = None):
-    """Yields, per geometry, {seed: row} (or {"error": ...} for a geometry that
-    could not be meshed or evaluated -- the pass continues with the next)."""
+    """Yields, per geometry, {seed: row}, or {"error": ...} for a geometry that
+    could not be meshed (the pass continues with the next). An error while the
+    states are evaluated on a mesh (on the box: a GPU error), and running out of
+    memory, are not a geometry's: they stop the pass, and the session runs it
+    again; a cache file that cannot be written is skipped (fine3d r5)."""
     from fejepa.analysis.posthoc import amplitude_factor, battery_amplitude, energy_norms, free_block, free_mask
     from fejepa.models.features import battery_fscale
 
     for g in range(n):
-        try:
-            per = {s: [] for s in models}
-            n_holes = None
-            for lc in REMESH_LC:
+        per = {s: [] for s in models}
+        n_holes, err = None, None
+        for lc in REMESH_LC:
+            try:
                 a, cached = remesh_instance(g, lc, cache)
-                free = free_mask(a)
-                Kf = free_block(a.K, free)
-                fs, sha = float(battery_fscale(a.F)), _mesh_sha(a)
-                pack = _shared_pack(models, a, device)
-                for s, model in models.items():
-                    U = _forward(model, pack)
-                    per[s].append({"lc": lc, "n_nodes": int(a.n_nodes), "fscale": fs,
-                                   "mesh_sha256": sha, "from_cache": cached,
-                                   "c_battery": battery_amplitude(U, a.K, a.F, free, Kf=Kf),
-                                   "c_star": amplitude_factor(U, a.K, a.F, free, Kf=Kf).tolist(),
-                                   "u_norm_K": energy_norms(U, a.K, free, Kf=Kf).tolist()})
-                n_holes = int(a.meta["extra"]["n_holes"])
-                del a, Kf, pack
-            yield {s: {"geometry": g, "n_holes": n_holes, "by_lc": per[s]} for s in models}
-        except Exception as exc:                           # noqa: BLE001 -- keep going
-            print(json.dumps({"remesh_geometry": g, "error": f"{type(exc).__name__}: {exc}"}),
-                  flush=True)
-            yield {s: {"geometry": g, "error": f"{type(exc).__name__}: {exc}"} for s in models}
+            except MemoryError:                            # not the geometry's: the pass stops
+                raise
+            except Exception as exc:                       # noqa: BLE001 -- keep going
+                err = f"{type(exc).__name__}: {exc}"
+                break
+            free = free_mask(a)
+            Kf = free_block(a.K, free)
+            fs, sha = float(battery_fscale(a.F)), _mesh_sha(a)
+            pack = _shared_pack(models, a, device)
+            for s, model in models.items():
+                U = _forward(model, pack)
+                per[s].append({"lc": lc, "n_nodes": int(a.n_nodes), "fscale": fs,
+                               "mesh_sha256": sha, "from_cache": cached,
+                               "c_battery": battery_amplitude(U, a.K, a.F, free, Kf=Kf),
+                               "c_star": amplitude_factor(U, a.K, a.F, free, Kf=Kf).tolist(),
+                               "u_norm_K": energy_norms(U, a.K, free, Kf=Kf).tolist()})
+            n_holes = int(a.meta["extra"]["n_holes"])
+            del a, Kf, pack
+        if err is not None:
+            print(json.dumps({"remesh_geometry": g, "error": err}), flush=True)
+            yield {s: {"geometry": g, "error": err} for s in models}
+            continue
+        yield {s: {"geometry": g, "n_holes": n_holes, "by_lc": per[s]} for s in models}
 
 
 def remesh_summary(rows: list) -> dict:
