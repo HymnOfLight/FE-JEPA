@@ -98,7 +98,7 @@ python -m pytest -q --deselect tests/test_cmame_material.py::test_manuscript_com
     --deselect tests/test_cmame_references.py::test_the_bibliography_renders_the_data_reference_and_the_chapter \
     2>&1 | tee runs/cmame/timing/pytest.log | tail -n 3
 ```
-The suite's last line reads `683 passed, 3 deselected`, then warnings and the
+The suite's last line reads `684 passed, 3 deselected`, then warnings and the
 time (the two LaTeX builds and the bibliography test are left out: they
 need a TeX installation that the box does not have). Anything failed, an
 error, or another count: stop and report. Any other output than the
@@ -522,7 +522,7 @@ python -m pytest -q --deselect tests/test_cmame_material.py::test_manuscript_com
     --deselect tests/test_cmame_references.py::test_the_bibliography_renders_the_data_reference_and_the_chapter \
     2>&1 | tee runs/cmame/spectra/pytest.log | tail -n 3
 ```
-The suite's last line reads `683 passed, 3 deselected`, then warnings and the
+The suite's last line reads `684 passed, 3 deselected`, then warnings and the
 time. Anything failed, an error, another count, or any other output than the
 comments describe: stop and report.
 
@@ -676,7 +676,7 @@ python -m pytest -q --deselect tests/test_cmame_material.py::test_manuscript_com
     --deselect tests/test_cmame_references.py::test_the_bibliography_renders_the_data_reference_and_the_chapter \
     2>&1 | tee runs/holdout/pytest.log | tail -n 3
 ```
-The suite's last line reads `683 passed, 3 deselected`, then warnings and the
+The suite's last line reads `684 passed, 3 deselected`, then warnings and the
 time. Anything failed, an error, another count, or any other output than the
 comments describe: stop and report. (`runs/holdout/status.txt` printed on a
 later visit, after an interrupted E1: go to E1' instead of E1.) The line

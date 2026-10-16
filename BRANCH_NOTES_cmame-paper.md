@@ -1638,3 +1638,36 @@ generator, and no record, configuration, pre-registration or source file changed
   on the miniature, with one state changed), and
   `tests/test_cmame_runbook.py` for Sec. E.
   Suite 686.
+
+## Stage 11, r6 (16 Oct 2026) -- PREREG_HOLDOUT r6 wording: no rule, set or code changed
+
+- An independent check before the stamp: the rules implemented again from
+  the pre-registration's text alone (frozen before any code was read), then
+  compared with `scripts/adjudicate_holdout.py` on 20,000 generated cases
+  under the sandbox's versions and under the box's (numpy 2.4.6, scipy
+  1.18.0), on 56 edge cases and on the manuscript's own arrays (every quoted
+  number and `records/cmame/holdout/resample.json` reproduced); and the
+  run's GPU paths, each one that export_fields.py or cm2d_spectra.py already
+  ran on the box. No blocking finding: every verdict as the text states it.
+  The text changed in three places:
+  - Sec. 7: when no attempt of a set's evaluation exited 0 or 5, the
+    evaluation whose start a labelling must follow is its first attempt, as
+    `labelled_after_evaluation` reads it (tested since r4); the text had no
+    such case.
+  - Sec. 7: the stamp script refuses any file but this r6 draft (the text
+    still named r5; found by an independent review of these changes); a
+    test now ties the draft named there to the stamp script's.
+  - Sec. 9: a critical-region recall changed alone is detected at 2% in 54%
+    to 100% of the draws for six of the seven recalls and in 2.5% for the
+    two-dimensional graph network's; the text said "in most draws" for any
+    one recall. The test reads both figures from the record.
+- Noted, not changed (none reachable with these arrays): scipy 1.18 gives
+  p = NaN for a quantity whose per-instance values are all tied (1.17 gave
+  1; Holm never rejects NaN, so the verdict is the same, but the verdict
+  file would record "nan"); the guard's denominators are regularised at a
+  reference mean of 0; the content check counts a non-finite value of the
+  report as an infinite deviation (every pinned array is finite).
+- The suite under the box's versions (Python 3.12.3, torch 2.12.1+cu130,
+  numpy 2.4.6, scipy 1.18.0) before this change: 684 passed, 2 skipped (no
+  LaTeX). RUNBOOK_CMAME's suite lines now read `684 passed, 3 deselected`.
+  Suite 687 (686 + 1).

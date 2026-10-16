@@ -13,7 +13,7 @@ with its bounds; the regression tool's miniatures within them; the sandbox
 scan's tool), and its instance names follow from the split; the validation
 names that the earlier exports recorded follow the same rule. The
 thresholds and tolerances are the values the pre-registration states.
-The pre-registration is the r5 draft the stamp script accepts, or a stamp of
+The pre-registration is the r6 draft the stamp script accepts, or a stamp of
 it that verifies; the stamp script stamps a copy of the draft so that the
 box script's and the adjudication's checks pass."""
 
@@ -336,13 +336,23 @@ def test_criteria_are_the_prereg_values(spec):
 def _draft_text(stamp) -> str:
     """PREREG_HOLDOUT.md as its approved draft (a stamped file un-stamped)."""
     text = PREREG.read_text(encoding="utf-8")
-    m = re.search(r"\*\*Status:\*\* r5, stamped (.+?) before the run:", text)
+    m = re.search(r"\*\*Status:\*\* r6, stamped (.+?) before the run:", text)
     if m:
         text = text.replace(stamp.stamped_status(m.group(1)), stamp.DRAFT_STATUS)
     text = re.sub(r"^CONFIG_SHA256\[holdout_v1\] = [0-9a-f]{64}$",
                   "CONFIG_SHA256[holdout_v1] = <fill before tagging>", text, flags=re.M)
     return re.sub(r"^PREREG_HOLDOUT_SHA256 = [0-9a-f]{64}$", stamp.FOOTER_OPEN, text,
                   flags=re.M)
+
+
+def test_the_text_names_the_draft_the_stamp_script_accepts():
+    """r6 (an independent review, D6): Sec. 7 names the draft the stamp
+    script accepts (it still named r5 after the script had moved to r6)."""
+    stamp = _script("stamp_prereg_holdout")
+    rev = re.search(r"\*\*Status:\*\* (r\d+) DRAFT", stamp.DRAFT_STATUS).group(1)
+    text = _draft_text(stamp)
+    assert re.findall(r"this (r\d+) draft's", text) == [rev]
+    assert f"the approved {rev} draft's" in (ROOT / "scripts" / "stamp_prereg_holdout.py").read_text()
 
 
 def test_prereg_is_the_draft_or_a_verified_stamp(spec, tmp_path):

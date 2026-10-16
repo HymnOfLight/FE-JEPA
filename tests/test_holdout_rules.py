@@ -393,10 +393,16 @@ def test_the_resampling_record_is_what_the_script_gives():
     assert (f"the two-dimensional label-free transformer's relative energy gap that H1 reads "
             f"(rejected in {pct(h1['1.10'])} of the draws at 1.10 and {pct(h1['1.20'])} at "
             "1.20)") in text
+    recalls = [q for q in det if q.endswith(":crit_recall")]
+    low = [q for q in recalls if det[q]["1.02"] <= 0.5]
+    assert len(recalls) == 7 and low == ["h2d:mgn:crit_recall"]     # r6: "six of the seven"
+    six = [det[q]["1.02"] for q in recalls if q not in low]
     assert (f"a change confined to one error metric of one row was detected less often, in as "
             f"few as {pct(e['1.10']['min'])} of the draws at 10% and {pct(e['1.20']['min'])} at "
-            f"20% (one critical-region recall, by contrast, in most draws already at 2%") in text
-    assert r["1.02"]["median"] > 0.5                                # "most draws"
+            f"20% (a critical-region recall alone, by contrast, already at 2% in "
+            f"{pct(min(six))} to {pct(max(six))} of the draws for six of the seven, though in "
+            f"{pct(det[low[0]]['1.02'])} for the two-dimensional graph network's (`mgn`); "
+            "Sec. 5)") in text
 
 
 def test_pairing_free_readings_and_v_on_the_manuscripts_own_arrays(manuscript):
