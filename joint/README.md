@@ -23,6 +23,11 @@ This folder holds the work towards a label-free surrogate for the extended end p
 - `return/`: the files of the operator's return package `c13_return.tar.gz` (SHA-256 `8b88839c9f452bbdd2e2e906d790d34505dc784bf862e5dbe055225326d6cb7b`), as received, with their hashes in `return_files.sha256`.
 - `audit/recompute.json` and `audit/recompute_blas2.json`: the recomputation, with the BLAS of numpy and scipy on 25 threads as on the host, and on 2.
 
+**`records/elements/`: the records of the element study** (`docs/element_study_note.md`)
+- `study.jsonl`: the 70 runs of seven element kinds on meshes from 20 mm to 2.5 mm;
+- `washer_radius.jsonl`, `review_checks.json` and `checks.json`: the washer patches, three checks of the review, and the checks of the elements;
+- `tables.md` and `convergence.png`, written from `study.jsonl` and `checks.json` by `probes/elements/write_report.py`.
+
 **`tests/`: the tests.** From this folder, with the repository one level up:
 ```bash
 FEJEPA_REPO=.. python -m pytest -q -p no:cacheprovider tests
@@ -36,12 +41,13 @@ FEJEPA_REPO=.. python -m pytest -q -p no:cacheprovider tests
 - G-C1c, the low-moment secants of the published joint curves: `PRESPEC_G-C1c.md`, `G-C1c_reading.md`.
 - `source_GiraoCoelho2006.md`: the authors' own finite element model of the T-stubs.
 - `C1.3_preparation_note.md`, `C1.3_data_design.md`: exploratory checks before stage C1.3.
+- `element_study_note.md`: an exploratory check after G-C1.3 of the element kind, the mesh and the integration rule.
 - G-C1.3, the training gate: `PRESPEC_G-C1.3.md`, with its stamped code in `G-C1.3_stamped_code/` and the hashes in `G-C1.3_code.sha256`; `G-C1.3_verdict.md`.
 - The files ending in `_text.md` and `_numbers.md` are the parts each verdict is assembled from.
 
-**`probes/`: exploratory probes.** None of them is a gate.
+**`probes/`: exploratory probes.** None of them is a gate. `probes/elements/` holds the scripts of the element study.
 
-## Status on 13 October 2026
+## Status on 16 October 2026
 
 | Gate | Result |
 |---|---|
@@ -51,6 +57,8 @@ FEJEPA_REPO=.. python -m pytest -q -p no:cacheprovider tests
 | G-C1c | Reading of the published curves at low moments |
 | G-C1.3 | PASS: on unseen layouts of the family, label-free training reproduced the reference model, not the joint tests: its initial stiffness (median error 0.29%) and its contact zone (median overlap 0.944). The reference model itself is 2 to 3 times stiffer than the joint tests (G-C1a). |
 
+The gap of G-C1a is not a discretisation effect: the five element kinds that do not lock converge to the same stiffness, and on the C1.3 mesh the current element is about 1% stiffer than it, up to 2.7% for FS1 depending on two nodes just outside the washer patches (`docs/element_study_note.md`, exploratory, 16 October 2026).
+
 ## Not in this folder
 
 - The run scripts and audit records of gates G-C1a to G-C1c, which the verdicts cite as `checks/...`. They are kept with the project owner's records.
@@ -58,6 +66,7 @@ FEJEPA_REPO=.. python -m pytest -q -p no:cacheprovider tests
 - The instance files and training labels of G-C1.3, the predictions of its supervised arms and its model states, which were left on the GPU host. `audit/c13_recompute.py` regenerates the held-out and tested instances.
 - The logs of the C1.3 cost probes.
 - The data cache of the two-dimensional probe, `probes/c13_net/data_cache.npz`; `net_probe.py` rebuilds it on its first run.
+- The scripts of the independent review of the element study. `probes/elements/review_checks.py` reproduces the three of its checks that the note cites.
 
 **Notes on the probes**
 - `probes/c13_scale.py`, `gc1b_weld_bracket.py` and `gc1b_weld_bracket_tables.py` read files in `checks/`, so they do not run from this folder alone.
@@ -68,7 +77,7 @@ FEJEPA_REPO=.. python -m pytest -q -p no:cacheprovider tests
 
 The repository's licences cover this folder as they cover the rest (see the repository's README):
 - the code (`fejoint/`, `c13/`, `audit/`, `tests/`, the scripts in `probes/` and the stamped copy in `docs/G-C1.3_stamped_code/`) under the PolyForm Noncommercial License 1.0.0 (`../LICENSE`);
-- the pre-specifications, verdicts and notes in `docs/`, `RUNBOOK_C13.md` with its addendum, the records in `probes/` (the `.json` and `.log` files) and those in `records/c13/` under the Creative Commons Attribution 4.0 International licence (`../LICENSE-CC-BY-4.0`), as the repository's pre-registration documents and records are.
+- the pre-specifications, verdicts and notes in `docs/`, `RUNBOOK_C13.md` with its addendum, the records in `probes/` (the `.json` and `.log` files) and those in `records/c13/` and `records/elements/` under the Creative Commons Attribution 4.0 International licence (`../LICENSE-CC-BY-4.0`), as the repository's pre-registration documents and records are.
 
 ## Reference
 

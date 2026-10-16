@@ -1,0 +1,125 @@
+{
+ "clamp": [
+  {
+   "kind": "H20",
+   "mesh": [
+    40,
+    4,
+    2
+   ],
+   "tip_over_timoshenko_full_nu0.3": 0.9942725434559632,
+   "tip_over_timoshenko_section_plane_nu0.3": 1.0006287568273695,
+   "tip_over_timoshenko_full_nu0": 1.0000016522650312
+  },
+  {
+   "kind": "H20",
+   "mesh": [
+    80,
+    8,
+    4
+   ],
+   "tip_over_timoshenko_full_nu0.3": 0.995138338877254,
+   "tip_over_timoshenko_section_plane_nu0.3": 1.000738250323968,
+   "tip_over_timoshenko_full_nu0": 1.0000087218676965
+  }
+ ],
+ "corners": {
+  "H8I": {
+   "S_paper_kNm_per_mrad": 37.86451147243578,
+   "corner_nodes": 20,
+   "corner_in_contact": 20,
+   "mid_nodes": 0,
+   "mid_in_contact": 0
+  },
+  "H20": {
+   "S_paper_kNm_per_mrad": 37.53793042601458,
+   "corner_nodes": 20,
+   "corner_in_contact": 0,
+   "mid_nodes": 28,
+   "mid_in_contact": 28
+  },
+  "H20R": {
+   "S_paper_kNm_per_mrad": 37.10959593092112,
+   "corner_nodes": 20,
+   "corner_in_contact": 1,
+   "mid_nodes": 28,
+   "mid_in_contact": 28
+  },
+  "H27": {
+   "S_paper_kNm_per_mrad": 37.337102001787784,
+   "corner_nodes": 20,
+   "corner_in_contact": 20,
+   "mid_nodes": 37,
+   "mid_in_contact": 37
+  },
+  "T10": {
+   "S_paper_kNm_per_mrad": 38.183058762094035,
+   "corner_nodes": 20,
+   "corner_in_contact": 10,
+   "mid_nodes": 37,
+   "mid_in_contact": 37
+  }
+ },
+ "family": [
+  {
+   "member": 4,
+   "washer_r": 14.1,
+   "radius_10th_node": 13.814350413154806,
+   "patches": [
+    10,
+    10,
+    10
+   ],
+   "S": 62.59814766655182,
+   "patches_reduced": [
+    9,
+    9,
+    9
+   ],
+   "S_reduced": 62.42821142312828,
+   "change": 0.0027221065532654354
+  },
+  {
+   "member": 16,
+   "washer_r": 14.1,
+   "radius_10th_node": 13.680260742991964,
+   "patches": [
+    10,
+    10,
+    10
+   ],
+   "S": 64.71413000303122,
+   "patches_reduced": [
+    9,
+    9,
+    9
+   ],
+   "S_reduced": 64.51246009259505,
+   "change": 0.0031260613863850484
+  },
+  {
+   "member": 17,
+   "washer_r": 14.1,
+   "radius_10th_node": 14.048210620498907,
+   "patches": [
+    10,
+    10,
+    10
+   ],
+   "S": 30.79776733541485,
+   "patches_reduced": [
+    9,
+    9,
+    9
+   ],
+   "S_reduced": 30.747469709864806,
+   "change": 0.0016358297454930337
+  }
+ ],
+ "env": {
+  "python": "3.11.15",
+  "numpy": "2.4.4",
+  "scipy": "1.17.1",
+  "solver": "legacy"
+ }
+}
